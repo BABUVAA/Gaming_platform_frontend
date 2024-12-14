@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import React, { lazy, Suspense } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSelector } from "react-redux";
-import Coc from "../pages/coc.JSX";
+import Coc from "../pages/Coc.jsx";
 
 // Lazy load the page components
 const App = lazy(() => import("../pages/App"));

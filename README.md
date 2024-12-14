@@ -1,1 +1,5 @@
-# Gaming_platform_frontend
+# gaming_platform
+
+<!-- Gaming Platform -->
+
+THIS IS AN ONLINE GAMING PLATFORM WHERE YOUC CAN COMPETE FOR REAL CASH OR PRIZES IN YOUR FAVOURITE VIDEO GAMES.
