@@ -1,7 +1,7 @@
 import { Form } from "react-router-dom";
-import { Button, Input } from "../myComponents";
 import api from "../api/axios-api";
 import { formData } from "../utils/utility";
+import { Button, Input } from "../components";
 
 const Admin = () => {
   const handleSubmit = async (event) => {
@@ -64,7 +64,7 @@ const Admin = () => {
           name="div_color"
           varient="m-b-s"
         />
-        <Button>submit</Button>
+        <Button type="submit">submit</Button>
       </Form>
     </div>
   );
