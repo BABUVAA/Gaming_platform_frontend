@@ -1,0 +1,77 @@
+/* Profile-container */
+.profile-menu {
+  height: 54px;
+  max-width: 70px;
+  border-left: 1px solid rgb(240, 240, 240);
+  border-right: 1px solid rgb(240, 240, 240);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* drop-down-container */
+.profile-links-container {
+  display: none;
+  flex-direction: column;
+  width: 205px;
+  padding: 12px 8px 8px;
+  border: 1px solid rgb(240, 240, 240);
+  z-index: 10;
+  box-shadow: 0px 2px 2px 1px rgb(0 0 0 / 20%);
+  background-color: #ffffff;
+}
+/* all links inside drop-down-container */
+.profile-links-container legend {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(37, 40, 43);
+}
+.profile-links-container hr {
+  margin: 8px 0px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+.profile-links-container a {
+  text-decoration: none;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  justify-content: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #62686d;
+}
+.profile-links-container a:hover {
+  background-color: aquamarine;
+  color: #00acf6;
+}
+/* Profile logo container */
+.profile-menu-block {
+  padding: 10px 20px;
+}
+
+/* Profile-icon */
+.profile-icon {
+  fill: #0f1016;
+}
+
+/* checkbox id */
+#profile-menu-active {
+  display: none; /* hiding all items by default */
+}
+
+#profile-menu-active:checked ~ .profile-links-container {
+  display: flex;
+}
+
+#profile-menu-active:checked ~ #profile-overlay {
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9;
+}

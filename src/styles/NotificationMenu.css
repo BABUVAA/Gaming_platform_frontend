@@ -1,0 +1,72 @@
+/*  Notification-container */
+.notification-menu {
+  height: 54px;
+  max-width: 70px;
+  border-left: 1px solid rgb(240, 240, 240);
+  border-right: 1px solid rgb(240, 240, 240);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-end;
+}
+/* drop-down-container */
+.notification-links-container {
+  display: none;
+  flex-direction: column;
+  width: 410px;
+  border: 1px solid rgb(240, 240, 240);
+  z-index: 10;
+  box-shadow: 0px 2px 2px 1px rgb(0 0 0 / 20%);
+  background-color: #ffffff;
+}
+.notification-links-container h2 {
+  padding: 16px;
+  font-size: 14px;
+  color: rgb(37, 40, 43);
+  font-weight: bold;
+}
+.notification-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+}
+.notification-area h3 {
+  margin: 21px 0px 10px;
+  font-size: 16px;
+  color: #000000de;
+}
+.notification-area p {
+  margin-bottom: 26px;
+  font-size: 13px;
+  color: #000000de;
+  text-align: center;
+}
+.view-all-notification {
+  padding: 16px;
+  background-color: #f0f0f0;
+  font-size: 12px;
+  border: none;
+}
+/* Profile logo container */
+.notification-menu-block {
+  padding: 10px 20px;
+}
+
+/* checkbox id */
+#notification-menu-active {
+  display: none; /* hiding all items by default */
+}
+
+#notification-menu-active:checked ~ .notification-links-container {
+  display: flex;
+}
+
+#notification-menu-active:checked ~ #notification-overlay {
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9;
+}

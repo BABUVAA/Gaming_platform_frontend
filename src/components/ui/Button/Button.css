@@ -1,0 +1,132 @@
+/* Base styles for the button */
+.btn {
+  display: inline-flex; /* Use inline-flex to allow the button to grow with content */
+  align-items: center;
+  justify-content: center;
+  font-size: 14px; /* Default font size */
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+  line-height: 1.5;
+  width: auto; /* Default auto width based on content */
+  height: auto; /* Default auto height based on content */
+  white-space: nowrap; /* Prevent text from wrapping */
+}
+
+/* Button Variants */
+.btn-primary {
+  background-color: var(--solid-color);
+  color: #fff;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.btn-link {
+  background-color: transparent;
+  color: #007bff;
+  text-decoration: underline;
+}
+
+.btn-transparent {
+  background-color: transparent;
+  color: rgb(160, 164, 168);
+  border: 2px solid #a0a4a8;
+}
+.btn-transparent:hover {
+  color: var(--solid-color);
+  border: 2px solid var(--solid-color);
+}
+
+/* Button Sizes */
+.btn-small {
+  font-size: 12px;
+  padding: 0.5rem 1rem;
+  width: 80px; /* Fixed width for small button */
+  height: 30px; /* Fixed height for small button */
+}
+
+.btn-medium {
+  font-size: 14px;
+  padding: 0.8rem 1.5rem;
+  width: 120px; /* Fixed width for medium button */
+  height: 40px; /* Fixed height for medium button */
+}
+
+.btn-large {
+  font-size: 16px;
+  padding: 1rem 2rem;
+  width: 160px; /* Fixed width for large button */
+  height: 50px; /* Fixed height for large button */
+}
+
+.btn-xl {
+  font-size: 18px;
+  padding: 1.2rem 3rem;
+  width: 200px; /* Fixed width for extra large button */
+  height: 60px; /* Fixed height for extra large button */
+}
+.btn-xxl {
+  font-size: 18px;
+  padding: 1.2rem 3rem;
+  width: 280px; /* Fixed width for extra large button */
+  height: 80px; /* Fixed height for extra large button */
+}
+
+/* Disabled button styles */
+.btn-disabled {
+  background-color: #f5f5f5;
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
+}
+
+/* Icons */
+.button-icon {
+  margin-right: 0.5rem;
+}
+
+.button-icon-start {
+  margin-right: 0.5rem;
+}
+
+.button-icon-end {
+  margin-left: 0.5rem;
+}
+
+/* Text styling */
+.button-text {
+  display: inline-block;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

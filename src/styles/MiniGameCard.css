@@ -1,0 +1,9 @@
+.mini_games_container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 8px 1px;
+  margin: 10px 0px;
+}

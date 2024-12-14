@@ -1,0 +1,18 @@
+.accordion {
+  border: 1px solid #ddd;
+}
+
+.accordion-header {
+  padding: 1rem;
+  text-align: left;
+  background-color: #f4f4f4;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.accordion-body {
+  padding: 1rem;
+  background-color: #fff;
+  border-top: 1px solid #ddd;
+}
