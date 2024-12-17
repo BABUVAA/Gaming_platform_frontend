@@ -151,7 +151,7 @@ const ContentSectionThree = () => {
       <div className="mr-5">
         <img src="Game-character.png" alt="character" />
       </div>
-      <div className="w-50 pt-5 pl-5 col res-yc">
+      <div className="w-75 pt-5 pl-5 col res-yc">
         <h4 className="mb-5 txt-primary xl">
           Stop Scrolling, <br />
           Start Playing
