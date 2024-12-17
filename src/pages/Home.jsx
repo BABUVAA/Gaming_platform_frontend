@@ -5,9 +5,6 @@ import GameCard from "../myComponents/UIElements/GameCard";
 import useNavigateHook from "../hooks/useNavigateHook";
 
 const Home = () => {
-
-
-  
   return (
     <>
       <div className="content">
@@ -128,7 +125,7 @@ const ContentSectionTwo = () => {
           />
         </div>
 
-        <div className="col tc yc mt-6 w-40 p-5">
+        <div className="col tc yc mt-6 w-75 p-5">
           <h5 className="mb-5 txt-main xl">
             Climb to the top of the leaderboard
           </h5>
