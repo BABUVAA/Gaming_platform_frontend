@@ -6,10 +6,10 @@ export const verifySession = createAsyncThunk(
   "auth/verifySession",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/api/auth/verifySession", {
+      const response = await api.post("/api/auth/verifySession", {
         withCredentials: true,
       });
-      return;
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -49,7 +49,7 @@ export const register = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await api.post("/api/auth/signup", userData);
-      return response.data.user;
+      return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
     }
@@ -61,7 +61,8 @@ const authSlice = createSlice({
   name: "auth",
   initialState: {
     user: null,
-    isAuthenticated: null,
+    isAuthenticated: false,
+    isLoading: false,
     error: null,
   },
   reducers: {
@@ -69,15 +70,21 @@ const authSlice = createSlice({
       state.error = null;
     },
   },
+
   extraReducers: (builder) => {
     builder
+      .addCase(verifySession.pending, (state) => {
+        state.isLoading = true; // Set loading to true when session verification starts
+      })
       .addCase(verifySession.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.isLoading = false; // Set loading to false when completed
       })
       .addCase(verifySession.rejected, (state, action) => {
         state.user = null;
         state.isAuthenticated = false;
+        state.isLoading = false; // Set loading to false on failure
         state.error = action.payload;
       })
       .addCase(logout.fulfilled, (state) => {
@@ -87,18 +94,28 @@ const authSlice = createSlice({
       .addCase(logout.rejected, (state, action) => {
         state.error = action.payload;
       })
+      .addCase(login.pending, (state) => {
+        state.isLoading = true; // Set loading to true during login
+      })
       .addCase(login.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.isLoading = false; // Set loading to false after login
       })
       .addCase(login.rejected, (state, action) => {
+        state.isLoading = false; // Set loading to false on login failure
         state.error = action.payload;
+      })
+      .addCase(register.pending, (state) => {
+        state.isLoading = true; // Set loading to true during registration
       })
       .addCase(register.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.isLoading = false; // Set loading to false after registration
       })
       .addCase(register.rejected, (state, action) => {
+        state.isLoading = false; // Set loading to false on registration failure
         state.error = action.payload;
       });
   },

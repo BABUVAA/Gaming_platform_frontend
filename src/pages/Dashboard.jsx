@@ -1,7 +1,6 @@
 import { useSelector } from "react-redux";
 import { SideBar } from "../components";
 import { Outlet } from "react-router-dom";
-import { useEffect } from "react";
 
 const Dashboard = () => {
   const games = useSelector((store) => store.games);

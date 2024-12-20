@@ -9,14 +9,14 @@ import { verifySession } from "../store/authSlice";
 function App() {
   const dispatch = useDispatch();
   const { loading } = useSelector((store) => store.games);
-  const { isAuthenticated } = useSelector((store) => store.auth);
+  const { isAuthenticated, isLoading } = useSelector((store) => store.auth);
+
   useEffect(() => {
     dispatch(fetchGames());
-    // dispatch(verifySession());
+    !isAuthenticated ? dispatch(verifySession()) : "";
   }, [dispatch]);
-
   //if games data loadings
-  if (loading) {
+  if (loading || isLoading) {
     return <LoadingSpinner />;
   }
 

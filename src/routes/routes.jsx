@@ -2,7 +2,6 @@ import { createBrowserRouter } from "react-router-dom";
 import React, { lazy, Suspense } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSelector } from "react-redux";
-import Coc from "../pages/Coc.jsx";
 
 // Lazy load the page components
 const App = lazy(() => import("../pages/App"));
@@ -19,12 +18,12 @@ const Admin = lazy(() => import("../pages/Admin"));
 const Login = lazy(() => import("../pages/Login"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const Clan = lazy(() => import("../pages/Clan"));
-
+const Coc = lazy(() => import("../pages/Coc.jsx"));
 // Fallback loading component while waiting for lazy-loaded components
 const Loading = () => <LoadingSpinner />;
 
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = useSelector((store) => store.auth.isAuthenticated);
+  const { isAuthenticated } = useSelector((store) => store.auth);
   return isAuthenticated ? children : <Login />;
 };
 

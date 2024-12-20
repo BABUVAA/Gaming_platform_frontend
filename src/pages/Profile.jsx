@@ -3,7 +3,7 @@ import { Button } from "../components";
 
 const Profile = () => {
   const { user } = useSelector((store) => store.auth);
-  const accounts = user.profile.linkedAccounts;
+  // const accounts = user.profile.linkedAccounts;
   const games = ["pubg", "Coc", "coc", "coc", "coc"];
   return (
     <>
@@ -17,7 +17,7 @@ const Profile = () => {
           <div className="col ml-3 sb">
             <h6>
               hii,
-              {user.username}
+              {/* {user.username} */}
             </h6>
             <Button size="medium" className="p-2 txt-small ">
               + Add Social Media
