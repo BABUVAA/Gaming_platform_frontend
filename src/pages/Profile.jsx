@@ -1,8 +1,13 @@
 import { useSelector } from "react-redux";
 import { Button } from "../components";
+import { useEffect } from "react";
 
 const Profile = () => {
   const { user } = useSelector((store) => store.auth);
+  useEffect(() => {
+      
+  });
+
   // const accounts = user.profile.linkedAccounts;
   const games = ["pubg", "Coc", "coc", "coc", "coc"];
   return (

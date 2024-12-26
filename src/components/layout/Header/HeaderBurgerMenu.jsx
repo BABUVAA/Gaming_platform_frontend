@@ -5,7 +5,8 @@ import { Link } from "react-router-dom";
 import { useRef } from "react";
 import Button from "../../ui/Button/Button";
 import useNavigateHook from "../../../hooks/useNavigateHook";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../../../store/authSlice";
 
 const HeaderBurgerMenu = () => {
   const { isAuthenticated } = useSelector((store) => store.auth);
@@ -72,7 +73,14 @@ const HeaderBurgerMenu = () => {
               <Link to="/account" onClick={closeMenu}>
                 Account
               </Link>
-              <Link to="/logout" onClick={closeMenu}>
+              <Link
+                to="/"
+                onClick={() => {
+                  const dispatch = useDispatch();
+                  closeMenu();
+                  dispatch(logout());
+                }}
+              >
                 Logout
               </Link>
             </div>
