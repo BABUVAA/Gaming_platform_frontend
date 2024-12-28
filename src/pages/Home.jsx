@@ -1,7 +1,7 @@
 import { GoTrophy } from "react-icons/go";
 import { Button, Footer } from "../components";
 import { useSelector } from "react-redux";
-import GameCard from "../myComponents/UIElements/GameCard";
+import GameCard from "../components/ui/GameCard/GameCard";
 import useNavigateHook from "../hooks/useNavigateHook";
 
 const Home = () => {
