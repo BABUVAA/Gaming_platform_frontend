@@ -47,14 +47,14 @@ const IntroSection = () => {
           </p>
         </div>
       </div>
-      <div className="flex z-10 justify-center flex-wrap w-full md:absolute md:-bottom-8 md:justify-end px-10 ">
+      <div className="flex z-10 justify-center flex-wrap w-full md:justify-end ">
         <Button
           onClick={goToSignUp}
           size="xxl"
           variant="primary"
           startIcon={<GoTrophy size={50} />}
           ariaLabel="Register"
-          className="shadow-md flex items-center gap-4"
+          className="shadow-md flex items-center gap-4 md:absolute md:-bottom-8"
         >
           <div className="flex flex-col items-start whitespace-nowrap leading-none">
             <small className="text-gray-200 text-sm">Start Playing!</small>
