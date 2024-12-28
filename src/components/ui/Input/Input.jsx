@@ -1,6 +1,5 @@
 import React from "react";
 import PropTypes from "prop-types";
-import "./Input.css";
 
 const Input = ({
   id,
@@ -20,36 +19,34 @@ const Input = ({
   ariaLabel,
   ...props
 }) => {
-  // Helper function to combine classes manually
-  const combineClasses = (...classes) => {
-    return classes.filter(Boolean).join(" ");
-  };
-
-  // Determine the input's CSS classes
-  const inputClasses = combineClasses(
-    "input", // Default input class
-    error && "input-error", // Error state
-    disabled && "input-disabled", // Disabled state
-    className // Additional custom classes passed via props
-  );
+  const inputBaseClasses =
+    "w-full px-4 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400";
+  const inputErrorClasses = error ? "border-red-500" : "border-gray-300";
+  const inputDisabledClasses = disabled
+    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+    : "bg-white text-gray-900";
 
   return (
-    <div className="input-container">
+    <div className="mb-4">
       {label && (
-        <label htmlFor={id} className="input-label">
+        <label
+          htmlFor={id}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           {label}
         </label>
       )}
-      <div className="input-wrapper">
+      <div className="relative">
         {iconStart && (
-          <span className="input-icon input-icon-start">{iconStart}</span>
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+            {iconStart}
+          </span>
         )}
 
         <input
           id={id}
           name={name}
           type={type}
-          className={inputClasses}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
@@ -57,20 +54,23 @@ const Input = ({
           onFocus={onFocus}
           disabled={disabled}
           aria-label={ariaLabel || placeholder}
-          {...props} // Spread any additional props like `data-*` attributes
+          className={`${inputBaseClasses} ${inputErrorClasses} ${inputDisabledClasses} ${
+            iconStart ? "pl-10" : ""
+          } ${iconEnd ? "pr-10" : ""} ${className}`}
+          {...props}
         />
 
         {iconEnd && (
-          <span className="input-icon input-icon-end">{iconEnd}</span>
+          <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+            {iconEnd}
+          </span>
         )}
       </div>
-
-      {error && <span className="input-error-message">{error}</span>}
+      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
 };
 
-// Prop validation to ensure correct prop types and values
 Input.propTypes = {
   id: PropTypes.string,
   name: PropTypes.string,

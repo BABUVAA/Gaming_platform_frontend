@@ -1,72 +1,85 @@
+import React from "react";
 import { Form } from "react-router-dom";
-import { formData } from "../utils/utility";
-import useNavigateHook from "../hooks/useNavigateHook";
-import { Button, Input } from "../components";
 import { useDispatch } from "react-redux";
 import { register } from "../store/authSlice";
+import { Button, Input } from "../components";
+import useNavigateHook from "../hooks/useNavigateHook";
 
 const SignUp = () => {
   const { goToDashboard, goToLogin } = useNavigateHook();
   const dispatch = useDispatch();
-  const handleSubmit = async (event) => {
-    event.preventDefault(); // prevent default form submit behavior
-    const signUpData = formData(event); //get the values from the form
 
-    //signup
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const signUpData = Object.fromEntries(formData);
+
     dispatch(register(signUpData))
       .unwrap()
       .then(() => {
-        // Handle success
-        alert("user registered successfully");
+        alert("User registered successfully!");
         goToDashboard();
       })
       .catch((err) => {
-        // Handle failure
         console.error("Signup failed:", err);
       });
   };
 
   return (
-    <>
-      <div className="col yc xc p-l gap">
-        <Form
-          onSubmit={handleSubmit}
-          method="POST"
-          className="col gap p-4 m-b-s bs bg6  w-min-250 w-max-350"
-        >
-          <h4 className="tc h4">E - GAMING</h4>
-          <label>Username</label>
-          <label className="error"></label>
-          <Input type="text" placeholder="Username..." name="username" />
-          <label>
-            Email Addrress<span>(You must verify your email Address)</span>
-          </label>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-white">
+      <div className="bg-white p-10 rounded-lg shadow-xl w-full max-w-lg">
+        <h1 className="text-3xl font-extrabold text-blue-600 text-center mb-8">
+          E-GAMING
+        </h1>
+        <Form onSubmit={handleSubmit} method="POST" className="space-y-6">
           <Input
-            type="email"
-            name="email"
-            placeholder="Your Email Address..."
+            name="username"
+            type="text"
+            placeholder="Enter your username"
+            label="Username"
+            className="text-gray-700 font-medium"
           />
-          <label>Password</label>
-          <Input type="password" placeholder="Password" name="password" />
-
-          <label className="signup-label">Date of Birth </label>
-          <Input type="date" placeholder="DOB" name="dob" />
-          <Button type="submit" className="as-c">
+          <Input
+            name="email"
+            type="email"
+            placeholder="Enter your email address"
+            label="Email Address"
+            className="text-gray-700 font-medium"
+          />
+          <Input
+            name="password"
+            type="password"
+            placeholder="Create a password"
+            label="Password"
+            className="text-gray-700 font-medium"
+          />
+          <Input
+            name="dob"
+            type="date"
+            label="Date of Birth"
+            className="text-gray-700 font-medium"
+          />
+          <Button
+            type="submit"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-md shadow-md"
+          >
             Sign Up
           </Button>
         </Form>
-        <small>
-          Already have an account?
-          <button
-            onClick={goToLogin}
-            className="style-none"
-            popovertarget="login"
-          >
-            <small className="txt-solid">Log in</small>
-          </button>
-        </small>
+        <div className="text-center mt-6">
+          <p className="text-gray-600">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={goToLogin}
+              className="text-blue-500 hover:underline font-bold"
+            >
+              Log in
+            </button>
+          </p>
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
