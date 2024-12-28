@@ -1,94 +1,112 @@
-import "../../../styles/HeaderBurgerMenu.css";
+import { useState } from "react";
+import { useSelector } from "react-redux";
+import useNavigateHook from "../../../hooks/useNavigateHook";
 import { CiMenuBurger } from "react-icons/ci";
 import { RiCloseFill } from "react-icons/ri";
 import { Link } from "react-router-dom";
-import { useRef } from "react";
 import Button from "../../ui/Button/Button";
-import useNavigateHook from "../../../hooks/useNavigateHook";
-import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../../../store/authSlice";
 
 const HeaderBurgerMenu = () => {
   const { isAuthenticated } = useSelector((store) => store.auth);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Create a ref for the checkbox
-  const menuCheckboxRef = useRef(null);
-
-  // Function to close the menu
-  const closeMenu = () => {
-    if (menuCheckboxRef.current) {
-      menuCheckboxRef.current.checked = false;
-    }
+  // Function to toggle the menu state
+  const toggleMenu = () => {
+    setMenuOpen((prevState) => !prevState);
   };
+  const { goToLogin, goToSignUp } = useNavigateHook();
 
-  const { goToLogin } = useNavigateHook();
   return (
-    <>
-      <nav className="Menu">
-        <input
-          type="checkbox"
-          id="menu-sidebar-active"
-          ref={menuCheckboxRef} // Attach the ref
-        />
-        <label
-          htmlFor="menu-sidebar-active"
-          className="menu-open-sidebar-button"
+    <nav className="relative md:hidden z-50 ">
+      {/* Menu Open Button */}
+      <button onClick={toggleMenu} className="p-2" aria-label="Open menu">
+        <CiMenuBurger size={30} className="text-gray-800" />
+      </button>
+
+      {/* Menu Content (Slides from Right) */}
+      {menuOpen && (
+        <div
+          className={`fixed top-0 right-0 w-full h-full bg-white shadow-lg z-10 flex flex-col items-start p-4  transition-all duration-1000 ease-in-out transform ${
+            menuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         >
-          <CiMenuBurger size={30} className="menu-icon" />
-        </label>
-        <div className="menu-links-container">
-          <div className="row sb w-100">
-            {!isAuthenticated && (
-              <label
-                htmlFor="menu-sidebar-active"
-                className="menu-close-sidebar-button"
-                onClick={goToLogin}
-              >
-                <Button onClick={closeMenu}>Login</Button>
-              </label>
-            )}
-            <label
-              htmlFor="menu-sidebar-active"
-              className="menu-close-sidebar-button "
+          {/* Close Button */}
+          <div className="flex justify-between w-full">
+            <button
+              onClick={toggleMenu}
+              className="p-2"
+              aria-label="Close menu"
             >
-              <RiCloseFill size={30} className="menu-icon" />
-            </label>
+              <RiCloseFill size={30} className="text-gray-800" />
+            </button>
+            {!isAuthenticated && (
+              <UnauthenticatedMenu
+                closeMenu={() => setMenuOpen(false)}
+                goToLogin={goToLogin}
+                goToSignUp={goToSignUp}
+              />
+            )}
           </div>
           <hr />
-          <Link to="/" onClick={closeMenu}>
+
+          {/* Menu Links */}
+          <Link
+            to="/"
+            onClick={() => setMenuOpen(false)}
+            className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
+          >
             Home
           </Link>
           <hr />
+          <Link
+            to="/about"
+            onClick={() => setMenuOpen(false)}
+            className="w-full p-4 text-left hover:bg-blue-500 text-gray-800 mt-0"
+          >
+            About Us
+          </Link>
+          <hr />
+          <Link
+            to="/support"
+            onClick={() => setMenuOpen(false)}
+            className="w-full  p-4 text-left hover:bg-blue-500 text-gray-800 mt-0"
+          >
+            Support
+          </Link>
+          <hr />
+
+          {/* Conditional Menu for Authenticated and Unauthenticated Users */}
           {isAuthenticated && (
-            <div>
-              <Link to="/dashboard" onClick={closeMenu}>
-                Dashboard
-              </Link>
-              <Link to="/profile" onClick={closeMenu}>
-                Profile
-              </Link>
-              <Link to="/wallet" onClick={closeMenu}>
-                Wallet
-              </Link>
-              <Link to="/account" onClick={closeMenu}>
-                Account
-              </Link>
-              <Link
-                to="/"
-                onClick={() => {
-                  const dispatch = useDispatch();
-                  closeMenu();
-                  dispatch(logout());
-                }}
-              >
-                Logout
-              </Link>
-            </div>
+            <AuthenticatedMenu closeMenu={() => setMenuOpen(false)} />
           )}
         </div>
-      </nav>
-    </>
+      )}
+    </nav>
   );
 };
+
+const UnauthenticatedMenu = ({ closeMenu, goToLogin, goToSignUp }) => (
+  <div className="flex items-center space-x-4">
+    <Button
+      onClick={() => {
+        closeMenu();
+        goToLogin();
+      }}
+      variant="transparent"
+    >
+      Login
+    </Button>
+    <Button
+      onClick={() => {
+        closeMenu();
+        goToSignUp();
+      }}
+    >
+      Sign Up
+    </Button>
+  </div>
+);
+
+const AuthenticatedMenu = ({ closeMenu }) => <></>;
 
 export default HeaderBurgerMenu;

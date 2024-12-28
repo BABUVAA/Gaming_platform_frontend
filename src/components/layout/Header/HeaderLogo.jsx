@@ -1,22 +1,19 @@
-import { FaEtsy } from "react-icons/fa";
-import { FaMinus, FaG, FaA, FaM, FaI, FaN } from "react-icons/fa6";
+import { FaEtsy, FaMinus, FaG, FaA, FaM, FaI, FaN } from "react-icons/fa6";
 import useNavigateHook from "../../../hooks/useNavigateHook";
 
 const HeaderLogo = () => {
   const { goToHome } = useNavigateHook();
+  const logoIcons = [FaEtsy, FaMinus, FaG, FaA, FaM, FaI, FaN, FaG];
+
   return (
-    <>
-      <div onClick={goToHome} className="row align-center p-3">
-        <FaEtsy size={16} />
-        <FaMinus size={10} />
-        <FaG size={16} />
-        <FaA size={16} />
-        <FaM size={16} />
-        <FaI size={16} />
-        <FaN size={16} />
-        <FaG size={16} />
-      </div>
-    </>
+    <div
+      onClick={goToHome}
+      className="flex items-center space-x-1 cursor-pointer p-3 "
+    >
+      {logoIcons.map((Icon, index) => (
+        <Icon key={index} size={16} />
+      ))}
+    </div>
   );
 };
 

@@ -23,14 +23,14 @@ function App() {
   }
 
   return (
-    <>
-      <div className="website-grid">
-        <Header />
-        <main className="main">
-          <Outlet />
-        </main>
-      </div>
-    </>
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <Header />
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        <Outlet />
+      </main>
+    </div>
   );
 }
 
