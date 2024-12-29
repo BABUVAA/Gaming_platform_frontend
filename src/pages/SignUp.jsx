@@ -26,7 +26,7 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-white">
+    <div className="min-h-screen flex items-start sm:items-center pt-5 sm:pt-0 justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-white">
       <div className="bg-white p-10 rounded-lg shadow-xl w-full max-w-lg">
         <h1 className="text-3xl font-extrabold text-blue-600 text-center mb-8">
           E-GAMING

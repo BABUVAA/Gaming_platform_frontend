@@ -26,7 +26,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-200">
+    <div className="min-h-screen flex items-start pt-5 sm:items-center sm:pt-0 justify-center bg-gradient-to-br from-white via-gray-100 to-gray-200">
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
         <h1 className="text-2xl font-bold text-blue-600 text-center mb-6">
           E-GAMING
