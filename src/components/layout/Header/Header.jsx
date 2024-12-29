@@ -16,7 +16,7 @@ const Header = () => {
 
   // Render authenticated menu
   const renderAuthenticatedMenu = () => (
-    <div className="flex items-center space-x-4">
+    <div className="items-center justify-center content-center space-x-4 h-full hidden md:flex  mr-2 px-2">
       <HeaderNotificationMenu />
       <HeaderProfileMenu />
       <HeaderWalletMenu />
