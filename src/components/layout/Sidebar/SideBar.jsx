@@ -21,7 +21,7 @@ const SideBar = () => {
         <MdOutlineCastle size={30} />
       </Link>
       <Link
-        to="/dashboard/game"
+        to="/dashboard"
         className="text-gray-600 hover:text-blue-500 transition duration-200"
       >
         <CgGames size={30} />

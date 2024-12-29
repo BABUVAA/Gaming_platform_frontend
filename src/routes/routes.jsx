@@ -85,7 +85,6 @@ const routes = createBrowserRouter([
         ),
         children: [
           {
-            path: "game",
             index: true,
             element: (
               <Suspense fallback={<Loading />}>

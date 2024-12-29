@@ -6,13 +6,12 @@ import GameCard from "../components/ui/GameCard/GameCard";
 const Game = () => {
   const games = useSelector((store) => store.games);
   return (
-    <div className="min-w-full  container justify-center mb-12  pb-6">
+    <div className="min-w-full bg-slate-100  container justify-center mb-12  pb-6">
       {/* Search Bar */}
-      <div className="mb-8">
+      <div className="my-2">
         <Input type="search" placeholder="Search for games..." />
       </div>
       {/* Connected Games Section */}
-
       <div className="flex flex-col bg-slate-100 text-left lg:justify-center">
         <h2 className="text-2xl font-bold pt-8 px-4 ">Connected Games</h2>
         <div className="flex flex-col w-full lg:max-w-screen-lg py-8 p-4">
