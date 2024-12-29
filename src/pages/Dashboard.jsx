@@ -11,8 +11,14 @@ const Dashboard = () => {
       <SideBar />
 
       {/* Main Content */}
-      <div className=" lg:ml-16 pt-2 lg:pt-0 flex-1">
-        <Outlet />
+      <div className="grid md:grid-cols-[auto_1fr] h-full">
+        {/* Empty div with fixed width */}
+        <div className="w-16 h-full"></div>
+
+        {/* The second part takes the remaining space */}
+        <div className="h-full w-full">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

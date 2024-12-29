@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 
 const SideBar = () => {
   return (
-    <aside className="sidebar fixed bottom-0 md:bottom-auto md:left-0 md:top-14 md:h-screen bg-white w-full md:w-16 h-16 md:flex md:flex-col md:justify-start md:items-center flex justify-around items-center shadow-lg z-50 border-t md:border-t-0 md:border-r border-gray-300 md:gap-7 md:pt-7">
+    <aside className="fixed bottom-0 md:bottom-auto md:left-0 md:top-14 md:h-screen bg-white w-full md:w-16 h-16 md:flex md:flex-col md:justify-start md:items-center flex justify-around items-center shadow-lg z-50 border-t md:border-t-0 md:border-r border-gray-300 md:gap-7 md:pt-7">
       <Link
         to="/dashboard/profile"
         className="text-gray-600 hover:text-blue-500 transition duration-200"
