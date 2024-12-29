@@ -11,7 +11,7 @@ const Dashboard = () => {
       <SideBar />
 
       {/* Main Content */}
-      <div className=" lg:ml-16 pt-16 lg:pt-0 flex-1">
+      <div className=" lg:ml-16 pt-2 lg:pt-0 flex-1">
         <Outlet />
       </div>
     </div>

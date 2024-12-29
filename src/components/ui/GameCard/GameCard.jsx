@@ -4,6 +4,7 @@ const GameCard = ({
   background,
   character,
   title,
+  background_color,
   div_color,
   type = "games",
 }) => {

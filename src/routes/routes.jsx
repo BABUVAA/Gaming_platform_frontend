@@ -27,6 +27,11 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Login />;
 };
 
+const LandingPage = () => {
+  const { isAuthenticated } = useSelector((store) => store.auth);
+  return isAuthenticated ? <Dashboard /> : <Home />;
+};
+
 // Add the routes with lazy-loaded components
 const routes = createBrowserRouter([
   {
@@ -41,7 +46,7 @@ const routes = createBrowserRouter([
         index: true,
         element: (
           <Suspense fallback={<Loading />}>
-            <Home />
+            <LandingPage />
           </Suspense>
         ),
       },
