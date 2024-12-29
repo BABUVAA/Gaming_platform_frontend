@@ -73,7 +73,7 @@ const AvailableGameSection = () => {
       <div className="flex flex-col w-full lg:max-w-screen-lg py-16 md:p-16  p-4">
         <h2 className="text-xl font-bold text-black mb-8">Available Games</h2>
         <div className="grid grid-cols-2 sm:grid-cols-2  lg:grid-cols-3 gap-4">
-          {games.data &&
+          {games.data.length > 0 &&
             games.data.map((game) => (
               <GameCard
                 key={game.id}

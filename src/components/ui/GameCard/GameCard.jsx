@@ -54,7 +54,7 @@ const GameCard = ({
 
       {/* Coming Soon Variant */}
       {type === "coming_soon" && (
-        <div className="relative flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 via-gray-600 to-gray-400 text-white w-full h-full rounded-lg transition-all">
+        <div className="relative flex flex-col items-center text-center justify-center bg-gradient-to-r from-gray-800 via-gray-600 to-gray-400 text-white w-full h-full rounded-lg transition-all">
           <span className="text-2xl font-bold">Coming Soon</span>
           <span className="text-sm mt-2">Stay Tuned!</span>
         </div>
