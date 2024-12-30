@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import useNavigateHook from "../../../hooks/useNavigateHook";
 import { CiMenuBurger } from "react-icons/ci";
 import { RiCloseFill } from "react-icons/ri";
 import { Link } from "react-router-dom";
 import Button from "../../ui/Button/Button";
+import { logout } from "../../../store/authSlice";
 
 const HeaderBurgerMenu = () => {
   const { isAuthenticated } = useSelector((store) => store.auth);
@@ -15,7 +16,6 @@ const HeaderBurgerMenu = () => {
     setMenuOpen((prevState) => !prevState);
   };
   const { goToLogin, goToSignUp } = useNavigateHook();
-
   return (
     <nav className="relative md:hidden z-50 ">
       {/* Menu Open Button */}
@@ -58,14 +58,10 @@ const HeaderBurgerMenu = () => {
             Home
           </Link>
           <hr />
-          <Link
-            to="/about"
-            onClick={() => setMenuOpen(false)}
-            className="w-full p-4 text-left hover:bg-blue-500 text-gray-800 mt-0"
-          >
-            About Us
-          </Link>
-          <hr />
+          {/* Conditional Menu for Authenticated and Unauthenticated Users */}
+          {isAuthenticated && (
+            <AuthenticatedMenu closeMenu={() => setMenuOpen(false)} />
+          )}
           <Link
             to="/support"
             onClick={() => setMenuOpen(false)}
@@ -74,11 +70,6 @@ const HeaderBurgerMenu = () => {
             Support
           </Link>
           <hr />
-
-          {/* Conditional Menu for Authenticated and Unauthenticated Users */}
-          {isAuthenticated && (
-            <AuthenticatedMenu closeMenu={() => setMenuOpen(false)} />
-          )}
         </div>
       )}
     </nav>
@@ -107,6 +98,52 @@ const UnauthenticatedMenu = ({ closeMenu, goToLogin, goToSignUp }) => (
   </div>
 );
 
-const AuthenticatedMenu = ({ closeMenu }) => <></>;
+const AuthenticatedMenu = ({ closeMenu }) => {
+  const dispatch = useDispatch();
+  const handleLogOut = () => {
+    dispatch(logout());
+  };
+
+  return (
+    <>
+      {" "}
+      <Link
+        to="/account"
+        onClick={() => setMenuOpen(false)}
+        className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
+      >
+        Account
+      </Link>
+      <hr />
+      <Link
+        to="/wallet"
+        onClick={() => setMenuOpen(false)}
+        className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
+      >
+        Wallet
+      </Link>
+      <hr />
+      <Link
+        to="/refer"
+        onClick={() => setMenuOpen(false)}
+        className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
+      >
+        Refer & Earn
+      </Link>
+      <hr />
+      <Link
+        to="#"
+        onClick={() => {
+          dispatch(logout());
+        }}
+        className="w-full p-4 text-left hover:bg-blue-500 text-gray-800 mt-0"
+      >
+        {" "}
+        Logout
+      </Link>
+      <hr />
+    </>
+  );
+};
 
 export default HeaderBurgerMenu;

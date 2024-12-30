@@ -194,7 +194,7 @@ const Profile = () => {
 
   // Section 4: Past Tournaments
   const PastTournaments = () => (
-    <div className="past-tournaments-wrapper bg-gradient-to-b from-blue-50 to-blue-100 mb-10">
+    <div className="past-tournaments-wrapper bg-gradient-to-b from-blue-50 to-blue-100 mb-12">
       <div className="past-tournaments bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
         <h3 className="text-2xl font-semibold text-gray-800 mb-4">
           Past Tournaments
@@ -225,7 +225,7 @@ const Profile = () => {
     </div>
   );
   return (
-    <div className="profile-container bg-gray-100 p-6">
+    <div className="profile-container bg-gray-100 p-6 gap-1">
       <ProfileHeader />
       <CareerStatistics />
       <ActiveTournaments />

@@ -1,8 +1,8 @@
 import { CgProfile } from "react-icons/cg";
 import { MdOutlineCastle } from "react-icons/md";
 import { CgGames } from "react-icons/cg";
-import { IoIosNotificationsOutline } from "react-icons/io";
-import { CiWallet } from "react-icons/ci";
+import { TbTournament } from "react-icons/tb";
+import { MdAccountBalance } from "react-icons/md";
 import { Link } from "react-router-dom";
 
 const SideBar = () => {
@@ -27,16 +27,16 @@ const SideBar = () => {
         <CgGames size={30} />
       </Link>
       <Link
-        to="/dashboard/notifications"
+        to="/dashboard/tournament"
         className="text-gray-600 hover:text-blue-500 transition duration-200"
       >
-        <IoIosNotificationsOutline size={30} />
+        <TbTournament size={30} />
       </Link>
       <Link
-        to="/dashboard/wallet"
+        to="/dashboard/account"
         className="text-gray-600 hover:text-blue-500 transition duration-200"
       >
-        <CiWallet size={30} />
+        <MdAccountBalance size={30} />
       </Link>
     </aside>
   );

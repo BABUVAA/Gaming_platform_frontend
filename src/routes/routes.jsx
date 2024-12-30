@@ -117,31 +117,30 @@ const routes = createBrowserRouter([
             ),
           },
           {
+            path: "account",
+            element: (
+              <Suspense fallback={<Loading />}>
+                <Account />
+              </Suspense>
+            ),
+          },
+          {
             path: "wallet",
             element: (
               <Suspense fallback={<Loading />}>
-                <Wallet />
+                <Account />
+              </Suspense>
+            ),
+          },
+          {
+            path: "refer",
+            element: (
+              <Suspense fallback={<Loading />}>
+                <Refer />
               </Suspense>
             ),
           },
         ],
-      },
-
-      {
-        path: "account",
-        element: (
-          <Suspense fallback={<Loading />}>
-            <Account />
-          </Suspense>
-        ),
-      },
-      {
-        path: "refer",
-        element: (
-          <Suspense fallback={<Loading />}>
-            <Refer />
-          </Suspense>
-        ),
       },
 
       {
