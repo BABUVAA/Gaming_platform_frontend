@@ -103,7 +103,7 @@ const Profile = () => {
     const activeGameStats = gameStats[activeTab];
 
     return (
-      <div className="career-statistics-wrapper  bg-gradient-to-b from-blue-50 to-blue-100 ">
+      <div className="career-statistics-wrapper mb-6 bg-gradient-to-b from-blue-50 to-blue-100 ">
         {/* Container */}
         <div className="career-statistics  bg-white p-8 rounded-lg shadow-lg mx-auto">
           <h3 className="text-2xl font-semibold text-gray-800 mb-4">
@@ -164,8 +164,8 @@ const Profile = () => {
 
   // Section 3: Active Tournaments
   const ActiveTournaments = () => (
-    <div className="active-tournaments-wrapper bg-gradient-to-b from-purple-50 to-purple-100 ">
-      <div className="active-tournaments bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+    <div className="active-tournaments-wrapper mb-6 bg-gradient-to-b from-purple-50 to-purple-100 ">
+      <div className="active-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">
         <h3 className="text-2xl font-semibold text-gray-800 mb-4">
           Active Tournaments
         </h3>
@@ -195,7 +195,7 @@ const Profile = () => {
   // Section 4: Past Tournaments
   const PastTournaments = () => (
     <div className="past-tournaments-wrapper bg-gradient-to-b from-blue-50 to-blue-100 mb-12">
-      <div className="past-tournaments bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+      <div className="past-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">
         <h3 className="text-2xl font-semibold text-gray-800 mb-4">
           Past Tournaments
         </h3>
