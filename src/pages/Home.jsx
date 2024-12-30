@@ -41,7 +41,7 @@ const IntroSection = () => {
               E-GAMING
             </span>
           </h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-8 max-w-md">
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-4 max-w-md">
             Play the games you love. Compete in tournaments. Win real money and
             prizes.
           </p>
@@ -70,8 +70,8 @@ const AvailableGameSection = () => {
   const games = useSelector((store) => store.games);
   return (
     <section className="flex bg-slate-100 text-left lg:justify-center">
-      <div className="flex flex-col w-full lg:max-w-screen-lg py-16 md:p-16  p-4">
-        <h2 className="text-xl font-bold text-black mb-8">Available Games</h2>
+      <div className="flex flex-col w-full lg:max-w-screen-lg py-4 md:p-8  p-4">
+        <h2 className="text-xl font-bold text-black mb-4">Available Games</h2>
         <div className="grid grid-cols-2 sm:grid-cols-2  lg:grid-cols-3 gap-4">
           {games?.data?.length > 0 &&
             games.data.map((game) => (
