@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { verifySession, login, logout, register } from "./authSlice";
+import { fetchGames } from "./gameSlice";
 
 // Loading slice
 const loadingSlice = createSlice({
@@ -48,6 +49,12 @@ const loadingSlice = createSlice({
         state.globalLoading = false;
       })
       .addCase(register.rejected, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(fetchGames.pending, (state) => {
+        state.globalLoading = true;
+      })
+      .addCase(fetchGames.fulfilled, (state) => {
         state.globalLoading = false;
       });
   },

@@ -83,6 +83,9 @@ const authSlice = createSlice({
     error: null,
   },
   reducers: {
+    setAuthenticated: (state, action) => {
+      state.isAuthenticated = action.payload;
+    },
     resetError: (state) => {
       state.error = null;
     },
@@ -93,10 +96,13 @@ const authSlice = createSlice({
       .addCase(verifySession.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.error = null;
       })
       .addCase(verifySession.rejected, (state, action) => {
         state.user = null;
         state.isAuthenticated = false;
+        state.user = null;
+        state.profile = null;
         state.error = action.payload;
       })
       .addCase(logout.fulfilled, (state) => {

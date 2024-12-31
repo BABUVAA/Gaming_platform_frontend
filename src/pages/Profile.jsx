@@ -3,10 +3,16 @@ import { CiInstagram } from "react-icons/ci";
 import { FaYoutube } from "react-icons/fa";
 import { IoIosAdd } from "react-icons/io";
 import { FcLikePlaceholder } from "react-icons/fc";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import api from "../api/axios-api";
 
 const Profile = () => {
   const { user } = useSelector((store) => store.auth);
+
+  useEffect(() => {
+    const response = api.get("/api/users/profile");
+    console.log(response);
+  });
 
   // Example data, replace with actual data from user profile
   const games = ["pubg", "Coc", "valorant", "fortnite"];

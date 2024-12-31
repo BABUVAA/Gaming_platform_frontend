@@ -4,21 +4,22 @@ import { useEffect } from "react";
 import { Header } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Outlet } from "react-router-dom";
-import { verifySession } from "../store/authSlice";
+import { authAction, verifySession } from "../store/authSlice";
 
 function App() {
   const dispatch = useDispatch();
-  const { loading } = useSelector((store) => store.games);
-  const { isAuthenticated, isLoading, user } = useSelector(
-    (store) => store.auth
-  );
+  const { globalLoading } = useSelector((store) => store.loading);
+  const { isAuthenticated } = useSelector((store) => store.auth);
 
   useEffect(() => {
+    // Fetch games regardless of authentication status
+    if (isAuthenticated) {
+      dispatch(verifySession());
+    }
     dispatch(fetchGames());
-    !isAuthenticated ? dispatch(verifySession()) : "";
-  }, [dispatch]);
-  //if games data loadings
-  if (loading || isLoading) {
+  }, []);
+  // Show loading spinner while fetching data
+  if (globalLoading) {
     return <LoadingSpinner />;
   }
 
