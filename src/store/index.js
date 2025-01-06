@@ -6,6 +6,7 @@ import loadingSlice from "./loadingSlice";
 import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import { combineReducers } from "@reduxjs/toolkit";
+import transactionSlice from "./transactionSlice";
 
 const persistConfig = {
   key: "root",
@@ -18,6 +19,7 @@ const reducer = combineReducers({
   games: gameSlice.reducer,
   tournament: TournamentSlice.reducer,
   loading: loadingSlice.reducer,
+  transactions: transactionSlice.reducer,
 });
 
 // const platformStore = configureStore({

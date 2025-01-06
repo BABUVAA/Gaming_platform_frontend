@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "tailwindcss/tailwind.css";
 
 const Clan = () => {
-  const [activeMainTab, setActiveMainTab] = useState("createClan"); // Default: "createClan" or "myClan"
+  const [activeMainTab, setActiveMainTab] = useState("createClan");
   const [activeSearchTab, setActiveSearchTab] = useState("searchClans");
   const [activeSocialTab, setActiveSocialTab] = useState("friends");
   const isInClan = false; // Replace with actual logic to check if the player is in a clan.
@@ -12,9 +12,9 @@ const Clan = () => {
   const handleSocialTabChange = (tab) => setActiveSocialTab(tab);
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
+    <div className="max-w-5xl mx-auto p-6 bg-gray-50 rounded-lg shadow-lg">
       {/* Main Tabs */}
-      <div className="flex justify-between bg-gray-800 text-white rounded-t-lg">
+      <div className="flex justify-between bg-gray-800 text-white rounded-lg shadow-md">
         {[
           {
             id: isInClan ? "myClan" : "createClan",
@@ -26,9 +26,9 @@ const Clan = () => {
           <button
             key={tab.id}
             onClick={() => handleMainTabChange(tab.id)}
-            className={`flex-1 p-3 text-center font-bold ${
+            className={`flex-1 p-4 text-center font-semibold transition duration-200 ${
               activeMainTab === tab.id ? "bg-gray-700" : "hover:bg-gray-600"
-            }`}
+            } rounded-lg`}
           >
             {tab.label}
           </button>
@@ -36,7 +36,7 @@ const Clan = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-gray-100 p-6 rounded-b-lg shadow-md">
+      <div className="bg-white p-6 rounded-lg shadow-md mt-4">
         {activeMainTab === "createClan" && <CreateClan />}
         {activeMainTab === "myClan" && <MyClan />}
         {activeMainTab === "searchClan" && (
@@ -58,19 +58,22 @@ const Clan = () => {
 
 const CreateClan = () => (
   <div>
-    <h2 className="text-xl font-bold mb-4">Create Clan</h2>
-    <form className="bg-white p-4 rounded-lg shadow">
+    <h2 className="text-2xl font-bold mb-4">Create Clan</h2>
+    <form className="bg-gray-100 p-6 rounded-lg shadow">
       <div className="mb-4">
         <label className="block mb-1 text-gray-700">Clan Name</label>
-        <input type="text" className="w-full p-2 border rounded" />
+        <input
+          type="text"
+          className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
       <div className="mb-4">
         <label className="block mb-1 text-gray-700">Description</label>
-        <textarea className="w-full p-2 border rounded"></textarea>
+        <textarea className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
       </div>
       <div className="mb-4">
         <label className="block mb-1 text-gray-700">Clan Type</label>
-        <select className="w-full p-2 border rounded">
+        <select className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option>Anyone Can Join</option>
           <option>Invite Only</option>
           <option>Closed</option>
@@ -80,17 +83,20 @@ const CreateClan = () => (
         <label className="block mb-1 text-gray-700">
           Minimum Level to Join
         </label>
-        <input type="number" className="w-full p-2 border rounded" />
+        <input
+          type="number"
+          className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
       <div className="mb-4">
         <label className="block mb-1 text-gray-700">Location</label>
-        <select className="w-full p-2 border rounded">
+        <select className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
           <option>Delhi</option>
           <option>Maharashtra</option>
           <option>Kerala</option>
         </select>
       </div>
-      <button className="bg-green-500 text-white px-4 py-2 rounded">
+      <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200">
         Create Clan
       </button>
     </form>
@@ -99,10 +105,10 @@ const CreateClan = () => (
 
 const MyClan = () => (
   <div>
-    <h2 className="text-xl font-bold mb-4">My Clan</h2>
-    <div className="bg-white p-4 rounded-lg shadow">
+    <h2 className="text-2xl font-bold mb-4">My Clan</h2>
+    <div className="bg-white p-6 rounded-lg shadow">
       <h3 className="text-lg font-semibold">Clan Name</h3>
-      <p>#CLAN_TAG</p>
+      <p className="text-xl font-bold">#CLAN_TAG</p>
       <p className="text-gray-600">Description: Amazing Clan!</p>
     </div>
   </div>
@@ -118,7 +124,7 @@ const SearchClan = ({ activeTab, setActiveTab }) => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`px-4 py-2 font-semibold ${
+          className={`px-4 py-2 font-semibold transition duration-200 ${
             activeTab === tab.id
               ? "border-b-2 border-blue-500 text-blue-500"
               : "text-gray-500 hover:text-blue-500"
@@ -139,9 +145,9 @@ const SearchClans = () => (
     <input
       type="text"
       placeholder="Search by Clan Name or Tag"
-      className="w-full p-2 border rounded mb-4"
+      className="w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
     />
-    <p>Filters go here...</p>
+    <p className="text-gray-600">Filters go here...</p>
   </div>
 );
 
@@ -163,7 +169,7 @@ const Social = ({ activeTab, setActiveTab }) => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`px-4 py-2 font-semibold ${
+          className={`px-4 py-2 font-semibold transition duration-200 ${
             activeTab === tab.id
               ? "border-b-2 border-blue-500 text-blue-500"
               : "text-gray-500 hover:text-blue-500"

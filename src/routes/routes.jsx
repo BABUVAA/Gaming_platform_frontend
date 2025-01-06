@@ -128,7 +128,7 @@ const routes = createBrowserRouter([
             path: "wallet",
             element: (
               <Suspense fallback={<Loading />}>
-                <Account />
+                <Wallet />
               </Suspense>
             ),
           },
