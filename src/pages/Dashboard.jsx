@@ -7,10 +7,12 @@ import { user_profile } from "../store/authSlice";
 const Dashboard = () => {
   const games = useSelector((store) => store.games);
   const userId = useSelector((store) => store.auth.user); // Select user ID from state
+  console.log(userId);
+  const { isAuthenticated } = useSelector((store) => store.auth);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (userId) {
+    if (userId && isAuthenticated) {
       dispatch(user_profile());
       
     }
