@@ -232,7 +232,7 @@ const Profile = () => {
     </div>
   );
   return (
-    <div className="profile-container bg-gray-100 p-6 gap-1">
+    <div className="profile-container bg-gray-100 p-2 gap-1">
       <ProfileHeader profile={profile} />
       <CareerStatistics />
       <ActiveTournaments />

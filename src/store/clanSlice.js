@@ -24,8 +24,9 @@ export const fetchUserClan = createAsyncThunk(
       if (!response) {
         throw new Error("Failed to fetch clan data");
       }
-      const data = await response.json();
-      return data; // return data to be used in the reducer
+      console.log("fetch user clan");
+      console.log(response.data);
+      return response.data; // return data to be used in the reducer
     } catch (error) {
       return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
     }
@@ -37,7 +38,7 @@ const clanSlice = createSlice({
   name: "clan",
   initialState: {
     createClanData: {},
-    userClanData: {},
+    userClanData: null,
     searchClanData: {},
     loading: false, // Tracks loading state
     error: null, // Tracks any error

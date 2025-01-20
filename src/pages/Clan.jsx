@@ -19,12 +19,13 @@ const Clan = () => {
   const [activeSocialTab, setActiveSocialTab] = useState("friends");
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !userClanData) {
+      dispatch(fetchUserClan());
     }
-  }, []); // Only run when isAuthenticated changes
+  }, [dispatch]); // Only run when isAuthenticated changes
 
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-gray-50 rounded-lg shadow-lg">
+    <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg shadow-lg mb-12">
       {/* Main Tabs */}
       <div className="flex justify-between bg-gray-800 text-white rounded-lg shadow-md">
         {[
@@ -50,7 +51,7 @@ const Clan = () => {
       {/* Tab Content */}
       <div className="bg-white rounded-lg shadow-md mt-4">
         {activeMainTab === "createClan" && <CreateClan state={states} />}
-        {activeMainTab === "myClan" && <MyClan clan={userClanData} />}
+        {activeMainTab === "myClan" && <MyClan />}
         {activeMainTab === "searchClan" && (
           <SearchClan
             activeTab={activeSearchTab}
@@ -159,7 +160,7 @@ const MyClan = () => {
       </div>
     );
   }
-
+  const clanData = userClanData.data;
   return (
     <div className=" max-w-7xl mx-auto bg-gray-50">
       <div className="flex flex-col md:flex-row min-h-[360px] shadow-lg rounded-lg overflow-hidden bg-white">
@@ -201,9 +202,9 @@ const MyClan = () => {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-4xl font-semibold text-gray-800">
-                {userClanData.clanName}
+                {clanData.clanName}
               </h2>
-              <p className="text-xl text-gray-500">{userClanData.tag}</p>
+              <p className="text-xl text-gray-500">{clanData.tag}</p>
             </div>
             <div className="flex items-center space-x-4">
               <FaBookmark
@@ -223,7 +224,7 @@ const MyClan = () => {
               <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
                 {/* Clan Bio */}
                 <div className="md:w-3/4 text-gray-700">
-                  <p className="text-lg">{userClanData.bio}</p>
+                  <p className="text-lg">{clanData.bio}</p>
                 </div>
               </div>
 
@@ -231,21 +232,21 @@ const MyClan = () => {
               <div className="mt-6 border-t pt-6 space-y-4">
                 <p>
                   <span className="font-semibold text-gray-600">Location:</span>{" "}
-                  {userClanData.location}
+                  {clanData.location}
                 </p>
                 <p>
                   <span className="font-semibold text-gray-600">Leader:</span>{" "}
-                  {userClanData.leader?.playerName}
+                  {clanData.leader?.playerName}
                 </p>
                 <p>
                   <span className="font-semibold text-gray-600">Members:</span>{" "}
-                  {userClanData.members?.length}
+                  {clanData.members?.length}
                 </p>
                 <p>
                   <span className="font-semibold text-gray-600">
                     Created At:
                   </span>{" "}
-                  {new Date(userClanData.createdAt).toLocaleDateString()}
+                  {new Date(clanData.createdAt).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -255,26 +256,24 @@ const MyClan = () => {
           {activeTab === "stats" && (
             <div className="bg-white rounded-lg">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                <div className="mt-6 border-t pt-6 space-y-4">
                   <p>
                     <span className="font-semibold text-gray-600">
                       Wars Won:
                     </span>{" "}
-                    {userClanData.stats?.warsWon}
+                    {clanData.stats?.warsWon}
                   </p>
                   <p>
                     <span className="font-semibold text-gray-600">
                       War Win Streak:
                     </span>{" "}
-                    {userClanData.stats?.warWinStreak}
+                    {clanData.stats?.warWinStreak}
                   </p>
-                </div>
-                <div className="text-right">
                   <p>
                     <span className="font-semibold text-gray-600">
                       War Frequency:
                     </span>{" "}
-                    {userClanData.stats?.warFrequency}
+                    {clanData.stats?.warFrequency}
                   </p>
                 </div>
               </div>
@@ -289,7 +288,7 @@ const MyClan = () => {
           Clan Members
         </h3>
         <ul className="space-y-4">
-          {userClanData.members?.map((member, index) => (
+          {clanData.members?.map((member, index) => (
             <li key={index} className="flex justify-between items-center">
               <div>
                 <span className="text-lg font-semibold">
