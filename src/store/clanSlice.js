@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api"; // Ensure you have the correct axios instance
+import { logout } from "./authSlice";
 
 // Async thunk to fetch all games from the server
 export const createClan = createAsyncThunk(
@@ -14,15 +15,19 @@ export const createClan = createAsyncThunk(
   }
 );
 
-// Async thunk to fetch all games from the server
+// Async thunk to fetch clan data
 export const fetchUserClan = createAsyncThunk(
-  "/auth/clan/fetch",
-  async (_, { rejectWithValue }) => {
+  "clan/fetchUserClan", // action type
+  async (_, thunkAPI) => {
     try {
       const response = await api.get("/api/clan/fetchClan");
-      return response.data;
+      if (!response) {
+        throw new Error("Failed to fetch clan data");
+      }
+      const data = await response.json();
+      return data; // return data to be used in the reducer
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
     }
   }
 );
@@ -59,6 +64,12 @@ const clanSlice = createSlice({
       .addCase(fetchUserClan.rejected, (state, action) => {
         state.error = action.payload;
         state.userClanData = null;
+      })
+      .addCase(logout.fulfilled, (state, action) => {
+        state.userClanData = {};
+        state.searchClanData = {};
+        state.createClanData = {};
+        state.error = "";
       });
   },
 });

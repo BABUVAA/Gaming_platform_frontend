@@ -1,21 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { states } from "../utils/states";
 import { Form } from "react-router-dom";
 import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
-import { createClan } from "../store/clanSlice";
+import { createClan, fetchUserClan } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 
 const Clan = () => {
-  const { profile } = useSelector((store) => store.auth);
+  const { profile, isAuthenticated } = useSelector((store) => store.auth);
   const { userClanData } = useSelector((store) => store.clan);
 
+  const dispatch = useDispatch();
   const [activeMainTab, setActiveMainTab] = useState(
     profile.clan ? "myClan" : "createClan"
   );
   const [activeSearchTab, setActiveSearchTab] = useState("searchClans");
   const [activeSocialTab, setActiveSocialTab] = useState("friends");
+
+  useEffect(() => {
+    if (isAuthenticated) {
+    }
+  }, []); // Only run when isAuthenticated changes
 
   return (
     <div className="max-w-5xl mx-auto p-6 bg-gray-50 rounded-lg shadow-lg">
@@ -305,7 +311,7 @@ const MyClan = () => {
 };
 
 const SearchClan = ({ activeTab, setActiveTab }) => (
-  <div>
+  <div className="p-6">
     <TabNavigation
       tabs={[
         { id: "searchClans", label: "Search Clans" },
@@ -320,7 +326,7 @@ const SearchClan = ({ activeTab, setActiveTab }) => (
 );
 
 const SearchClans = () => (
-  <div>
+  <div className="p-6">
     <h2 className="text-lg font-bold mb-4">Search Clans</h2>
     <input
       type="text"
@@ -332,14 +338,14 @@ const SearchClans = () => (
 );
 
 const BookmarkedClans = () => (
-  <div>
+  <div className="p-6">
     <h2 className="text-lg font-bold mb-4">Bookmarked Clans</h2>
     <p>No bookmarked clans yet.</p>
   </div>
 );
 
 const Social = ({ activeTab, setActiveTab }) => (
-  <div>
+  <div className="p-6">
     <TabNavigation
       tabs={[
         { id: "friends", label: "Friends" },
@@ -358,7 +364,6 @@ const Social = ({ activeTab, setActiveTab }) => (
 const Friends = () => <p>No friends yet.</p>;
 const FriendRequests = () => <p>No friend requests yet.</p>;
 const SearchPlayers = () => <p>Search players by their tag.</p>;
-
 const TabNavigation = ({ tabs, activeTab, setActiveTab }) => (
   <div className="border-b mb-4">
     {tabs.map((tab) => (

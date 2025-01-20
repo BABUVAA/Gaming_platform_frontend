@@ -4,19 +4,26 @@ import { useEffect } from "react";
 import { Header } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Outlet } from "react-router-dom";
-import { authAction, verifySession } from "../store/authSlice";
+import { verifySession } from "../store/authSlice";
 
 function App() {
   const dispatch = useDispatch();
+
   const { globalLoading } = useSelector((store) => store.loading);
   const { isAuthenticated } = useSelector((store) => store.auth);
 
   useEffect(() => {
-    // Fetch games regardless of authentication status
-    if (isAuthenticated) {
-      dispatch(verifySession());
-    }
-    dispatch(fetchGames());
+    const fetchData = async () => {
+      try {
+        if (isAuthenticated) {
+          await dispatch(verifySession());
+        }
+        await dispatch(fetchGames());
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
   }, []);
 
   // Show loading spinner while fetching data

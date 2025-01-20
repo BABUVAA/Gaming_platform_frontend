@@ -1,13 +1,20 @@
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { CiInstagram } from "react-icons/ci";
 import { FaYoutube } from "react-icons/fa";
 import { IoIosAdd } from "react-icons/io";
 import { FcLikePlaceholder } from "react-icons/fc";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { user_profile } from "../store/authSlice";
 
 const Profile = () => {
-  const { profile } = useSelector((store) => store.auth);
+  const { profile, isAuthenticated } = useSelector((store) => store.auth);
+  const dispatch = useDispatch();
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(user_profile());
+    }
+  }, [dispatch]);
   // Example data, replace with actual data from user profile
   const games = ["pubg", "Coc", "valorant", "fortnite"];
   const tournamentStats = {
