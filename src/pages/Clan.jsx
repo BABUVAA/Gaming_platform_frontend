@@ -5,6 +5,7 @@ import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
 import { createClan } from "../store/clanSlice";
+import { FaBookmark, FaShareAlt } from "react-icons/fa";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
@@ -41,7 +42,7 @@ const Clan = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white p-6 rounded-lg shadow-md mt-4">
+      <div className="bg-white rounded-lg shadow-md mt-4">
         {activeMainTab === "createClan" && <CreateClan state={states} />}
         {activeMainTab === "myClan" && <MyClan clan={userClanData} />}
         {activeMainTab === "searchClan" && (
@@ -143,6 +144,7 @@ const CreateClan = ({ state }) => {
 
 const MyClan = () => {
   const { userClanData } = useSelector((store) => store.clan);
+  const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
 
   if (!userClanData) {
     return (
@@ -153,75 +155,147 @@ const MyClan = () => {
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      {/* Clan Header */}
-      <div className="flex items-center space-x-4 bg-gray-100 p-6 rounded-lg shadow">
-        {/* Replace the placeholder with dynamic badge when available */}
-        <img
-          src={`/assets/badges/${userClanData.badge || "default.png"}`} // Dynamic badge image
-          alt="Clan Badge"
-          className="w-16 h-16"
-        />
-        <div>
-          <h2 className="text-2xl font-bold">{userClanData.clanName}</h2>
-          <p className="text-gray-500 font-medium">{userClanData.tag}</p>
-          <p className="text-gray-600">{userClanData.bio}</p>
+    <div className=" max-w-7xl mx-auto bg-gray-50">
+      <div className="flex flex-col md:flex-row min-h-[360px] shadow-lg rounded-lg overflow-hidden bg-white">
+        {/* Tabs Section (Vertical on tablets and larger) */}
+        <div className="md:w-1/4 flex md:flex-col gap-1 p-1 bg-gray-200 rounded-lg md:rounded-none md:shadow-md">
+          <button
+            className={`flex items-center justify-center p-4 w-full transition-all duration-300 rounded-lg ${
+              activeTab === "badge"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-blue-100"
+            }`}
+            onClick={() => setActiveTab("badge")}
+          >
+            <img
+              src="/clan-badge.png" // Clan Badge
+              alt="Clan Badge"
+              className="w-12 h-12 object-contain"
+            />
+          </button>
+          <button
+            className={`flex items-center justify-center p-4 w-full transition-all duration-300 rounded-lg ${
+              activeTab === "stats"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-blue-100"
+            }`}
+            onClick={() => setActiveTab("stats")}
+          >
+            <img
+              src="/bar-chart.png" // Placeholder for statistics image
+              alt="Clan Statistics"
+              className="w-12 h-12 object-contain"
+            />
+          </button>
+        </div>
+
+        {/* Content Section (Bio and Details) */}
+        <div className="md:w-3/4 py-6 px-6">
+          {/* Clan Info */}
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-4xl font-semibold text-gray-800">
+                {userClanData.clanName}
+              </h2>
+              <p className="text-xl text-gray-500">{userClanData.tag}</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <FaBookmark
+                size={24}
+                className="text-gray-600 hover:text-blue-500 cursor-pointer"
+              />
+              <FaShareAlt
+                size={24}
+                className="text-gray-600 hover:text-blue-500 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* First Tab - Clan Info (Badge Tab) */}
+          {activeTab === "badge" && (
+            <div className="bg-white rounded-lg">
+              <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+                {/* Clan Bio */}
+                <div className="md:w-3/4 text-gray-700">
+                  <p className="text-lg">{userClanData.bio}</p>
+                </div>
+              </div>
+
+              {/* Clan Details */}
+              <div className="mt-6 border-t pt-6 space-y-4">
+                <p>
+                  <span className="font-semibold text-gray-600">Location:</span>{" "}
+                  {userClanData.location}
+                </p>
+                <p>
+                  <span className="font-semibold text-gray-600">Leader:</span>{" "}
+                  {userClanData.leader?.playerName}
+                </p>
+                <p>
+                  <span className="font-semibold text-gray-600">Members:</span>{" "}
+                  {userClanData.members?.length}
+                </p>
+                <p>
+                  <span className="font-semibold text-gray-600">
+                    Created At:
+                  </span>{" "}
+                  {new Date(userClanData.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Second Tab - Clan Statistics */}
+          {activeTab === "stats" && (
+            <div className="bg-white rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p>
+                    <span className="font-semibold text-gray-600">
+                      Wars Won:
+                    </span>{" "}
+                    {userClanData.stats?.warsWon}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-gray-600">
+                      War Win Streak:
+                    </span>{" "}
+                    {userClanData.stats?.warWinStreak}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p>
+                    <span className="font-semibold text-gray-600">
+                      War Frequency:
+                    </span>{" "}
+                    {userClanData.stats?.warFrequency}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Clan Details */}
-      <div className="mt-6 bg-white p-6 rounded-lg shadow">
-        <h3 className="text-xl font-bold mb-4">Clan Details</h3>
-        <p>
-          <span className="font-medium">Location:</span> {userClanData.location}
-        </p>
-        <p>
-          <span className="font-medium">Leader:</span>{" "}
-          {userClanData.leader?.playerName}
-        </p>
-        <p>
-          <span className="font-medium">Created At:</span>{" "}
-          {new Date(userClanData.createdAt).toLocaleDateString()}
-        </p>
-      </div>
-
-      {/* Clan Stats */}
-      <div className="mt-6 bg-white p-6 rounded-lg shadow">
-        <h3 className="text-xl font-bold mb-4">Clan Stats</h3>
-        <p>
-          <span className="font-medium">League:</span>{" "}
-          {userClanData.stats?.league}
-        </p>
-        <p>
-          <span className="font-medium">Type:</span> {userClanData.stats?.type}
-        </p>
-        <p>
-          <span className="font-medium">Max Members:</span>{" "}
-          {userClanData.stats?.maxMembers}
-        </p>
-        <p>
-          <span className="font-medium">Required Level:</span>{" "}
-          {userClanData.stats?.requiredLevel}
-        </p>
-        <p>
-          <span className="font-medium">War Frequency:</span>{" "}
-          {userClanData.stats?.warFrequency}
-        </p>
-      </div>
-
-      {/* Clan Members */}
-      <div className="mt-6 bg-white p-6 rounded-lg shadow">
-        <h3 className="text-xl font-bold mb-4">Members</h3>
-        <ul>
-          {userClanData.members?.map((member) => (
-            <li
-              key={member.user}
-              className="flex items-center justify-between py-2 border-b"
-            >
-              <span>
-                {member.playerName} ({member.playerTag})
-              </span>
-              <span className="text-gray-500 text-sm">{member.role}</span>
+      {/* Member List Section */}
+      <div className="bg-white p-6 rounded-lg mt-6 shadow-lg">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+          Clan Members
+        </h3>
+        <ul className="space-y-4">
+          {userClanData.members?.map((member, index) => (
+            <li key={index} className="flex justify-between items-center">
+              <div>
+                <span className="text-lg font-semibold">
+                  {member.playerName}
+                </span>
+                <p className="text-gray-600">{member.role}</p>
+              </div>
+              <div>
+                <button className="text-blue-500 hover:underline">
+                  Profile
+                </button>
+              </div>
             </li>
           ))}
         </ul>
