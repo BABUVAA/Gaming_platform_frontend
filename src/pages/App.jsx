@@ -18,6 +18,7 @@ function App() {
     }
     dispatch(fetchGames());
   }, []);
+
   // Show loading spinner while fetching data
   if (globalLoading) {
     return <LoadingSpinner />;

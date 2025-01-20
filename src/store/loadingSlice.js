@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { verifySession, login, logout, register } from "./authSlice";
 import { fetchGames } from "./gameSlice";
+import { createClan, fetchUserClan } from "./clanSlice";
 
 // Loading slice
 const loadingSlice = createSlice({
@@ -55,6 +56,27 @@ const loadingSlice = createSlice({
         state.globalLoading = true;
       })
       .addCase(fetchGames.fulfilled, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(fetchGames.rejected, (state, action) => {
+        state.globalLoading = false;
+      })
+      .addCase(createClan.pending, (state, action) => {
+        state.globalLoading = true;
+      })
+      .addCase(createClan.fulfilled, (state, action) => {
+        state.globalLoading = false;
+      })
+      .addCase(createClan.rejected, (state, action) => {
+        state.globalLoading = false;
+      })
+      .addCase(fetchUserClan.pending, (state, action) => {
+        state.globalLoading = true;
+      })
+      .addCase(fetchUserClan.fulfilled, (state, action) => {
+        state.globalLoading = false;
+      })
+      .addCase(fetchUserClan.rejected, (state, action) => {
         state.globalLoading = false;
       });
   },

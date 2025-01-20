@@ -36,7 +36,7 @@ const Login = () => {
             name="email"
             type="email"
             placeholder="Email"
-            label="Username"
+            label="Email"
             ariaLabel="Email"
             className="text-gray-700"
           />

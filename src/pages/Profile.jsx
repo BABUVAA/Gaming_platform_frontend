@@ -3,16 +3,10 @@ import { CiInstagram } from "react-icons/ci";
 import { FaYoutube } from "react-icons/fa";
 import { IoIosAdd } from "react-icons/io";
 import { FcLikePlaceholder } from "react-icons/fc";
-import { useEffect, useState } from "react";
-import api from "../api/axios-api";
+import { useState } from "react";
 
 const Profile = () => {
-  const { user } = useSelector((store) => store.auth);
-
-  useEffect(() => {
-    const response = api.get("/api/users/profile");
-    console.log(response);
-  });
+  const { profile } = useSelector((store) => store.auth);
 
   // Example data, replace with actual data from user profile
   const games = ["pubg", "Coc", "valorant", "fortnite"];
@@ -33,7 +27,7 @@ const Profile = () => {
   ];
 
   //Section 1: Profile Information
-  const ProfileHeader = () => (
+  const ProfileHeader = ({ profile }) => (
     <div className="bg-white  relative rounded-lg mb-6 overflow-hidden h-[300px]">
       {/* Banner */}
       <div
@@ -56,7 +50,7 @@ const Profile = () => {
           />
           {/* Username */}
           <h2 className="text-xl font-bold text-black">
-            {user?.username || "Player"}
+            {profile?.profile.username || "Player"}
           </h2>
         </div>
 
@@ -232,7 +226,7 @@ const Profile = () => {
   );
   return (
     <div className="profile-container bg-gray-100 p-6 gap-1">
-      <ProfileHeader />
+      <ProfileHeader profile={profile} />
       <CareerStatistics />
       <ActiveTournaments />
       <PastTournaments />

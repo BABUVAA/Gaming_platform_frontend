@@ -62,11 +62,11 @@ export const register = createAsyncThunk(
 );
 
 // Async thunk for user Profile
-export const profile = createAsyncThunk(
+export const user_profile = createAsyncThunk(
   "users/profile",
-  async (userData, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const response = await api.post("/api/auth/profile");
+      const response = await api.get("/api/users/profile");
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -126,6 +126,12 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
       })
       .addCase(register.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      .addCase(user_profile.fulfilled, (state, action) => {
+        state.profile = action.payload;
+      })
+      .addCase(user_profile.rejected, (state, action) => {
         state.error = action.payload;
       });
   },
