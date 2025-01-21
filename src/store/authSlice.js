@@ -6,11 +6,9 @@ export const verifySession = createAsyncThunk(
   "auth/verifySession",
   async (_, { rejectWithValue }) => {
     try {
-      console.log("verifying");
       const response = await api.post("/api/auth/verifySession", {
         withCredentials: true,
       });
-      console.log("verified");
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);

@@ -24,8 +24,6 @@ export const fetchUserClan = createAsyncThunk(
       if (!response) {
         throw new Error("Failed to fetch clan data");
       }
-      console.log("fetch user clan");
-      console.log(response.data);
       return response.data; // return data to be used in the reducer
     } catch (error) {
       return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
