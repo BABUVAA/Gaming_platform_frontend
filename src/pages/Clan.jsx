@@ -4,7 +4,12 @@ import { Form } from "react-router-dom";
 import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
-import { createClan, fetchUserClan, searchClan } from "../store/clanSlice";
+import {
+  createClan,
+  fetchUserClan,
+  leaveClan,
+  searchClan,
+} from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 import { user_profile } from "../store/authSlice";
 
@@ -31,7 +36,7 @@ const Clan = () => {
     setLoading(true);
     const fetchClan = async () => {
       try {
-        if (userClanData === null) {
+        if (profile?.clan?._id && userClanData === null) {
           await dispatch(fetchUserClan());
         }
       } catch (error) {
@@ -176,8 +181,13 @@ const CreateClan = ({ state }) => {
 const MyClan = () => {
   const { userClanData } = useSelector((store) => store.clan);
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
+  const dispatch = useDispatch();
+  const handleLeave = async () => {
+    await dispatch(leaveClan());
+  };
 
   let clanData = userClanData?.data;
+
   useEffect(() => {
     clanData = userClanData?.data;
   }, [userClanData]);
@@ -320,7 +330,10 @@ const MyClan = () => {
         <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
           Send Mail
         </button>
-        <button className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+        <button
+          onClick={handleLeave}
+          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+        >
           Leave
         </button>
       </div>
@@ -374,7 +387,7 @@ const SearchClans = () => {
   const { searchClanData } = useSelector((store) => store.clan);
   const [input, setInput] = useState("");
   const dispatch = useDispatch();
-
+  console.log(searchClanData);
   const handleSearch = () => {
     try {
       dispatch(searchClan({ clanTag: input }));
@@ -400,9 +413,7 @@ const SearchClans = () => {
 
       {searchClanData && (
         <div className="mt-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <div
-            className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
-          >
+          <div className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
             <img
               src={`/${searchClanData?.data?.badge}`} // Assuming `badge` is a URL or image path
               alt="Clan Badge"
@@ -411,7 +422,9 @@ const SearchClans = () => {
             <h4 className="text-xl font-semibold text-center">
               {searchClanData?.data?.clanName}
             </h4>
-            <p className="text-sm text-center text-gray-600">{searchClanData?.data?.clanTag}</p>
+            <p className="text-sm text-center text-gray-600">
+              {searchClanData?.data?.clanTag}
+            </p>
             <p className="text-sm text-center text-gray-500">
               {searchClanData?.data?.stats?.type}
             </p>
