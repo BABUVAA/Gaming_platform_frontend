@@ -35,7 +35,7 @@ export const fetchUserClan = createAsyncThunk(
 const clanSlice = createSlice({
   name: "clan",
   initialState: {
-    createClanData: {},
+    createClanData: "",
     userClanData: null,
     searchClanData: {},
     loading: false, // Tracks loading state
@@ -45,7 +45,8 @@ const clanSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(createClan.fulfilled, (state, action) => {
-        state.createClanData = action.payload;
+        state.createClanData = "clan Created";
+        state.userClanData = action.payload;
       })
       .addCase(createClan.pending, (state, action) => {
         state.createClanData = "Creating Clan....";

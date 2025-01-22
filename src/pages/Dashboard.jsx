@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { SideBar } from "../components";
 import { Outlet } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchUserClan } from "../store/clanSlice";
 import { user_profile } from "../store/authSlice";
 import LoadingSpinner from "../components/common/LoadingSpinner";

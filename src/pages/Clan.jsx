@@ -6,15 +6,20 @@ import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
 import { createClan } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
+import { user_profile } from "../store/authSlice";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
-
   const [activeMainTab, setActiveMainTab] = useState(
     profile?.clan ? "myClan" : "createClan"
   );
+
   const [activeSearchTab, setActiveSearchTab] = useState("searchClans");
   const [activeSocialTab, setActiveSocialTab] = useState("friends");
+
+  useEffect(() => {
+    setActiveMainTab(profile?.clan ? "myClan" : "createClan");
+  }, [profile]);
 
   return (
     <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg shadow-lg mb-12">
@@ -69,10 +74,13 @@ const CreateClan = ({ state }) => {
     try {
       const response = await dispatch(createClan(clanData))
         .unwrap()
-        .then(() => {
+        .then(async () => {
+          await dispatch(user_profile());
           alert("clan created successfully");
         });
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
