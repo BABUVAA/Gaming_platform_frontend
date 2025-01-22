@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import React, { lazy, Suspense } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSelector } from "react-redux";
@@ -29,7 +29,7 @@ const ProtectedRoute = ({ children }) => {
 
 const LandingPage = () => {
   const { isAuthenticated } = useSelector((store) => store.auth);
-  return isAuthenticated ? <Dashboard /> : <Home />;
+  return isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/home" />;
 };
 
 // Add the routes with lazy-loaded components
@@ -47,6 +47,14 @@ const routes = createBrowserRouter([
         element: (
           <Suspense fallback={<Loading />}>
             <LandingPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "home",
+        element: (
+          <Suspense fallback={<Loading />}>
+            <Home />
           </Suspense>
         ),
       },
