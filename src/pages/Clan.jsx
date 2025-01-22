@@ -4,12 +4,13 @@ import { Form } from "react-router-dom";
 import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
-import { createClan, fetchUserClan } from "../store/clanSlice";
+import { createClan, fetchUserClan, searchClan } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 import { user_profile } from "../store/authSlice";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
+  const { userClanData } = useSelector((store) => store.clan);
   const [activeMainTab, setActiveMainTab] = useState(
     profile?.clan ? "myClan" : "createClan"
   );
@@ -21,8 +22,30 @@ const Clan = () => {
     setActiveMainTab(profile?.clan ? "myClan" : "createClan");
   }, [profile]);
 
+  const { globalLoading } = useSelector((store) => store.loading);
+  const [loading, setLoading] = useState(false);
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    setLoading(true);
+    const fetchClan = async () => {
+      try {
+        if (userClanData === null) {
+          await dispatch(fetchUserClan());
+        }
+      } catch (error) {
+        console.error("Error fetching profile or clan:", error);
+      }
+    };
+    fetchClan();
+    setLoading(false);
+  }, []);
+
+  if (globalLoading || loading) <LoadingSpinner />;
+
   return (
-    <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg shadow-lg mb-12">
+    <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg  mb-12">
       {/* Main Tabs */}
       <div className="flex justify-between bg-gray-800 text-white rounded-lg shadow-md">
         {[
@@ -154,9 +177,9 @@ const MyClan = () => {
   const { userClanData } = useSelector((store) => store.clan);
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
 
-  let clanData = userClanData.data;
+  let clanData = userClanData?.data;
   useEffect(() => {
-    clanData = userClanData.data;
+    clanData = userClanData?.data;
   }, [userClanData]);
 
   if (!userClanData) {
@@ -201,7 +224,6 @@ const MyClan = () => {
             />
           </button>
         </div>
-
         {/* Content Section (Bio and Details) */}
         <div className="md:w-3/4 py-6 px-6">
           {/* Clan Info */}
@@ -210,7 +232,7 @@ const MyClan = () => {
               <h2 className="text-4xl font-semibold text-gray-800">
                 {clanData?.clanName}
               </h2>
-              <p className="text-xl text-gray-500">{clanData?.tag}</p>
+              <p className="text-xl text-gray-500">{clanData?.clanTag}</p>
             </div>
             <div className="flex items-center space-x-4">
               <FaBookmark
@@ -287,18 +309,36 @@ const MyClan = () => {
           )}
         </div>
       </div>
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-1 w-full justify-around md:justify-start space-x-4 my-2">
+        <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+          Edit
+        </button>
+        <button className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+          War Log
+        </button>
+        <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+          Send Mail
+        </button>
+        <button className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+          Leave
+        </button>
+      </div>
 
       {/* Member List Section */}
-      <div className="bg-white p-6 rounded-lg mt-6 shadow-lg">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4 border-b">
           Clan Members
         </h3>
         <ul className="space-y-4">
           {clanData?.members?.map((member, index) => (
-            <li key={index} className="flex justify-between items-center">
+            <li
+              key={index}
+              className="flex justify-between items-center hover:bg-slate-300"
+            >
               <div>
                 <span className="text-lg font-semibold">
-                  {member.playerName}
+                  {member.clanMemberName}
                 </span>
                 <p className="text-gray-600">{member.role}</p>
               </div>
@@ -330,17 +370,60 @@ const SearchClan = ({ activeTab, setActiveTab }) => (
   </div>
 );
 
-const SearchClans = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-bold mb-4">Search Clans</h2>
-    <input
-      type="text"
-      placeholder="Search by Clan Name or Tag"
-      className="w-full p-3 border border-gray-300 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-    <p className="text-gray-600">Filters go here...</p>
-  </div>
-);
+const SearchClans = () => {
+  const { searchClanData } = useSelector((store) => store.clan);
+  const [input, setInput] = useState("");
+  const dispatch = useDispatch();
+
+  const handleSearch = () => {
+    try {
+      dispatch(searchClan({ clanTag: input }));
+    } catch (error) {}
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-1 items-center p-6">
+        <Input
+          type="text"
+          name="searchClan"
+          label="Search Clan"
+          placeholder="Enter Clan Tag #ABCD1234"
+          onChange={(e) => {
+            setInput(e.target.value);
+          }}
+        />
+        <Button variant="success" size="xs" onClick={handleSearch}>
+          Search
+        </Button>
+      </div>
+
+      {searchClanData && (
+        <div className="mt-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div
+            className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300"
+          >
+            <img
+              src={`/${searchClanData?.data?.badge}`} // Assuming `badge` is a URL or image path
+              alt="Clan Badge"
+              className="w-24 h-24 rounded-full object-cover mb-4"
+            />
+            <h4 className="text-xl font-semibold text-center">
+              {searchClanData?.data?.clanName}
+            </h4>
+            <p className="text-sm text-center text-gray-600">{searchClanData?.data?.clanTag}</p>
+            <p className="text-sm text-center text-gray-500">
+              {searchClanData?.data?.stats?.type}
+            </p>
+            <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300">
+              View Clan
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 const BookmarkedClans = () => (
   <div className="p-6">

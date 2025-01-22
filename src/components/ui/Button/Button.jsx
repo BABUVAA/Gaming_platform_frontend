@@ -33,6 +33,7 @@ const Button = ({
       "bg-transparent text-blue-600 hover:text-blue-400 underline",
     variant === "transparent" &&
       "bg-transparent text-gray-600 border-2 border-gray-400 hover:text-blue-600 hover:border-blue-600",
+    size === "xs" &&" text-sm w-24 h-10",
     size === "small" && "text-sm  px-3 py-1.5 w-24 h-11",
     size === "medium" && "text-base px-4 py-2 w-36 h-12",
     size === "large" && "text-lg px-6 py-3 w-48 h-14",
@@ -75,7 +76,7 @@ Button.propTypes = {
     "link",
     "transparent",
   ]),
-  size: PropTypes.oneOf(["small", "medium", "large", "xl", "xxl"]),
+  size: PropTypes.oneOf(["xs","small", "medium", "large", "xl", "xxl"]),
   isLoading: PropTypes.bool,
   disabled: PropTypes.bool,
   onClick: PropTypes.func,

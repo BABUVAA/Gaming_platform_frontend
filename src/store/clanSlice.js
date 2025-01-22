@@ -31,6 +31,23 @@ export const fetchUserClan = createAsyncThunk(
   }
 );
 
+//Async thunk to Search Clan
+export const searchClan = createAsyncThunk(
+  "clan/searchClan", // action type
+  async (clanTag, thunkAPI) => {
+    console.log(clanTag);
+    try {
+      const response = await api.post("/api/clan/searchClan", clanTag);
+      if (!response) {
+        throw new Error("Failed to fetch clan data");
+      }
+      return response.data; // return data to be used in the reducer
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
+    }
+  }
+);
+
 // Slice for game data
 const clanSlice = createSlice({
   name: "clan",
@@ -63,6 +80,12 @@ const clanSlice = createSlice({
       .addCase(fetchUserClan.rejected, (state, action) => {
         state.error = action.payload;
         state.userClanData = null;
+      })
+      .addCase(searchClan.fulfilled, (state, action) => {
+        state.searchClanData = action.payload;
+      })
+      .addCase(searchClan.rejected, (state, action) => {
+        state.error = action.payload;
       })
       .addCase(logout.fulfilled, (state, action) => {
         state.userClanData = {};
