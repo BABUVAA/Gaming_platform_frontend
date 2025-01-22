@@ -4,7 +4,7 @@ import { Form } from "react-router-dom";
 import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
-import { createClan } from "../store/clanSlice";
+import { createClan, fetchUserClan } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 import { user_profile } from "../store/authSlice";
 
@@ -76,6 +76,7 @@ const CreateClan = ({ state }) => {
         .unwrap()
         .then(async () => {
           await dispatch(user_profile());
+          await dispatch(fetchUserClan());
           alert("clan created successfully");
         });
     } catch (error) {
@@ -153,6 +154,11 @@ const MyClan = () => {
   const { userClanData } = useSelector((store) => store.clan);
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
 
+  let clanData = userClanData.data;
+  useEffect(() => {
+    clanData = userClanData.data;
+  }, [userClanData]);
+
   if (!userClanData) {
     return (
       <div className="p-6 text-gray-600">
@@ -160,7 +166,7 @@ const MyClan = () => {
       </div>
     );
   }
-  const clanData = userClanData.data;
+
   return (
     <div className=" max-w-7xl mx-auto bg-gray-50">
       <div className="flex flex-col md:flex-row min-h-[360px] shadow-lg rounded-lg overflow-hidden bg-white">
