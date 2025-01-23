@@ -3,6 +3,7 @@ import { Button, Footer } from "../components";
 import { useSelector } from "react-redux";
 import GameCard from "../components/ui/GameCard/GameCard";
 import useNavigateHook from "../hooks/useNavigateHook";
+import { useEffect, useState } from "react";
 
 const Home = () => {
   return (
@@ -19,22 +20,46 @@ const Home = () => {
 
 const IntroSection = () => {
   const { goToSignUp } = useNavigateHook();
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+
+  // Load the video when the component is in the viewport
+  useEffect(() => {
+    const handleScroll = () => {
+      const section = document.getElementById("intro-section");
+      if (section && section.getBoundingClientRect().top < window.innerHeight) {
+        setIsVideoLoaded(true);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // Trigger check on mount
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
-    <section className="relative flex  flex-wrap items-center justify-between h-[80vh] px-6 bg-black text-white">
+    <section
+      id="intro-section"
+      className="relative flex flex-wrap items-center justify-between h-[80vh] px-6 bg-black text-white"
+    >
       {/* Background Video */}
-      <video
-        src="Battlefield.mp4"
-        muted
-        autoPlay
-        loop
-        className="absolute inset-0 w-full h-full object-cover opacity-70"
-        typeof="video/mp4"
-      />
+      {isVideoLoaded && (
+        <video
+          src="Battlefield.mp4"
+          muted
+          autoPlay
+          loop
+          className="absolute inset-0 w-full h-full object-cover opacity-70"
+          typeof="video/mp4"
+        />
+      )}
+
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center  justify-between w-full max-w-7xl mx-auto gap-8 pt-10 pb-1">
+      <div className="relative z-10 flex flex-col items-center justify-between w-full max-w-7xl mx-auto gap-8 pt-10 pb-1">
         {/* Text Section */}
-        <div className="flex flex-col items-center  text-center ">
+        <div className="flex flex-col items-center text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-snug">
             COMPETE ON{" "}
             <span className="inline-block bg-blue-600 text-white px-4 py-2 mt-2 rounded-sm shadow-md">
@@ -47,7 +72,7 @@ const IntroSection = () => {
           </p>
         </div>
       </div>
-      <div className="flex z-10 justify-center flex-wrap w-full md:justify-end ">
+      <div className="flex z-10 justify-center flex-wrap w-full md:justify-end">
         <Button
           onClick={goToSignUp}
           size="xxl"
@@ -65,7 +90,6 @@ const IntroSection = () => {
     </section>
   );
 };
-
 const AvailableGameSection = () => {
   const games = useSelector((store) => store.games);
   return (
