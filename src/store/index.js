@@ -8,6 +8,7 @@ import storage from "redux-persist/lib/storage";
 import { combineReducers } from "@reduxjs/toolkit";
 import transactionSlice from "./transactionSlice";
 import clanSlice from "./clanSlice";
+import toastSlice from "./toastSlice";
 
 const persistConfig = {
   key: "root",
@@ -23,6 +24,7 @@ const reducer = combineReducers({
   loading: loadingSlice.reducer,
   transactions: transactionSlice.reducer,
   clan: clanSlice.reducer,
+  toast: toastSlice.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, reducer);
