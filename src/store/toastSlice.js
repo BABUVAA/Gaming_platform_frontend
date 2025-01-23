@@ -1,11 +1,22 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+export const types = {
+  DEAFAULT: "default",
+  SUCCESS: "success",
+  DANGER: "danger",
+  WARNING: "warning",
+  SIMPLE: "simple",
+  MESSAGE: "message-cta",
+  NOTIFICATION: "notification",
+  INTERACTIVE: "interactive",
+};
+
 const toastSlice = createSlice({
   name: "toast",
   initialState: {
     visible: false,
     message: "",
-    type: "success", // success, error, info, etc.
+    type: types.DEAFAULT, // success, error, info, etc.
     position: "top-right", // top-left, top-right, bottom-left, bottom-right
   },
   reducers: {

@@ -1,26 +1,31 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { hideToast } from "../../../store/toastSlice";
+import { CiWarning } from "react-icons/ci";
+import { IoCloseCircleOutline } from "react-icons/io5";
+import { IoCloseOutline } from "react-icons/io5";
+import { FaCheckCircle } from "react-icons/fa";
+import { CiCircleInfo } from "react-icons/ci";
 
-// Toast component
-const Toast = ({ message, position = "top-right", type = "info", onClose }) => {
-  const [showToast, setShowToast] = useState(true);
+const Toast = () => {
+  const dispatch = useDispatch();
+  const { visible, message, type, position } = useSelector(
+    (store) => store.toast
+  );
 
-  const closeToast = () => {
-    setShowToast(false);
-    if (onClose) onClose();
-  };
-
+  // Auto close after 5 seconds
   useEffect(() => {
-    if (showToast) {
+    if (visible) {
       const timer = setTimeout(() => {
-        setShowToast(false);
-      }, 5000); // Auto close after 5 seconds
+        dispatch(hideToast());
+      }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [showToast]);
+  }, [visible, dispatch]);
 
-  if (!showToast) return null;
+  if (!visible) return null;
 
-  // Dynamic positioning classes based on the 'position' prop
+  // Position and type classes
   const positionClasses = {
     "top-left": "top-5 left-5",
     "top-right": "top-5 right-5",
@@ -28,41 +33,53 @@ const Toast = ({ message, position = "top-right", type = "info", onClose }) => {
     "bottom-right": "bottom-5 right-5",
   };
 
-  // Dynamic style based on the 'type' prop (info, success, error)
   const typeClasses = {
-    info: "bg-blue-600 text-white",
-    success: "bg-green-600 text-white",
-    error: "bg-red-600 text-white",
+    success: "bg-green-100 text-green-700 border-green-500",
+    danger: "bg-red-100 text-red-700 border-red-500",
+    warning: "bg-yellow-100 text-yellow-700 border-yellow-500",
+    default: "bg-blue-100 text-blue-700 border-blue-500",
+  };
+
+  const iconClasses = () => {
+    switch (type) {
+      case "success":
+        return <FaCheckCircle size={30} className="text-green-500" />;
+      case "danger":
+        return <IoCloseCircleOutline size={30} className="text-red-500" />;
+      case "warning":
+        return <CiWarning size={30} className="text-yellow-500" />;
+      case "default":
+      default:
+        return <CiCircleInfo size={30} className="text-blue-500" />;
+    }
+  };
+
+  const positionClass =
+    positionClasses[position] || positionClasses["top-right"];
+  const typeClass = typeClasses[type] || typeClasses["default"];
+
+  const closeToast = () => {
+    dispatch(hideToast());
   };
 
   return (
     <div
-      className={`fixed flex items-center w-full max-w-xs p-4 space-x-4 text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow dark:text-gray-400 dark:divide-gray-700 dark:bg-gray-800 ${positionClasses[position]} ${typeClasses[type]}`}
+      id={`toast-${type}`}
+      className={`flex items-center w-full max-w-xs p-4 border rounded-lg shadow-lg fixed z-50 ${positionClass} ${typeClass}`}
       role="alert"
     >
-      <div className="text-sm font-normal">{message}</div>
+      <div className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg">
+        {iconClasses()}
+      </div>
+      <div className="ms-3 text-sm font-medium">{message}</div>
       <button
         onClick={closeToast}
         type="button"
-        className="ms-auto -mx-1.5 -my-1.5 bg-white items-center justify-center flex-shrink-0 text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700"
+        className="ms-auto -mx-1.5 -my-1.5 p-1.5 rounded-lg focus:ring-2 focus:ring-gray-300 hover:bg-opacity-30 transition duration-150 ease-in-out"
         aria-label="Close"
       >
         <span className="sr-only">Close</span>
-        <svg
-          className="w-3 h-3"
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 14 14"
-        >
-          <path
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-          />
-        </svg>
+        <IoCloseOutline size={20} className="text-gray-500" />
       </button>
     </div>
   );

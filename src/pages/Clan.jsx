@@ -183,7 +183,11 @@ const MyClan = () => {
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
   const dispatch = useDispatch();
   const handleLeave = async () => {
-    await dispatch(leaveClan());
+    await dispatch(leaveClan())
+      .unwrap()
+      .then(() => {
+        console.log(response);
+      });
   };
 
   let clanData = userClanData?.data;
@@ -387,7 +391,6 @@ const SearchClans = () => {
   const { searchClanData } = useSelector((store) => store.clan);
   const [input, setInput] = useState("");
   const dispatch = useDispatch();
-  console.log(searchClanData);
   const handleSearch = () => {
     try {
       dispatch(searchClan({ clanTag: input }));

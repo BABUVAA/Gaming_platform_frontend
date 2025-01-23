@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import { register } from "../store/authSlice";
 import { Button, Input } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
+import { showToast, types } from "../store/toastSlice";
 
 const SignUp = () => {
   const { goToDashboard, goToLogin } = useNavigateHook();
@@ -17,7 +18,13 @@ const SignUp = () => {
     dispatch(register(signUpData))
       .unwrap()
       .then(() => {
-        alert("User registered successfully!");
+        dispatch(
+          showToast({
+            message: "SignUp Successfull",
+            type: types.SUCCESS,
+            position: "top-right",
+          })
+        );
         goToDashboard();
       })
       .catch((err) => {
