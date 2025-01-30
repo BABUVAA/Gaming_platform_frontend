@@ -1,11 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
 import { fetchGames } from "../store/gameSlice";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Header, Toast } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Outlet } from "react-router-dom";
 import { verifySession } from "../store/authSlice";
-import { showToast, types } from "../store/toastSlice";
+import WebSocketTest from "./WebsocketTest";
 
 function App() {
   const dispatch = useDispatch();
@@ -15,21 +15,10 @@ function App() {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        if (isAuthenticated) {
-          await dispatch(verifySession());
-          dispatch(
-            showToast({
-              message: "Session Verified",
-              type: types.DEAFAULT,
-              position: "bottom-right",
-            })
-          );
-        }
-        await dispatch(fetchGames());
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      if (isAuthenticated) {
+        await dispatch(verifySession());
       }
+      await dispatch(fetchGames());
     };
     fetchData();
   }, []);
@@ -44,16 +33,11 @@ function App() {
       {/* Header */}
       <Header />
       {/* Main Content */}
+      {/* <WebSocketTest /> */}
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
-      {visible && (
-        <Toast
-          message="This is a success message!"
-          position="top-right"
-          type="success"
-        />
-      )}
+      {visible && <Toast />}
     </div>
   );
 }

@@ -42,7 +42,7 @@ export const searchClan = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
+      return response.data; // return error message in case of failure
     }
   }
 );
@@ -50,11 +50,11 @@ export const searchClan = createAsyncThunk(
 //Async thunk to Join Clan
 export const joinClan = createAsyncThunk(
   "clan/joinClan", //action type a
-  async (_, thunkAPI) => {
+  async (clanTag, thunkAPI) => {
     try {
-      const response = await api.post("/api/clan/joinClan");
+      const response = await api.post("/api/clan/joinClan", clanTag);
       if (!response) {
-        throw new Error("Failed to fetch clan data");
+        throw new Error("Failed to Join Clan");
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
@@ -65,7 +65,7 @@ export const joinClan = createAsyncThunk(
 
 //Async thunk to Leave Clan
 export const leaveClan = createAsyncThunk(
-  "clan/joinClan", //action type a
+  "clan/leaveClan", //action type a
   async (_, thunkAPI) => {
     try {
       const response = await api.post("/api/clan/leaveClan");
@@ -106,6 +106,21 @@ const clanSlice = createSlice({
         state.error = action.payload;
         state.createClanData = null;
       })
+
+      .addCase(joinClan.fulfilled, (state, action) => {
+        state.userClanData = action.payload;
+      })
+      .addCase(joinClan.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+
+      .addCase(leaveClan.fulfilled, (state, action) => {
+        state.userClanData = null;
+      })
+      .addCase(leaveClan.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+
       .addCase(fetchUserClan.fulfilled, (state, action) => {
         state.userClanData = action.payload;
       })
@@ -116,12 +131,14 @@ const clanSlice = createSlice({
         state.error = action.payload;
         state.userClanData = null;
       })
+
       .addCase(searchClan.fulfilled, (state, action) => {
         state.searchClanData = action.payload;
       })
       .addCase(searchClan.rejected, (state, action) => {
         state.error = action.payload;
       })
+
       .addCase(logout.fulfilled, (state) => {
         state.userClanData = null;
         state.searchClanData = null;

@@ -1,49 +1,91 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
+import { showToast, types } from "./toastSlice";
 
 // Async thunk for session verification
 export const verifySession = createAsyncThunk(
   "auth/verifySession",
-  async (_, { rejectWithValue }) => {
+  async (_, thunkAPI) => {
+    // ✅ Add `thunkAPI` here
     try {
       const response = await api.post("/api/auth/verifySession", {
         withCredentials: true,
       });
+      // ✅ Dispatch `showToast` correctly
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message || error,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.error || error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
 // Async thunk for logout
-export const logout = createAsyncThunk(
-  "auth/logout",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await api.post(
-        "/api/auth/logout",
-        {},
-        { withCredentials: true }
-      );
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
-    }
+export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
+  try {
+    const response = await api.post(
+      "/api/auth/logout",
+      {},
+      { withCredentials: true }
+    );
+    thunkAPI.dispatch(
+      showToast({
+        message: response.data.message,
+        type: types.SUCCESS,
+        position: "bootom-right",
+      })
+    );
+    return response.data;
+  } catch (error) {
+    thunkAPI.dispatch(
+      showToast({
+        message: error.response.data.error,
+        type: types.DANGER,
+        position: "bottom-right",
+      })
+    );
+    return thunkAPI.rejectWithValue(error.response?.data || error.message);
   }
-);
+});
 
 // Async thunk for user login
 export const login = createAsyncThunk(
   "auth/login",
-  async (credentials, { rejectWithValue }) => {
+  async (credentials, thunkAPI) => {
     try {
       const response = await api.post("/api/auth/login", credentials, {
         withCredentials: true,
       });
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -54,8 +96,22 @@ export const register = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await api.post("/api/auth/signup", userData);
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return response.data;
     } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -69,6 +125,13 @@ export const user_profile = createAsyncThunk(
       const response = await api.get("/api/users/profile");
       return response.data;
     } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
       return rejectWithValue(error.response?.data || error.message);
     }
   }

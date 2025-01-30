@@ -4,7 +4,6 @@ import { useDispatch } from "react-redux";
 import { login } from "../store/authSlice";
 import useNavigateHook from "../hooks/useNavigateHook";
 import { Input, Button } from "../components";
-import { showToast, types } from "../store/toastSlice";
 
 const Login = () => {
   const { goToDashboard, goToForgetPWD, goToSignUp } = useNavigateHook();
@@ -15,20 +14,10 @@ const Login = () => {
     const formData = new FormData(event.target);
     const loginData = Object.fromEntries(formData);
 
-    dispatch(login(loginData))
+    await dispatch(login(loginData))
       .unwrap()
       .then(() => {
-        dispatch(
-          showToast({
-            message: "Login Successfull",
-            type: types.SUCCESS,
-            position: "top-right",
-          })
-        );
         goToDashboard();
-      })
-      .catch((err) => {
-        console.error("Login failed:", err);
       });
   };
 

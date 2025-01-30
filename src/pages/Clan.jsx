@@ -7,15 +7,17 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   createClan,
   fetchUserClan,
+  joinClan,
   leaveClan,
   searchClan,
 } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 import { user_profile } from "../store/authSlice";
+import { showToast, types } from "../store/toastSlice";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
-  const { userClanData } = useSelector((store) => store.clan);
+  const { userClanData, error } = useSelector((store) => store.clan);
   const [activeMainTab, setActiveMainTab] = useState(
     profile?.clan ? "myClan" : "createClan"
   );
@@ -41,11 +43,18 @@ const Clan = () => {
         }
       } catch (error) {
         console.error("Error fetching profile or clan:", error);
+        dispatch(
+          showToast({
+            message: "Error fetching profile or clan: " + error,
+            type: types.DANGER,
+            position: "bottom-right",
+          })
+        );
       }
     };
     fetchClan();
     setLoading(false);
-  }, []);
+  }, [profile, userClanData]);
 
   if (globalLoading || loading) <LoadingSpinner />;
 
@@ -105,10 +114,23 @@ const CreateClan = ({ state }) => {
         .then(async () => {
           await dispatch(user_profile());
           await dispatch(fetchUserClan());
-          alert("clan created successfully");
+          dispatch(
+            showToast({
+              message: "Clan Created Successfully",
+              type: types.SUCCESS,
+              position: "bottom-right",
+            })
+          );
         });
     } catch (error) {
       console.error(error);
+      dispatch(
+        showToast({
+          message: "Error fetching profile or clan: " + error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
     }
   };
 
@@ -179,15 +201,21 @@ const CreateClan = ({ state }) => {
 };
 
 const MyClan = () => {
-  const { userClanData } = useSelector((store) => store.clan);
+  const { userClanData, error } = useSelector((store) => store.clan);
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
   const dispatch = useDispatch();
   const handleLeave = async () => {
-    await dispatch(leaveClan())
-      .unwrap()
-      .then(() => {
-        console.log(response);
+    try {
+      const response = await dispatch(leaveClan());
+      await dispatch(user_profile);
+    } catch (error) {
+      console.error(error);
+      showToast({
+        message: error,
+        type: types.DANGER,
+        position: "bottom-right",
       });
+    }
   };
 
   let clanData = userClanData?.data;
@@ -388,13 +416,36 @@ const SearchClan = ({ activeTab, setActiveTab }) => (
 );
 
 const SearchClans = () => {
-  const { searchClanData } = useSelector((store) => store.clan);
+  const { searchClanData, loading, error } = useSelector((store) => store.clan); // Assuming you have a loading state
   const [input, setInput] = useState("");
   const dispatch = useDispatch();
-  const handleSearch = () => {
+
+  const handleSearch = async () => {
     try {
-      dispatch(searchClan({ clanTag: input }));
-    } catch (error) {}
+      const response = await dispatch(searchClan({ clanTag: input }));
+      console.log(response);
+    } catch (error) {
+      console.error("Error while searching for clan:", error);
+      console.log(error);
+    }
+  };
+
+  const handleJoin = async (clanTag) => {
+    if (clanTag) {
+      try {
+        await dispatch(joinClan({ clanTag: clanTag })); // Using the fetched clan's tag for joining
+        await dispatch(
+          showToast({
+            message: "Clan Joined Successfully",
+            type: types.SUCCESS,
+            position: "bottom-right",
+          })
+        );
+        await dispatch(user_profile());
+      } catch (error) {
+        console.error("Error while joining the clan:", error);
+      }
+    }
   };
 
   return (
@@ -405,16 +456,20 @@ const SearchClans = () => {
           name="searchClan"
           label="Search Clan"
           placeholder="Enter Clan Tag #ABCD1234"
-          onChange={(e) => {
-            setInput(e.target.value);
-          }}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
         />
+
         <Button variant="success" size="xs" onClick={handleSearch}>
           Search
         </Button>
       </div>
 
-      {searchClanData && (
+      {loading && <div>Loading...</div>}
+
+      {error && <div className="text-red-500">{error}</div>}
+
+      {searchClanData ? (
         <div className="mt-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <div className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
             <img
@@ -431,11 +486,21 @@ const SearchClans = () => {
             <p className="text-sm text-center text-gray-500">
               {searchClanData?.data?.stats?.type}
             </p>
-            <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300">
-              View Clan
-            </button>
+            <div className="flex justify-between">
+              <button
+                onClick={() => handleJoin(searchClanData.data.clanTag)}
+                className="mt-4 px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 transition duration-300"
+              >
+                Join CLan
+              </button>
+              <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300">
+                View Clan
+              </button>
+            </div>
           </div>
         </div>
+      ) : (
+        input && !loading && !error && <div>No clans found</div>
       )}
     </>
   );

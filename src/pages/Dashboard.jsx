@@ -29,7 +29,7 @@ const Dashboard = () => {
     };
     fetchProfileAndClan();
     setLoading(false);
-  }, []);
+  }, [profile]);
 
   if (globalLoading || loading) <LoadingSpinner />;
   return (

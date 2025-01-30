@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 export const types = {
-  DEAFAULT: "default",
+  DEFAULT: "default",
   SUCCESS: "success",
   DANGER: "danger",
   WARNING: "warning",
@@ -13,23 +13,26 @@ export const types = {
 
 const toastSlice = createSlice({
   name: "toast",
+
   initialState: {
     visible: false,
-    message: "",
-    type: types.DEAFAULT, // success, error, info, etc.
-    position: "top-right", // top-left, top-right, bottom-left, bottom-right
+    toasts: [], // Store multiple toasts as an array
   },
   reducers: {
-    // Action to show the toast
     showToast: (state, action) => {
       state.visible = true;
-      state.message = action.payload.message || "message";
-      state.type = action.payload.type || "success";
-      state.position = action.payload.position || "top-right";
+      const newToast = {
+        id: Date.now(), // Unique identifier
+        message: action.payload.message || "message",
+        type: action.payload.type || types.SUCCESS,
+        position: action.payload.position || "top-right",
+      };
+      state.toasts.push(newToast); // Add new toast
     },
-    // Action to hide the toast
-    hideToast: (state) => {
-      state.visible = false;
+    hideToast: (state, action) => {
+      state.toasts = state.toasts.filter(
+        (toast) => toast.id !== action.payload
+      );
     },
   },
 });
