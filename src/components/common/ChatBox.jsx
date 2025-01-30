@@ -61,7 +61,7 @@ const ChatBox = ({ chatType }) => {
         <div className="px-4 py-3 border-b dark:border-zinc-700">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-zinc-800 dark:text-white">
-              {chatType === "clan-chat" ? "Clan Chat" : "Private Chat"}
+              {chatType === "clan" ? "Clan Chat" : "Private Chat"}
             </h2>
             <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
               Online
