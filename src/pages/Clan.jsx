@@ -13,26 +13,24 @@ import {
 } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 import { user_profile } from "../store/authSlice";
-import { showToast, types } from "../store/toastSlice";
+import ChatBox from "../components/common/ChatBox";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
-  const { userClanData, error } = useSelector((store) => store.clan);
+  const { userClanData } = useSelector((store) => store.clan);
+  const { globalLoading } = useSelector((store) => store.loading);
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+
   const [activeMainTab, setActiveMainTab] = useState(
     profile?.clan ? "myClan" : "createClan"
   );
-
   const [activeSearchTab, setActiveSearchTab] = useState("searchClans");
   const [activeSocialTab, setActiveSocialTab] = useState("friends");
 
   useEffect(() => {
     setActiveMainTab(profile?.clan ? "myClan" : "createClan");
   }, [profile]);
-
-  const { globalLoading } = useSelector((store) => store.loading);
-  const [loading, setLoading] = useState(false);
-
-  const dispatch = useDispatch();
 
   useEffect(() => {
     setLoading(true);
@@ -43,18 +41,11 @@ const Clan = () => {
         }
       } catch (error) {
         console.error("Error fetching profile or clan:", error);
-        dispatch(
-          showToast({
-            message: "Error fetching profile or clan: " + error,
-            type: types.DANGER,
-            position: "bottom-right",
-          })
-        );
       }
     };
     fetchClan();
     setLoading(false);
-  }, [profile, userClanData]);
+  }, [profile]);
 
   if (globalLoading || loading) <LoadingSpinner />;
 
@@ -114,23 +105,9 @@ const CreateClan = ({ state }) => {
         .then(async () => {
           await dispatch(user_profile());
           await dispatch(fetchUserClan());
-          dispatch(
-            showToast({
-              message: "Clan Created Successfully",
-              type: types.SUCCESS,
-              position: "bottom-right",
-            })
-          );
         });
     } catch (error) {
       console.error(error);
-      dispatch(
-        showToast({
-          message: "Error fetching profile or clan: " + error,
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
     }
   };
 
@@ -207,14 +184,9 @@ const MyClan = () => {
   const handleLeave = async () => {
     try {
       const response = await dispatch(leaveClan());
-      await dispatch(user_profile);
+      await dispatch(user_profile());
     } catch (error) {
       console.error(error);
-      showToast({
-        message: error,
-        type: types.DANGER,
-        position: "bottom-right",
-      });
     }
   };
 
@@ -262,6 +234,20 @@ const MyClan = () => {
             <img
               src="/bar-chart.png" // Placeholder for statistics image
               alt="Clan Statistics"
+              className="w-12 h-12 object-contain"
+            />
+          </button>
+          <button
+            className={`flex items-center justify-center p-4 w-full transition-all duration-300 rounded-lg ${
+              activeTab === "clanchat"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-blue-100"
+            }`}
+            onClick={() => setActiveTab("clanchat")}
+          >
+            <img
+              src="/clan_chat.png" // Placeholder for statistics image
+              alt="Clan Chat"
               className="w-12 h-12 object-contain"
             />
           </button>
@@ -349,6 +335,8 @@ const MyClan = () => {
               </div>
             </div>
           )}
+
+          {activeTab === "clanchat" && <ChatBox chatType="clan" />}
         </div>
       </div>
       {/* Action Buttons */}
@@ -423,25 +411,17 @@ const SearchClans = () => {
   const handleSearch = async () => {
     try {
       const response = await dispatch(searchClan({ clanTag: input }));
-      console.log(response);
     } catch (error) {
       console.error("Error while searching for clan:", error);
-      console.log(error);
     }
   };
 
   const handleJoin = async (clanTag) => {
     if (clanTag) {
       try {
-        await dispatch(joinClan({ clanTag: clanTag })); // Using the fetched clan's tag for joining
-        await dispatch(
-          showToast({
-            message: "Clan Joined Successfully",
-            type: types.SUCCESS,
-            position: "bottom-right",
-          })
-        );
+        await dispatch(joinClan({ clanTag: clanTag }));
         await dispatch(user_profile());
+        await dispatch(fetchUserClan());
       } catch (error) {
         console.error("Error while joining the clan:", error);
       }

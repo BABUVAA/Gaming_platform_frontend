@@ -12,7 +12,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
 
   const dispatch = useDispatch();
-
+  
   useEffect(() => {
     setLoading(true);
     const fetchProfileAndClan = async () => {

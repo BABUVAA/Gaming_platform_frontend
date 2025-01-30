@@ -1,16 +1,31 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api"; // Ensure you have the correct axios instance
 import { logout } from "./authSlice";
+import { showToast, types } from "./toastSlice";
 
 // Async thunk to fetch all games from the server
 export const createClan = createAsyncThunk(
   "/auth/clan/create",
-  async (clanData, { rejectWithValue }) => {
+  async (clanData, thunkAPI) => {
     try {
       const response = await api.post("/api/clan/createClan", clanData);
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -53,11 +68,23 @@ export const joinClan = createAsyncThunk(
   async (clanTag, thunkAPI) => {
     try {
       const response = await api.post("/api/clan/joinClan", clanTag);
-      if (!response) {
-        throw new Error("Failed to Join Clan");
-      }
+
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return response.data; // return data to be used in the reducer
     } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
     }
   }
@@ -108,7 +135,7 @@ const clanSlice = createSlice({
       })
 
       .addCase(joinClan.fulfilled, (state, action) => {
-        state.userClanData = action.payload;
+        state.userClanData = action.payload.clan;
       })
       .addCase(joinClan.rejected, (state, action) => {
         state.error = action.payload;
