@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { io } from "socket.io-client";
 
 // Connect to your backend WebSocket server
-const socket = io("http://localhost:8080"); // Replace with your WebSocket server URL
+const socket = io(import.meta.env.VITE_SERVER_URL); // Replace with your WebSocket server URL
 
 const ChatBox = ({ chatType }) => {
   const { profile } = useSelector((store) => store.auth); // User profile
