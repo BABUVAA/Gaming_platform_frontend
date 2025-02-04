@@ -1,17 +1,33 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
+import { showToast, types } from "./toastSlice";
 
 // Async thunk for fetching tournaments from the server
 export const fetchTournaments = createAsyncThunk(
   "tournament/fetchTournaments",
-  async (_, { rejectWithValue }) => {
+  async (_, thunkAPI) => {
     try {
-      const response = await api.get("/api/tournaments", {
+      const response = await api.get("/api/tournaments/searchBattleCOC", {
         withCredentials: true,
       });
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
       return response.data; // Return the tournament data from the API
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response.data.error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      e;
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );

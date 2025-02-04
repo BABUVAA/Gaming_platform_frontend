@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Fuse from "fuse.js";
 import { TournamentCard } from "../components";
+import { useDispatch } from "react-redux";
+import { fetchTournaments } from "../store/tournamentSlice";
+import Matchmaking from "../components/myComponents/MatchMaking";
 
 const tournaments = [
   {
@@ -156,6 +159,7 @@ const tournaments = [
 ];
 
 const Tournament = () => {
+  const dispatch = useDispatch();
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -178,48 +182,55 @@ const Tournament = () => {
     setCurrentPage(page);
   };
 
+  useEffect(() => {
+    dispatch(fetchTournaments());
+  }, []);
+
   return (
-    <div className="p-4 md:p-8">
-      <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 text-indigo-700">
-        Tournaments
-      </h1>
-      <div className="mb-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tournaments..."
-          className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md"
-        />
-      </div>
+    <>
+      <Matchmaking />
+      <div className="p-4 md:p-8">
+        <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 text-indigo-700">
+          Tournaments
+        </h1>
+        <div className="mb-4">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tournaments..."
+            className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md"
+          />
+        </div>
 
-      {/* Grid Layout - Display up to 10 Active Tournaments */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {paginatedResults.map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} />
-        ))}
-      </div>
+        {/* Grid Layout - Display up to 10 Active Tournaments */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {paginatedResults.map((tournament) => (
+            <TournamentCard key={tournament.id} tournament={tournament} />
+          ))}
+        </div>
 
-      <div className="flex justify-between items-center mt-4">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="bg-gray-300 hover:bg-gray-400 text-black py-2 px-4 rounded-md disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <p className="text-sm">
-          Page {currentPage} of {totalPages}
-        </p>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="bg-gray-300 hover:bg-gray-400 text-black py-2 px-4 rounded-md disabled:opacity-50"
-        >
-          Next
-        </button>
+        <div className="flex justify-between items-center mt-4">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="bg-gray-300 hover:bg-gray-400 text-black py-2 px-4 rounded-md disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <p className="text-sm">
+            Page {currentPage} of {totalPages}
+          </p>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="bg-gray-300 hover:bg-gray-400 text-black py-2 px-4 rounded-md disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

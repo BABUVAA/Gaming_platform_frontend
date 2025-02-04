@@ -5,7 +5,6 @@ import { Header, Toast } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Outlet } from "react-router-dom";
 import { verifySession } from "../store/authSlice";
-import WebSocketTest from "./WebsocketTest";
 
 function App() {
   const dispatch = useDispatch();
@@ -33,7 +32,6 @@ function App() {
       {/* Header */}
       <Header />
       {/* Main Content */}
-      {/* <WebSocketTest /> */}
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
