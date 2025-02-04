@@ -11,12 +11,10 @@ const Matchmaking = () => {
   const [match, setMatch] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
 
-  
   const startMatchmaking = async () => {
     setSearching(true);
     try {
       const response = await dispatch(fetchTournaments());
-      console.log(response);
       setMatch(response.data.match);
       setTimeLeft(response.data.timeLimit);
     } catch (error) {
