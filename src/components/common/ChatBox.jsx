@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { io } from "socket.io-client";
-
-// Connect to your backend WebSocket server
-const socket = io(import.meta.env.VITE_SERVER_URL); // Replace with your WebSocket server URL
+import { useSocket } from "../../context/socketContext";
 
 const ChatBox = ({ chatType }) => {
   const { profile } = useSelector((store) => store.auth); // User profile
   const { userClanData } = useSelector((store) => store.clan); // Clan data
   const [message, setMessage] = useState(""); // To hold the current message
   const [messages, setMessages] = useState([]); // To hold all the chat messages
-
+  const socket = useSocket();
+  console.log(socket);
   // Determine chat ID based on type
-  const chatId = chatType === "clan" ? userClanData.data._id : profile._id; // ✅ Fixed chatId
+  const chatId = chatType === "clan" ? userClanData?.data?._id : profile._id; // ✅ Fixed chatId
   const senderId = profile._id; // ✅ Fixed senderId
 
   // Join chat room and listen for messages
@@ -25,15 +23,15 @@ const ChatBox = ({ chatType }) => {
       setMessages((prevMessages) => [...prevMessages, newMessage]);
     };
 
-    socket.on(`${chatType}_message`, messageListener); // ✅ Use event constant
+    socket.socket.on(`${chatType}_message`, messageListener); // ✅ Use event constant
 
     // Join chat room
-    socket.emit(`join_${chatType}_room`, chatId);
+    socket.socket.emit(`join_${chatType}_room`, chatId);
 
     // Cleanup on unmount
     return () => {
-      socket.emit(`leave_${chatType}_room`, chatId);
-      socket.off(`${chatType}_message`, messageListener);
+      socket.socket.emit(`leave_${chatType}_room`, chatId);
+      socket.socket.off(`${chatType}_message`, messageListener);
     };
   }, [chatType, chatId, senderId]);
 
@@ -49,7 +47,7 @@ const ChatBox = ({ chatType }) => {
 
     // Emit the message to the server
     console.log("Sending message:", messageData); // Debug message data
-    socket.emit(`${chatType}_message`, messageData); // ✅ Use event constant
+    socket.socket.emit(`${chatType}_message`, messageData); // ✅ Use event constant
 
     // Clear the input field after sending
     setMessage("");

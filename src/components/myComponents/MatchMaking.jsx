@@ -1,22 +1,46 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios-api";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchTournaments } from "../../store/tournamentSlice";
-import { io } from "socket.io-client";
+import { useSocket } from "../../context/socketContext";
 
-const socket = io(import.meta.env.VITE_SERVER_URL);
 const Matchmaking = () => {
+  const { profile } = useSelector((store) => store.auth); // User profile
+  const { userClanData } = useSelector((store) => store.clan); // Clan data
   const dispatch = useDispatch();
   const [searching, setSearching] = useState(false);
-  const [match, setMatch] = useState(null);
+  const [match, setMatch] = useState();
   const [timeLeft, setTimeLeft] = useState(null);
+  const socket = useSocket();
+
+  // Join chat room and listen for messages
+  useEffect(() => {
+    // Listen for new messages
+    const messageListener = (newMessage) => {
+      console.log("New message received:", newMessage);
+      setMatch(newMessage);
+    };
+
+    socket.on(`tournament_pool`, messageListener); // ✅ Use event constant
+
+    // Cleanup on unmount
+    return () => {
+      socket.off(`tournament_pool`, messageListener);
+    };
+  }, []);
 
   const startMatchmaking = async () => {
     setSearching(true);
+
+    const matchData = {
+      clanId: userClanData?.data?._id, // ✅ Ensure safe access
+      userId: profile?._id, // ✅ Send user ID for identification
+      username: profile?.username, // ✅ Optional for logs
+      timestamp: new Date(),
+    };
+
     try {
-      const response = await dispatch(fetchTournaments());
-      setMatch(response.data.match);
-      setTimeLeft(response.data.timeLimit);
+      socket.emit("find_match_coc", matchData); // ✅ Send match data
     } catch (error) {
       console.error("Matchmaking error:", error);
       setSearching(false);
@@ -62,7 +86,9 @@ const Matchmaking = () => {
         <div className="flex flex-col items-center">
           {match ? (
             <p className="text-lg font-semibold mb-4">
-              Match found! Time left: {timeLeft} seconds
+              Match found!
+              {`${match.userId} vs ${match.opponentId}`}
+              Time left: {timeLeft} seconds
             </p>
           ) : (
             <div className="relative flex flex-col items-center">

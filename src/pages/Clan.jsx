@@ -13,7 +13,6 @@ import {
 } from "../store/clanSlice";
 import { FaBookmark, FaShareAlt } from "react-icons/fa";
 import { user_profile } from "../store/authSlice";
-import ChatBox from "../components/common/ChatBox";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
@@ -237,20 +236,6 @@ const MyClan = () => {
               className="w-12 h-12 object-contain"
             />
           </button>
-          <button
-            className={`flex items-center justify-center p-4 w-full transition-all duration-300 rounded-lg ${
-              activeTab === "clanchat"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-blue-100"
-            }`}
-            onClick={() => setActiveTab("clanchat")}
-          >
-            <img
-              src="/clan_chat.png" // Placeholder for statistics image
-              alt="Clan Chat"
-              className="w-12 h-12 object-contain"
-            />
-          </button>
         </div>
         {/* Content Section (Bio and Details) */}
         <div className="md:w-3/4 py-6 px-6">
@@ -335,8 +320,6 @@ const MyClan = () => {
               </div>
             </div>
           )}
-
-          {activeTab === "clanchat" && <ChatBox chatType="clan" />}
         </div>
       </div>
       {/* Action Buttons */}
