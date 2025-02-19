@@ -19,3 +19,7 @@ export { default as Spinner } from "./ui/Spinner/Spinner.jsx";
 export { default as Toast } from "./ui/Toast/Toast.jsx";
 export { default as TournamentCard } from "./ui/GameCard/TournamentCard.jsx";
 export { default as GameCard } from "./ui/GameCard/GameCard.jsx";
+
+//my components
+
+export { default as MatchMaking } from "./myComponents/MatchMaking.jsx";

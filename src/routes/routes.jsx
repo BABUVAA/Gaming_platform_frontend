@@ -19,6 +19,7 @@ const Login = lazy(() => import("../pages/Login"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const Clan = lazy(() => import("../pages/Clan"));
 const Coc = lazy(() => import("../pages/Coc.jsx"));
+const Chats = lazy(() => import("../pages/Chats.jsx"));
 // Fallback loading component while waiting for lazy-loaded components
 const Loading = () => <LoadingSpinner />;
 
@@ -29,7 +30,11 @@ const ProtectedRoute = ({ children }) => {
 
 const LandingPage = () => {
   const { isAuthenticated } = useSelector((store) => store.auth);
-  return isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/home" />;
+  return isAuthenticated ? (
+    <Navigate to="/dashboard" />
+  ) : (
+    <Navigate to="/home" />
+  );
 };
 
 // Add the routes with lazy-loaded components
@@ -105,6 +110,14 @@ const routes = createBrowserRouter([
             element: (
               <Suspense fallback={<Loading />}>
                 <Tournament />
+              </Suspense>
+            ),
+          },
+          {
+            path: "chats",
+            element: (
+              <Suspense fallback={<Loading />}>
+                <Chats />
               </Suspense>
             ),
           },

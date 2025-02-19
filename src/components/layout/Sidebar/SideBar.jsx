@@ -33,7 +33,7 @@ const SideBar = () => {
         <TbTournament size={30} />
       </Link>
       <Link
-        to="/dashboard/wallet"
+        to="/dashboard/chats"
         className="text-gray-600 hover:text-blue-500 transition duration-200"
       >
         <MdAccountBalance size={30} />

@@ -5,6 +5,7 @@ import routes from "../../routes/routes"; // Routes configuration for the app
 import ErrorBoundary from "./ErrorBoundary"; // Custom error boundary component
 import { PersistGate } from "redux-persist/integration/react";
 import { persistStore } from "redux-persist";
+import { SocketProvider } from "../../context/socketContext";
 
 /**
  * AppProvider component wraps the app with necessary context providers:
@@ -20,7 +21,9 @@ const AppProvider = () => (
   <ErrorBoundary>
     <Provider store={platformStore}>
       <PersistGate persistor={persistor}>
-        <RouterProvider router={routes} />
+        <SocketProvider>
+          <RouterProvider router={routes} />
+        </SocketProvider>
       </PersistGate>
     </Provider>
   </ErrorBoundary>
