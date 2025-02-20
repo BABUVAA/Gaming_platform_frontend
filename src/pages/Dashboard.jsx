@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const Dashboard = () => {
   const { profile } = useSelector((store) => store.auth);
+  const { userClanData } = useSelector((store) => store.clan);
   const { globalLoading } = useSelector((store) => store.loading);
   const [loading, setLoading] = useState(false);
 
@@ -23,6 +24,10 @@ const Dashboard = () => {
             await dispatch(fetchUserClan());
           }
         }
+        console.log(profile.clan._id);
+        if (userClanData === null && profile.clan._id) {
+          await dispatch(fetchUserClan());
+        }
       } catch (error) {
         console.error("Error fetching profile or clan:", error);
       }
@@ -33,12 +38,12 @@ const Dashboard = () => {
 
   if (globalLoading || loading) <LoadingSpinner />;
   return (
-    <div className="relative min-h-screen">
+    <div className="relative ">
       {/* Sidebar */}
       <SideBar />
 
       {/* Main Content */}
-      <div className="grid md:grid-cols-[auto_1fr] h-full">
+      <div className="grid md:grid-cols-[auto_1fr]">
         {/* Empty div with fixed width */}
         <div className="w-16 h-full"></div>
 

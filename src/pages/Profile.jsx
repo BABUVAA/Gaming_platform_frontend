@@ -52,6 +52,9 @@ const Profile = () => {
           <h2 className="text-xl font-bold text-black">
             {profile?.profile.username || "Player"}
           </h2>
+          <h2 className="text-xl font-bold text-black">
+            {profile?.profileTag}
+          </h2>
         </div>
 
         {/* Right Section: Social Media */}
