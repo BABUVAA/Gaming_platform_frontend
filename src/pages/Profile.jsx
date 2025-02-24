@@ -1,9 +1,23 @@
-import { useSelector } from "react-redux";
-import { CiInstagram } from "react-icons/ci";
-import { FaYoutube } from "react-icons/fa";
-import { IoIosAdd } from "react-icons/io";
-import { FcLikePlaceholder } from "react-icons/fc";
-import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  FaDiscord,
+  FaEdit,
+  FaFacebook,
+  FaInstagram,
+  FaLinkedin,
+  FaPlus,
+  FaRegCopy,
+  FaSteam,
+  FaTwitch,
+  FaTwitter,
+  FaYoutube,
+} from "react-icons/fa";
+import { useEffect, useState } from "react";
+import {
+  profile_data_update,
+  profile_file_update,
+  user_profile,
+} from "../store/authSlice";
 
 const Profile = () => {
   const { profile } = useSelector((store) => store.auth);
@@ -27,62 +41,301 @@ const Profile = () => {
   ];
 
   //Section 1: Profile Information
-  const ProfileHeader = ({ profile }) => (
-    <div className="bg-white  relative rounded-lg mb-6 overflow-hidden h-[300px]">
-      {/* Banner */}
-      <div
-        className="absolute top-0 left-0 w-full h-[160px] bg-cover bg-center"
-        style={{ backgroundImage: `url('/pubg_background.jpg')` }}
-      ></div>
 
-      {/* Overlay for banner */}
-      <div className="absolute inset-0 bg-white opacity-30 "></div>
+  const ProfileHeader = ({ profile }) => {
+    const [profilePic, setProfilePic] = useState(
+      profile?.profile.avatar || "/profile-pic.png"
+    );
+    const [bannerPic, setBannerPic] = useState(
+      profile?.profile.banner || "/pubg_background.jpg"
+    );
+    const [selectedImageType, setSelectedImageType] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
+    const [socialAccounts, setSocialAccounts] = useState(
+      profile.profile.linkedAccounts || {
+        instagram: "",
+        youtube: "",
+        twitter: "",
+        facebook: "",
+      }
+    );
 
-      {/* Profile Picture, Username, and Social Media */}
-      <div className="relative flex items-start justify-between p-4 sm:p-6  h-full">
-        {/* Left Section */}
-        <div className="flex flex-col items-center absolute bottom-10 ">
+    const dispatch = useDispatch();
+    const handleImageChange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const imageUrl = URL.createObjectURL(file);
+        if (selectedImageType === "profile") {
+          setProfilePic(imageUrl);
+          handleProfileUpdate("avatar", file);
+        } else if (selectedImageType === "banner") {
+          setBannerPic(imageUrl);
+          handleProfileUpdate("banner", file);
+          dispatch(user_profile());
+        }
+        setIsModalOpen(false);
+      }
+    };
+
+    {
+      /* Social accounts handling */
+    }
+    const [editableFields, setEditableFields] = useState({});
+
+    const handleEditClick = (platform) => {
+      setEditableFields((prev) => ({ ...prev, [platform]: true }));
+    };
+
+    const handleBlur = (e) => {
+      const { name, value } = e.target;
+
+      if (value.trim()) {
+        setSocialAccounts((prev) => {
+          const updatedAccounts = { ...prev, [name]: value };
+          return updatedAccounts;
+        });
+      }
+      setEditableFields((prev) => ({ ...prev, [name]: false })); // Disable input again
+    };
+
+    {
+      /** copy feature */
+    }
+    const [copied, setCopied] = useState(false);
+
+    const copyToClipboard = async () => {
+      if (!profile?.profileTag) return;
+      try {
+        await navigator.clipboard.writeText(profile.profileTag);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500); // Reset copied state after 1.5 sec
+      } catch (err) {
+        console.error("Failed to copy: ", err);
+      }
+    };
+
+    {
+      /**profile data update function */
+    }
+    const handleProfileUpdate = async (field, data) => {
+      try {
+        dispatch(profile_file_update({ field: field, data: data }));
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    return (
+      <div className="bg-white relative rounded-lg mb-6 overflow-hidden h-[300px]">
+        {/* Banner */}
+        <div
+          className="absolute top-0 left-0 w-full h-[160px] bg-cover bg-center cursor-pointer"
+          style={{ backgroundImage: `url(${bannerPic})` }}
+          onClick={() => {
+            setSelectedImageType("banner");
+            setIsModalOpen(true);
+          }}
+        >
+          {/* Edit Button for Banner */}
+          <button
+            className="absolute z-50 top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition"
+            onClick={() => {
+              setSelectedImageType("banner");
+              setIsModalOpen(true);
+            }}
+          >
+            <FaEdit className="text-lg" />
+          </button>
+        </div>
+
+        {/* Overlay for Banner */}
+        <div className="absolute inset-0 bg-white opacity-30"></div>
+
+        {/* Profile Picture, Username, and Social Icons */}
+        <div className="relative flex items-start justify-between p-4 pt-[160px] pt- sm:p-6 sm:pt-[160px] h-full">
           {/* Profile Picture */}
-          <img
-            src="/profile-pic.png"
-            alt="Profile Picture"
-            className="w-[120px] h-[120px] rounded-full border-4 border-white sm:mt-0 mt-4"
+          <div className="flex flex-col items-center absolute bottom-10">
+            {/* Profile Picture with Edit Button at Bottom-Right */}
+            <div className="relative">
+              <img
+                src={profilePic}
+                alt="Profile"
+                className="w-28 h-28 rounded-full border-4 border-white"
+              />
+              <button
+                className="absolute bottom-2 right-2 bg-blue-600 text-white p-1 rounded-full shadow-md hover:bg-blue-700 transition duration-200"
+                onClick={() => {
+                  setSelectedImageType("profile");
+                  setIsModalOpen(true);
+                }}
+              >
+                <FaEdit className="text-sm" />
+              </button>
+            </div>
+            <h2 className="text-xl font-bold text-black">
+              {profile?.profile.username || "Player"}
+            </h2>
+            <div className="right-2 mt-2 flex items-center space-x-2">
+              <h2 className="text-sm font-bold text-black">
+                {profile?.profileTag}
+              </h2>
+
+              <FaRegCopy
+                className={`cursor-pointer text-gray-500 hover:text-gray-700 ${
+                  copied ? "text-green-600" : ""
+                }`}
+                onClick={copyToClipboard}
+                title="Copy to clipboard"
+              />
+            </div>
+          </div>
+
+          {/* Social Icons & Add Social Accounts */}
+          <SocialAccounts
+            linkedAccounts={profile.profile.linkedAccounts}
+            onUpdate={() => {
+              setIsSocialModalOpen(true);
+            }}
           />
-          {/* Username */}
-          <h2 className="text-xl font-bold text-black">
-            {profile?.profile.username || "Player"}
-          </h2>
-          <h2 className="text-xl font-bold text-black">
-            {profile?.profileTag}
-          </h2>
         </div>
 
-        {/* Right Section: Social Media */}
+        {/* Image Change Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+              <h2 className="text-xl font-bold mb-4">
+                Change {selectedImageType === "profile" ? "Profile" : "Banner"}{" "}
+                Picture
+              </h2>
+              <img
+                src={selectedImageType === "profile" ? profilePic : bannerPic}
+                alt="Current"
+                className="w-full h-[200px] object-cover rounded-md mb-4"
+              />
+              <label className="block text-center bg-blue-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-700">
+                Select New Image
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+              </label>
+              <button
+                className="mt-4 w-full bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
-        <div className="absolute bottom-2 right-2 flex items-start gap-1">
-          <FcLikePlaceholder size={20} />
-          <CiInstagram size={20} />
-          <FaYoutube size={20} />
-          <IoIosAdd size={20} />
-        </div>
+        {/* Social Accounts Modal */}
+        {isSocialModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+              <h2 className="text-xl font-bold mb-4">Add Social Accounts</h2>
+              <div className="space-y-3">
+                {Object.keys(socialAccounts).map((platform) => (
+                  <div
+                    key={platform}
+                    className="flex items-center justify-between border p-2 rounded"
+                  >
+                    <span className="capitalize">{platform}</span>
+                    <div className="flex items-center w-2/3">
+                      <input
+                        type="text"
+                        name={platform}
+                        defaultValue={socialAccounts[platform] || ""}
+                        placeholder={`Enter ${platform} URL`}
+                        className="border rounded px-2 py-1 w-full"
+                        disabled={
+                          socialAccounts[platform]
+                            ? !editableFields[platform]
+                            : ""
+                        } // Disable unless editing
+                        onBlur={handleBlur} // Update on losing focus
+                      />
+                      {!editableFields[platform] &&
+                        socialAccounts[platform] && (
+                          <button
+                            className="ml-2 text-blue-600 hover:underline"
+                            onClick={() => handleEditClick(platform)}
+                          >
+                            Edit
+                          </button>
+                        )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-end space-x-2">
+                <button
+                  className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+                  onClick={() => setIsSocialModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  onClick={() => {
+                    dispatch(
+                      profile_data_update({
+                        field: "profile.linkedAccounts",
+                        data: socialAccounts,
+                      })
+                    );
+                    dispatch(user_profile());
+                    setIsSocialModalOpen(false);
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    );
+  };
+  const SocialAccounts = ({ linkedAccounts, onUpdate }) => {
+    const socialIcons = {
+      discord: <FaDiscord className="text-purple-600" />,
+      instagram: <FaInstagram className="text-pink-500" />,
+      steam: <FaSteam className="text-gray-600" />,
+      twitch: <FaTwitch className="text-purple-500" />,
+      twitter: <FaTwitter className="text-blue-400" />,
+      youtube: <FaYoutube className="text-red-600" />,
+    };
+    return (
+      <div className="absolute bottom-2 right-2 flex flex-wrap items-center w-20 gap-2">
+        {/* Render linked accounts */}
+        {Object.entries(linkedAccounts).map(([platform, link]) =>
+          link ? (
+            <a
+              key={platform}
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:scale-110 transition-transform"
+            >
+              {socialIcons[platform] || null}
+            </a>
+          ) : null
+        )}
 
-      {/* Centralized Layout for Smaller Screens */}
-      {/* <div className="sm:hidden absolute bottom-4 left-0 right-0 text-center">
-        <h2 className="text-xl font-bold text-white">
-          {user?.username || "Player"}
-        </h2>
-        <div className="flex items-center justify-center gap-2 mt-2">
-          <span className="text-sm text-white">
-            <i className="fas fa-thumbs-up"></i> 1.2K Likes
-          </span>
-          <Button size="small" className="p-1 text-sm bg-blue-600 text-white">
-            + Add Friend
-          </Button>
-        </div>
-      </div> */}
-    </div>
-  );
+        {/* Button to update accounts */}
+        <button
+          onClick={onUpdate}
+          className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 flex items-center justify-center"
+        >
+          <FaPlus size={15} />
+        </button>
+      </div>
+    );
+  };
 
   // Section 2: Career Statistics with Tab System
   const CareerStatistics = () => {

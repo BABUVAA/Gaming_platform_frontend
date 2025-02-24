@@ -136,6 +136,77 @@ export const user_profile = createAsyncThunk(
     }
   }
 );
+
+// Async thunk for updating profile data
+export const profile_file_update = createAsyncThunk(
+  "users/profile_file_update",
+  async (data, thunkAPI) => {
+    try {
+      // Send POST request with form data
+      const response = await api.post("/api/users/profile_file_update", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // Show success toast notification
+      thunkAPI.dispatch(
+        showToast({
+          message: "Profile Updated",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+
+      return response.data;
+    } catch (error) {
+      // Show error toast notification
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response?.data?.error || "Failed to update profile",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+
+      // Reject action with error message
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Async thunk for updating profile data
+export const profile_data_update = createAsyncThunk(
+  "users/profile_data_update",
+  async (data, thunkAPI) => {
+    try {
+      // Send POST request with form data
+      const response = await api.post("/api/users/profile_data_update", data);
+
+      // Show success toast notification
+      thunkAPI.dispatch(
+        showToast({
+          message: "Profile Updated",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+
+      return response.data;
+    } catch (error) {
+      // Show error toast notification
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response?.data?.error || "Failed to update profile",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+
+      // Reject action with error message
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // Auth slice
 const authSlice = createSlice({
   name: "auth",

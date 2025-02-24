@@ -16,7 +16,6 @@ export const SocketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState({}); // Store messages per chatId
 
-  console.log(messages);
   useEffect(() => {
     // Initialize socket connection
     socketRef.current = io(import.meta.env.VITE_SERVER_URL, {
