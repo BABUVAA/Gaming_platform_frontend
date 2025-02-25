@@ -4,7 +4,6 @@ import {
   FaEdit,
   FaFacebook,
   FaInstagram,
-  FaLinkedin,
   FaPlus,
   FaRegCopy,
   FaSteam,
@@ -12,7 +11,7 @@ import {
   FaTwitter,
   FaYoutube,
 } from "react-icons/fa";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   profile_data_update,
   profile_file_update,
@@ -62,7 +61,8 @@ const Profile = () => {
     );
 
     const dispatch = useDispatch();
-    const handleImageChange = (e) => {
+
+    const handleImageChange = async (e) => {
       const file = e.target.files[0];
       if (file) {
         const imageUrl = URL.createObjectURL(file);
@@ -72,7 +72,6 @@ const Profile = () => {
         } else if (selectedImageType === "banner") {
           setBannerPic(imageUrl);
           handleProfileUpdate("banner", file);
-          dispatch(user_profile());
         }
         setIsModalOpen(false);
       }
@@ -90,12 +89,20 @@ const Profile = () => {
     const handleBlur = (e) => {
       const { name, value } = e.target;
 
-      if (value.trim()) {
-        setSocialAccounts((prev) => {
-          const updatedAccounts = { ...prev, [name]: value };
-          return updatedAccounts;
-        });
-      }
+      setSocialAccounts((prev) => {
+        const updatedAccounts = { ...prev };
+
+        if (value.trim()) {
+          // If there's a value, update it
+          updatedAccounts[name] = value;
+        } else {
+          // If empty, remove the key
+          updatedAccounts[name] = null;
+        }
+
+        return updatedAccounts;
+      });
+
       setEditableFields((prev) => ({ ...prev, [name]: false })); // Disable input again
     };
 
@@ -116,11 +123,12 @@ const Profile = () => {
     };
 
     {
-      /**profile data update function */
+      /*profile data update function */
     }
     const handleProfileUpdate = async (field, data) => {
       try {
-        dispatch(profile_file_update({ field: field, data: data }));
+        await dispatch(profile_file_update({ field: field, data: data }));
+        await dispatch(user_profile());
       } catch (error) {
         console.log(error);
       }
@@ -139,7 +147,7 @@ const Profile = () => {
         >
           {/* Edit Button for Banner */}
           <button
-            className="absolute z-50 top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition"
+            className="absolute z-40 top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition"
             onClick={() => {
               setSelectedImageType("banner");
               setIsModalOpen(true);
@@ -281,6 +289,7 @@ const Profile = () => {
                 <button
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                   onClick={async () => {
+                    console.log(socialAccounts);
                     await dispatch(
                       profile_data_update({
                         field: "profile.linkedAccounts",

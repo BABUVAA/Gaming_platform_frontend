@@ -177,6 +177,7 @@ export const profile_file_update = createAsyncThunk(
 export const profile_data_update = createAsyncThunk(
   "users/profile_data_update",
   async (data, thunkAPI) => {
+    console.log(data);
     try {
       // Send POST request with form data
       const response = await api.post("/api/users/profile_data_update", data);
