@@ -280,14 +280,14 @@ const Profile = () => {
                 </button>
                 <button
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  onClick={() => {
-                    dispatch(
+                  onClick={async () => {
+                    await dispatch(
                       profile_data_update({
                         field: "profile.linkedAccounts",
                         data: socialAccounts,
                       })
                     );
-                    dispatch(user_profile());
+                    await dispatch(user_profile());
                     setIsSocialModalOpen(false);
                   }}
                 >
