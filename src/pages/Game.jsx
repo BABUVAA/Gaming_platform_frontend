@@ -14,11 +14,6 @@ const Game = () => {
 
   const [isModalOpen, setModalOpen] = useState(false);
 
-  // Filter Available Games (Exclude Connected Games)
-  const availableGames = games.filter(
-    (game) => !connectedGames.some((connected) => connected._id === game._id)
-  );
-
   // Handle Connect / Disconnect
   const handleGameAction = async (game, action) => {
     let updatedGames =
@@ -91,7 +86,14 @@ const Game = () => {
                       key={game._id}
                       className="flex items-center justify-between p-2 border rounded-lg"
                     >
-                      <span className="text-lg">{game.name}</span>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={game.title} // Assuming game.title contains the image URL
+                          alt={game.name}
+                          className="w-16 h-5 object-cover rounded-md"
+                        />
+                        <span className="text-sm">{game.name}</span>
+                      </div>
                       <button
                         onClick={() => handleGameAction(game, "disconnect")}
                         className="bg-red-600 text-white px-4 py-1 rounded-md hover:bg-red-700"
@@ -120,7 +122,14 @@ const Game = () => {
                         key={game._id}
                         className="flex items-center justify-between p-2 border rounded-lg"
                       >
-                        <span className="text-lg">{game.name}</span>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={game.title} // Assuming game.title contains the image URL
+                            alt={game.name}
+                            className="w-16 h-5 object-cover rounded-md"
+                          />
+                          <span className="text-sm">{game.name}</span>
+                        </div>
                         <button
                           onClick={() => handleGameAction(game, "connect")}
                           className="bg-blue-600 text-white px-4 py-1 rounded-md hover:bg-blue-700"
