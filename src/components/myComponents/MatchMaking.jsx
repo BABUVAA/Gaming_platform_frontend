@@ -11,7 +11,7 @@ const Matchmaking = () => {
   const [searching, setSearching] = useState(false);
   const [match, setMatch] = useState();
   const [timeLeft, setTimeLeft] = useState(null);
-  const socket = useSocket();
+  const { socket } = useSocket();
 
   // Join chat room and listen for messages
   useEffect(() => {

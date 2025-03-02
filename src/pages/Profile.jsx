@@ -68,10 +68,10 @@ const Profile = () => {
         const imageUrl = URL.createObjectURL(file);
         if (selectedImageType === "profile") {
           setProfilePic(imageUrl);
-          handleProfileUpdate("avatar", file);
+          handleProfileUpdate("profile.avatar", file);
         } else if (selectedImageType === "banner") {
           setBannerPic(imageUrl);
-          handleProfileUpdate("banner", file);
+          handleProfileUpdate("profile.banner", file);
         }
         setIsModalOpen(false);
       }
@@ -110,7 +110,6 @@ const Profile = () => {
       /** copy feature */
     }
     const [copied, setCopied] = useState(false);
-
     const copyToClipboard = async () => {
       if (!profile?.profileTag) return;
       try {

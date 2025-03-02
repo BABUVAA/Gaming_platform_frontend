@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { states } from "../utils/states";
-import { Form } from "react-router-dom";
+import { Form, useNavigate } from "react-router-dom";
 import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
+
 import {
   createClan,
   fetchUserClan,
@@ -11,8 +12,23 @@ import {
   leaveClan,
   searchClan,
 } from "../store/clanSlice";
-import { FaBookmark, FaShareAlt } from "react-icons/fa";
-import { user_profile } from "../store/authSlice";
+import {
+  FaBookmark,
+  FaShareAlt,
+  FaMapMarkerAlt,
+  FaCrown,
+  FaUsers,
+  FaCalendarAlt,
+  FaTrophy,
+  FaFire,
+  FaClock,
+  FaEye,
+  FaTrash,
+  FaSignInAlt,
+} from "react-icons/fa";
+
+import { profile_data_update, user_profile } from "../store/authSlice";
+import { FaRegBookmark, FaRegCopy } from "react-icons/fa6";
 
 const Clan = () => {
   const { profile } = useSelector((store) => store.auth);
@@ -63,7 +79,7 @@ const Clan = () => {
           <button
             key={tab.id}
             onClick={() => setActiveMainTab(tab.id)}
-            className={`flex-1 p-4 text-center font-semibold transition duration-200 ${
+            className={`flex-1 p-1 md:p-2 lg:p-4 text-center font-semibold transition duration-200 ${
               activeMainTab === tab.id ? "bg-gray-700" : "hover:bg-gray-600"
             } rounded-lg`}
           >
@@ -177,9 +193,67 @@ const CreateClan = ({ state }) => {
 };
 
 const MyClan = () => {
-  const { userClanData, error } = useSelector((store) => store.clan);
+  const { userClanData } = useSelector((store) => store.clan);
+  const { profile } = useSelector((store) => store.auth);
+
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
+
   const dispatch = useDispatch();
+
+  let clanData = userClanData?.data;
+
+  {
+    /** copy feature */
+  }
+  const [copied, setCopied] = useState(false);
+  const copyToClipboard = async () => {
+    if (!clanData?.clanTag) return;
+    try {
+      await navigator.clipboard.writeText(clanData.clanTag);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500); // Reset copied state after 1.5 sec
+    } catch (err) {
+      console.error("Failed to copy: ", err);
+    }
+  };
+
+  //Bookmark functionality
+  const [loading, setLoading] = useState(false);
+
+  const isBookmarked = profile?.profile?.bookmarkedClans.includes(
+    clanData?._id
+  );
+
+  const handleBookmark = async () => {
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      if (isBookmarked) {
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.bookmarkedClans",
+            data: clanData._id,
+          })
+        );
+      } else {
+        await dispatch(
+          profile_data_update({
+            action: "add",
+            field: "profile.bookmarkedClans",
+            data: clanData._id,
+          })
+        );
+      }
+      await dispatch(user_profile());
+    } catch (error) {
+      console.error("Error updating bookmark:", error);
+    }
+
+    setLoading(false);
+  };
+
   const handleLeave = async () => {
     try {
       const response = await dispatch(leaveClan());
@@ -188,8 +262,6 @@ const MyClan = () => {
       console.error(error);
     }
   };
-
-  let clanData = userClanData?.data;
 
   useEffect(() => {
     clanData = userClanData?.data;
@@ -209,7 +281,7 @@ const MyClan = () => {
         {/* Tabs Section (Vertical on tablets and larger) */}
         <div className="md:w-1/4 flex md:flex-col gap-1 p-1 bg-gray-200 rounded-lg md:rounded-none md:shadow-md">
           <button
-            className={`flex items-center justify-center p-4 w-full transition-all duration-300 rounded-lg ${
+            className={`flex items-center justify-center p-2 md:p-4 w-full transition-all duration-300 rounded-lg ${
               activeTab === "badge"
                 ? "bg-blue-500 text-white"
                 : "bg-white text-gray-700 hover:bg-blue-100"
@@ -219,11 +291,11 @@ const MyClan = () => {
             <img
               src="/clan-badge.png" // Clan Badge
               alt="Clan Badge"
-              className="w-12 h-12 object-contain"
+              className="w-12 h-6 md:h-12 object-contain"
             />
           </button>
           <button
-            className={`flex items-center justify-center p-4 w-full transition-all duration-300 rounded-lg ${
+            className={`flex items-center justify-center p-2 md:p-4 w-full transition-all duration-300 rounded-lg ${
               activeTab === "stats"
                 ? "bg-blue-500 text-white"
                 : "bg-white text-gray-700 hover:bg-blue-100"
@@ -233,93 +305,52 @@ const MyClan = () => {
             <img
               src="/bar-chart.png" // Placeholder for statistics image
               alt="Clan Statistics"
-              className="w-12 h-12 object-contain"
+              className="w-12 h-6 md:h-12 object-contain"
             />
           </button>
         </div>
+
         {/* Content Section (Bio and Details) */}
         <div className="md:w-3/4 py-6 px-6">
           {/* Clan Info */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className=" flex items-center justify-between">
             <div>
-              <h2 className="text-4xl font-semibold text-gray-800">
+              <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-800">
                 {clanData?.clanName}
               </h2>
-              <p className="text-xl text-gray-500">{clanData?.clanTag}</p>
+              <span className="flex gap-2">
+                <p className="text-xs sm:text-sm md:text-base text-gray-500">
+                  {clanData?.clanTag}
+                </p>
+                <FaRegCopy
+                  className={`cursor-pointer text-gray-500 hover:text-gray-700 ${
+                    copied ? "text-green-600" : ""
+                  }`}
+                  onClick={copyToClipboard}
+                  title="Copy to clipboard"
+                />
+              </span>
             </div>
             <div className="flex items-center space-x-4">
-              <FaBookmark
-                size={24}
-                className="text-gray-600 hover:text-blue-500 cursor-pointer"
-              />
-              <FaShareAlt
-                size={24}
-                className="text-gray-600 hover:text-blue-500 cursor-pointer"
-              />
+              {/* Bookmark Button */}
+              <button
+                onClick={handleBookmark}
+                disabled={loading}
+                className="relative"
+              >
+                {isBookmarked ? (
+                  <FaBookmark className="text-blue-500 w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-transform transform hover:scale-110" />
+                ) : (
+                  <FaRegBookmark className="text-gray-600 hover:text-blue-500 cursor-pointer w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-transform transform hover:scale-110" />
+                )}
+              </button>
+
+              {/* Share Button */}
+              <FaShareAlt className="text-gray-600 hover:text-blue-500 cursor-pointer w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-transform transform hover:scale-110" />
             </div>
           </div>
-
           {/* First Tab - Clan Info (Badge Tab) */}
-          {activeTab === "badge" && (
-            <div className="bg-white rounded-lg">
-              <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                {/* Clan Bio */}
-                <div className="md:w-3/4 text-gray-700">
-                  <p className="text-lg">{clanData?.bio}</p>
-                </div>
-              </div>
-
-              {/* Clan Details */}
-              <div className="mt-6 border-t pt-6 space-y-4">
-                <p>
-                  <span className="font-semibold text-gray-600">Location:</span>{" "}
-                  {clanData?.location}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-600">Leader:</span>{" "}
-                  {clanData?.leader?.playerName}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-600">Members:</span>{" "}
-                  {clanData?.members?.length}
-                </p>
-                <p>
-                  <span className="font-semibold text-gray-600">
-                    Created At:
-                  </span>{" "}
-                  {new Date(clanData?.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Second Tab - Clan Statistics */}
-          {activeTab === "stats" && (
-            <div className="bg-white rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="mt-6 border-t pt-6 space-y-4">
-                  <p>
-                    <span className="font-semibold text-gray-600">
-                      Wars Won:
-                    </span>{" "}
-                    {clanData?.stats?.warsWon}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-gray-600">
-                      War Win Streak:
-                    </span>{" "}
-                    {clanData?.stats?.warWinStreak}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-gray-600">
-                      War Frequency:
-                    </span>{" "}
-                    {clanData?.stats?.warFrequency}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <ClanProfile activeTab={activeTab} clanData={clanData} />
         </div>
       </div>
       {/* Action Buttons */}
@@ -367,6 +398,83 @@ const MyClan = () => {
           ))}
         </ul>
       </div>
+    </div>
+  );
+};
+
+const ClanProfile = ({ clanData, activeTab }) => {
+  return (
+    <div className="bg-white  rounded-lg p-6 md:p-8 transition-all duration-300">
+      {/* First Tab - Clan Info (Badge Tab) */}
+      {activeTab === "badge" && (
+        <div className="space-y-6">
+          {/* Clan Bio */}
+          <p className="text-gray-800 text-sm sm:text-lg font-medium border-l-4 border-blue-500 pl-4">
+            {clanData?.bio}
+          </p>
+
+          {/* Clan Details */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-gray-700">
+            <div className="flex items-center space-x-3">
+              <FaMapMarkerAlt className="text-blue-600 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">Location:</span>{" "}
+                {clanData?.location}
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <FaCrown className="text-yellow-500 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">Leader:</span>{" "}
+                {clanData?.leader?.playerName}
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <FaUsers className="text-green-500 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">Members:</span>{" "}
+                {clanData?.members?.length}
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <FaCalendarAlt className="text-purple-500 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">Created At:</span>{" "}
+                {new Date(clanData?.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Second Tab - Clan Statistics */}
+      {activeTab === "stats" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-gray-700">
+            <div className="flex items-center space-x-3">
+              <FaTrophy className="text-yellow-500 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">Wars Won:</span>{" "}
+                {clanData?.stats?.warsWon}
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <FaFire className="text-red-500 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">War Win Streak:</span>{" "}
+                {clanData?.stats?.warWinStreak}
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <FaClock className="text-blue-600 text-sm" />
+              <p className="text-sm">
+                <span className="font-semibold">War Frequency:</span>{" "}
+                {clanData?.stats?.warFrequency}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -469,12 +577,100 @@ const SearchClans = () => {
   );
 };
 
-const BookmarkedClans = () => (
-  <div className="p-6">
-    <h2 className="text-lg font-bold mb-4">Bookmarked Clans</h2>
-    <p>No bookmarked clans yet.</p>
-  </div>
-);
+const BookmarkedClans = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { profile } = useSelector((store) => store.auth);
+
+  const [bookmarkedClans, setBookmarkedClans] = useState(
+    profile?.profile?.bookmarkedClans || []
+  );
+  const [joinRequests, setJoinRequests] = useState({});
+
+  // Handle removing a clan from bookmarks
+  const handleRemoveBookmark = (clanId) => {
+    setBookmarkedClans(bookmarkedClans.filter((clan) => clan._id !== clanId));
+
+    // Dispatch action to remove from backend
+    dispatch(removeClanBookmark(clanId));
+  };
+
+  // Handle sending a join request
+  const handleJoinClan = (clanId) => {
+    setJoinRequests((prev) => ({ ...prev, [clanId]: "Pending..." }));
+
+    // Simulate sending request (Replace with API call)
+    setTimeout(() => {
+      setJoinRequests((prev) => ({ ...prev, [clanId]: "Request Sent" }));
+    }, 2000);
+  };
+
+  return (
+    <div className="max-w-md md:max-w-2xl mx-auto p-4 md:p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-lg md:text-xl font-bold mb-4">🔥 Bookmarked Clans</h2>
+
+      {bookmarkedClans.length === 0 ? (
+        <p className="text-gray-600 text-sm md:text-base">
+          No bookmarked clans yet.
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {bookmarkedClans.map((clan) => (
+            <li
+              key={clan._id}
+              className="flex flex-wrap md:flex-nowrap justify-between items-center bg-gray-100 p-3 md:p-4 rounded-lg hover:bg-gray-200 transition cursor-pointer"
+            >
+              {/* Clan Badge & Name */}
+              <div className="flex items-center space-x-3">
+                <img
+                  src={`/${clan.badge}`}
+                  alt={clan.clanName}
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full border"
+                />
+                <span className="text-sm md:text-lg font-semibold">
+                  {clan.clanName}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap space-x-2 mt-2 md:mt-0">
+                {/* View Profile */}
+                <button
+                  className="flex items-center space-x-1 bg-blue-500 text-white px-2 md:px-3 py-1 rounded-md text-xs md:text-sm hover:bg-blue-600 transition"
+                  onClick={() => navigate(`/clan/${clan._id}`)}
+                >
+                  <FaEye /> <span>Profile</span>
+                </button>
+
+                {/* Remove from Bookmarks */}
+                <button
+                  className="flex items-center space-x-1 bg-red-500 text-white px-2 md:px-3 py-1 rounded-md text-xs md:text-sm hover:bg-red-600 transition"
+                  onClick={() => handleRemoveBookmark(clan._id)}
+                >
+                  <FaTrash /> <span>Remove</span>
+                </button>
+
+                {/* Send Join Request */}
+                {joinRequests[clan._id] ? (
+                  <span className="text-gray-500 text-xs md:text-sm">
+                    {joinRequests[clan._id]}
+                  </span>
+                ) : (
+                  <button
+                    className="flex items-center space-x-1 bg-green-500 text-white px-2 md:px-3 py-1 rounded-md text-xs md:text-sm hover:bg-green-600 transition"
+                    onClick={() => handleJoinClan(clan._id)}
+                  >
+                    <FaSignInAlt /> <span>Join</span>
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const Social = ({ activeTab, setActiveTab }) => (
   <div className="p-6">

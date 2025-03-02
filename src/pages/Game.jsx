@@ -16,13 +16,13 @@ const Game = () => {
 
   // Handle Connect / Disconnect
   const handleGameAction = async (game, action) => {
-    let updatedGames =
-      action === "connect"
-        ? [...connectedGames, game]
-        : connectedGames.filter((g) => g._id !== game._id);
-
+    let actionType = action === "connect" ? "add" : "remove";
     await dispatch(
-      profile_data_update({ field: "profile.games", data: updatedGames })
+      profile_data_update({
+        action: actionType,
+        field: "profile.games",
+        data: game,
+      })
     );
     await dispatch(user_profile());
   };
