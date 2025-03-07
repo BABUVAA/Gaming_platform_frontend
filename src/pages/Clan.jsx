@@ -4,7 +4,6 @@ import { Form, useNavigate } from "react-router-dom";
 import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
-
 import {
   createClan,
   fetchUserClan,
@@ -49,6 +48,7 @@ const Clan = () => {
 
   useEffect(() => {
     setLoading(true);
+
     const fetchClan = async () => {
       try {
         if (profile?.clan?._id && userClanData === null) {
@@ -62,51 +62,53 @@ const Clan = () => {
     setLoading(false);
   }, [profile]);
 
-  if (globalLoading || loading) <LoadingSpinner />;
+  if (globalLoading || loading) return <LoadingSpinner />;
+  else
+    return (
+      <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg  mb-12">
+        {/* Main Tabs */}
+        <div className="flex justify-between bg-gray-800 text-white rounded-lg shadow-md">
+          {[
+            {
+              id: profile?.clan ? "myClan" : "createClan",
+              label: profile?.clan ? "My Clan" : "Create Clan",
+            },
+            { id: "searchClan", label: "Search Clan" },
+            { id: "social", label: "Social" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveMainTab(tab.id)}
+              className={`flex-1 p-1 md:p-2 lg:p-4 text-center font-semibold transition duration-200 ${
+                activeMainTab === tab.id ? "bg-gray-700" : "hover:bg-gray-600"
+              } rounded-lg`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-  return (
-    <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg  mb-12">
-      {/* Main Tabs */}
-      <div className="flex justify-between bg-gray-800 text-white rounded-lg shadow-md">
-        {[
-          {
-            id: profile?.clan ? "myClan" : "createClan",
-            label: profile?.clan ? "My Clan" : "Create Clan",
-          },
-          { id: "searchClan", label: "Search Clan" },
-          { id: "social", label: "Social" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveMainTab(tab.id)}
-            className={`flex-1 p-1 md:p-2 lg:p-4 text-center font-semibold transition duration-200 ${
-              activeMainTab === tab.id ? "bg-gray-700" : "hover:bg-gray-600"
-            } rounded-lg`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {/* Tab Content */}
+        <div className="bg-white rounded-lg shadow-md mt-4">
+          {activeMainTab === "createClan" && <CreateClan state={states} />}
+          {activeMainTab === "myClan" && (
+            <MyClan userClanData={userClanData} profile={profile} />
+          )}
+          {activeMainTab === "searchClan" && (
+            <SearchClan
+              activeTab={activeSearchTab}
+              setActiveTab={setActiveSearchTab}
+            />
+          )}
+          {activeMainTab === "social" && (
+            <Social
+              activeTab={activeSocialTab}
+              setActiveTab={setActiveSocialTab}
+            />
+          )}
+        </div>
       </div>
-
-      {/* Tab Content */}
-      <div className="bg-white rounded-lg shadow-md mt-4">
-        {activeMainTab === "createClan" && <CreateClan state={states} />}
-        {activeMainTab === "myClan" && <MyClan />}
-        {activeMainTab === "searchClan" && (
-          <SearchClan
-            activeTab={activeSearchTab}
-            setActiveTab={setActiveSearchTab}
-          />
-        )}
-        {activeMainTab === "social" && (
-          <Social
-            activeTab={activeSocialTab}
-            setActiveTab={setActiveSocialTab}
-          />
-        )}
-      </div>
-    </div>
-  );
+    );
 };
 
 const CreateClan = ({ state }) => {
@@ -192,16 +194,26 @@ const CreateClan = ({ state }) => {
   );
 };
 
-const MyClan = () => {
-  const { userClanData } = useSelector((store) => store.clan);
-  const { profile } = useSelector((store) => store.auth);
-
+const MyClan = ({ userClanData, profile }) => {
   const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
-
   const dispatch = useDispatch();
+  const [clanData, setClanData] = useState(null); // Start as null
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
-  let clanData = userClanData?.data;
+  useEffect(() => {
+    if (userClanData?.data) {
+      setClanData(userClanData.data);
+    }
+  }, [userClanData]);
 
+  useEffect(() => {
+    if (profile?.profile?.bookmarkedClans && clanData?._id) {
+      const found = profile.profile.bookmarkedClans.some(
+        (clan) => String(clan._id) === String(clanData._id)
+      );
+      setIsBookmarked(found);
+    }
+  }, [profile, clanData]);
   {
     /** copy feature */
   }
@@ -219,10 +231,6 @@ const MyClan = () => {
 
   //Bookmark functionality
   const [loading, setLoading] = useState(false);
-
-  const isBookmarked = profile?.profile?.bookmarkedClans.includes(
-    clanData?._id
-  );
 
   const handleBookmark = async () => {
     if (loading) return;
@@ -250,7 +258,6 @@ const MyClan = () => {
     } catch (error) {
       console.error("Error updating bookmark:", error);
     }
-
     setLoading(false);
   };
 
@@ -262,10 +269,6 @@ const MyClan = () => {
       console.error(error);
     }
   };
-
-  useEffect(() => {
-    clanData = userClanData?.data;
-  }, [userClanData]);
 
   if (!userClanData) {
     return (
@@ -354,19 +357,16 @@ const MyClan = () => {
         </div>
       </div>
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-1 w-full justify-around md:justify-start space-x-4 my-2">
-        <button className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-          Edit
-        </button>
-        <button className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+      <div className="flex flex-wrap gap-2 w-full justify-center md:justify-start my-2">
+        <button className="w-full md:w-auto bg-gray-600 text-sm text-white px-3 py-2 rounded-xl shadow-md hover:bg-gray-700 transition-all">
           War Log
         </button>
-        <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+        <button className="w-full md:w-auto bg-green-600 text-sm text-white px-3 py-2 rounded-xl shadow-md hover:bg-green-700 transition-all">
           Send Mail
         </button>
         <button
           onClick={handleLeave}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+          className="w-full md:w-auto bg-red-600 text-sm text-white px-4 py-2 rounded-xl shadow-md hover:bg-red-700 transition-all"
         >
           Leave
         </button>
@@ -426,7 +426,7 @@ const ClanProfile = ({ clanData, activeTab }) => {
               <FaCrown className="text-yellow-500 text-sm" />
               <p className="text-sm">
                 <span className="font-semibold">Leader:</span>{" "}
-                {clanData?.leader?.playerName}
+                {clanData?.leader?.leaderName}
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -455,14 +455,14 @@ const ClanProfile = ({ clanData, activeTab }) => {
               <FaTrophy className="text-yellow-500 text-sm" />
               <p className="text-sm">
                 <span className="font-semibold">Wars Won:</span>{" "}
-                {clanData?.stats?.warsWon}
+                {clanData?.stats?.warsWon || 0}
               </p>
             </div>
             <div className="flex items-center space-x-3">
               <FaFire className="text-red-500 text-sm" />
               <p className="text-sm">
                 <span className="font-semibold">War Win Streak:</span>{" "}
-                {clanData?.stats?.warWinStreak}
+                {clanData?.stats?.warWinStreak || 0}
               </p>
             </div>
             <div className="flex items-center space-x-3">

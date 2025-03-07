@@ -1,5 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { verifySession, login, logout, register } from "./authSlice";
+import {
+  verifySession,
+  login,
+  logout,
+  register,
+  user_profile,
+  profile_data_update,
+  profile_file_update,
+} from "./authSlice";
 import { fetchGames } from "./gameSlice";
 import { createClan, fetchUserClan } from "./clanSlice";
 
@@ -10,7 +18,7 @@ const loadingSlice = createSlice({
     globalLoading: false,
   },
   reducers: {
-    setLoading: (state, action) => {
+    setLoading: (state) => {
       state.globalLoading = action.payload;
     },
   },
@@ -52,31 +60,58 @@ const loadingSlice = createSlice({
       .addCase(register.rejected, (state) => {
         state.globalLoading = false;
       })
+      .addCase(user_profile.pending, (state) => {
+        state.globalLoading = true;
+      })
+      .addCase(user_profile.fulfilled, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(user_profile.rejected, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(profile_data_update.pending, (state) => {
+        state.globalLoading = true;
+      })
+      .addCase(profile_data_update.fulfilled, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(profile_data_update.rejected, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(profile_file_update.pending, (state) => {
+        state.globalLoading = true;
+      })
+      .addCase(profile_file_update.fulfilled, (state) => {
+        state.globalLoading = false;
+      })
+      .addCase(profile_file_update.rejected, (state) => {
+        state.globalLoading = false;
+      })
       .addCase(fetchGames.pending, (state) => {
         state.globalLoading = true;
       })
       .addCase(fetchGames.fulfilled, (state) => {
         state.globalLoading = false;
       })
-      .addCase(fetchGames.rejected, (state, action) => {
+      .addCase(fetchGames.rejected, (state) => {
         state.globalLoading = false;
       })
-      .addCase(createClan.pending, (state, action) => {
+      .addCase(createClan.pending, (state) => {
         state.globalLoading = true;
       })
-      .addCase(createClan.fulfilled, (state, action) => {
+      .addCase(createClan.fulfilled, (state) => {
         state.globalLoading = false;
       })
-      .addCase(createClan.rejected, (state, action) => {
+      .addCase(createClan.rejected, (state) => {
         state.globalLoading = false;
       })
-      .addCase(fetchUserClan.pending, (state, action) => {
+      .addCase(fetchUserClan.pending, (state) => {
         state.globalLoading = true;
       })
-      .addCase(fetchUserClan.fulfilled, (state, action) => {
+      .addCase(fetchUserClan.fulfilled, (state) => {
         state.globalLoading = false;
       })
-      .addCase(fetchUserClan.rejected, (state, action) => {
+      .addCase(fetchUserClan.rejected, (state) => {
         state.globalLoading = false;
       });
   },

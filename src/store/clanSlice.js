@@ -140,14 +140,12 @@ const clanSlice = createSlice({
       .addCase(joinClan.rejected, (state, action) => {
         state.error = action.payload;
       })
-
       .addCase(leaveClan.fulfilled, (state, action) => {
         state.userClanData = null;
       })
       .addCase(leaveClan.rejected, (state, action) => {
         state.error = action.payload;
       })
-
       .addCase(fetchUserClan.fulfilled, (state, action) => {
         state.userClanData = action.payload;
       })
@@ -158,14 +156,12 @@ const clanSlice = createSlice({
         state.error = action.payload;
         state.userClanData = null;
       })
-
       .addCase(searchClan.fulfilled, (state, action) => {
         state.searchClanData = action.payload;
       })
       .addCase(searchClan.rejected, (state, action) => {
         state.error = action.payload;
       })
-
       .addCase(logout.fulfilled, (state) => {
         state.userClanData = null;
         state.searchClanData = null;
