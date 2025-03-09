@@ -50,7 +50,7 @@ export default Chats;
 
 const ChatSidebar = ({ onSelectChat, onChatType, clanChat, personalChats }) => {
   return (
-    <div className="h-full md:pb-0 bg-blue-50 border-r border-blue-300 shadow-lg w-full flex flex-col">
+    <div className=" absolute bottom-1 h-full md:pb-0 bg-blue-50 border-r border-blue-300 shadow-lg w-full flex flex-col">
       {/* Sidebar Header */}
       <div className="p-2 bg-blue-500 text-white text-xs font-semibold shadow-md flex justify-between items-center">
         <span>Chats</span>

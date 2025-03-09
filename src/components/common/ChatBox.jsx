@@ -133,7 +133,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
               </div>
             ))}
           </div>
-          <div className="p-2 border-t dark:border-zinc-700">
+          <div className="absolute bottom-1 p-2 border-t w-full dark:border-zinc-700">
             <div className="flex items-center gap-2">
               <input
                 placeholder="Type a message..."
