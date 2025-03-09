@@ -34,7 +34,7 @@ const Header = () => {
   );
 
   return (
-    <header className="flex items-center justify-between h-16 md:h-14 bg-white shadow-md">
+    <header className="flex items-center justify-between h-12 md:h-16 bg-white shadow-md">
       {/* Logo */}
       <HeaderLogo />
 

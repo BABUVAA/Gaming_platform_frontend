@@ -23,7 +23,7 @@ export const verifySession = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message: error.response.data.error || error,
+          message: error.response.data.message || error,
           type: types.DANGER,
           position: "bottom-right",
         })
