@@ -106,6 +106,39 @@ export const leaveClan = createAsyncThunk(
   }
 );
 
+// Async thunk for updating profile data
+export const clan_data_update = createAsyncThunk(
+  "clan/clan_data_update",
+  async (data, thunkAPI) => {
+    try {
+      // Send POST request with form data
+      const response = await api.post("/api/clan/clan_data_update", data);
+
+      // Show success toast notification
+      thunkAPI.dispatch(
+        showToast({
+          message: "Clan Data Updated",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+
+      return response.data;
+    } catch (error) {
+      // Show error toast notification
+      thunkAPI.dispatch(
+        showToast({
+          message: error.response?.data?.error || "Failed to update Clan Data",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+
+      // Reject action with error message
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
 // Slice for game data
 const clanSlice = createSlice({
   name: "clan",

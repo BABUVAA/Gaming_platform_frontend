@@ -14,10 +14,15 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const chatId = chatType === "clan" ? userClanData?.data?._id : profile._id; // ✅ Fixed chatId
   const senderId = profile._id; // ✅ Fixed senderId
   const senderName = profile.profile.username;
-  console.log(chatType);
   // Join chat room and listen for messages
   useEffect(() => {
     if (!chatId || !senderId) return; // ✅ Prevents invalid IDs
+
+    // Listen for previous messages
+    const loadMessagesListener = (loadedMessages) => {
+      console.log("Previous messages received:", loadedMessages);
+      setMessages(loadedMessages); // ✅ Store previous messages
+    };
 
     // Listen for new messages
     const messageListener = (newMessage) => {
@@ -25,6 +30,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
       setMessages((prevMessages) => [...prevMessages, newMessage]);
     };
 
+    socket.socket.on("clan_load_messages", loadMessagesListener);
     socket.socket.on(`${chatType}_message`, messageListener); // ✅ Use event constant
 
     // Join chat room
@@ -37,6 +43,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
     };
   }, [chatType, chatId, senderId]);
 
+  console.log("message:", messages);
   // Send a new message
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -94,7 +101,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
             className="flex-1 p-2 overflow-y-auto flex flex-col space-y-1.5"
             id="chatDisplay"
           >
-            {userClanData?.data?.chat.map((msg, index) => (
+            {/* {userClanData?.data?.chat.map((msg, index) => (
               <div
                 key={index}
                 className={`flex ${
@@ -112,7 +119,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
                   {msg.message}
                 </div>
               </div>
-            ))}
+            ))} */}
             {messages.map((msg, index) => (
               <div
                 key={index}

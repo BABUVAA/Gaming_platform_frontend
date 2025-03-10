@@ -5,6 +5,7 @@ import { Button, Input } from "../components";
 import { formData } from "../utils/utility";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  clan_data_update,
   createClan,
   fetchUserClan,
   joinClan,
@@ -25,8 +26,15 @@ import {
   FaTrash,
   FaSignInAlt,
 } from "react-icons/fa";
+import { FaChevronDown, FaUserCircle } from "react-icons/fa";
+import { MdPersonRemove, MdArrowUpward, MdArrowDownward } from "react-icons/md";
+import { HiOutlineEye } from "react-icons/hi";
 
-import { profile_data_update, user_profile } from "../store/authSlice";
+import {
+  profile_data_update,
+  searchPlayer,
+  user_profile,
+} from "../store/authSlice";
 import { FaRegBookmark, FaRegCopy } from "react-icons/fa6";
 
 const Clan = () => {
@@ -199,6 +207,32 @@ const MyClan = ({ userClanData, profile }) => {
   const dispatch = useDispatch();
   const [clanData, setClanData] = useState(null); // Start as null
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const roleHierarchy = ["MEMBER", "ELDER", "COLEADER", "LEADER"];
+  const roleColors = {
+    LEADER: "bg-red-500 text-white",
+    COLEADER: "bg-blue-500 text-white",
+    ELDER: "bg-green-500 text-white",
+    MEMBER: "bg-gray-500 text-white",
+  };
+
+  const currentUserRole = clanData?.members?.find(
+    (member) => member.user === profile._id
+  )?.role;
+
+  const canPromote = (userRole, targetRole) => {
+    return roleHierarchy.indexOf(userRole) > roleHierarchy.indexOf(targetRole);
+  };
+  const canDemote = (userRole, targetRole) => {
+    return (
+      roleHierarchy.indexOf(userRole) > roleHierarchy.indexOf(targetRole) &&
+      targetRole !== "MEMBER"
+    );
+  };
+
+  const canKick = (userRole, targetRole) => {
+    return roleHierarchy.indexOf(userRole) > roleHierarchy.indexOf(targetRole);
+  };
 
   useEffect(() => {
     if (userClanData?.data) {
@@ -373,26 +407,89 @@ const MyClan = ({ userClanData, profile }) => {
       </div>
 
       {/* Member List Section */}
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-4 border-b">
+      <div className="bg-white p-4 rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">
           Clan Members
         </h3>
-        <ul className="space-y-4">
+        <ul className="space-y-2">
           {clanData?.members?.map((member, index) => (
             <li
               key={index}
-              className="flex justify-between items-center hover:bg-slate-300"
+              className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 transition relative"
             >
-              <div>
-                <span className="text-lg font-semibold">
-                  {member.clanMemberName}
-                </span>
-                <p className="text-gray-600">{member.role}</p>
+              {/* Left Section - Avatar & Name */}
+              <div className="flex items-center space-x-3">
+                <FaUserCircle className="text-gray-500 text-2xl" />
+                <div>
+                  <span className="text-base font-medium">
+                    {member.clanMemberName}
+                  </span>
+                  <div
+                    className={`mt-1 text-xs font-bold px-2 py-1 rounded ${
+                      roleColors[member.role]
+                    }`}
+                  >
+                    {member.role}
+                  </div>
+                </div>
               </div>
-              <div>
-                <button className="text-blue-500 hover:underline">
-                  Profile
+
+              {/* Right Section - Dropdown Menu */}
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setOpenDropdown(openDropdown === index ? null : index)
+                  }
+                  className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Options <FaChevronDown size={14} className="ml-1" />
                 </button>
+
+                {openDropdown === index && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md z-10">
+                    <button
+                      className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
+                      onClick={() => console.log("View Profile")}
+                    >
+                      <HiOutlineEye className="mr-2 text-blue-500" /> View
+                      Profile
+                    </button>
+
+                    {canPromote(currentUserRole, member.role) && (
+                      <button
+                        className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
+                        onClick={() => console.log("Promote")}
+                      >
+                        <MdArrowUpward className="mr-2 text-green-500" />{" "}
+                        Promote
+                      </button>
+                    )}
+
+                    {canDemote(currentUserRole, member.role) && (
+                      <button
+                        className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
+                        onClick={() => console.log("Demote")}
+                      >
+                        <MdArrowDownward className="mr-2 text-yellow-500" />{" "}
+                        Demote
+                      </button>
+                    )}
+
+                    {canKick(currentUserRole, member.role) && (
+                      <button
+                        className="flex items-center px-3 py-2 w-full text-left text-sm text-red-600 hover:bg-red-100"
+                        onClick={() => {
+                          console.log("Kick Out");
+                          dispatch(
+                            clan_data_update({ "clan.members": "elder" })
+                          );
+                        }}
+                      >
+                        <MdPersonRemove className="mr-2" /> Kick Out
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </li>
           ))}
@@ -689,9 +786,412 @@ const Social = ({ activeTab, setActiveTab }) => (
   </div>
 );
 
-const Friends = () => <p>No friends yet.</p>;
-const FriendRequests = () => <p>No friend requests yet.</p>;
-const SearchPlayers = () => <p>Search players by their tag.</p>;
+const Friends = () => {
+  // Hardcoded friends list for now
+  const { profile } = useSelector((store) => store.auth);
+  console.log("friends", profile.profile.friends);
+  const [friends, setFriends] = useState(profile.profile.friends || []);
+
+  // Function to remove a friend
+  const removeFriend = (id) => {
+    setFriends(friends.filter((friend) => friend.id !== id));
+  };
+
+  return (
+    <div>
+      <h2>Your Friends</h2>
+
+      {/* Uncomment and use this when API is ready */}
+      {/*
+      useEffect(() => {
+        const fetchFriends = async () => {
+          try {
+            const { data } = await axios.get("/api/friends", { withCredentials: true });
+            setFriends(data);
+          } catch (error) {
+            console.error("Error fetching friends:", error);
+          }
+        };
+        fetchFriends();
+      }, []);
+      */}
+
+      {friends.length === 0 ? (
+        <p>No friends yet.</p>
+      ) : (
+        <ul>
+          {friends.map((friend) => (
+            <li
+              key={friend._id}
+              style={{ display: "flex", alignItems: "center", gap: "10px" }}
+            >
+              <img
+                src={friend.profile.avatar}
+                alt="Avatar"
+                width={40}
+                style={{ borderRadius: "50%" }}
+              />
+              <span>{friend.profile.username}</span>
+              <button
+                onClick={() => alert(`Viewing profile of ${friend.username}`)}
+              >
+                👤 View
+              </button>
+              <button onClick={() => removeFriend(friend.id)}>❌ Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+const FriendRequests = () => {
+  const dispatch = useDispatch();
+  const { profile } = useSelector((state) => state.auth); // Fetching profile
+
+  // Incoming friend requests list
+  const friendRequests = profile?.profile.friendRequests || [];
+
+  return (
+    <div className="p-4 bg-white shadow-lg rounded-lg">
+      <h2 className="text-xl font-semibold mb-4">Friend Requests</h2>
+
+      {friendRequests.length === 0 ? (
+        <p>No friend requests yet.</p>
+      ) : (
+        <ul>
+          {friendRequests.map((requesterId) => (
+            <FriendRequestCard key={requesterId} requesterId={requesterId} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+const FriendRequestCard = ({ requesterId }) => {
+  const dispatch = useDispatch();
+  // Accept Friend Request
+  const handleAcceptRequest = async () => {
+    try {
+      await dispatch(
+        profile_data_update({
+          action: "remove",
+          field: "profile.friendRequests",
+          data: requesterId,
+        })
+      );
+
+      await dispatch(
+        profile_data_update({
+          action: "remove",
+          field: "profile.sentRequests",
+          data: profile._id,
+          playerId: requesterId,
+        })
+      );
+
+      await dispatch(
+        profile_data_update({
+          action: "add",
+          field: "profile.friends",
+          data: requesterId,
+        })
+      );
+
+      await dispatch(
+        profile_data_update({
+          action: "add",
+          field: "profile.friends",
+          data: profile._id,
+          playerId: requesterId,
+        })
+      );
+
+      await dispatch(user_profile()); // Refresh profile
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
+    }
+  };
+
+  // Reject Friend Request
+  const handleRejectRequest = async () => {
+    try {
+      await dispatch(
+        profile_data_update({
+          action: "remove",
+          field: "profile.friendRequests",
+          data: requesterId,
+        })
+      );
+
+      await dispatch(
+        profile_data_update({
+          action: "remove",
+          field: "profile.sentRequests",
+          data: profile._id,
+          playerId: requesterId,
+        })
+      );
+
+      await dispatch(user_profile()); // Refresh profile
+    } catch (error) {
+      console.error("Error rejecting friend request:", error);
+    }
+  };
+
+  if (!requesterId) return <p>Loading...</p>;
+
+  return (
+    <li className="flex items-center justify-between p-3 border-b">
+      <div className="flex items-center gap-3">
+        <img
+          src={requesterId?.profile?.avatar || "/profile-pic.png"}
+          alt="User Avatar"
+          className="w-10 h-10 rounded-full object-cover"
+        />
+        <span className="font-medium">
+          {requesterId?.profile?.username || "player"}
+        </span>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleAcceptRequest}
+          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Accept
+        </button>
+        <button
+          onClick={handleRejectRequest}
+          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+        >
+          Reject
+        </button>
+      </div>
+    </li>
+  );
+};
+
+const SearchPlayers = () => {
+  const { profile } = useSelector((store) => store.auth);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [searchPlayerData, setSearchPlayerData] = useState(null);
+  const dispatch = useDispatch();
+
+  const handleSearch = async () => {
+    if (!input.trim()) return;
+    setLoading(true);
+    setError("");
+    setSearchPlayerData(null);
+
+    try {
+      const response = await dispatch(
+        searchPlayer({ playerTag: input })
+      ).unwrap(); // Ensure we get the data
+      setSearchPlayerData(response.data); // Store player data
+    } catch (error) {
+      console.error("Error while searching for player:", error);
+      setError("Player Not Found");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddFriend = async (friendId) => {
+    if (friendId) {
+      try {
+        await dispatch(
+          profile_data_update({
+            action: "add",
+            field: "profile.sentRequests",
+            data: friendId,
+          })
+        );
+        await dispatch(
+          profile_data_update({
+            action: "add",
+            field: "profile.friendRequests",
+            data: profile._id,
+            playerId: friendId,
+          })
+        );
+        setSearchPlayerData((prev) => ({
+          ...prev,
+          friendshipStatus: "request_sent",
+        }));
+        await dispatch(user_profile()); // Refresh user data
+      } catch (error) {
+        console.error("Error while sending friend request:", error);
+      }
+    }
+  };
+
+  const handleCancelRequest = async (friendId) => {
+    if (friendId) {
+      try {
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.sentRequests",
+            data: friendId,
+          })
+        );
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.friendRequests",
+            data: profile._id,
+            playerId: friendId,
+          })
+        );
+
+        setSearchPlayerData((prev) => ({
+          ...prev,
+          friendshipStatus: "not_friends",
+        }));
+
+        await dispatch(user_profile()); // Refresh user data
+      } catch (error) {
+        console.error("Error while canceling friend request:", error);
+      }
+    }
+  };
+
+  const handleAcceptRequest = async (friendId) => {
+    if (friendId) {
+      try {
+        // Remove from friendRequests
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.friendRequests",
+            data: friendId,
+          })
+        );
+
+        // Remove from sender's sentRequests
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.sentRequests",
+            data: profile._id,
+            playerId: friendId,
+          })
+        );
+
+        // Add to friends list
+        await dispatch(
+          profile_data_update({
+            action: "add",
+            field: "profile.friends",
+            data: friendId,
+          })
+        );
+        await dispatch(
+          profile_data_update({
+            action: "add",
+            field: "profile.friends",
+            data: profile._id,
+            playerId: friendId,
+          })
+        );
+
+        setSearchPlayerData((prev) => ({
+          ...prev,
+          friendshipStatus: "friends",
+        }));
+
+        await dispatch(user_profile()); // Refresh user data
+      } catch (error) {
+        console.error("Error while accepting friend request:", error);
+      }
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-1 items-center p-6">
+        <Input
+          type="text"
+          name="searchFriend"
+          label="Search Friend"
+          placeholder="Enter Username or Tag"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <Button variant="success" size="xs" onClick={handleSearch}>
+          Search
+        </Button>
+      </div>
+
+      {loading && <div>Loading...</div>}
+      {error && <div className="text-red-500">{error}</div>}
+
+      {searchPlayerData ? (
+        <div className="mt-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <img
+              src={searchPlayerData.avatar || "/profile-pic.png"} // Default avatar fallback
+              alt="User Avatar"
+              className="w-24 h-24 rounded-full object-cover mb-4"
+            />
+            <h4 className="text-xl font-semibold text-center">
+              {searchPlayerData.username}
+            </h4>
+
+            {/* Display friendship status-based actions */}
+            <div className="flex flex-col items-center gap-2 mt-4">
+              {searchPlayerData.friendshipStatus === "not_friends" && (
+                <button
+                  onClick={() => handleAddFriend(searchPlayerData._id)}
+                  className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 transition duration-300"
+                >
+                  Add Friend
+                </button>
+              )}
+
+              {searchPlayerData.friendshipStatus === "request_received" && (
+                <button
+                  onClick={() => handleCancelRequest(searchPlayerData._id)}
+                  className="px-4 py-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-600 transition duration-300"
+                >
+                  Pending... (Cancel)
+                </button>
+              )}
+
+              {searchPlayerData.friendshipStatus === "request_sent" && (
+                <button
+                  onClick={() => handleAcceptRequest(searchPlayerData._id)}
+                  className="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-600 transition duration-300"
+                >
+                  Accept Request
+                </button>
+              )}
+
+              {searchPlayerData.friendshipStatus === "friends" && (
+                <button
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg cursor-not-allowed"
+                  disabled
+                >
+                  ✅ Friends
+                </button>
+              )}
+
+              <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300">
+                View Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        input && !loading && !error && <div>No players found</div>
+      )}
+    </>
+  );
+};
+
 const TabNavigation = ({ tabs, activeTab, setActiveTab }) => (
   <div className="border-b mb-4">
     {tabs.map((tab) => (

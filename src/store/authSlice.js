@@ -137,6 +137,22 @@ export const user_profile = createAsyncThunk(
   }
 );
 
+//Async thunk to Search Clan
+export const searchPlayer = createAsyncThunk(
+  "users/searchPlayer", // action type
+  async (playerTag, thunkAPI) => {
+    try {
+      const response = await api.post("/api/users/searchPlayer", playerTag);
+      if (!response) {
+        throw new Error("Failed to fetch player data");
+      }
+      return response.data; // return data to be used in the reducer
+    } catch (error) {
+      return response.data; // return error message in case of failure
+    }
+  }
+);
+
 // Async thunk for updating profile data
 export const profile_file_update = createAsyncThunk(
   "users/profile_file_update",
