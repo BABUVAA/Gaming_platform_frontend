@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { states } from "../utils/states";
 import { Form, useNavigate } from "react-router-dom";
 import { Button, Input } from "../components";
@@ -688,11 +688,17 @@ const BookmarkedClans = () => {
   const [joinRequests, setJoinRequests] = useState({});
 
   // Handle removing a clan from bookmarks
-  const handleRemoveBookmark = (clanId) => {
+  const handleRemoveBookmark = async (clanId) => {
     setBookmarkedClans(bookmarkedClans.filter((clan) => clan._id !== clanId));
-
     // Dispatch action to remove from backend
-    dispatch(removeClanBookmark(clanId));
+    await dispatch(
+      profile_data_update({
+        action: "remove",
+        field: "profile.bookmarkedClans",
+        data: clanId,
+      })
+    );
+    await dispatch(user_profile());
   };
 
   // Handle sending a join request
@@ -799,6 +805,19 @@ const Friends = () => {
     profile.profile.sentRequests || []
   );
   const [selectedFriend, setSelectedFriend] = useState(null);
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".dropdown-container")) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   // Cancel Friend Request
   const cancelRequest = async (friendId) => {
@@ -829,16 +848,36 @@ const Friends = () => {
   };
 
   // Remove Friend
-  const removeFriend = (id) => {
+  const removeFriend = async (id) => {
     setFriends(friends.filter((friend) => friend._id !== id));
     setSelectedFriend(null);
     // Dispatch API call to remove friend (if needed)
+    if (id) {
+      try {
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.friends",
+            data: id,
+          })
+        );
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.friends",
+            data: profile._id,
+            playerId: id,
+          })
+        );
+        await dispatch(user_profile()); // Refresh user data
+      } catch (error) {
+        console.error("Error while canceling friend request:", error);
+      }
+    }
   };
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg">
-      <h2 className="text-xl font-semibold mb-4">Friends</h2>
-
       {/* Sent Friend Requests Section */}
       <div className="mb-4">
         <h3 className="text-lg font-medium">Sent Requests</h3>
@@ -874,59 +913,67 @@ const Friends = () => {
       </div>
 
       {/* Friends List Section */}
-      <div>
-        <h3 className="text-lg font-medium">Friends List</h3>
-        {friends.length === 0 ? (
-          <p>No friends yet.</p>
-        ) : (
-          <ul>
-            {friends.map((friend) => (
-              <li
-                key={friend._id}
-                className="flex items-center p-3 border-b cursor-pointer hover:bg-gray-100"
-                onClick={() => setSelectedFriend(friend)}
-              >
+      <div className="bg-white  rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">
+          Friends List
+        </h3>
+        <ul className="space-y-2">
+          {friends?.map((friend, index) => (
+            <li
+              key={index}
+              className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 transition relative"
+            >
+              {/* Left Section - Avatar & Name */}
+              <div className="flex items-center space-x-3">
                 <img
-                  src={friend.profile.avatar || "/profile-pic.png"}
+                  src={friend.profile.avatar || "/default-avatar.png"}
                   alt="Avatar"
                   className="w-10 h-10 rounded-full object-cover"
                 />
-                <span className="ml-3">{friend.profile.username}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                <span className="text-base font-medium">
+                  {friend.profile.username}
+                </span>
+              </div>
 
-      {/* Friend Options (When a friend is clicked) */}
-      {selectedFriend && (
-        <div className="mt-4 p-3 bg-gray-100 rounded">
-          <h3 className="font-semibold">Friend Options</h3>
-          <p>{selectedFriend.profile.username}</p>
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={() =>
-                alert(`Viewing profile of ${selectedFriend.profile.username}`)
-              }
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
-            >
-              <FaUser /> View Profile
-            </button>
-            <button
-              onClick={() => removeFriend(selectedFriend._id)}
-              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              ❌ Remove Friend
-            </button>
-          </div>
-        </div>
-      )}
+              {/* Right Section - Dropdown Menu */}
+              <div className="relative dropdown-container">
+                <button
+                  onClick={() =>
+                    setOpenDropdown(openDropdown === index ? null : index)
+                  }
+                  className="flex items-center text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Options <FaChevronDown size={14} className="ml-1" />
+                </button>
+
+                {openDropdown === index && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md z-10">
+                    <button
+                      className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
+                      onClick={() => console.log("View Profile")}
+                    >
+                      <HiOutlineEye className="mr-2 text-blue-500" /> View
+                      Profile
+                    </button>
+
+                    <button
+                      className="flex items-center px-3 py-2 w-full text-left text-sm text-red-600 hover:bg-red-100"
+                      onClick={() => removeFriend(friend._id)}
+                    >
+                      <MdPersonRemove className="mr-2" /> Remove Friend
+                    </button>
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
 
 const FriendRequests = () => {
-  const dispatch = useDispatch();
   const { profile } = useSelector((state) => state.auth); // Fetching profile
 
   // Incoming friend requests list
@@ -941,14 +988,18 @@ const FriendRequests = () => {
       ) : (
         <ul>
           {friendRequests.map((requesterId) => (
-            <FriendRequestCard key={requesterId} requesterId={requesterId} />
+            <FriendRequestCard
+              key={requesterId}
+              userId={profile._id}
+              requesterId={requesterId}
+            />
           ))}
         </ul>
       )}
     </div>
   );
 };
-const FriendRequestCard = ({ requesterId }) => {
+const FriendRequestCard = ({ requesterId, userId }) => {
   const dispatch = useDispatch();
   console.log(requesterId);
   // Accept Friend Request
@@ -961,14 +1012,16 @@ const FriendRequestCard = ({ requesterId }) => {
           data: requesterId._id,
         })
       );
+      console.log(useId);
       await dispatch(
         profile_data_update({
           action: "add",
           field: "profile.friends",
-          data: profile._id,
+          data: userId,
           playerId: requesterId._id,
         })
       );
+
       await dispatch(
         profile_data_update({
           action: "remove",
@@ -980,7 +1033,7 @@ const FriendRequestCard = ({ requesterId }) => {
         profile_data_update({
           action: "remove",
           field: "profile.sentRequests",
-          data: profile._id,
+          data: userId,
           playerId: requesterId._id,
         })
       );
