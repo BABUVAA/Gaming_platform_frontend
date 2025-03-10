@@ -799,23 +799,6 @@ const Friends = () => {
 
   return (
     <div>
-      <h2>Your Friends</h2>
-
-      {/* Uncomment and use this when API is ready */}
-      {/*
-      useEffect(() => {
-        const fetchFriends = async () => {
-          try {
-            const { data } = await axios.get("/api/friends", { withCredentials: true });
-            setFriends(data);
-          } catch (error) {
-            console.error("Error fetching friends:", error);
-          }
-        };
-        fetchFriends();
-      }, []);
-      */}
-
       {friends.length === 0 ? (
         <p>No friends yet.</p>
       ) : (
