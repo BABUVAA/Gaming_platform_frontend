@@ -25,8 +25,11 @@ import {
   FaEye,
   FaTrash,
   FaSignInAlt,
+  FaTimes,
+  FaUser,
+  FaChevronDown,
+  FaUserCircle,
 } from "react-icons/fa";
-import { FaChevronDown, FaUserCircle } from "react-icons/fa";
 import { MdPersonRemove, MdArrowUpward, MdArrowDownward } from "react-icons/md";
 import { HiOutlineEye } from "react-icons/hi";
 
@@ -787,43 +790,136 @@ const Social = ({ activeTab, setActiveTab }) => (
 );
 
 const Friends = () => {
-  // Hardcoded friends list for now
   const { profile } = useSelector((store) => store.auth);
-  console.log("friends", profile.profile.friends);
-  const [friends, setFriends] = useState(profile.profile.friends || []);
+  const dispatch = useDispatch();
 
-  // Function to remove a friend
+  // Friends & Sent Requests
+  const [friends, setFriends] = useState(profile.profile.friends || []);
+  const [sentRequests, setSentRequests] = useState(
+    profile.profile.sentRequests || []
+  );
+  const [selectedFriend, setSelectedFriend] = useState(null);
+
+  // Cancel Friend Request
+  const cancelRequest = async (friendId) => {
+    setSentRequests(sentRequests.filter((requestId) => requestId !== friendId));
+    if (friendId) {
+      try {
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.sentRequests",
+            data: friendId,
+          })
+        );
+        await dispatch(
+          profile_data_update({
+            action: "remove",
+            field: "profile.friendRequests",
+            data: profile._id,
+            playerId: friendId,
+          })
+        );
+        await dispatch(user_profile()); // Refresh user data
+      } catch (error) {
+        console.error("Error while canceling friend request:", error);
+      }
+    }
+    // Dispatch API call to cancel friend request (if needed)
+  };
+
+  // Remove Friend
   const removeFriend = (id) => {
-    setFriends(friends.filter((friend) => friend.id !== id));
+    setFriends(friends.filter((friend) => friend._id !== id));
+    setSelectedFriend(null);
+    // Dispatch API call to remove friend (if needed)
   };
 
   return (
-    <div>
-      {friends.length === 0 ? (
-        <p>No friends yet.</p>
-      ) : (
-        <ul>
-          {friends.map((friend) => (
-            <li
-              key={friend._id}
-              style={{ display: "flex", alignItems: "center", gap: "10px" }}
-            >
-              <img
-                src={friend.profile.avatar}
-                alt="Avatar"
-                width={40}
-                style={{ borderRadius: "50%" }}
-              />
-              <span>{friend.profile.username}</span>
-              <button
-                onClick={() => alert(`Viewing profile of ${friend.username}`)}
+    <div className="p-4 bg-white shadow-lg rounded-lg">
+      <h2 className="text-xl font-semibold mb-4">Friends</h2>
+
+      {/* Sent Friend Requests Section */}
+      <div className="mb-4">
+        <h3 className="text-lg font-medium">Sent Requests</h3>
+        {sentRequests.length === 0 ? (
+          <p>No sent requests.</p>
+        ) : (
+          <ul>
+            {sentRequests.map((request) => (
+              <li
+                key={request._id}
+                className="flex items-center justify-between p-2 border-b"
               >
-                👤 View
-              </button>
-              <button onClick={() => removeFriend(friend.id)}>❌ Remove</button>
-            </li>
-          ))}
-        </ul>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={request.profile.avatar || "/default-avatar.png"}
+                    alt="Avatar"
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <span className="text-gray-700 font-medium">
+                    {request.profile.username}
+                  </span>
+                </div>
+                <button
+                  onClick={() => cancelRequest(request._id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <FaTimes size={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Friends List Section */}
+      <div>
+        <h3 className="text-lg font-medium">Friends List</h3>
+        {friends.length === 0 ? (
+          <p>No friends yet.</p>
+        ) : (
+          <ul>
+            {friends.map((friend) => (
+              <li
+                key={friend._id}
+                className="flex items-center p-3 border-b cursor-pointer hover:bg-gray-100"
+                onClick={() => setSelectedFriend(friend)}
+              >
+                <img
+                  src={friend.profile.avatar || "/profile-pic.png"}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                <span className="ml-3">{friend.profile.username}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Friend Options (When a friend is clicked) */}
+      {selectedFriend && (
+        <div className="mt-4 p-3 bg-gray-100 rounded">
+          <h3 className="font-semibold">Friend Options</h3>
+          <p>{selectedFriend.profile.username}</p>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={() =>
+                alert(`Viewing profile of ${selectedFriend.profile.username}`)
+              }
+              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
+            >
+              <FaUser /> View Profile
+            </button>
+            <button
+              onClick={() => removeFriend(selectedFriend._id)}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              ❌ Remove Friend
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -854,43 +950,40 @@ const FriendRequests = () => {
 };
 const FriendRequestCard = ({ requesterId }) => {
   const dispatch = useDispatch();
+  console.log(requesterId);
   // Accept Friend Request
   const handleAcceptRequest = async () => {
     try {
       await dispatch(
         profile_data_update({
-          action: "remove",
-          field: "profile.friendRequests",
-          data: requesterId,
+          action: "add",
+          field: "profile.friends",
+          data: requesterId._id,
         })
       );
-
+      await dispatch(
+        profile_data_update({
+          action: "add",
+          field: "profile.friends",
+          data: profile._id,
+          playerId: requesterId._id,
+        })
+      );
+      await dispatch(
+        profile_data_update({
+          action: "remove",
+          field: "profile.friendRequests",
+          data: requesterId._id,
+        })
+      );
       await dispatch(
         profile_data_update({
           action: "remove",
           field: "profile.sentRequests",
           data: profile._id,
-          playerId: requesterId,
+          playerId: requesterId._id,
         })
       );
-
-      await dispatch(
-        profile_data_update({
-          action: "add",
-          field: "profile.friends",
-          data: requesterId,
-        })
-      );
-
-      await dispatch(
-        profile_data_update({
-          action: "add",
-          field: "profile.friends",
-          data: profile._id,
-          playerId: requesterId,
-        })
-      );
-
       await dispatch(user_profile()); // Refresh profile
     } catch (error) {
       console.error("Error accepting friend request:", error);
@@ -904,7 +997,7 @@ const FriendRequestCard = ({ requesterId }) => {
         profile_data_update({
           action: "remove",
           field: "profile.friendRequests",
-          data: requesterId,
+          data: requesterId._id,
         })
       );
 
@@ -913,7 +1006,7 @@ const FriendRequestCard = ({ requesterId }) => {
           action: "remove",
           field: "profile.sentRequests",
           data: profile._id,
-          playerId: requesterId,
+          playerId: requesterId._id,
         })
       );
 
@@ -1126,14 +1219,15 @@ const SearchPlayers = () => {
 
             {/* Display friendship status-based actions */}
             <div className="flex flex-col items-center gap-2 mt-4">
-              {searchPlayerData.friendshipStatus === "not_friends" && (
-                <button
-                  onClick={() => handleAddFriend(searchPlayerData._id)}
-                  className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 transition duration-300"
-                >
-                  Add Friend
-                </button>
-              )}
+              {searchPlayerData.friendshipStatus === "not_friends" &&
+                profile._id !== searchPlayerData._id && (
+                  <button
+                    onClick={() => handleAddFriend(searchPlayerData._id)}
+                    className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 transition duration-300"
+                  >
+                    Add Friend
+                  </button>
+                )}
 
               {searchPlayerData.friendshipStatus === "request_received" && (
                 <button
