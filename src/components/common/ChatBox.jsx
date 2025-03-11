@@ -11,12 +11,14 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const socket = useSocket();
 
   // Determine chat ID based on type
-  const chatId = chatType === "clan" ? userClanData?.data?._id : profile._id; // ✅ Fixed chatId
+  const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat; // ✅ Fixed chatId
+  console.log("chat to ", chatId);
+  console.log("selectedChat", selectedChat);
   const senderId = profile._id; // ✅ Fixed senderId
-  const senderName = profile.profile.username;
+  const senderName = profile.profile.username || "unknown";
   // Join chat room and listen for messages
   useEffect(() => {
-    if (!chatId || !senderId) return; // ✅ Prevents invalid IDs
+    if (!socket?.socket || !chatId || !senderId) return;
 
     // Listen for previous messages
     const loadMessagesListener = (loadedMessages) => {
@@ -30,9 +32,10 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
       setMessages((prevMessages) => [...prevMessages, newMessage]);
     };
 
-    socket.socket.on("clan_load_messages", loadMessagesListener);
+    socket.socket.on(`${chatType}_load_messages`, loadMessagesListener);
     socket.socket.on(`${chatType}_message`, messageListener); // ✅ Use event constant
 
+    console.log(chatId);
     // Join chat room
     socket.socket.emit(`join_${chatType}_room`, chatId);
 
@@ -40,20 +43,37 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
     return () => {
       socket.socket.emit(`leave_${chatType}_room`, chatId);
       socket.socket.off(`${chatType}_message`, messageListener);
+      socket.socket.off(`${chatType}_load_messages`, loadMessagesListener);
     };
   }, [chatType, chatId, senderId]);
+
+  useEffect(() => {
+    const chatDisplay = document.getElementById("chatDisplay");
+    if (chatDisplay) {
+      chatDisplay.scrollTop = chatDisplay.scrollHeight;
+    }
+  }, [messages]); // ✅ Scrolls down on new messages
 
   console.log("message:", messages);
   // Send a new message
   const sendMessage = () => {
     if (!message.trim()) return;
 
-    const messageData = {
+    let messageData = {
       clanId: chatId, // ✅ Ensure correct reference
       senderId: senderId, // ✅ Ensure correct sender
       senderName: senderName,
       message,
     };
+    if (chatType === "personal") {
+      messageData = {
+        receiverId: selectedChat,
+        receiverName: chatName,
+        senderId: senderId, // ✅ Ensure correct sender
+        senderName: senderName,
+        message,
+      };
+    }
 
     // Emit the message to the server
     console.log("Sending message:", messageData); // Debug message data
@@ -89,7 +109,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
                 ←
               </button>
               <h2 className="text-base font-medium text-zinc-800 dark:text-white">
-                {chatType === "clan" ? "Clan Chat" : "Private Chat"}
+                {chatType === "clan" ? "Clan Chat" : `${chatName}`}
               </h2>
             </div>
             <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
@@ -134,7 +154,9 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
                       : "bg-gray-300 text-black"
                   }`}
                 >
-                  <span className="font-medium">{msg.senderName}: </span>
+                  {chatType === "clan" && (
+                    <span className="font-medium">{msg.senderName}: </span>
+                  )}
                   {msg.message}
                 </div>
               </div>
@@ -147,9 +169,11 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
                 className="flex-1 p-2 border rounded-full dark:bg-zinc-700 dark:text-white dark:border-zinc-600 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               />
+
               <button
+                disabled={!message.trim()}
                 className="bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 px-4 rounded-full transition duration-300 ease-in-out text-sm"
                 onClick={sendMessage}
               >
