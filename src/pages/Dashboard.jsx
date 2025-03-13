@@ -24,7 +24,7 @@ const Dashboard = () => {
             await dispatch(fetchUserClan());
           }
         }
-        if (userClanData === null && profile.clan._id) {
+        if (userClanData === null && profile?.clan._id) {
           await dispatch(fetchUserClan());
         }
       } catch (error) {

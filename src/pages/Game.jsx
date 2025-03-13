@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import Input from "../components/ui/Input/Input";
 import GameCard from "../components/ui/GameCard/GameCard";
@@ -8,8 +8,12 @@ const Game = () => {
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data || []);
 
-  const connectedGames = useSelector(
-    (store) => store.auth?.profile?.profile?.games || []
+  const stableConnectedGames = useSelector(
+    (store) => store.auth?.profile?.profile?.games
+  );
+  const connectedGames = useMemo(
+    () => stableConnectedGames || [],
+    [stableConnectedGames]
   );
 
   const [isModalOpen, setModalOpen] = useState(false);

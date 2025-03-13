@@ -7,7 +7,7 @@ const Chats = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatType, setChatType] = useState(null);
   const [chatName, setChatName] = useState(null);
-  const [personalChats, setPersonalChats] = useState(profile.activeChats || []);
+  const [personalChats, setPersonalChats] = useState(profile?.activeChats || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   console.log("personalCHats:", personalChats);
@@ -66,8 +66,6 @@ const ChatSidebar = ({
   onNewChat,
   chatName,
 }) => {
-  console.log("chats", personalChats);
-  console.log("chat sidebar:", selectedChat);
   return (
     <div className="absolute bottom-1 h-full md:pb-0 bg-blue-50 border-r border-blue-300 shadow-lg w-full flex flex-col">
       {/* Sidebar Header */}
@@ -95,9 +93,9 @@ const ChatSidebar = ({
             key={chat._id}
             className="p-2 mx-1 my-0.5 bg-white rounded-md shadow-sm border border-gray-300 cursor-pointer hover:bg-blue-100 transition"
             onClick={() => {
-              onSelectChat(chat.userId || chat.id || "unknown");
+              onSelectChat(chat.userId || chat.id || chat._id || "unknown");
               onChatType("personal");
-              chatName(chat.username);
+              chatName(chat.username || chat.profile.username);
             }}
           >
             <span className="text-xs font-medium text-gray-800">
@@ -139,18 +137,16 @@ const NewChatModal = ({
 
     // Find friend details
     const friend = friends.find((f) => f._id === selectedUser);
-
+    console.log("friend", friend);
     // Check if already in personalChats
     if (!personalChats.find((chat) => chat._id === friend._id)) {
       setPersonalChats([...personalChats, { ...friend, type: "personal" }]);
-      console.log(friend.profile.username);
       setChatName(friend.profile.username);
     }
 
     onClose(); // Close modal
   };
 
-  console.log("modal", selectedUser);
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white p-4 rounded-lg shadow-lg w-80">

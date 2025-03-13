@@ -14,7 +14,7 @@ const Profile = lazy(() => import("../pages/Profile"));
 const Account = lazy(() => import("../pages/Account"));
 const Refer = lazy(() => import("../pages/Refer"));
 const Wallet = lazy(() => import("../pages/Wallet"));
-const Admin = lazy(() => import("../pages/Admin"));
+const AdminDashboard = lazy(() => import("../pages/AdminDashboard.jsx"));
 const Login = lazy(() => import("../pages/Login"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const Clan = lazy(() => import("../pages/Clan"));
@@ -87,6 +87,7 @@ const routes = createBrowserRouter([
           </Suspense>
         ),
       },
+
       {
         path: "dashboard",
         element: (
@@ -174,7 +175,7 @@ const routes = createBrowserRouter([
     path: "/panelAdmin", // Path for admin panel
     element: (
       <Suspense fallback={<Loading />}>
-        <Admin />
+        <AdminDashboard />
       </Suspense>
     ), // Wrap admin route in Suspense
   },
