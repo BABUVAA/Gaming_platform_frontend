@@ -93,7 +93,7 @@ export const login = createAsyncThunk(
 // Async thunk for user registration
 export const register = createAsyncThunk(
   "auth/signup",
-  async (userData, { rejectWithValue }) => {
+  async (userData, thunkAPI) => {
     try {
       const response = await api.post("/api/auth/signup", userData);
       thunkAPI.dispatch(
@@ -112,7 +112,7 @@ export const register = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return rejectWithValue(error.response?.data || error.message);
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );

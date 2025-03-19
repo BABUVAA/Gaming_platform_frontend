@@ -51,7 +51,6 @@ const Matchmaking = () => {
     setSearching(false);
     setMatch(null);
     setTimeLeft(null);
-    await api.post("/api/matchmaking/cancel");
   };
 
   useEffect(() => {
@@ -61,17 +60,6 @@ const Matchmaking = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft]);
-
-  useEffect(() => {
-    if (timeLeft === 0 && match) {
-      axios
-        .post("/api/matchmaking/resolve", { matchId: match.id })
-        .then((response) => {
-          console.log("Match result fetched:", response.data);
-        })
-        .catch((error) => console.error("Result fetch error:", error));
-    }
-  }, [timeLeft, match]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
