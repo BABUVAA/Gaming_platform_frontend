@@ -1,6 +1,22 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import GameCard from "../ui/gamecard/GameCard";
+import GameSlider from "../ui/GameSlider/GameSlider";
 
 const HeroSection = () => {
+  const games = useSelector((store) => store.games?.data || []);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (games.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % games.length);
+      }, 3000); // Slide every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [games]);
+
   return (
     <section className="relative bg-gray-900 text-white py-16 px-4 md:px-8 lg:px-16 flex flex-col items-center text-center">
       {/* Background Animation */}
@@ -32,20 +48,29 @@ const HeroSection = () => {
           className="w-full p-3 rounded-md bg-gray-800 text-white border border-gray-600 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400 transition"
         />
       </div>
-
-      {/* Featured Tournament Highlights */}
-      <div className="mt-10 flex flex-wrap justify-center gap-6 z-10">
-        <div className="bg-gray-800 p-4 rounded-md shadow-lg w-60">
-          <h3 className="text-lg font-semibold text-indigo-400">
-            🔥 PUBG Mobile
-          </h3>
-          <p className="text-sm text-gray-300">Ongoing - Register Now</p>
+      <GameSlider />
+      {/* Game Card Slideshow */}
+      {/* {games.length > 0 && (
+        <div className="mt-10 relative w-[90vw] max-w-lg overflow-hidden z-10">
+          <div
+            className="flex transition-transform duration-700 ease-in-out"
+            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          >
+            {games.map((game) => (
+              <div key={game._id} className="w-full flex-shrink-0">
+                <GameCard
+                  character={game.character}
+                  title={game.title}
+                  background={game.background}
+                  background_color={game.background_color}
+                  div_color={game.div_color}
+                  type="games"
+                />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="bg-gray-800 p-4 rounded-md shadow-lg w-60">
-          <h3 className="text-lg font-semibold text-green-400">🎯 Valorant</h3>
-          <p className="text-sm text-gray-300">Upcoming - Slots Available</p>
-        </div>
-      </div>
+      )} */}
     </section>
   );
 };

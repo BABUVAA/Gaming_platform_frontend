@@ -1,7 +1,6 @@
 import { GoTrophy } from "react-icons/go";
-import { Button, Footer } from "../components";
+import { Button, Footer, GameCard } from "../components";
 import { useSelector } from "react-redux";
-import GameCard from "../components/ui/GameCard/GameCard";
 import useNavigateHook from "../hooks/useNavigateHook";
 import { useEffect, useState } from "react";
 
