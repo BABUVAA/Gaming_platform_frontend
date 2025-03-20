@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import GameCard from "../ui/gamecard/GameCard";
 import GameSlider from "../ui/GameSlider/GameSlider";
 
 const HeroSection = () => {
