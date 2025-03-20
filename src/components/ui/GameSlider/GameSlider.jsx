@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import GameCard from "../gamecard/GameCard.jsx";
+import GameCard from "../GameCard/GameCard";
 
 const GameSlider = () => {
   const games = useSelector((store) => store.games?.data || []);
