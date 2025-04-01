@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import api from "../../api/axios-api";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchTournaments } from "../../store/tournamentSlice";
 import { useSocket } from "../../context/socketContext";
 
 const Matchmaking = () => {

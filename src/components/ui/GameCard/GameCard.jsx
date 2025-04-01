@@ -1,9 +1,11 @@
 import { CiCirclePlus } from "react-icons/ci";
+import { Link } from "react-router-dom";
 
 const GameCard = ({
   background,
   character,
   title,
+  link,
   background_color,
   div_color,
   type = "games",
@@ -36,11 +38,12 @@ const GameCard = ({
             className="absolute bottom-10 w-[70%] max-h-[70%] object-contain z-20"
           />
           {/* Play Now Div */}
+
           <div
             className="relative z-30 h-[25%] md:h-[15%] text-white text-center font-semibold py-2 w-full"
             style={{ backgroundColor: div_color }} // Dynamic div color
           >
-            Play Now
+            <Link to={link}>Play Now</Link>
           </div>
         </>
       )}

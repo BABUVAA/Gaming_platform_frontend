@@ -45,7 +45,12 @@ const Game = () => {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {connectedGames.length > 0 ? (
               connectedGames.map((game) => (
-                <GameCard key={game._id} {...game} type="games" />
+                <GameCard
+                  key={game._id}
+                  {...game}
+                  link={`/dashboard/tournament/${game.link}`}
+                  type="games"
+                />
               ))
             ) : (
               <p className="text-gray-600">No connected games found.</p>
@@ -65,7 +70,12 @@ const Game = () => {
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {games.length > 0 ? (
               games.map((game) => (
-                <GameCard key={game._id} {...game} type="games" />
+                <GameCard
+                  key={game._id}
+                  {...game}
+                  link={`/dashboard/tournament/${game.link}`}
+                  type="games"
+                />
               ))
             ) : (
               <p className="text-gray-600">No available games found.</p>

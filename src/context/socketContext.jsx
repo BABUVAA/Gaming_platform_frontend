@@ -5,7 +5,9 @@ import React, {
   useEffect,
   useRef,
 } from "react";
+import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
+import { updateTournament } from "../store/tournamentSlice";
 
 // Create a Context for the Socket
 const SocketContext = createContext();
@@ -13,8 +15,11 @@ const SocketContext = createContext();
 // SocketProvider component
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
+  const dispatch = useDispatch();
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState({}); // Store messages per chatId
+  const [tournament, setTournament] = useState({}); // Store live tournament data
+  console.log(tournament);
 
   useEffect(() => {
     // Initialize socket connection
@@ -24,12 +29,12 @@ export const SocketProvider = ({ children }) => {
 
     socketRef.current.on("connect", () => {
       setConnected(true);
-      console.log("Connected to socket server");
+      console.log("✅ Connected to socket server");
     });
 
     socketRef.current.on("disconnect", () => {
       setConnected(false);
-      console.log("Disconnected from socket server");
+      console.log("❌ Disconnected from socket server");
     });
 
     // Listen for messages from both clan and private chats
@@ -39,6 +44,11 @@ export const SocketProvider = ({ children }) => {
 
     socketRef.current.on("personal_message", (newMessage) => {
       handleNewMessage(newMessage);
+    });
+
+    // ✅ Listen for live tournament updates
+    socketRef.current.on("newTournament", (updatedTournament) => {
+      handleTournamentUpdate(updatedTournament);
     });
 
     return () => {
@@ -54,9 +64,22 @@ export const SocketProvider = ({ children }) => {
     }));
   };
 
+  // ✅ Function to handle real-time tournament updates
+  const handleTournamentUpdate = (updatedTournament) => {
+    setTournament((prev) => ({
+      ...prev,
+      [updatedTournament.id]: updatedTournament,
+    }));
+  };
+
   return (
     <SocketContext.Provider
-      value={{ socket: socketRef.current, connected, messages, setMessages }}
+      value={{
+        socket: socketRef.current,
+        connected,
+        messages,
+        tournament,
+      }}
     >
       {children}
     </SocketContext.Provider>

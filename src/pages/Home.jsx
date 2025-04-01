@@ -102,6 +102,7 @@ const AvailableGameSection = () => {
                 key={game._id}
                 character={game.character}
                 title={game.title}
+                link={`/dashboard/tournament/${game.link}`}
                 background={game.background}
                 background_color={game.background_color}
                 div_color={game.div_color}

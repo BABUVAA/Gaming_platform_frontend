@@ -65,6 +65,7 @@ const GameSlider = () => {
           {gameList.map((game, index) => (
             <div key={index}>
               <GameCard
+                link={`/dashboard/tournament/${game.link}`}
                 character={game.character}
                 title={game.title}
                 background={game.background}

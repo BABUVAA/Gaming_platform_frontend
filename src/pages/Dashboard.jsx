@@ -35,7 +35,10 @@ const Dashboard = () => {
     setLoading(false);
   }, [profile]);
 
-  if (globalLoading || loading) <LoadingSpinner />;
+  if (globalLoading || loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="relative ">
       {/* Sidebar */}

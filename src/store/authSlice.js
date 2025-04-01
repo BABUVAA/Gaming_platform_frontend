@@ -11,14 +11,6 @@ export const verifySession = createAsyncThunk(
       const response = await api.post("/api/auth/verifySession", {
         withCredentials: true,
       });
-      // ✅ Dispatch `showToast` correctly
-      thunkAPI.dispatch(
-        showToast({
-          message: response.data.message || error,
-          type: types.SUCCESS,
-          position: "bottom-right",
-        })
-      );
       return response.data;
     } catch (error) {
       thunkAPI.dispatch(

@@ -3,187 +3,126 @@ import React, { lazy, Suspense } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSelector } from "react-redux";
 
-// Lazy load the page components
-const App = lazy(() => import("../pages/App"));
-const Home = lazy(() => import("../pages/Home"));
-const ForgotPassword = lazy(() => import("../pages/ForgotPassword"));
-const Dashboard = lazy(() => import("../pages/Dashboard"));
-const Game = lazy(() => import("../pages/Game"));
-const Tournament = lazy(() => import("../pages/Tournament"));
-const Profile = lazy(() => import("../pages/Profile"));
-const Account = lazy(() => import("../pages/Account"));
-const Refer = lazy(() => import("../pages/Refer"));
-const Wallet = lazy(() => import("../pages/Wallet"));
-const AdminDashboard = lazy(() => import("../pages/AdminDashboard.jsx"));
-const Login = lazy(() => import("../pages/Login"));
-const SignUp = lazy(() => import("../pages/SignUp"));
-const Clan = lazy(() => import("../pages/Clan"));
-const Coc = lazy(() => import("../pages/Coc.jsx"));
-const Chats = lazy(() => import("../pages/Chats.jsx"));
-// Fallback loading component while waiting for lazy-loaded components
-const Loading = () => <LoadingSpinner />;
-
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector((store) => store.auth);
-  return isAuthenticated ? children : <Login />;
+// Centralized Route Paths
+const ROUTES = {
+  HOME: "/home",
+  LOGIN: "/login",
+  SIGNUP: "/signup",
+  FORGOT_PASSWORD: "/forgotPWD",
+  DASHBOARD: "/dashboard",
+  GAME: "/dashboard/game",
+  TOURNAMENT: "/dashboard/tournament",
+  CHATS: "/dashboard/chats",
+  CLAN: "/dashboard/clan",
+  PROFILE: "/dashboard/profile",
+  ACCOUNT: "/dashboard/account",
+  WALLET: "/dashboard/wallet",
+  REFER: "/dashboard/refer",
+  ADMIN_PANEL: "/panelAdmin",
+  COC: "/coc",
+  LOGOUT: "/logout",
+  TOURNAMENT_DETAILS: "/tournamentDetails",
 };
 
+// Lazy load components
+const LazyComponents = {
+  App: lazy(() => import("../pages/App")),
+  Home: lazy(() => import("../pages/Home")),
+  ForgotPassword: lazy(() => import("../pages/ForgotPassword")),
+  Dashboard: lazy(() => import("../pages/Dashboard")),
+  Game: lazy(() => import("../pages/Game")),
+  Tournament: lazy(() => import("../pages/Tournament")),
+  TournamentGame: lazy(() => import("../pages/TournamentGame.jsx")),
+  TOurnamentDetails: lazy(() => import("../pages/TournamentDetails.jsx")),
+  Profile: lazy(() => import("../pages/Profile")),
+  Account: lazy(() => import("../pages/Account")),
+  Refer: lazy(() => import("../pages/Refer")),
+  Wallet: lazy(() => import("../pages/Wallet")),
+  AdminDashboard: lazy(() => import("../pages/AdminDashboard.jsx")),
+  Login: lazy(() => import("../pages/Login")),
+  SignUp: lazy(() => import("../pages/SignUp")),
+  Clan: lazy(() => import("../pages/Clan")),
+  Coc: lazy(() => import("../pages/Coc.jsx")),
+  Chats: lazy(() => import("../pages/Chats.jsx")),
+};
+
+// Loading fallback
+const Loading = () => <LoadingSpinner />;
+
+// Protected Route Wrapper
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated } = useSelector((store) => store.auth);
+  return isAuthenticated ? children : <Navigate to={ROUTES.LOGIN} replace />;
+};
+
+// Landing Page Logic
 const LandingPage = () => {
   const { isAuthenticated } = useSelector((store) => store.auth);
   return isAuthenticated ? (
-    <Navigate to="/dashboard" />
+    <Navigate to={ROUTES.DASHBOARD} replace />
   ) : (
-    <Navigate to="/home" />
+    <Navigate to={ROUTES.HOME} replace />
   );
 };
 
-// Add the routes with lazy-loaded components
+// Define Routes
 const routes = createBrowserRouter([
   {
     path: "/",
     element: (
       <Suspense fallback={<Loading />}>
-        <App />
+        <LazyComponents.App />
       </Suspense>
-    ), // Wrap the top-level route with Suspense
+    ),
     children: [
+      { index: true, element: <LandingPage /> },
+      { path: ROUTES.HOME, element: <LazyComponents.Home /> },
       {
-        index: true,
-        element: (
-          <Suspense fallback={<Loading />}>
-            <LandingPage />
-          </Suspense>
-        ),
+        path: ROUTES.FORGOT_PASSWORD,
+        element: <LazyComponents.ForgotPassword />,
       },
-      {
-        path: "home",
-        element: (
-          <Suspense fallback={<Loading />}>
-            <Home />
-          </Suspense>
-        ),
-      },
-      {
-        path: "forgotPWD",
-        element: (
-          <Suspense fallback={<Loading />}>
-            <ForgotPassword />
-          </Suspense>
-        ),
-      },
-      {
-        path: "login",
-        element: (
-          <Suspense fallback={<Loading />}>
-            <Login />
-          </Suspense>
-        ),
-      },
-      {
-        path: "signup",
-        element: (
-          <Suspense fallback={<Loading />}>
-            <SignUp />
-          </Suspense>
-        ),
-      },
+      { path: ROUTES.LOGIN, element: <LazyComponents.Login /> },
+      { path: ROUTES.SIGNUP, element: <LazyComponents.SignUp /> },
+      { path: ROUTES.COC, element: <LazyComponents.Coc /> },
+      { path: ROUTES.LOGOUT, element: <></> }, // Placeholder for logout logic
 
       {
-        path: "dashboard",
+        path: ROUTES.DASHBOARD,
         element: (
-          <Suspense fallback={<Loading />}>
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          </Suspense>
+          <ProtectedRoute>
+            <LazyComponents.Dashboard />
+          </ProtectedRoute>
         ),
         children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Game />
-              </Suspense>
-            ),
-          },
+          { index: true, element: <LazyComponents.Game /> },
           {
             path: "tournament",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Tournament />
-              </Suspense>
-            ),
+            element: <LazyComponents.Tournament />,
+          },
+          // Dynamic Game Tournament Route
+          {
+            path: "tournament/:game",
+            element: <LazyComponents.TournamentGame />,
           },
           {
-            path: "chats",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Chats />
-              </Suspense>
-            ),
+            path: "tournamentDetails",
+            element: <LazyComponents.TOurnamentDetails />,
           },
-          {
-            path: "clan",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Clan />
-              </Suspense>
-            ),
-          },
-          {
-            path: "profile",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Profile />
-              </Suspense>
-            ),
-          },
-          {
-            path: "account",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Account />
-              </Suspense>
-            ),
-          },
-          {
-            path: "wallet",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Wallet />
-              </Suspense>
-            ),
-          },
-          {
-            path: "refer",
-            element: (
-              <Suspense fallback={<Loading />}>
-                <Refer />
-              </Suspense>
-            ),
-          },
+          { path: "chats", element: <LazyComponents.Chats /> },
+          { path: "clan", element: <LazyComponents.Clan /> },
+          { path: "profile", element: <LazyComponents.Profile /> },
+          { path: "account", element: <LazyComponents.Account /> },
+          { path: "wallet", element: <LazyComponents.Wallet /> },
+          { path: "refer", element: <LazyComponents.Refer /> },
         ],
-      },
-
-      {
-        path: "logout",
-        element: <></>,
       },
     ],
   },
   {
-    path: "/panelAdmin", // Path for admin panel
+    path: ROUTES.ADMIN_PANEL,
     element: (
       <Suspense fallback={<Loading />}>
-        <AdminDashboard />
-      </Suspense>
-    ), // Wrap admin route in Suspense
-  },
-  {
-    path: "/coc",
-    element: (
-      <Suspense fallback={<Loading />}>
-        <Coc />
+        <LazyComponents.AdminDashboard />
       </Suspense>
     ),
   },

@@ -2,43 +2,70 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
 import { showToast, types } from "./toastSlice";
 
-// Async thunk for fetching tournaments from the server
+// ✅ Fetch Tournaments (Existing)
 export const fetchTournaments = createAsyncThunk(
   "tournament/fetchTournaments",
   async (_, thunkAPI) => {
     try {
-      const response = await api.get("/api/tournaments/searchBattleCOC", {
+      const response = await api.get("/api/tournaments/fetchAllTournament", {
         withCredentials: true,
       });
-      thunkAPI.dispatch(
-        showToast({
-          message: response.data.message,
-          type: types.SUCCESS,
-          position: "bottom-right",
-        })
-      );
-      return response.data; // Return the tournament data from the API
+      return response.data;
     } catch (error) {
-      thunkAPI.dispatch(
-        showToast({
-          message: error.response.data.error,
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
-      e;
       return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-// Tournament slice
+// ✅ Update Tournament (New)
+export const updateTournament = createAsyncThunk(
+  "tournament/updateTournament",
+  async ({ tournamentId, updatedData }, thunkAPI) => {
+    try {
+      const response = await api.put(
+        `/api/tournaments/update/${tournamentId}`,
+        updatedData,
+        { withCredentials: true }
+      );
+
+      thunkAPI.dispatch(
+        showToast({
+          message: "Tournament updated successfully!",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+
+      return response.data; // Return updated tournament
+    } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message: "Failed to update tournament.",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// ✅ Tournament Slice
 const tournamentSlice = createSlice({
   name: "tournament",
   initialState: {
-    tournaments: [], // No default data
+    tournaments: [],
     error: null,
     loading: false,
+  },
+  reducers: {
+    // ✅ WebSocket Update Handler
+    updateTournamentState: (state, action) => {
+      const updatedTournament = action.payload;
+      state.tournaments = state.tournaments.map((tournament) =>
+        tournament.id === updatedTournament.id ? updatedTournament : tournament
+      );
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -47,11 +74,19 @@ const tournamentSlice = createSlice({
       })
       .addCase(fetchTournaments.fulfilled, (state, action) => {
         state.loading = false;
-        state.tournaments = action.payload; // The API will return the tournament data
+        state.tournaments = action.payload;
       })
       .addCase(fetchTournaments.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload; // Handle errors if the fetch fails
+        state.error = action.payload;
+      })
+      .addCase(updateTournament.fulfilled, (state, action) => {
+        state.tournaments = state.tournaments.map((tournament) =>
+          tournament.id === action.payload.id ? action.payload : tournament
+        );
+      })
+      .addCase(updateTournament.rejected, (state, action) => {
+        state.error = action.payload;
       });
   },
 });

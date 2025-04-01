@@ -48,28 +48,6 @@ const HeroSection = () => {
         />
       </div>
       <GameSlider />
-      {/* Game Card Slideshow */}
-      {/* {games.length > 0 && (
-        <div className="mt-10 relative w-[90vw] max-w-lg overflow-hidden z-10">
-          <div
-            className="flex transition-transform duration-700 ease-in-out"
-            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-          >
-            {games.map((game) => (
-              <div key={game._id} className="w-full flex-shrink-0">
-                <GameCard
-                  character={game.character}
-                  title={game.title}
-                  background={game.background}
-                  background_color={game.background_color}
-                  div_color={game.div_color}
-                  type="games"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )} */}
     </section>
   );
 };
