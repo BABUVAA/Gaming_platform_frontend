@@ -61,6 +61,7 @@ const TournamentManagement = () => {
     entryFee: "",
     prizePool: "",
     mode: "",
+    maxParticipants: "",
     status: "upcoming",
     category: "none",
     imageUrl: "",
@@ -100,6 +101,7 @@ const TournamentManagement = () => {
       entryFee: "",
       prizePool: "",
       mode: "",
+      maxParticipants: "",
       status: "upcoming",
       category: "none",
       imageUrl: "",
@@ -137,9 +139,8 @@ const TournamentManagement = () => {
             className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
           >
             <option value="">Select Game</option>
-            <option value="BGMI">BGMI</option>
-            <option value="PUBG">PUBG</option>
-            <option value="COD Mobile">COD Mobile</option>
+            <option value="bgmi">BGMI</option>
+            <option value="coc">COC</option>
           </select>
         </div>
 
@@ -216,6 +217,18 @@ const TournamentManagement = () => {
           </select>
         </div>
 
+        {/** Participant */}
+        <div>
+          <label className="block text-sm font-medium">Participants</label>
+          <input
+            type="number"
+            name="maxParticipants"
+            value={tournamentData.maxParticipants}
+            onChange={handleChange}
+            placeholder="Optional"
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
+          />
+        </div>
         {/* Tournament Status */}
         <div>
           <label className="block text-sm font-medium">Status</label>

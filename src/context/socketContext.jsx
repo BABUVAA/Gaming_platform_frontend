@@ -18,7 +18,7 @@ export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState({}); // Store messages per chatId
-  const [tournament, setTournament] = useState({}); // Store live tournament data
+  const [tournament, setTournament] = useState([]); // Store live tournament data
   console.log(tournament);
 
   useEffect(() => {
@@ -66,10 +66,7 @@ export const SocketProvider = ({ children }) => {
 
   // ✅ Function to handle real-time tournament updates
   const handleTournamentUpdate = (updatedTournament) => {
-    setTournament((prev) => ({
-      ...prev,
-      [updatedTournament.id]: updatedTournament,
-    }));
+    setTournament((prev) => [...prev, updatedTournament]);
   };
 
   return (

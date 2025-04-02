@@ -15,7 +15,7 @@ const TournamentCard = ({ tournament }) => {
     startTime,
     thumbnail = "/profile-pic.png",
   } = tournament;
-  console.log("tournamentCard", tournament);
+  
   // Calculate players joined percentage
   const filledPercentage = (playersJoined / totalPlayers) * 100;
 
