@@ -21,7 +21,7 @@ const ROUTES = {
   ADMIN_PANEL: "/panelAdmin",
   COC: "/coc",
   LOGOUT: "/logout",
-  TOURNAMENT_DETAILS: "/tournamentDetails",
+  TOURNAMENT_DETAILS: "/",
 };
 
 // Lazy load components
@@ -33,7 +33,7 @@ const LazyComponents = {
   Game: lazy(() => import("../pages/Game")),
   Tournament: lazy(() => import("../pages/Tournament")),
   TournamentGame: lazy(() => import("../pages/TournamentGame.jsx")),
-  TOurnamentDetails: lazy(() => import("../pages/TournamentDetails.jsx")),
+  TournamentDetails: lazy(() => import("../pages/TournamentDetails.jsx")),
   Profile: lazy(() => import("../pages/Profile")),
   Account: lazy(() => import("../pages/Account")),
   Refer: lazy(() => import("../pages/Refer")),
@@ -104,10 +104,6 @@ const routes = createBrowserRouter([
             path: "tournament/:game",
             element: <LazyComponents.TournamentGame />,
           },
-          {
-            path: "tournamentDetails",
-            element: <LazyComponents.TOurnamentDetails />,
-          },
           { path: "chats", element: <LazyComponents.Chats /> },
           { path: "clan", element: <LazyComponents.Clan /> },
           { path: "profile", element: <LazyComponents.Profile /> },
@@ -115,6 +111,10 @@ const routes = createBrowserRouter([
           { path: "wallet", element: <LazyComponents.Wallet /> },
           { path: "refer", element: <LazyComponents.Refer /> },
         ],
+      },
+      {
+        path: "tournamentDeatils/:id",
+        element: <LazyComponents.TournamentDetails />,
       },
     ],
   },

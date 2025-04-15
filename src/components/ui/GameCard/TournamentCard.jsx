@@ -1,83 +1,100 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+
+import InviteModal from "../../feature/InviteModal";
 
 const TournamentCard = ({ tournament }) => {
   const {
-    id,
+    _id,
+    tournamentName,
     game,
-    title,
-    playersJoined,
-    totalPlayers,
+    mode,
+    registeredPlayers,
+    registeredTeams,
+    maxParticipants,
+    teamSize,
     entryFee,
     prizePool,
     status,
-    mode,
-    startTime,
-    thumbnail = "/profile-pic.png",
   } = tournament;
-  
-  // Calculate players joined percentage
-  const filledPercentage = (playersJoined / totalPlayers) * 100;
 
-  // Dynamic Status Badge
-  const getStatusBadge = () => {
-    if (status === "live") return "Live Now 🔴";
-    if (playersJoined >= totalPlayers * 0.9) return "Almost Full ⚡";
-    if (startTime) return `Starts in ${startTime}`;
-    return "Open for Registration";
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  let filledPercentage =
+    mode !== "solo"
+      ? (registeredTeams?.length / maxParticipants) * 100
+      : (registeredPlayers?.length / maxParticipants) * 100;
+
+  const handleJoinClick = (e) => {
+    e.preventDefault(); // prevent navigation
+    setIsModalOpen(true);
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg shadow-md hover:shadow-xl transition transform hover:-translate-y-1">
-      {/* Thumbnail */}
-      <Link to={`/tournament/${id}`}>
-        <img
-          src={thumbnail}
-          alt={title}
-          className="w-full h-40 object-cover rounded-lg"
-        />
-      </Link>
+    <>
+      <div className="bg-white shadow-md rounded-xl p-4 w-full max-w-2xl mx-auto flex flex-col sm:flex-row justify-between gap-4 transition-all hover:shadow-xl">
+        {/* Left */}
+        <div className="flex-1">
+          <div className="mb-1 text-sm text-gray-600 font-medium">{game}</div>
+          <div className="text-xl font-bold text-gray-900">
+            {tournamentName}
+          </div>
 
-      {/* Tournament Info */}
-      <div className="mt-4 text-white">
-        <h3 className="text-lg font-bold">{title}</h3>
-        <p className="text-gray-400 text-sm">
-          {game} • {mode}
-        </p>
+          <div className="mt-2 text-xs text-gray-500">🏆 Prize Pool</div>
+          <div className="text-2xl font-extrabold text-black">₹{prizePool}</div>
 
-        {/* Players Bar */}
-        <div className="mt-2 flex items-center space-x-2">
-          <div className="w-full bg-gray-700 rounded-full h-3 relative">
+          <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-green-500 h-3 rounded-full"
+              className="bg-green-500 h-2 rounded-full transition-all"
               style={{ width: `${filledPercentage}%` }}
-            ></div>
+            />
           </div>
-          <span className="text-gray-300 text-xs">
-            {playersJoined}/{totalPlayers} Players
-          </span>
+          <div className="text-xs text-gray-500 mt-1">
+            {maxParticipants - registeredTeams?.length || maxParticipants} Spots
+            left
+          </div>
+
+          {status === "guaranteed" && (
+            <div className="mt-2 text-xs text-blue-600 font-semibold">
+              ✅ Guaranteed
+            </div>
+          )}
         </div>
 
-        {/* Entry Fee & Prize */}
-        <div className="flex justify-between items-center mt-3">
-          <div>
-            <p className="text-sm text-yellow-400">💰 Entry: ₹{entryFee}</p>
-            <p className="text-sm text-green-400">🏆 Prize: ₹{prizePool}</p>
-          </div>
-          <span className="text-xs px-3 py-1 bg-gray-600 text-white rounded-lg">
-            {getStatusBadge()}
-          </span>
-        </div>
+        {/* Right */}
+        <div className="flex flex-col justify-center items-center sm:items-end gap-2">
+          <div className="text-sm text-gray-500">Entry</div>
+          <div className="text-lg font-bold text-green-600">₹{entryFee}</div>
+          <div className="text-xs text-gray-500">{maxParticipants} Spots</div>
 
-        {/* Join Now Button */}
-        <Link
-          to={`/tournament/${id}`}
-          className="block mt-3 bg-blue-600 hover:bg-blue-700 text-center text-white font-semibold py-2 rounded-lg transition"
-        >
-          Join Now
-        </Link>
+          <button
+            onClick={handleJoinClick}
+            className="mt-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-all"
+          >
+            Join Now
+          </button>
+
+          {/* Navigate link (optional) */}
+          <Link
+            to={`/tournamentDeatils/${_id}`}
+            className="mt-1 text-xs text-blue-600 hover:underline"
+          >
+            View Details
+          </Link>
+        </div>
       </div>
-    </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <InviteModal
+          tournamentId={tournament._id}
+          maxParticipants={maxParticipants}
+          teamSize={teamSize}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

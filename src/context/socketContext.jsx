@@ -7,7 +7,8 @@ import React, {
 } from "react";
 import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
-import { updateTournament } from "../store/tournamentSlice";
+import { tournamentAction } from "../store/tournamentSlice";
+import { showToast, types } from "../store/toastSlice";
 
 // Create a Context for the Socket
 const SocketContext = createContext();
@@ -18,8 +19,6 @@ export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState({}); // Store messages per chatId
-  const [tournament, setTournament] = useState([]); // Store live tournament data
-  console.log(tournament);
 
   useEffect(() => {
     // Initialize socket connection
@@ -51,6 +50,20 @@ export const SocketProvider = ({ children }) => {
       handleTournamentUpdate(updatedTournament);
     });
 
+    // Listen for Tournament Join
+    socketRef.current.on("TOURNAMENT_JOIN_SUCESS");
+
+    // Listen for live ERROR updates
+    socketRef.current.on("ERROR", (data) => {
+      dispatch(
+        showToast({
+          message: data.message || error,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+    });
+
     return () => {
       socketRef.current?.disconnect();
     };
@@ -64,9 +77,37 @@ export const SocketProvider = ({ children }) => {
     }));
   };
 
+  // Function to find tournament Category
+  const getTournamentCategory = (tournament) => {
+    if (tournament.isFeatured) return "featuredTournaments";
+
+    switch (tournament.status) {
+      case "registration_open":
+        return "activeTournaments";
+      case "upcoming":
+        return "upcomingTournaments";
+      case "completed":
+        return "pastTournaments";
+      default:
+        return "tournament"; // Optional: skip other statuses like "completed"
+    }
+  };
+
   // ✅ Function to handle real-time tournament updates
   const handleTournamentUpdate = (updatedTournament) => {
-    setTournament((prev) => [...prev, updatedTournament]);
+    // 🧠 Usage
+    const foundCategory = getTournamentCategory(updatedTournament);
+    if (!foundCategory) {
+      console.warn("Tournament doesn't match any updateable category.");
+      return;
+    }
+    // Dispatch updated tournament to the correct category
+    dispatch(
+      tournamentAction.addTournament({
+        category: foundCategory,
+        tournament: updatedTournament,
+      })
+    );
   };
 
   return (
@@ -75,7 +116,6 @@ export const SocketProvider = ({ children }) => {
         socket: socketRef.current,
         connected,
         messages,
-        tournament,
       }}
     >
       {children}

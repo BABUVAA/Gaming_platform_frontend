@@ -29,11 +29,6 @@ const Profile = () => {
     totalEarnings: 10000,
   };
 
-  const activeTournaments = [
-    { name: "PUBG Championship", date: "2024-12-28" },
-    { name: "Coc Clan League", date: "2024-12-15" },
-  ];
-
   const pastTournaments = [
     { name: "PUBG Invitational", date: "2024-11-10", result: "Won" },
     { name: "Coc World Cup", date: "2024-10-5", result: "Runner-Up" },
@@ -427,34 +422,38 @@ const Profile = () => {
   };
 
   // Section 3: Active Tournaments
-  const ActiveTournaments = () => (
-    <div className="active-tournaments-wrapper mb-6 bg-gradient-to-b from-purple-50 to-purple-100 ">
-      <div className="active-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-          Active Tournaments
-        </h3>
-        {activeTournaments.length > 0 ? (
-          <div className="tournament-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {activeTournaments.map((tournament, index) => (
-              <div
-                key={index}
-                className="tournament-card bg-purple-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              >
-                <h4 className="text-lg font-bold text-gray-700 mb-2">
-                  {tournament.name}
-                </h4>
-                <p className="text-sm text-gray-600">
-                  <strong>Date:</strong> {tournament.date}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-gray-500">No active tournaments</p>
-        )}
+  const ActiveTournaments = ({ tournament }) => {
+    console.log("Active tournament", tournament);
+
+    return (
+      <div className="active-tournaments-wrapper mb-6 bg-gradient-to-b from-purple-50 to-purple-100 ">
+        <div className="active-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-4">
+            Active Tournaments
+          </h3>
+          {tournament.length > 0 ? (
+            <div className="tournament-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {tournament.map((tournament, index) => (
+                <div
+                  key={index}
+                  className="tournament-card bg-purple-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                >
+                  <h4 className="text-lg font-bold text-gray-700 mb-2">
+                    {tournament.tournamentName}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    <strong>Date:</strong> {tournament.startDate}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-500">No active tournaments</p>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Section 4: Past Tournaments
   const PastTournaments = () => (
@@ -492,7 +491,7 @@ const Profile = () => {
     <div className="profile-container bg-gray-100 p-2 gap-1">
       <ProfileHeader profile={profile} />
       <CareerStatistics />
-      <ActiveTournaments />
+      <ActiveTournaments tournament={profile.profile.tournaments} />
       <PastTournaments />
     </div>
   );

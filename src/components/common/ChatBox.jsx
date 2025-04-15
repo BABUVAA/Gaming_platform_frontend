@@ -9,6 +9,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const [message, setMessage] = useState(""); // To hold the current message
   const [messages, setMessages] = useState([]); // To hold all the chat messages
   const socket = useSocket();
+  console.log(socket);
 
   // Determine chat ID based on type
   const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat; // ✅ Fixed chatId

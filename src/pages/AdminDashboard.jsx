@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useSocket } from "../context/socketContext";
 
 const AdminDashboard = () => {
+  const { socket } = useSocket();
+  console.log("Socket in TournamentManagement:", socket);
+
   const [activeSection, setActiveSection] = useState("dashboard");
 
   const services = [
@@ -36,7 +39,9 @@ const AdminDashboard = () => {
       {/* Render Active Section */}
       <div className="w-full max-w-4xl p-4 sm:p-6 bg-white rounded-lg shadow-md">
         {activeSection === "dashboard" && <Dashboard />}
-        {activeSection === "tournaments" && <TournamentManagement />}
+        {activeSection === "tournaments" && (
+          <TournamentManagement socket={socket} />
+        )}
         {activeSection === "users" && <UserManagement />}
         {activeSection === "games" && <GameManagement />}
         {activeSection === "rewards" && <RewardManagement />}
@@ -50,9 +55,7 @@ const Dashboard = () => (
   <p className="text-center">Welcome to the Admin Dashboard!</p>
 );
 
-const TournamentManagement = () => {
-  const { socket } = useSocket();
-
+const TournamentManagement = ({ socket }) => {
   const [tournamentData, setTournamentData] = useState({
     tournamentName: "",
     game: "",
@@ -62,6 +65,7 @@ const TournamentManagement = () => {
     prizePool: "",
     mode: "",
     maxParticipants: "",
+    teamSize: "",
     status: "upcoming",
     category: "none",
     imageUrl: "",
@@ -102,6 +106,7 @@ const TournamentManagement = () => {
       prizePool: "",
       mode: "",
       maxParticipants: "",
+      teamSize: "",
       status: "upcoming",
       category: "none",
       imageUrl: "",
@@ -225,10 +230,23 @@ const TournamentManagement = () => {
             name="maxParticipants"
             value={tournamentData.maxParticipants}
             onChange={handleChange}
-            placeholder="Optional"
+            placeholder="Max Participants"
             className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
           />
         </div>
+        {/** teamSize */}
+        <div>
+          <label className="block text-sm font-medium">Team Size</label>
+          <input
+            type="number"
+            name="teamSize"
+            value={tournamentData.teamSize}
+            onChange={handleChange}
+            placeholder="Minimum Team Size"
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
+          />
+        </div>
+
         {/* Tournament Status */}
         <div>
           <label className="block text-sm font-medium">Status</label>

@@ -50,7 +50,7 @@ const GameSlider = () => {
   };
 
   return (
-    <div className="relative max-w-[80vw] mx-auto mt-10 ">
+    <div className="relative max-w-[85vw] mx-auto mt-10 ">
       {/* Left Button */}
       <button
         className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-900 bg-opacity-50 text-white p-2 rounded-full z-10 hover:bg-opacity-70"

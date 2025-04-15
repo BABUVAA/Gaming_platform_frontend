@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaDiscord,
   FaInstagram,
@@ -7,58 +7,35 @@ import {
   FaTwitter,
   FaYoutube,
 } from "react-icons/fa6";
+import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-
-const tournamentData = {
-  id: "12345",
-  title: "BGMI Pro Tournament",
-  game: "BGMI",
-  prizePool: 50000,
-  entryFee: 100,
-  mode: "squad",
-  status: "registration_open",
-  playersJoined: 78,
-  totalPlayers: 100,
-  description:
-    "Join the ultimate BGMI Pro Tournament and compete for cash prizes!",
-  rules: [
-    "No cheating or hacking.",
-    "Follow fair play rules.",
-    "All matches must be played on time.",
-    "Toxic behavior will lead to disqualification.",
-  ],
-  thumbnail: "https://via.placeholder.com/800x400.png?text=Tournament+Banner",
-};
+import { fetchTournamentById } from "../store/tournamentSlice";
 
 const TournamentDetails = () => {
   const [activeTab, setActiveTab] = useState("Rules"); // Default active tab
   const { id } = useParams(); // Get tournament ID from URL
+  const dispatch = useDispatch();
+  const { tournamentId } = useSelector((store) => store.tournament);
 
-  if (!tournamentData) {
-    return <div className="text-center text-white">Loading...</div>;
-  }
+  useEffect(() => {
+    dispatch(fetchTournamentById(id));
+  }, [id]);
 
-  const {
-    title,
-    game,
-    prizePool,
-    entryFee,
-    mode,
-    status,
-    playersJoined,
-    totalPlayers,
-    description,
-    rules,
-    thumbnail,
-  } = tournamentData;
-
-  const filledPercentage = (playersJoined / totalPlayers) * 100;
+  const filledPercentage =
+    (tournamentId?.registeredPlayers.length / tournamentId?.maxParticipants) *
+    100;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Hero Section */}
-      <TournamentBanner title={title} bannerUrl={thumbnail} />
-      <TournamentData title={title} status={status} />
+      <TournamentBanner
+        title={tournamentId?.tournamentName}
+        bannerUrl={tournamentId?.imageUrl}
+      />
+      <TournamentData
+        title={tournamentId?.tournamentName}
+        status={tournamentId?.status}
+      />
       <TournamentTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       {/* Tournament Info */}
       <div className="max-w-4xl mx-auto p-6">
@@ -72,7 +49,8 @@ const TournamentDetails = () => {
             ></div>
           </div>
           <p className="text-gray-300 text-sm mt-1">
-            {playersJoined} / {totalPlayers} Players
+            {tournamentId?.registeredPlayers.length} /{" "}
+            {tournamentId?.maxParticipants} Players
           </p>
         </div>
 
@@ -80,9 +58,9 @@ const TournamentDetails = () => {
         <div className="mt-6">
           <h2 className="text-xl font-semibold">📜 Rules</h2>
           <ul className="text-gray-400 mt-2 space-y-2 list-disc pl-5">
-            {rules.map((rule, index) => (
+            {/* {rules.map((rule, index) => (
               <li key={index}>{rule}</li>
-            ))}
+            ))} */}
           </ul>
         </div>
 
@@ -148,7 +126,6 @@ const TournamentData = ({ title, status }) => {
     </>
   );
 };
-
 const TournamentTabs = ({ activeTab, setActiveTab }) => {
   const tabs = [
     "Overview",

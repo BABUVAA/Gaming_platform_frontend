@@ -17,7 +17,7 @@ export const fetchTournaments = createAsyncThunk(
   }
 );
 
-// ✅ Update Tournament (New)
+// ✅ Update Tournaments (Existing)
 export const updateTournament = createAsyncThunk(
   "tournament/updateTournament",
   async ({ tournamentId, updatedData }, thunkAPI) => {
@@ -50,23 +50,95 @@ export const updateTournament = createAsyncThunk(
   }
 );
 
+// ✅ Fetch Single Tournament by ID
+export const fetchTournamentById = createAsyncThunk(
+  "tournament/fetchTournamentById",
+  async (tournamentId, thunkAPI) => {
+    console.log(tournamentId);
+    try {
+      const response = await api.get(`/api/tournaments/${tournamentId}`, {
+        withCredentials: true,
+      });
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 // ✅ Tournament Slice
 const tournamentSlice = createSlice({
   name: "tournament",
   initialState: {
-    tournaments: [],
+    tournaments: {
+      activeTournaments: [],
+      upcomingTournaments: [],
+      pastTournaments: [],
+      featuredTournaments: [],
+    },
+    tournamentId: null,
     error: null,
     loading: false,
   },
   reducers: {
-    // ✅ WebSocket Update Handler
-    updateTournamentState: (state, action) => {
-      const updatedTournament = action.payload;
-      state.tournaments = state.tournaments.map((tournament) =>
-        tournament.id === updatedTournament.id ? updatedTournament : tournament
+    // Add tournament to a category
+    addTournament(state, action) {
+      const { category, tournament } = action.payload;
+
+      if (!state.tournaments[category]) {
+        console.warn(`Category ${category} does not exist in tournaments.`);
+        return;
+      }
+
+      const exists = state.tournaments[category].some(
+        (t) => t._id === tournament._id
       );
+
+      if (!exists) {
+        state.tournaments[category].push(tournament);
+      } else {
+        const index = state.tournaments[category].findIndex(
+          (t) => t._id === tournament._id
+        );
+        if (index !== -1) {
+          state.tournaments[category][index] = {
+            ...state.tournaments[category][index],
+            ...tournament,
+          };
+        }
+      }
+    },
+
+    // Update tournament in all categories
+    updateTournament(state, action) {
+      const updatedTournament = action.payload;
+      const categories = Object.keys(state.tournaments);
+
+      categories.forEach((category) => {
+        const index = state.tournaments[category].findIndex(
+          (t) => t._id === updatedTournament._id
+        );
+        if (index !== -1) {
+          state.tournaments[category][index] = {
+            ...state.tournaments[category][index],
+            ...updatedTournament,
+          };
+        }
+      });
+    },
+
+    // Remove tournament from a specific category
+    removeTournament(state, action) {
+      const { category, tournamentId } = action.payload;
+
+      if (state.tournaments[category]) {
+        state.tournaments[category] = state.tournaments[category].filter(
+          (t) => t._id !== tournamentId
+        );
+      }
     },
   },
+
   extraReducers: (builder) => {
     builder
       .addCase(fetchTournaments.pending, (state) => {
@@ -86,6 +158,17 @@ const tournamentSlice = createSlice({
         );
       })
       .addCase(updateTournament.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      .addCase(fetchTournamentById.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchTournamentById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tournamentId = action.payload;
+      })
+      .addCase(fetchTournamentById.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload;
       });
   },
