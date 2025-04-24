@@ -21,9 +21,14 @@ const TournamentDetails = () => {
     dispatch(fetchTournamentById(id));
   }, [id]);
 
-  const filledPercentage =
-    (tournamentId?.registeredPlayers.length / tournamentId?.maxParticipants) *
-    100;
+  let filledPercentage =
+    tournamentId?.mode !== "solo"
+      ? (tournamentId?.registeredTeams?.length /
+          tournamentId?.maxParticipants) *
+        100
+      : (tournamentId?.registeredPlayers?.length /
+          tournamentId?.maxParticipants) *
+        100;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -35,6 +40,8 @@ const TournamentDetails = () => {
       <TournamentData
         title={tournamentId?.tournamentName}
         status={tournamentId?.status}
+        prizePool={tournamentId?.prizePool}
+        entry={tournamentId?.entryFee}
       />
       <TournamentTabs activeTab={activeTab} setActiveTab={setActiveTab} />
       {/* Tournament Info */}
@@ -49,8 +56,11 @@ const TournamentDetails = () => {
             ></div>
           </div>
           <p className="text-gray-300 text-sm mt-1">
-            {tournamentId?.registeredPlayers.length} /{" "}
-            {tournamentId?.maxParticipants} Players
+            {tournamentId?.mode !== "solo"
+              ? tournamentId?.maxParticipants -
+                tournamentId?.registeredTeams?.length
+              : registeredPlayers.length}{" "}
+            / {tournamentId?.maxParticipants} Players
           </p>
         </div>
 
@@ -91,7 +101,7 @@ const TournamentBanner = ({ bannerUrl, title }) => {
     </div>
   );
 };
-const TournamentData = ({ title, status }) => {
+const TournamentData = ({ title, status, prizePool, entry }) => {
   return (
     <>
       {/* Tournament Details & Social Section */}
@@ -116,11 +126,11 @@ const TournamentData = ({ title, status }) => {
         {/* Prize & Entry Details */}
         <div className="w-full flex flex-row py-3 border-b items-center justify-between md:items-start">
           <h3 className="text-sm font-bold">🏆 Prize Pool</h3>
-          <p className="text-sm font-semibold text-blue-600">$250.00</p>
+          <p className="text-sm font-semibold text-blue-600">₹ {prizePool}</p>
         </div>
         <div className="w-full flex flex-row py-3 border-b items-center justify-between md:items-start">
-          <h3 className="text-sm font-bold ">🎟 Entry Type</h3>
-          <p className="text-sm font-semibold text-green-600">Free Entry</p>
+          <h3 className="text-sm font-bold ">🎟 Entry Fees</h3>
+          <p className="text-sm font-semibold text-green-600">₹ {entry}</p>
         </div>
       </div>
     </>

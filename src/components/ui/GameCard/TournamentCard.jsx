@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-
 import InviteModal from "../../feature/InviteModal";
+import { useSocket } from "../../../context/socketContext";
+import { useSelector } from "react-redux";
 
 const TournamentCard = ({ tournament }) => {
   const {
@@ -19,7 +20,13 @@ const TournamentCard = ({ tournament }) => {
   } = tournament;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { profile } = useSelector((store) => store.auth);
 
+  const hasGame = profile.profile.games.some((gameObj) =>
+    Object.values(gameObj).includes(game)
+  );
+
+  const { socket } = useSocket();
   let filledPercentage =
     mode !== "solo"
       ? (registeredTeams?.length / maxParticipants) * 100
@@ -27,7 +34,15 @@ const TournamentCard = ({ tournament }) => {
 
   const handleJoinClick = (e) => {
     e.preventDefault(); // prevent navigation
-    setIsModalOpen(true);
+    if (mode !== "solo") setIsModalOpen(true);
+    else if (hasGame) {
+      const payload = {
+        tournamentId: _id,
+      };
+      socket.emit("join_tournament", payload);
+    } else {
+      alert("please connect your game");
+    }
   };
 
   return (
@@ -50,15 +65,11 @@ const TournamentCard = ({ tournament }) => {
             />
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {maxParticipants - registeredTeams?.length || maxParticipants} Spots
-            left
+            {mode !== "solo"
+              ? maxParticipants - registeredTeams?.length
+              : registeredPlayers.length}{" "}
+            Spots left
           </div>
-
-          {status === "guaranteed" && (
-            <div className="mt-2 text-xs text-blue-600 font-semibold">
-              ✅ Guaranteed
-            </div>
-          )}
         </div>
 
         {/* Right */}
@@ -67,13 +78,14 @@ const TournamentCard = ({ tournament }) => {
           <div className="text-lg font-bold text-green-600">₹{entryFee}</div>
           <div className="text-xs text-gray-500">{maxParticipants} Spots</div>
 
-          <button
-            onClick={handleJoinClick}
-            className="mt-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-all"
-          >
-            Join Now
-          </button>
-
+          {status === "registration_open" && (
+            <button
+              onClick={handleJoinClick}
+              className="mt-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-all"
+            >
+              Join Now
+            </button>
+          )}
           {/* Navigate link (optional) */}
           <Link
             to={`/tournamentDeatils/${_id}`}

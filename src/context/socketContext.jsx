@@ -45,13 +45,26 @@ export const SocketProvider = ({ children }) => {
       handleNewMessage(newMessage);
     });
 
-    // ✅ Listen for live tournament updates
+    // ✅ Listen for live new tournament updates
     socketRef.current.on("newTournament", (updatedTournament) => {
       handleTournamentUpdate(updatedTournament);
     });
 
+    // ✅ Listen for live tournament updates
+    socketRef.current.on("updateTournament", (updatedTournament) => {
+      handleTournamentUpdate(updatedTournament);
+    });
+
     // Listen for Tournament Join
-    socketRef.current.on("TOURNAMENT_JOIN_SUCESS");
+    socketRef.current.on("TOURNAMENT_JOIN_SUCCESS", (data) => {
+      dispatch(
+        showToast({
+          message: "TOURNAMENT JOINED SUCCESSFULLY",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+    });
 
     // Listen for live ERROR updates
     socketRef.current.on("ERROR", (data) => {

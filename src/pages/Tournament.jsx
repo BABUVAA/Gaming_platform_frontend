@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useSocket } from "../context/socketContext";
-import { fetchTournaments, tournamentAction } from "../store/tournamentSlice";
+import { fetchTournaments } from "../store/tournamentSlice";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
 import GameSlider from "../components/ui/GameSlider/GameSlider";
 
 const TournamentPage = () => {
   const dispatch = useDispatch();
-  const { tournament } = useSocket();
   let { tournaments } = useSelector((state) => state.tournament);
 
   let tournamentData;
-  tournamentData = { ...tournaments, tournament };
-  console.log("tournamentData", tournamentData);
-  console.lo;
+  tournamentData = { ...tournaments };
+
   // Fetch tournaments on mount
   useEffect(() => {
     dispatch(fetchTournaments());
