@@ -283,7 +283,6 @@ const Profile = () => {
                 <button
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                   onClick={async () => {
-                    console.log(socialAccounts);
                     await dispatch(
                       profile_data_update({
                         field: "profile.linkedAccounts",
@@ -423,8 +422,6 @@ const Profile = () => {
 
   // Section 3: Active Tournaments
   const ActiveTournaments = ({ tournament }) => {
-    console.log("Active tournament", tournament);
-
     return (
       <div className="active-tournaments-wrapper mb-6 bg-gradient-to-b from-purple-50 to-purple-100 ">
         <div className="active-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">

@@ -57,7 +57,6 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
     };
 
     socket.emit("join_tournament", payload);
-    console.log("Sent join_tournament with", payload);
     onClose();
   };
 

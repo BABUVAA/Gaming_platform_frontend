@@ -7,10 +7,11 @@ const Chats = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatType, setChatType] = useState(null);
   const [chatName, setChatName] = useState(null);
-  const [personalChats, setPersonalChats] = useState(profile?.activeChats || []);
+  const [personalChats, setPersonalChats] = useState(
+    profile?.activeChats || []
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  console.log("personalCHats:", personalChats);
   return (
     <div className="flex h-[calc(100vh-96px)]">
       {/* Sidebar */}
@@ -137,7 +138,6 @@ const NewChatModal = ({
 
     // Find friend details
     const friend = friends.find((f) => f._id === selectedUser);
-    console.log("friend", friend);
     // Check if already in personalChats
     if (!personalChats.find((chat) => chat._id === friend._id)) {
       setPersonalChats([...personalChats, { ...friend, type: "personal" }]);

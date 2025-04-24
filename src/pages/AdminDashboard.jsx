@@ -3,8 +3,6 @@ import { useSocket } from "../context/socketContext";
 
 const AdminDashboard = () => {
   const { socket } = useSocket();
-  console.log("Socket in TournamentManagement:", socket);
-
   const [activeSection, setActiveSection] = useState("dashboard");
 
   const services = [
@@ -94,7 +92,6 @@ const TournamentManagement = ({ socket }) => {
 
     // Emit to WebSocket
     socket.emit("newTournament", tournamentData);
-    console.log("New Tournament Sent:", tournamentData);
 
     // Reset Form
     setTournamentData({

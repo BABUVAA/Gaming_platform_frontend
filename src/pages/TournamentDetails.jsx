@@ -59,7 +59,7 @@ const TournamentDetails = () => {
             {tournamentId?.mode !== "solo"
               ? tournamentId?.maxParticipants -
                 tournamentId?.registeredTeams?.length
-              : registeredPlayers.length}{" "}
+              : tournamentId?.registeredPlayers.length}{" "}
             / {tournamentId?.maxParticipants} Players
           </p>
         </div>

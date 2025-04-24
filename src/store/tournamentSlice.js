@@ -54,7 +54,6 @@ export const updateTournament = createAsyncThunk(
 export const fetchTournamentById = createAsyncThunk(
   "tournament/fetchTournamentById",
   async (tournamentId, thunkAPI) => {
-    console.log(tournamentId);
     try {
       const response = await api.get(`/api/tournaments/${tournamentId}`, {
         withCredentials: true,

@@ -9,12 +9,9 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const [message, setMessage] = useState(""); // To hold the current message
   const [messages, setMessages] = useState([]); // To hold all the chat messages
   const socket = useSocket();
-  console.log(socket);
 
   // Determine chat ID based on type
   const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat; // ✅ Fixed chatId
-  console.log("chat to ", chatId);
-  console.log("selectedChat", selectedChat);
   const senderId = profile._id; // ✅ Fixed senderId
   const senderName = profile.profile.username || "unknown";
   // Join chat room and listen for messages
@@ -23,20 +20,17 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
 
     // Listen for previous messages
     const loadMessagesListener = (loadedMessages) => {
-      console.log("Previous messages received:", loadedMessages);
       setMessages(loadedMessages); // ✅ Store previous messages
     };
 
     // Listen for new messages
     const messageListener = (newMessage) => {
-      console.log("New message received:", newMessage);
       setMessages((prevMessages) => [...prevMessages, newMessage]);
     };
 
     socket.socket.on(`${chatType}_load_messages`, loadMessagesListener);
     socket.socket.on(`${chatType}_message`, messageListener); // ✅ Use event constant
 
-    console.log(chatId);
     // Join chat room
     socket.socket.emit(`join_${chatType}_room`, chatId);
 
@@ -55,7 +49,6 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
     }
   }, [messages]); // ✅ Scrolls down on new messages
 
-  console.log("message:", messages);
   // Send a new message
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -77,7 +70,6 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
     }
 
     // Emit the message to the server
-    console.log("Sending message:", messageData); // Debug message data
     socket.socket.emit(`${chatType}_message`, messageData); // ✅ Use event constant
 
     // Clear the input field after sending

@@ -15,7 +15,6 @@ const Matchmaking = () => {
   useEffect(() => {
     // Listen for new messages
     const messageListener = (newMessage) => {
-      console.log("New message received:", newMessage);
       setMatch(newMessage);
     };
 

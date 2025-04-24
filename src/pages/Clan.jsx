@@ -1001,7 +1001,6 @@ const FriendRequests = () => {
 };
 const FriendRequestCard = ({ requesterId, userId }) => {
   const dispatch = useDispatch();
-  console.log(requesterId);
   // Accept Friend Request
   const handleAcceptRequest = async () => {
     try {
@@ -1012,7 +1011,6 @@ const FriendRequestCard = ({ requesterId, userId }) => {
           data: requesterId._id,
         })
       );
-      console.log(useId);
       await dispatch(
         profile_data_update({
           action: "add",
