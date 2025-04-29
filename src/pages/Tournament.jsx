@@ -114,7 +114,14 @@ const FeaturedTournaments = ({ label, tournaments }) => {
       ) : (
         <div className="flex flex-row flex-wrap justify-center gap-4">
           {tournaments.map((tournament) => (
-            <TournamentCard key={tournament._id} tournament={tournament} />
+            <TournamentCard
+              key={tournament._id}
+              tournament={tournament}
+              hidden={
+                tournament.status !== "registration_open" &&
+                !tournament.isFeatured
+              }
+            />
           ))}
         </div>
       )}

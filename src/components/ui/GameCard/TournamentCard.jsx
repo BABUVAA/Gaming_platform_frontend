@@ -4,7 +4,7 @@ import InviteModal from "../../feature/InviteModal";
 import { useSocket } from "../../../context/socketContext";
 import { useSelector } from "react-redux";
 
-const TournamentCard = ({ tournament }) => {
+const TournamentCard = ({ tournament, hidden }) => {
   const {
     _id,
     tournamentName,
@@ -47,7 +47,18 @@ const TournamentCard = ({ tournament }) => {
 
   return (
     <>
-      <div className="bg-white shadow-md rounded-xl p-4 w-full max-w-2xl mx-auto flex flex-col sm:flex-row justify-between gap-4 transition-all hover:shadow-xl">
+      <div
+        className={`
+    bg-white shadow-md rounded-xl p-4 w-full max-w-2xl mx-auto
+    flex flex-col sm:flex-row justify-between gap-4
+    transition-all duration-500 ease-in-out hover:shadow-xl
+    ${
+      hidden
+        ? "opacity-0 scale-95 pointer-events-none h-0 overflow-hidden"
+        : "opacity-100 scale-100"
+    }
+  `}
+      >
         {/* Left */}
         <div className="flex-1">
           <div className="mb-1 text-sm text-gray-600 font-medium">{game}</div>
@@ -66,9 +77,12 @@ const TournamentCard = ({ tournament }) => {
           </div>
           <div className="text-xs text-gray-500 mt-1">
             {mode !== "solo"
-              ? maxParticipants - registeredTeams?.length
-              : registeredPlayers.length}{" "}
-            Spots left
+              ? maxParticipants - registeredTeams?.length === 0
+                ? "Tournament Full"
+                : `${maxParticipants - registeredTeams?.length} Spots left`
+              : maxParticipants - registeredPlayers?.length === 0
+              ? "Tournament Full"
+              : `${maxParticipants - registeredPlayers?.length} Spots left`}
           </div>
         </div>
 

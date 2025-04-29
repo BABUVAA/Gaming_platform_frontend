@@ -74,6 +74,7 @@ const tournamentSlice = createSlice({
       upcomingTournaments: [],
       pastTournaments: [],
       featuredTournaments: [],
+      tournament: [],
     },
     tournamentId: null,
     error: null,
@@ -83,6 +84,7 @@ const tournamentSlice = createSlice({
     // Add tournament to a category
     addTournament(state, action) {
       const { category, tournament } = action.payload;
+      console.log(state.tournaments[category]);
 
       if (!state.tournaments[category]) {
         console.warn(`Category ${category} does not exist in tournaments.`);

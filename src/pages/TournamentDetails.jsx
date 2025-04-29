@@ -19,7 +19,7 @@ const TournamentDetails = () => {
 
   useEffect(() => {
     dispatch(fetchTournamentById(id));
-  }, [id]);
+  }, [id, dispatch]);
 
   let filledPercentage =
     tournamentId?.mode !== "solo"
@@ -29,6 +29,8 @@ const TournamentDetails = () => {
       : (tournamentId?.registeredPlayers?.length /
           tournamentId?.maxParticipants) *
         100;
+  const isJoinDisabled =
+    tournamentId?.status === "completed" || filledPercentage >= 100;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -57,37 +59,50 @@ const TournamentDetails = () => {
           </div>
           <p className="text-gray-300 text-sm mt-1">
             {tournamentId?.mode !== "solo"
-              ? tournamentId?.maxParticipants -
-                tournamentId?.registeredTeams?.length
-              : tournamentId?.registeredPlayers.length}{" "}
-            / {tournamentId?.maxParticipants} Players
+              ? `${tournamentId?.registeredTeams?.length} / ${tournamentId?.maxParticipants} Teams`
+              : `${tournamentId?.registeredPlayers?.length} / ${tournamentId?.maxParticipants} Players`}
           </p>
         </div>
 
-        {/* Rules & Description */}
-        <div className="mt-6">
-          <h2 className="text-xl font-semibold">📜 Rules</h2>
-          <ul className="text-gray-400 mt-2 space-y-2 list-disc pl-5">
-            {/* {rules.map((rule, index) => (
-              <li key={index}>{rule}</li>
-            ))} */}
-          </ul>
-        </div>
-
         {/* Join Button */}
-        <button className="mt-6 w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg text-lg font-semibold">
-          Join Tournament
-        </button>
+        {tournamentId?.status === "registration_open" && (
+          <button
+            disabled={isJoinDisabled}
+            className={`mt-6 w-full py-3 rounded-lg text-lg font-semibold transition-all ${
+              isJoinDisabled
+                ? "bg-gray-500 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {isJoinDisabled && tournamentId?.status === "active"
+              ? "Tournament Full"
+              : "Join Tournament"}
+          </button>
+        )}
+
+        <div
+          className={`mt-6 text-center w-full py-3 rounded-lg text-lg font-semibold transition-all ${
+            isJoinDisabled
+              ? "bg-gray-500 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          {" "}
+          {isJoinDisabled && tournamentId?.status === "active"
+            ? "Tournament Full"
+            : "Join Tournament"}
+        </div>
       </div>
     </div>
   );
 };
+
 const TournamentBanner = ({ bannerUrl, title }) => {
   return (
     <div className="relative w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px]">
       {/* Banner Image */}
       <img
-        src={"/pubg_background.jpg" || bannerUrl}
+        src={bannerUrl || "/pubg_background.jpg"}
         alt={title}
         className="w-full h-full object-cover"
       />
@@ -172,10 +187,117 @@ const TournamentTabs = ({ activeTab, setActiveTab }) => {
         {activeTab === "Watch Live" && <p>Live Streaming Information...</p>}
         {activeTab === "Prize Pool" && <p>Prize Details & Distribution...</p>}
         {activeTab === "Scoring" && <p>Scoring System Breakdown...</p>}
-        {activeTab === "Rules" && <p>Rules & Regulations for Tournament...</p>}
+        {activeTab === "Rules" && <Rules />}
       </div>
     </div>
   );
 };
 
+const Rules = () => (
+  <div className="mt-6 bg-gray-700">
+    <h2 className="text-xl font-semibold">
+      📜 Clash of Clans Tournament Rules (Official)
+    </h2>
+
+    <ul className="text-gray-400 mt-4 space-y-6 list-disc pl-5">
+      {/* 1. Registration Requirements */}
+      <li>
+        <span className="font-semibold text-white">
+          1. Registration Requirements
+        </span>
+        <ul className="list-disc pl-5 mt-2 space-y-2">
+          <li>
+            All players must be registered on the platform before joining the
+            tournament.
+          </li>
+          <li>
+            Players must connect the required Clash of Clans (CoC) game account
+            to their profile.
+          </li>
+          <li>
+            Each player must have a valid and active Clash of Clans account.
+          </li>
+          <li>
+            Players must either join a valid clan or create a valid clan to
+            participate.
+          </li>
+          <li>
+            Only the registered account is allowed to play in the tournament
+            matches.
+          </li>
+        </ul>
+      </li>
+
+      {/* 2. Clan Requirements */}
+      <li>
+        <span className="font-semibold text-white">2. Clan Requirements</span>
+        <ul className="list-disc pl-5 mt-2 space-y-2">
+          <li>Clans must have Friendly War settings enabled.</li>
+          <li>War Log must be set to Public for transparency.</li>
+          <li>Only clans consisting of registered players are allowed.</li>
+          <li>
+            No outsiders or alternate accounts are allowed during tournament
+            matches.
+          </li>
+        </ul>
+      </li>
+
+      {/* 3. Tournament Start and Match Procedure */}
+      <li>
+        <span className="font-semibold text-white">
+          3. Tournament Start and Match Procedure
+        </span>
+        <ul className="list-disc pl-5 mt-2 space-y-2">
+          <li>
+            Once the tournament is full or started:
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>
+                10 minutes to join the designated clan and send a Friendly
+                Battle request.
+              </li>
+              <li>5 minutes of preparation time after both teams are ready.</li>
+              <li>30 minutes battle time once the war is initiated.</li>
+            </ul>
+          </li>
+          <li>
+            Team A (first mentioned team) must send the Friendly War request.
+          </li>
+          <li>Team B must accept the Friendly War request promptly.</li>
+        </ul>
+      </li>
+
+      {/* 4. Disqualification and Irregularities */}
+      <li>
+        <span className="font-semibold text-white">
+          4. Disqualification and Irregularities
+        </span>
+        <ul className="list-disc pl-5 mt-2 space-y-2">
+          <li>
+            Any irregularity (e.g., unregistered players, account mismatch, war
+            log hidden, refusal to start/accept battle) will lead to immediate
+            disqualification.
+          </li>
+          <li>
+            Deliberate delays or refusal to cooperate during match setup will
+            not be tolerated.
+          </li>
+        </ul>
+      </li>
+
+      {/* 5. Important Notes */}
+      <li>
+        <span className="font-semibold text-white">5. Important Notes</span>
+        <ul className="list-disc pl-5 mt-2 space-y-2">
+          <li>
+            Players are responsible for ensuring their account and clan setup is
+            complete before the match time.
+          </li>
+          <li>
+            Admins' decisions are final in any dispute or irregular situation.
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+);
 export default TournamentDetails;
