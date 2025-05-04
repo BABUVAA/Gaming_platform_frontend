@@ -3,14 +3,15 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchTournaments } from "../store/tournamentSlice";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
 import GameSlider from "../components/ui/GameSlider/GameSlider";
+import tournamentCategorizer from "../utils/tournamentCategorizer";
 
 const TournamentPage = () => {
   const dispatch = useDispatch();
   let { tournaments } = useSelector((state) => state.tournament);
 
-  let tournamentData;
-  tournamentData = { ...tournaments };
-
+  // Creating categories for tournaments based on status
+  const categorizedTournaments = tournamentCategorizer(tournaments);
+  console.log(categorizedTournaments);
   // Fetch tournaments on mount
   useEffect(() => {
     dispatch(fetchTournaments());
@@ -26,19 +27,19 @@ const TournamentPage = () => {
         {/* 🔥 New Tournaments */}
         <FeaturedTournaments
           label={"🔥 New Tournaments"}
-          tournaments={tournamentData.tournament || []}
+          tournaments={categorizedTournaments.registration_open || []}
         />
 
         {/* 🔥 Featured Tournaments */}
         <FeaturedTournaments
           label={"🔥 Featured Tournaments"}
-          tournaments={tournamentData.featuredTournaments || []}
+          tournaments={categorizedTournaments.featured || []}
         />
 
         {/* 🎮 Quick Join Tournaments by Game */}
         <FeaturedTournaments
           label={"🎮 Quick Join Tournaments"}
-          tournaments={tournamentData.activeTournaments || []}
+          tournaments={categorizedTournaments.active || []}
         />
       </div>
     </div>
@@ -114,14 +115,7 @@ const FeaturedTournaments = ({ label, tournaments }) => {
       ) : (
         <div className="flex flex-row flex-wrap justify-center gap-4">
           {tournaments.map((tournament) => (
-            <TournamentCard
-              key={tournament._id}
-              tournament={tournament}
-              hidden={
-                tournament.status !== "registration_open" &&
-                !tournament.isFeatured
-              }
-            />
+            <TournamentCard key={tournament._id} tournament={tournament} />
           ))}
         </div>
       )}

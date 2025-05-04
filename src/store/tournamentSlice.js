@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
 import { showToast, types } from "./toastSlice";
 
-// ✅ Fetch Tournaments (Existing)
+// ✅ Fetch All Tournaments (Updated for the new structure)
 export const fetchTournaments = createAsyncThunk(
   "tournament/fetchTournaments",
   async (_, thunkAPI) => {
@@ -10,14 +10,14 @@ export const fetchTournaments = createAsyncThunk(
       const response = await api.get("/api/tournaments/fetchAllTournament", {
         withCredentials: true,
       });
-      return response.data;
+      return response.data.tournaments; // New structure: { tournamentId: tournamentData }
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-// ✅ Update Tournaments (Existing)
+// ✅ Update Tournament
 export const updateTournament = createAsyncThunk(
   "tournament/updateTournament",
   async ({ tournamentId, updatedData }, thunkAPI) => {
@@ -69,74 +69,42 @@ export const fetchTournamentById = createAsyncThunk(
 const tournamentSlice = createSlice({
   name: "tournament",
   initialState: {
-    tournaments: {
-      activeTournaments: [],
-      upcomingTournaments: [],
-      pastTournaments: [],
-      featuredTournaments: [],
-      tournament: [],
-    },
+    tournaments: {}, // Store tournaments as { tournament.id: tournamentData }
     tournamentId: null,
     error: null,
     loading: false,
   },
   reducers: {
-    // Add tournament to a category
+    // Add tournament to a category (new structure)
     addTournament(state, action) {
-      const { category, tournament } = action.payload;
-      console.log(state.tournaments[category]);
+      const { tournament } = action.payload;
 
-      if (!state.tournaments[category]) {
-        console.warn(`Category ${category} does not exist in tournaments.`);
-        return;
-      }
-
-      const exists = state.tournaments[category].some(
-        (t) => t._id === tournament._id
-      );
-
-      if (!exists) {
-        state.tournaments[category].push(tournament);
+      if (!state.tournaments[tournament._id]) {
+        state.tournaments[tournament._id] = tournament;
       } else {
-        const index = state.tournaments[category].findIndex(
-          (t) => t._id === tournament._id
-        );
-        if (index !== -1) {
-          state.tournaments[category][index] = {
-            ...state.tournaments[category][index],
-            ...tournament,
-          };
-        }
+        state.tournaments[tournament._id] = {
+          ...state.tournaments[tournament._id],
+          ...tournament,
+        };
       }
     },
 
-    // Update tournament in all categories
+    // Update tournament in all categories (new structure)
     updateTournament(state, action) {
       const updatedTournament = action.payload;
-      const categories = Object.keys(state.tournaments);
 
-      categories.forEach((category) => {
-        const index = state.tournaments[category].findIndex(
-          (t) => t._id === updatedTournament._id
-        );
-        if (index !== -1) {
-          state.tournaments[category][index] = {
-            ...state.tournaments[category][index],
-            ...updatedTournament,
-          };
-        }
-      });
+      if (state.tournaments[updatedTournament._id]) {
+        state.tournaments[updatedTournament._id] = {
+          ...state.tournaments[updatedTournament._id],
+          ...updatedTournament,
+        };
+      }
     },
 
-    // Remove tournament from a specific category
+    // Remove tournament (new structure)
     removeTournament(state, action) {
-      const { category, tournamentId } = action.payload;
-
-      if (state.tournaments[category]) {
-        state.tournaments[category] = state.tournaments[category].filter(
-          (t) => t._id !== tournamentId
-        );
-      }
+      const { tournamentId } = action.payload;
+      delete state.tournaments[tournamentId];
     },
   },
 
@@ -147,16 +115,15 @@ const tournamentSlice = createSlice({
       })
       .addCase(fetchTournaments.fulfilled, (state, action) => {
         state.loading = false;
-        state.tournaments = action.payload;
+        state.tournaments = action.payload; // Update tournaments with the new structure
       })
       .addCase(fetchTournaments.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
       .addCase(updateTournament.fulfilled, (state, action) => {
-        state.tournaments = state.tournaments.map((tournament) =>
-          tournament.id === action.payload.id ? action.payload : tournament
-        );
+        const updatedTournament = action.payload;
+        state.tournaments[updatedTournament._id] = updatedTournament;
       })
       .addCase(updateTournament.rejected, (state, action) => {
         state.error = action.payload;
