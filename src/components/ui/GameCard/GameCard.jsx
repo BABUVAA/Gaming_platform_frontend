@@ -6,7 +6,6 @@ const GameCard = ({
   character,
   title,
   link,
-  background_color,
   div_color,
   type = "games",
 }) => {

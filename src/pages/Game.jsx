@@ -9,7 +9,6 @@ const Game = () => {
   const [selectedGame, setSelectedGame] = useState(null);
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data || []);
-  console.log(games);
   const stableConnectedGames = useSelector(
     (store) => store.auth?.profile?.profile?.games
   );
@@ -101,6 +100,7 @@ const Game = () => {
         <GameConnectForm
           game={selectedGame}
           onClose={() => setSelectedGame(null)}
+          setSelectedGame={setSelectedGame}
           onSubmit={() => {
             handleGameAction(selectedGame, "connect");
             setSelectedGame(null);

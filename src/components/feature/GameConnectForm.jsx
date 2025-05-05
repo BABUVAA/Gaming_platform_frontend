@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { useSocket } from "../../context/socketContext";
 
-const GameConnectForm = ({ game, onClose, onSubmit }) => {
+const GameConnectForm = ({ game, onClose, onSubmit, setSelectedGame }) => {
   const { socket } = useSocket();
   const [step, setStep] = useState(1);
   const [playerTag, setPlayerTag] = useState("");
   const [gameToken, setGameToken] = useState("");
   const [playerInfo, setPlayerInfo] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const handleVerifyPlayer = () => {
     if (!playerTag) return alert("Please enter your player tag.");
     setLoading(true);
@@ -42,11 +41,17 @@ const GameConnectForm = ({ game, onClose, onSubmit }) => {
       operation: "VERIFY_TOKEN",
     });
 
-    socket.once("verify_game_data_response", (data) => {
-      console.log(data);
+    socket.once("verify_game_data_response", async (data) => {
       setLoading(false);
       if (data?.success) {
         alert("API Token verified successfully.");
+        const newGameData = {
+          game: game._id, // Game ObjectId from backend
+          accountUsername: playerInfo.name,
+          accountId: playerInfo.tag,
+          additionalDetails: playerInfo, // optional extras
+        };
+        await setSelectedGame(newGameData);
         onSubmit();
         onClose(); // Close the form after successful submission
       } else {
