@@ -6,21 +6,15 @@ import ErrorBoundary from "./ErrorBoundary"; // Custom error boundary component
 import { PersistGate } from "redux-persist/integration/react";
 import { persistStore } from "redux-persist";
 import { SocketProvider } from "../../context/socketContext";
+import LoadingSpinner from "./LoadingSpinner"; // Custom loading spinner
 
-/**
- * AppProvider component wraps the app with necessary context providers:
- * - ReduxProvider: Global state management using Redux
- * - AuthProvider: Manages authentication state
- * - LoadingProvider: Manages loading spinner state
- * - RouterProvider: Provides routing to the app
- */
-
+// Initialize the persistor for Redux Persist
 let persistor = persistStore(platformStore);
 
 const AppProvider = () => (
   <ErrorBoundary>
     <Provider store={platformStore}>
-      <PersistGate persistor={persistor}>
+      <PersistGate loading={<LoadingSpinner />} persistor={persistor}>
         <SocketProvider>
           <RouterProvider router={routes} />
         </SocketProvider>
