@@ -90,7 +90,12 @@ export const register = createAsyncThunk(
       const response = await api.post("/api/auth/signup", userData);
       thunkAPI.dispatch(
         showToast({
-          message: response.data.message,
+          message:
+            response.data.message ||
+            response.data.errors.username ||
+            response.data.errors.email ||
+            response.data.errors.password ||
+            response.data.errors.dob,
           type: types.SUCCESS,
           position: "bottom-right",
         })
@@ -185,6 +190,7 @@ export const profile_file_update = createAsyncThunk(
 export const profile_data_update = createAsyncThunk(
   "users/profile_data_update",
   async (data, thunkAPI) => {
+    console.log(data);
     try {
       // Send POST request with form data
       const response = await api.post("/api/users/profile_data_update", data);

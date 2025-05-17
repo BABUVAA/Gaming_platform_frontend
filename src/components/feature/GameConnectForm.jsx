@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useSocket } from "../../context/socketContext";
 
-const GameConnectForm = ({ game, onClose, onSubmit, setSelectedGame }) => {
+const GameConnectForm = ({ game, onClose, onSubmit }) => {
   const { socket } = useSocket();
   const [step, setStep] = useState(1);
   const [playerTag, setPlayerTag] = useState("");
   const [gameToken, setGameToken] = useState("");
   const [playerInfo, setPlayerInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const handleVerifyPlayer = () => {
     if (!playerTag) return alert("Please enter your player tag.");
     setLoading(true);
@@ -30,7 +31,7 @@ const GameConnectForm = ({ game, onClose, onSubmit, setSelectedGame }) => {
   };
 
   // Step 2: Handle API Token Submission
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!gameToken) return alert("Please enter your API Token.");
     setLoading(true);
 
@@ -51,8 +52,7 @@ const GameConnectForm = ({ game, onClose, onSubmit, setSelectedGame }) => {
           accountId: playerInfo.tag,
           additionalDetails: playerInfo, // optional extras
         };
-        await setSelectedGame(newGameData);
-        onSubmit();
+        onSubmit(newGameData);
         onClose(); // Close the form after successful submission
       } else {
         alert(data?.message || "Token verification failed.");

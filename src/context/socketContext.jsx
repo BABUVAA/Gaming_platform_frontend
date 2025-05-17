@@ -28,12 +28,10 @@ export const SocketProvider = ({ children }) => {
 
     socketRef.current.on("connect", () => {
       setConnected(true);
-      console.log("✅ Connected to socket server");
     });
 
     socketRef.current.on("disconnect", () => {
       setConnected(false);
-      console.log("❌ Disconnected from socket server");
     });
 
     // Listen for messages from both clan and private chats

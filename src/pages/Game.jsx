@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import Input from "../components/ui/Input/Input";
 import GameCard from "../components/ui/GameCard/GameCard";
@@ -6,7 +6,8 @@ import { profile_data_update, user_profile } from "../store/authSlice";
 import GameConnectForm from "../components/feature/GameConnectForm";
 
 const Game = () => {
-  const [selectedGame, setSelectedGame] = useState(null);
+  const [selectedGame, setSelectedGame] = useState();
+  console.log("selected", selectedGame);
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data || []);
   const stableConnectedGames = useSelector(
@@ -99,11 +100,12 @@ const Game = () => {
       {selectedGame && (
         <GameConnectForm
           game={selectedGame}
-          onClose={() => setSelectedGame(null)}
-          setSelectedGame={setSelectedGame}
-          onSubmit={() => {
-            handleGameAction(selectedGame, "connect");
-            setSelectedGame(null);
+          onClose={() => setSelectedGame()}
+          onSubmit={(data) => {
+            console.log("data to set", data);
+            setSelectedGame(data);
+            // handleGameAction(selectedGame, "connect");
+
             setModalOpen(false); // optionally close main modal
           }}
         />
