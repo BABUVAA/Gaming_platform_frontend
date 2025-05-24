@@ -7,7 +7,6 @@ import GameConnectForm from "../components/feature/GameConnectForm";
 
 const Game = () => {
   const [selectedGame, setSelectedGame] = useState();
-  console.log("selected", selectedGame);
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data || []);
   const stableConnectedGames = useSelector(
@@ -23,6 +22,7 @@ const Game = () => {
   // Handle Connect / Disconnect
   const handleGameAction = async (game, action) => {
     let actionType = action === "connect" ? "add" : "remove";
+    console.log(game);
     await dispatch(
       profile_data_update({
         action: actionType,
@@ -48,9 +48,9 @@ const Game = () => {
             {connectedGames.length > 0 ? (
               connectedGames.map((game) => (
                 <GameCard
-                  key={game._id}
-                  {...game}
-                  link={`/dashboard/tournament/${game.link}`}
+                  key={game.game._id}
+                  {...game.game}
+                  link={`/dashboard/tournament/${game.game.link}`}
                   type="games"
                 />
               ))
@@ -197,7 +197,7 @@ const GameConnect = ({
                         if (game.link === "coc") {
                           setSelectedGame(game);
                         } else {
-                          handleGameAction(game, "connect");
+                          handleGameAction({ game: game._id }, "connect");
                         }
                       }}
                       className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-blue-700 transition"

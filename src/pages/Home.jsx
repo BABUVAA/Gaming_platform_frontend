@@ -49,6 +49,7 @@ const IntroSection = () => {
           src="Battlefield.mp4"
           muted
           autoPlay
+          preload="none"
           loop
           className="absolute inset-0 w-full h-full object-cover opacity-70"
           typeof="video/mp4"

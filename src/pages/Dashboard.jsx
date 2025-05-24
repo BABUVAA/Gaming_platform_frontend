@@ -11,7 +11,6 @@ const Dashboard = () => {
   const { userClanData } = useSelector((store) => store.clan);
   const { globalLoading } = useSelector((store) => store.loading);
   const [loading, setLoading] = useState(false);
-
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -24,7 +23,7 @@ const Dashboard = () => {
             await dispatch(fetchUserClan());
           }
         }
-        if (userClanData === null && profile?.clan._id) {
+        if (userClanData === null && profile?.clan?._id) {
           await dispatch(fetchUserClan());
         }
       } catch (error) {

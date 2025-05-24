@@ -1,6 +1,6 @@
 import React from "react";
-import { useParams, Link } from "react-router-dom";
-import Matchmaking from "../components/myComponents/MatchMaking";
+import { useParams } from "react-router-dom";
+import { TournamentCard } from "../components";
 
 // Game-specific data
 const gameData = {
@@ -26,10 +26,50 @@ const gameData = {
   },
 };
 
+// Dummy tournament data (replace with real data or fetch from backend)
+const dummyTournaments = [
+  {
+    _id: "1",
+    title: "BGMI Mega Match",
+    game: "bgmi",
+    status: "featured",
+    entryFee: 10,
+    prize: 100,
+    date: "2025-05-25",
+  },
+  {
+    _id: "2",
+    title: "BGMI Squad War",
+    game: "bgmi",
+    status: "registration_open",
+    entryFee: 20,
+    prize: 200,
+    date: "2025-05-26",
+  },
+  {
+    _id: "3",
+    title: "Clash Mayhem",
+    game: "coc",
+    status: "active",
+    entryFee: 5,
+    prize: 50,
+    date: "2025-05-22",
+  },
+  {
+    _id: "4",
+    title: "Clash Brawl",
+    game: "coc",
+    status: "registration_open",
+    entryFee: 10,
+    prize: 150,
+    date: "2025-05-23",
+  },
+];
+
 const TournamentGame = () => {
   const { game } = useParams();
 
-  // If the game doesn't exist in the data, show 404
+  // Check if the game exists
   if (!gameData[game]) {
     return (
       <h2 className="text-center text-3xl text-red-500 mt-10">
@@ -39,6 +79,30 @@ const TournamentGame = () => {
   }
 
   const { name, icon, downloadLink, promoImages } = gameData[game];
+
+  // Filter tournaments for this game
+  const gameTournaments = dummyTournaments.filter((t) => t.game === game);
+
+  // Categorize tournaments
+  const categorizedTournaments = {
+    featured: gameTournaments.filter((t) => t.status === "featured"),
+    registration_open: gameTournaments.filter(
+      (t) => t.status === "registration_open"
+    ),
+    active: gameTournaments.filter((t) => t.status === "active"),
+  };
+
+  const categoryList = [
+    {
+      label: "🔥 Featured Matches",
+      tournaments: categorizedTournaments.featured,
+    },
+    {
+      label: "🎯 Registration Open",
+      tournaments: categorizedTournaments.registration_open,
+    },
+    { label: "🎮 Ongoing Matches", tournaments: categorizedTournaments.active },
+  ];
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
@@ -72,8 +136,8 @@ const TournamentGame = () => {
         </div>
       </div>
 
-      {/* Promo Images Section */}
-      <div className="w-[95vw] overflow-hidden">
+      {/* Promo Images */}
+      <div className="w-[85vw] overflow-hidden">
         <div className="flex overflow-x-auto space-x-2 md:space-x-4 py-6 px-4 scrollbar-hide">
           {promoImages.map((img, index) => (
             <div
@@ -90,20 +154,39 @@ const TournamentGame = () => {
         </div>
       </div>
 
-      {/* Quick Match Section */}
-      <div className="max-w-4xl mb-16 mx-auto mt-8 md:mt-12 p-4 md:p-6 bg-gray-800 rounded-lg shadow-lg text-center">
-        <h3 className="text-xl md:text-2xl font-bold border-b border-gray-600 pb-2">
-          Quick Match for {name}
-        </h3>
-        <p className="text-gray-400 mt-4 text-sm md:text-base">
-          Find and join a quick match instantly.
-        </p>
-        <div className="mt-6 w-full h-32">
-          <Matchmaking />
-        </div>
+      {/* Tournament Categories */}
+      <div className="max-w-6xl mx-auto px-4 mt-10 space-y-10 pb-16">
+        {categoryList.map(
+          (category, idx) =>
+            category.tournaments.length > 0 && (
+              <CategorySection
+                key={idx}
+                label={category.label}
+                tournaments={category.tournaments}
+              />
+            )
+        )}
       </div>
     </div>
   );
 };
+
+// Reusable Category Section
+const CategorySection = ({ label, tournaments }) => (
+  <section className="py-10" id="featured-tournaments">
+    <h2 className="text-3xl font-bold text-white mb-6">{label}</h2>
+    {tournaments.length === 0 ? (
+      <p className="text-gray-400 text-center">
+        No featured tournaments available
+      </p>
+    ) : (
+      <div className="flex flex-row flex-wrap justify-center gap-4">
+        {tournaments.map((tournament) => (
+          <TournamentCard key={tournament._id} tournament={tournament} />
+        ))}
+      </div>
+    )}
+  </section>
+);
 
 export default TournamentGame;
