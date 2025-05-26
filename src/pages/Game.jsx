@@ -22,7 +22,7 @@ const Game = () => {
   // Handle Connect / Disconnect
   const handleGameAction = async (game, action) => {
     let actionType = action === "connect" ? "add" : "remove";
-    console.log(game);
+
     await dispatch(
       profile_data_update({
         action: actionType,
@@ -102,10 +102,8 @@ const Game = () => {
           game={selectedGame}
           onClose={() => setSelectedGame()}
           onSubmit={(data) => {
-            console.log("data to set", data);
             setSelectedGame(data);
-            // handleGameAction(selectedGame, "connect");
-
+            handleGameAction(selectedGame, "connect");
             setModalOpen(false); // optionally close main modal
           }}
         />
@@ -122,102 +120,105 @@ const GameConnect = ({
   setModalOpen,
   handleGameAction,
   setSelectedGame,
-}) => (
-  <div className="fixed z-50 inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 sm:mx-0 sm:w-96">
-      <h3 className="text-2xl font-bold mb-4 text-center text-gray-800">
-        Manage Your Games
-      </h3>
+}) => {
+  return (
+    <div className="fixed z-50 inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 sm:mx-0 sm:w-96">
+        <h3 className="text-2xl font-bold mb-4 text-center text-gray-800">
+          Manage Your Games
+        </h3>
 
-      <div className="space-y-6 max-h-96 overflow-y-auto pr-2 custom-scroll">
-        {/* Connected Games List */}
-        {connectedGames.length > 0 && (
-          <div>
-            <h4 className="text-lg font-semibold mb-2 text-gray-700">
-              Connected Games
-            </h4>
-            <div className="space-y-3">
-              {connectedGames.map((game) => (
-                <div
-                  key={game._id}
-                  className="flex items-center justify-between p-3 border rounded-xl bg-gray-50 hover:shadow-md transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={game.title}
-                      alt={game.name}
-                      className="w-10 h-10 object-cover rounded-md"
-                    />
-                    <span className="text-sm font-medium text-gray-800">
-                      {game.name}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleGameAction(game, "disconnect")}
-                    className="bg-red-500 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-red-600 transition"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Available Games List */}
-        {allGames.filter(
-          (game) => !connectedGames.some((g) => g._id === game._id)
-        ).length > 0 && (
-          <div>
-            <h4 className="text-lg font-semibold mb-2 text-gray-700">
-              Available Games
-            </h4>
-            <div className="space-y-3">
-              {allGames
-                .filter(
-                  (game) => !connectedGames.some((g) => g._id === game._id)
-                )
-                .map((game) => (
+        <div className="space-y-6 max-h-96 overflow-y-auto pr-2 custom-scroll">
+          {/* Connected Games List */}
+          {connectedGames.length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-700">
+                Connected Games
+              </h4>
+              <div className="space-y-3">
+                {connectedGames.map((game) => (
                   <div
-                    key={game._id}
+                    key={game.game._id}
                     className="flex items-center justify-between p-3 border rounded-xl bg-gray-50 hover:shadow-md transition"
                   >
                     <div className="flex items-center gap-3">
                       <img
-                        src={game.title}
-                        alt={game.name}
+                        src={game.game.title}
+                        alt={game.game.name}
                         className="w-10 h-10 object-cover rounded-md"
                       />
                       <span className="text-sm font-medium text-gray-800">
-                        {game.name}
+                        {game.game.name}
                       </span>
                     </div>
                     <button
-                      onClick={() => {
-                        if (game.link === "coc") {
-                          setSelectedGame(game);
-                        } else {
-                          handleGameAction({ game: game._id }, "connect");
-                        }
-                      }}
-                      className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-blue-700 transition"
+                      onClick={() => handleGameAction(game, "disconnect")}
+                      className="bg-red-500 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-red-600 transition"
                     >
-                      Connect
+                      Disconnect
                     </button>
                   </div>
                 ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {/* Close Button */}
-      <button
-        onClick={() => setModalOpen(false)}
-        className="mt-6 w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
-      >
-        Close
-      </button>
+          {/* Available Games List */}
+          {allGames.filter(
+            (game) => !connectedGames.some((g) => g.game._id === game._id)
+          ).length > 0 && (
+            <div>
+              <h4 className="text-lg font-semibold mb-2 text-gray-700">
+                Available Games
+              </h4>
+              <div className="space-y-3">
+                {allGames
+                  .filter(
+                    (game) =>
+                      !connectedGames.some((g) => g.game._id === game._id)
+                  )
+                  .map((game) => (
+                    <div
+                      key={game._id}
+                      className="flex items-center justify-between p-3 border rounded-xl bg-gray-50 hover:shadow-md transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={game.title}
+                          alt={game.name}
+                          className="w-10 h-10 object-cover rounded-md"
+                        />
+                        <span className="text-sm font-medium text-gray-800">
+                          {game.name}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (game.link === "coc") {
+                            setSelectedGame(game);
+                          } else {
+                            handleGameAction({ game: game._id }, "connect");
+                          }
+                        }}
+                        className="bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg hover:bg-blue-700 transition"
+                      >
+                        Connect
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Close Button */}
+        <button
+          onClick={() => setModalOpen(false)}
+          className="mt-6 w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
+        >
+          Close
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
