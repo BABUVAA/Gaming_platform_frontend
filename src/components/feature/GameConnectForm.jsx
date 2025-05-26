@@ -79,6 +79,7 @@ const GameConnectForm = ({ game, onClose, onSubmit }) => {
                 value={playerTag}
                 onChange={(e) => setPlayerTag(e.target.value)}
                 placeholder="#ABC123"
+                required
                 className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

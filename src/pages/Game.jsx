@@ -8,6 +8,7 @@ import GameConnectForm from "../components/feature/GameConnectForm";
 const Game = () => {
   const [selectedGame, setSelectedGame] = useState();
   const dispatch = useDispatch();
+  const { globalLoading } = useSelector((store) => store.loading);
   const games = useSelector((store) => store.games?.data || []);
   const stableConnectedGames = useSelector(
     (store) => store.auth?.profile?.profile?.games
@@ -33,6 +34,8 @@ const Game = () => {
     await dispatch(user_profile());
   };
 
+  if (globalLoading) return null;
+
   return (
     <div className="min-w-full bg-slate-100 container justify-center mb-12 pb-6">
       {/* Search Bar */}
@@ -48,9 +51,9 @@ const Game = () => {
             {connectedGames.length > 0 ? (
               connectedGames.map((game) => (
                 <GameCard
-                  key={game.game._id}
-                  {...game.game}
-                  link={`/dashboard/tournament/${game.game.link}`}
+                  key={game.game?._id}
+                  {...game?.game}
+                  link={`/dashboard/tournament/${game.game?.link}`}
                   type="games"
                 />
               ))
@@ -102,8 +105,7 @@ const Game = () => {
           game={selectedGame}
           onClose={() => setSelectedGame()}
           onSubmit={(data) => {
-            setSelectedGame(data);
-            handleGameAction(selectedGame, "connect");
+            handleGameAction(data, "connect");
             setModalOpen(false); // optionally close main modal
           }}
         />
