@@ -10,6 +10,7 @@ const TournamentCard = ({ tournament }) => {
     tournamentName,
     game,
     mode,
+    map,
     registeredPlayers,
     registeredTeams,
     maxParticipants,
@@ -19,6 +20,7 @@ const TournamentCard = ({ tournament }) => {
     status,
   } = tournament;
 
+  console.log(tournament);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { profile } = useSelector((store) => store.auth);
   const { socket } = useSocket();
@@ -27,13 +29,14 @@ const TournamentCard = ({ tournament }) => {
     (gameObj) => gameObj.game.link === game
   );
 
-  const filledPercentage =
-    mode !== "solo"
-      ? (registeredTeams?.length / maxParticipants) * 100
-      : (registeredPlayers?.length / maxParticipants) * 100;
+  // const filledPercentage =
+  //   mode !== "solo"
+  //     ? (registeredTeams?.length / maxParticipants) * 100
+  //     : (registeredPlayers?.length / maxParticipants) * 100;
+  const filledPercentage = 0;
 
   const handleJoinClick = (e) => {
-    console.log(profile);
+    console.log("hello");
     e.preventDefault();
     if (mode !== "solo") {
       setIsModalOpen(true);
@@ -83,7 +86,7 @@ const TournamentCard = ({ tournament }) => {
           </div>
           <div className="bg-gray-100 px-3 py-2 rounded-md text-center">
             <p className="text-xs text-gray-500">Total Slots</p>
-            <p className="font-medium">{maxParticipants}</p>
+            <p className="font-medium text-black">{maxParticipants}</p>
           </div>
         </div>
 
@@ -96,13 +99,13 @@ const TournamentCard = ({ tournament }) => {
             />
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {mode !== "solo"
+            {/* {mode !== "solo"
               ? maxParticipants - registeredTeams?.length === 0
                 ? "Tournament Full"
                 : `${maxParticipants - registeredTeams?.length} Spots left`
               : maxParticipants - registeredPlayers?.length === 0
               ? "Tournament Full"
-              : `${maxParticipants - registeredPlayers?.length} Spots left`}
+              : `${maxParticipants - registeredPlayers?.length} Spots left`} */}  
           </p>
         </div>
 

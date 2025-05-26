@@ -9,12 +9,14 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
   const { socket } = useSocket();
 
   const clanMembers = useSelector(
-    (store) => store.clan.userClanData.data.members || []
+    (store) => store.clan.userClanData?.data?.members || []
   );
   const friends = useSelector(
-    (store) => store.auth.profile.profile.friends || []
+    (store) => store.auth.profile?.profile?.friends || []
   );
-  const teams = useSelector((store) => store.auth.profile.profile.teams || []);
+  const teams = useSelector(
+    (store) => store.auth.profile?.profile?.teams || []
+  );
 
   if (!isOpen) return null;
 

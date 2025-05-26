@@ -57,11 +57,10 @@ const TournamentManagement = ({ socket }) => {
   const [tournamentData, setTournamentData] = useState({
     tournamentName: "",
     game: "",
-    startDate: "",
-    endDate: "",
+    mode: "",
+    map: "",
     entryFee: "",
     prizePool: "",
-    mode: "",
     maxParticipants: "",
     teamSize: "",
     status: "upcoming",
@@ -80,16 +79,12 @@ const TournamentManagement = ({ socket }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (
-      !tournamentData.tournamentName ||
-      !tournamentData.game ||
-      !tournamentData.startDate ||
-      !tournamentData.endDate
-    ) {
+    if (!tournamentData.tournamentName || !tournamentData.game) {
       alert("Please fill all required fields!");
       return;
     }
 
+    console.log(tournamentData);
     // Emit to WebSocket
     socket.emit("newTournament", tournamentData);
 
@@ -97,11 +92,10 @@ const TournamentManagement = ({ socket }) => {
     setTournamentData({
       tournamentName: "",
       game: "",
-      startDate: "",
-      endDate: "",
+      mode: "",
+      map: "",
       entryFee: "",
       prizePool: "",
-      mode: "",
       maxParticipants: "",
       teamSize: "",
       status: "upcoming",
@@ -146,8 +140,51 @@ const TournamentManagement = ({ socket }) => {
           </select>
         </div>
 
-        {/* Start Date */}
+        {/* Mode Selection */}
         <div>
+          <label className="block text-sm font-medium">Mode</label>
+          <select
+            name="mode"
+            value={tournamentData.mode}
+            onChange={handleChange}
+            required
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
+          >
+            <option value="">Select Mode</option>
+            <option value="solo">Solo</option>
+            <option value="duo">Duo</option>
+            <option value="squad">Squad</option>
+            <option value="5v5">5v5</option>
+            <option value="10v10">10v10</option>
+            {/* <option value="15v15">15v15</option>
+            <option value="20v20">20v20</option> */}
+          </select>
+        </div>
+
+        {/* Map Selection */}
+        <div>
+          <label className="block text-sm font-medium">Map</label>
+          <select
+            name="map"
+            value={tournamentData.map}
+            onChange={handleChange}
+            required
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
+          >
+            <option value="">Select Map</option>
+            <option value="erangal">erangal</option>
+            <option value="sanhok">sanhok</option>
+            <option value="miramar">miramar</option>
+            <option value="vikendi">vikendi</option>
+            <option value="clan_war">clan_war</option>
+            <option value="cwl">cwl</option>
+            <option value="random">random</option>
+            <option value="none">none</option>
+          </select>
+        </div>
+
+        {/* Start Date */}
+        {/* <div>
           <label className="block text-sm font-medium">Start Date</label>
           <input
             type="date"
@@ -157,10 +194,10 @@ const TournamentManagement = ({ socket }) => {
             required
             className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
           />
-        </div>
+        </div> */}
 
         {/* End Date */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium">End Date</label>
           <input
             type="date"
@@ -170,7 +207,7 @@ const TournamentManagement = ({ socket }) => {
             required
             className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
           />
-        </div>
+        </div> */}
 
         {/* Entry Fee */}
         <div>
@@ -196,27 +233,6 @@ const TournamentManagement = ({ socket }) => {
             placeholder="Optional"
             className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
           />
-        </div>
-
-        {/* Mode Selection */}
-        <div>
-          <label className="block text-sm font-medium">Mode</label>
-          <select
-            name="mode"
-            value={tournamentData.mode}
-            onChange={handleChange}
-            required
-            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
-          >
-            <option value="">Select Mode</option>
-            <option value="solo">Solo</option>
-            <option value="duo">Duo</option>
-            <option value="squad">Squad</option>
-            <option value="5v5">5v5</option>
-            <option value="10v10">10v10</option>
-            <option value="15v15">15v15</option>
-            <option value="20v20">20v20</option>
-          </select>
         </div>
 
         {/** Participant */}

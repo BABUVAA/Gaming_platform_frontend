@@ -1,6 +1,7 @@
 import React from "react";
 import { useParams } from "react-router-dom";
 import { TournamentCard } from "../components";
+import { useSelector } from "react-redux";
 
 // Game-specific data
 const gameData = {
@@ -26,49 +27,10 @@ const gameData = {
   },
 };
 
-// Dummy tournament data (replace with real data or fetch from backend)
-const dummyTournaments = [
-  {
-    _id: "1",
-    title: "BGMI Mega Match",
-    game: "bgmi",
-    status: "featured",
-    entryFee: 10,
-    prize: 100,
-    date: "2025-05-25",
-  },
-  {
-    _id: "2",
-    title: "BGMI Squad War",
-    game: "bgmi",
-    status: "registration_open",
-    entryFee: 20,
-    prize: 200,
-    date: "2025-05-26",
-  },
-  {
-    _id: "3",
-    title: "Clash Mayhem",
-    game: "coc",
-    status: "active",
-    entryFee: 5,
-    prize: 50,
-    date: "2025-05-22",
-  },
-  {
-    _id: "4",
-    title: "Clash Brawl",
-    game: "coc",
-    status: "registration_open",
-    entryFee: 10,
-    prize: 150,
-    date: "2025-05-23",
-  },
-];
-
 const TournamentGame = () => {
   const { game } = useParams();
-
+  const { tournaments } = useSelector((store) => store.tournament);
+  console.log(tournaments);
   // Check if the game exists
   if (!gameData[game]) {
     return (
@@ -81,8 +43,9 @@ const TournamentGame = () => {
   const { name, icon, downloadLink, promoImages } = gameData[game];
 
   // Filter tournaments for this game
-  const gameTournaments = dummyTournaments.filter((t) => t.game === game);
-
+  const gameTournaments = Object.values(tournaments).filter(
+    (t) => t.game === game
+  );
   // Categorize tournaments
   const categorizedTournaments = {
     featured: gameTournaments.filter((t) => t.status === "featured"),
