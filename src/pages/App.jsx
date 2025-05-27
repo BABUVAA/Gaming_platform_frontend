@@ -45,8 +45,6 @@ function App() {
         }
       } catch (error) {
         console.error("Dashboard init fetch error:", error);
-      } finally {
-        console.log("fetching complete");
       }
     };
 

@@ -20,7 +20,6 @@ const TournamentCard = ({ tournament }) => {
     status,
   } = tournament;
 
-  console.log(tournament);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { profile } = useSelector((store) => store.auth);
   const { socket } = useSocket();
@@ -36,7 +35,6 @@ const TournamentCard = ({ tournament }) => {
   const filledPercentage = 0;
 
   const handleJoinClick = (e) => {
-    console.log("hello");
     e.preventDefault();
     if (mode !== "solo") {
       setIsModalOpen(true);
@@ -44,6 +42,7 @@ const TournamentCard = ({ tournament }) => {
       const payload = {
         tournamentId: _id,
       };
+      console.log(payload);
       socket.emit("join_tournament", payload);
     } else {
       alert("Please connect your game.");
@@ -105,7 +104,7 @@ const TournamentCard = ({ tournament }) => {
                 : `${maxParticipants - registeredTeams?.length} Spots left`
               : maxParticipants - registeredPlayers?.length === 0
               ? "Tournament Full"
-              : `${maxParticipants - registeredPlayers?.length} Spots left`} */}  
+              : `${maxParticipants - registeredPlayers?.length} Spots left`} */}
           </p>
         </div>
 
