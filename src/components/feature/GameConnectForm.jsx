@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSocket } from "../../context/socketContext";
+import validator from "validator";
 
 const GameConnectForm = ({ game, onClose, onSubmit }) => {
   const { socket } = useSocket();
@@ -9,11 +10,18 @@ const GameConnectForm = ({ game, onClose, onSubmit }) => {
   const [playerInfo, setPlayerInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleVerifyPlayer = () => {
+  const isValidTag = (tag) => /^#[a-zA-Z0-9]{1,10}$/.test(tag);
+
+  const handleVerifyPlayer = async () => {
     if (!playerTag) return alert("Please enter your player tag.");
+    if (!isValidTag(playerTag))
+      return alert(
+        "Invalid tag. Use '#' followed by letters and numbers only."
+      );
+
     setLoading(true);
 
-    socket.emit("verify_game_data", {
+    await socket.emit("verify_game_data", {
       gameKey: game.link,
       tag: playerTag,
       operation: "VERIFY_ID",
@@ -28,6 +36,7 @@ const GameConnectForm = ({ game, onClose, onSubmit }) => {
         alert(data?.message || "Verification failed.");
       }
     });
+    setLoading(false);
   };
 
   // Step 2: Handle API Token Submission
@@ -77,6 +86,7 @@ const GameConnectForm = ({ game, onClose, onSubmit }) => {
               <input
                 type="text"
                 value={playerTag}
+                maxLength={11}
                 onChange={(e) => setPlayerTag(e.target.value)}
                 placeholder="#ABC123"
                 required

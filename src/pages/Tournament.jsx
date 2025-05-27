@@ -8,14 +8,8 @@ import tournamentCategorizer from "../utils/tournamentCategorizer";
 const TournamentPage = () => {
   const dispatch = useDispatch();
   let { tournaments } = useSelector((state) => state.tournament);
-
   // Creating categories for tournaments based on status
   const categorizedTournaments = tournamentCategorizer(tournaments);
-  console.log(categorizedTournaments);
-  // Fetch tournaments on mount
-  useEffect(() => {
-    dispatch(fetchTournaments());
-  }, [dispatch]);
 
   return (
     <div className="bg-black min-h-screen  text-white flex flex-col">
