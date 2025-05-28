@@ -34,10 +34,8 @@ function App() {
         let currentProfile = profile;
 
         // Fetch profile if not already fetched
-        if (profile) {
-          const result = await dispatch(user_profile());
-          currentProfile = result?.payload;
-        }
+        const result = await dispatch(user_profile());
+        currentProfile = result?.payload;
 
         // Fetch clan if not available but profile has clan
         if (userClanData && currentProfile?.clan?._id) {
