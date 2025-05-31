@@ -14,7 +14,7 @@ const gameData = {
       "https://i.imgur.com/vDWK9dy.png",
       "https://i.imgur.com/iE39Hdm.png",
     ],
-    filters: ["5vs5", "10vs10", "CWL"],
+    filters: ["5v5", "10vs10", "CWL"],
   },
   bgmi: {
     name: "BGMI",
@@ -33,19 +33,7 @@ const TournamentGame = () => {
   const { game } = useParams();
   const { tournaments } = useSelector((store) => store.tournament);
   const [activeTab, setActiveTab] = useState("tournaments");
-  const [activeFilters, setActiveFilters] = useState([]);
-
-  const toggleFilter = (filter) => {
-    if (filter === "CLEAR_ALL") {
-      setActiveFilters([]);
-    } else {
-      setActiveFilters((prev) =>
-        prev.includes(filter)
-          ? prev.filter((f) => f !== filter)
-          : [...prev, filter]
-      );
-    }
-  };
+  const [activeFilter, setActiveFilter] = useState("All");
 
   if (!gameData[game]) {
     return (
@@ -61,11 +49,16 @@ const TournamentGame = () => {
   );
 
   const filteredTournaments = useMemo(() => {
-    return gameTournaments.filter((tournament) =>
-      activeFilters.every((filter) => tournament.tags?.includes(filter))
-    );
-  }, [gameTournaments, activeFilters]);
+    if (!activeFilter) return gameTournaments;
+    if (activeFilter === "All") return gameTournaments;
+    if (activeFilter === "Featured")
+      return gameTournaments.filter((t) => t.isFeatured);
 
+    return gameTournaments.filter(
+      (tournament) =>
+        tournament.mode === activeFilter || tournament.map === activeFilter
+    );
+  }, [gameTournaments, activeFilter]);
   return (
     <div className="bg-gray-900 min-h-screen text-white">
       <BannerSection
@@ -78,8 +71,8 @@ const TournamentGame = () => {
         <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
         {activeTab === "tournaments" && (
           <FilterSection
-            activeFilters={activeFilters}
-            toggleFilter={toggleFilter}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
             filters={filters}
           />
         )}
@@ -189,15 +182,15 @@ const TabsSection = ({ activeTab, onTabChange }) => {
   );
 };
 
-const FilterSection = ({ activeFilters, toggleFilter, filters = [] }) => {
+const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   return (
     <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
-      {filters.map((filter) => {
-        const isActive = activeFilters.includes(filter);
+      {["All", "Featured", ...filters].map((filter) => {
+        const isActive = activeFilter === filter;
         return (
           <button
             key={filter}
-            onClick={() => toggleFilter(filter)}
+            onClick={() => setActiveFilter(filter)}
             className={`px-3 py-1 rounded-full text-sm font-medium border transition ${
               isActive
                 ? "bg-red-600 border-red-500 text-white"
