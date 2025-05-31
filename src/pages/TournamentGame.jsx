@@ -1,4 +1,4 @@
-import React from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { TournamentCard } from "../components";
 import { useSelector } from "react-redux";
@@ -14,6 +14,7 @@ const gameData = {
       "https://i.imgur.com/vDWK9dy.png",
       "https://i.imgur.com/iE39Hdm.png",
     ],
+    filters: ["5vs5", "10vs10", "CWL"],
   },
   bgmi: {
     name: "BGMI",
@@ -24,14 +25,28 @@ const gameData = {
       "https://i.imgur.com/60tq4bk.png",
       "https://i.imgur.com/60tq4bk.png",
     ],
+    filters: ["solo", "duo", "squad", "erangel", "sanhok", "miramar"],
   },
 };
 
 const TournamentGame = () => {
   const { game } = useParams();
   const { tournaments } = useSelector((store) => store.tournament);
-  console.log(tournaments);
-  // Check if the game exists
+  const [activeTab, setActiveTab] = useState("tournaments");
+  const [activeFilters, setActiveFilters] = useState([]);
+
+  const toggleFilter = (filter) => {
+    if (filter === "CLEAR_ALL") {
+      setActiveFilters([]);
+    } else {
+      setActiveFilters((prev) =>
+        prev.includes(filter)
+          ? prev.filter((f) => f !== filter)
+          : [...prev, filter]
+      );
+    }
+  };
+
   if (!gameData[game]) {
     return (
       <h2 className="text-center text-3xl text-red-500 mt-10">
@@ -40,36 +55,67 @@ const TournamentGame = () => {
     );
   }
 
-  const { name, icon, downloadLink, promoImages } = gameData[game];
-
-  // Filter tournaments for this game
+  const { name, icon, downloadLink, promoImages, filters } = gameData[game];
   const gameTournaments = Object.values(tournaments).filter(
     (t) => t.game === game
   );
-  // Categorize tournaments
-  const categorizedTournaments = {
-    featured: gameTournaments.filter((t) => t.status === "featured"),
-    registration_open: gameTournaments.filter(
-      (t) => t.status === "registration_open"
-    ),
-    active: gameTournaments.filter((t) => t.status === "active"),
-  };
 
-  const categoryList = [
-    {
-      label: "🔥 Featured Matches",
-      tournaments: categorizedTournaments.featured,
-    },
-    {
-      label: "🎯 Registration Open",
-      tournaments: categorizedTournaments.registration_open,
-    },
-    { label: "🎮 Ongoing Matches", tournaments: categorizedTournaments.active },
-  ];
+  const filteredTournaments = useMemo(() => {
+    return gameTournaments.filter((tournament) =>
+      activeFilters.every((filter) => tournament.tags?.includes(filter))
+    );
+  }, [gameTournaments, activeFilters]);
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      {/* Banner Section */}
+      <BannerSection
+        name={name}
+        icon={icon}
+        downloadLink={downloadLink}
+        promoImages={promoImages}
+      />
+      <div className="sticky top-0 z-30 bg-gray-900 border-b border-gray-800 shadow-sm">
+        <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
+        {activeTab === "tournaments" && (
+          <FilterSection
+            activeFilters={activeFilters}
+            toggleFilter={toggleFilter}
+            filters={filters}
+          />
+        )}
+      </div>
+      <div className="max-w-6xl mx-auto px-4 mt-2 space-y-10 pb-16">
+        {activeTab === "tournaments" ? (
+          <Tournament tournaments={filteredTournaments} />
+        ) : (
+          <p className="text-center text-gray-500">
+            Section under construction
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TournamentGame;
+
+const Tournament = ({ tournaments }) => (
+  <section id="featured-tournaments">
+    {tournaments.length === 0 ? (
+      <p className="text-gray-400 text-center">No tournaments available</p>
+    ) : (
+      <div className="flex flex-row flex-wrap justify-center gap-4">
+        {tournaments.map((tournament) => (
+          <TournamentCard key={tournament._id} tournament={tournament} />
+        ))}
+      </div>
+    )}
+  </section>
+);
+
+const BannerSection = ({ name, icon, downloadLink, promoImages }) => {
+  return (
+    <>
       <div className="relative w-full bg-gradient-to-r from-blue-500 via-purple-500 to-red-500 py-8 md:py-12 text-center">
         <div className="max-w-4xl mx-auto flex flex-col items-center px-4">
           <h2 className="text-3xl md:text-4xl font-bold flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -98,9 +144,7 @@ const TournamentGame = () => {
           </a>
         </div>
       </div>
-
-      {/* Promo Images */}
-      <div className="w-[85vw] overflow-hidden">
+      <div className="w-[100vw] overflow-hidden">
         <div className="flex overflow-x-auto space-x-2 md:space-x-4 py-6 px-4 scrollbar-hide">
           {promoImages.map((img, index) => (
             <div
@@ -116,40 +160,54 @@ const TournamentGame = () => {
           ))}
         </div>
       </div>
+    </>
+  );
+};
 
-      {/* Tournament Categories */}
-      <div className="max-w-6xl mx-auto px-4 mt-10 space-y-10 pb-16">
-        {categoryList.map(
-          (category, idx) =>
-            category.tournaments.length > 0 && (
-              <CategorySection
-                key={idx}
-                label={category.label}
-                tournaments={category.tournaments}
-              />
-            )
-        )}
-      </div>
+const TabsSection = ({ activeTab, onTabChange }) => {
+  const tabs = ["tournaments", "my_tournaments", "teams", "Rules"];
+
+  return (
+    <div className="flex w-[100vw] overflow-x-auto scrollbar-hide px-2">
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab;
+        return (
+          <button
+            key={tab}
+            onClick={() => onTabChange(tab)}
+            className={`flex-1 text-sm sm:text-base px-3 py-3 font-semibold border-b-2 transition-colors duration-200 whitespace-nowrap ${
+              isActive
+                ? "border-red-500 text-white"
+                : "border-transparent text-gray-400 hover:text-white"
+            }`}
+          >
+            {tab.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+          </button>
+        );
+      })}
     </div>
   );
 };
 
-// Reusable Category Section
-const CategorySection = ({ label, tournaments }) => (
-  <section className="py-10" id="featured-tournaments">
-    <h2 className="text-3xl font-bold text-white mb-6">{label}</h2>
-    {tournaments.length === 0 ? (
-      <p className="text-gray-400 text-center">
-        No featured tournaments available
-      </p>
-    ) : (
-      <div className="flex flex-row flex-wrap justify-center gap-4">
-        {tournaments.map((tournament) => (
-          <TournamentCard key={tournament._id} tournament={tournament} />
-        ))}
-      </div>
-    )}
-  </section>
-);
-
-export default TournamentGame;
+const FilterSection = ({ activeFilters, toggleFilter, filters = [] }) => {
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
+      {filters.map((filter) => {
+        const isActive = activeFilters.includes(filter);
+        return (
+          <button
+            key={filter}
+            onClick={() => toggleFilter(filter)}
+            className={`px-3 py-1 rounded-full text-sm font-medium border transition ${
+              isActive
+                ? "bg-red-600 border-red-500 text-white"
+                : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            {filter}
+          </button>
+        );
+      })}
+    </div>
+  );
+};

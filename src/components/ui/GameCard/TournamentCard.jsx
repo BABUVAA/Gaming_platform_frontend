@@ -28,21 +28,14 @@ const TournamentCard = ({ tournament }) => {
     (gameObj) => gameObj.game.link === game
   );
 
-  // const filledPercentage =
-  //   mode !== "solo"
-  //     ? (registeredTeams?.length / maxParticipants) * 100
-  //     : (registeredPlayers?.length / maxParticipants) * 100;
-  const filledPercentage = 0;
+  const filledPercentage = 0; // Placeholder until backend provides data
 
   const handleJoinClick = (e) => {
     e.preventDefault();
     if (mode !== "solo") {
       setIsModalOpen(true);
     } else if (hasGame) {
-      const payload = {
-        tournamentId: _id,
-      };
-      console.log(payload);
+      const payload = { tournamentId: _id };
       socket.emit("join_tournament", payload);
     } else {
       alert("Please connect your game.");
@@ -51,22 +44,22 @@ const TournamentCard = ({ tournament }) => {
 
   return (
     <>
-      <div className="bg-white shadow-lg rounded-xl p-5 w-full max-w-4xl mx-auto transition hover:shadow-2xl">
-        {/* Header: Game + Status */}
+      <div className="bg-white rounded-xl shadow-md p-3 w-full transition-all hover:shadow-lg hover:-translate-y-0.5 duration-300">
+        {/* Header */}
         <div className="flex justify-between items-start mb-3">
           <div>
-            <p className="text-sm text-indigo-500 font-semibold uppercase">
+            <p className="text-[10px] uppercase text-indigo-600 font-semibold">
               {game}
             </p>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
+            <h2 className="text-sm font-bold text-gray-900 line-clamp-2">
               {tournamentName}
             </h2>
           </div>
           <span
-            className={`text-xs font-semibold px-2 py-1 rounded-md ${
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
               status === "registration_open"
                 ? "bg-green-100 text-green-700"
-                : "bg-gray-300 text-gray-600"
+                : "bg-gray-200 text-gray-600"
             }`}
           >
             {status.replace("_", " ").toUpperCase()}
@@ -74,70 +67,68 @@ const TournamentCard = ({ tournament }) => {
         </div>
 
         {/* Key Info Chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mb-4">
-          <div className="bg-gray-100 px-3 py-2 rounded-md text-center">
-            <p className="text-xs text-gray-500">Entry Fee</p>
-            <p className="font-semibold text-green-600">₹{entryFee}</p>
-          </div>
-          <div className="bg-gray-100 px-3 py-2 rounded-md text-center">
-            <p className="text-xs text-gray-500">Prize Pool</p>
-            <p className="font-semibold text-yellow-600">₹{prizePool}</p>
-          </div>
-          <div className="bg-gray-100 px-3 py-2 rounded-md text-center">
-            <p className="text-xs text-gray-500">Total Slots</p>
-            <p className="font-medium text-black">{maxParticipants}</p>
-          </div>
+        <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 text-xs mb-3">
+          <InfoChip label="Entry Fee" value={`₹${entryFee}`} color="green" />
+          <InfoChip label="Prize Pool" value={`₹${prizePool}`} color="yellow" />
+          <InfoChip label="Total Slots" value={maxParticipants} color="gray" />
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-2">
-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div className="mb-3">
+          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-700"
               style={{ width: `${filledPercentage}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {/* {mode !== "solo"
-              ? maxParticipants - registeredTeams?.length === 0
-                ? "Tournament Full"
-                : `${maxParticipants - registeredTeams?.length} Spots left`
-              : maxParticipants - registeredPlayers?.length === 0
-              ? "Tournament Full"
-              : `${maxParticipants - registeredPlayers?.length} Spots left`} */}
-          </p>
         </div>
 
         {/* Actions */}
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="mt-3 flex flex-row  gap-2 items-center justify-between">
           {status === "registration_open" && (
             <button
               onClick={handleJoinClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-medium text-sm w-full sm:w-auto"
+              className=" sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-xs font-medium transition-all"
             >
-              Join Tournament
+              Join
             </button>
           )}
           <Link
             to={`/tournamentDeatils/${_id}`}
-            className="text-sm text-blue-600 hover:underline font-medium"
+            className="text-xs text-indigo-600 hover:underline font-medium"
           >
-            View Full Details →
+            Details →
           </Link>
         </div>
-
-        {/* Modal */}
-        {isModalOpen && (
-          <InviteModal
-            tournamentId={_id}
-            maxParticipants={maxParticipants}
-            teamSize={teamSize}
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-          />
-        )}
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <InviteModal
+          tournamentId={_id}
+          maxParticipants={maxParticipants}
+          teamSize={teamSize}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </>
+  );
+};
+
+// Chip Component
+const InfoChip = ({ label, value, color }) => {
+  const colorMap = {
+    green: "text-green-600",
+    yellow: "text-yellow-600",
+    gray: "text-gray-800",
+  };
+
+  return (
+    <div className="bg-gray-100 px-2 py-1 rounded text-center">
+      <p className="text-[10px] text-gray-500">{label}</p>
+      <p className={`text-xs font-semibold ${colorMap[color]}`}>{value}</p>
+    </div>
   );
 };
 
