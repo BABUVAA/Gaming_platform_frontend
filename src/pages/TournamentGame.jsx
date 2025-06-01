@@ -184,7 +184,7 @@ const TabsSection = ({ activeTab, onTabChange }) => {
 
 const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   return (
-    <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
+    <div className="flex w-[100vw] overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
       {["All", "Featured", ...filters].map((filter) => {
         const isActive = activeFilter === filter;
         return (
