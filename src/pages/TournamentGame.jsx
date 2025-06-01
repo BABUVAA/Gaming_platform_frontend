@@ -56,9 +56,12 @@ const TournamentGame = () => {
 
     return gameTournaments.filter(
       (tournament) =>
-        tournament.mode === activeFilter || tournament.map === activeFilter
+        tournament.mode === activeFilter ||
+        tournament.map === activeFilter ||
+        tournament.category === activeFilter
     );
   }, [gameTournaments, activeFilter]);
+
   return (
     <div className="bg-gray-900 min-h-screen text-white">
       <BannerSection
@@ -97,7 +100,7 @@ const Tournament = ({ tournaments }) => (
     {tournaments.length === 0 ? (
       <p className="text-gray-400 text-center">No tournaments available</p>
     ) : (
-      <div className="flex flex-row flex-wrap justify-center gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {tournaments.map((tournament) => (
           <TournamentCard key={tournament._id} tournament={tournament} />
         ))}
@@ -109,7 +112,7 @@ const Tournament = ({ tournaments }) => (
 const BannerSection = ({ name, icon, downloadLink, promoImages }) => {
   return (
     <>
-      <div className="relative w-full bg-gradient-to-r from-blue-500 via-purple-500 to-red-500 py-8 md:py-12 text-center">
+      <div className="relative w-[100vw] md:w-full  bg-gradient-to-r from-blue-500 via-purple-500 to-red-500 py-8 md:py-12 text-center">
         <div className="max-w-4xl mx-auto flex flex-col items-center px-4">
           <h2 className="text-3xl md:text-4xl font-bold flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
             <img src={icon} alt={name} className="w-10 h-10 md:w-12 md:h-12" />
@@ -137,7 +140,7 @@ const BannerSection = ({ name, icon, downloadLink, promoImages }) => {
           </a>
         </div>
       </div>
-      <div className="w-[100vw] overflow-hidden">
+      <div className="w-[100vw] md:w-full overflow-x-auto">
         <div className="flex overflow-x-auto space-x-2 md:space-x-4 py-6 px-4 scrollbar-hide">
           {promoImages.map((img, index) => (
             <div
@@ -161,7 +164,7 @@ const TabsSection = ({ activeTab, onTabChange }) => {
   const tabs = ["tournaments", "my_tournaments", "teams", "Rules"];
 
   return (
-    <div className="flex w-[100vw] overflow-x-auto scrollbar-hide px-2">
+    <div className="flex w-[100vw] md:w-full overflow-x-auto scrollbar-hide px-2">
       {tabs.map((tab) => {
         const isActive = activeTab === tab;
         return (
@@ -184,7 +187,7 @@ const TabsSection = ({ activeTab, onTabChange }) => {
 
 const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   return (
-    <div className="flex w-[100vw] overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
+    <div className="flex w-[100vw] md:w-full  overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
       {["All", "Featured", ...filters].map((filter) => {
         const isActive = activeFilter === filter;
         return (
