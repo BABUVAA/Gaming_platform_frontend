@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { TournamentCard } from "../components";
 import { useSelector } from "react-redux";
 
-// Game-specific data
+// Game-specific data (same as before)
 const gameData = {
   coc: {
     name: "Clash of Clans",
@@ -29,11 +29,14 @@ const gameData = {
   },
 };
 
+const ITEMS_PER_PAGE = 6;
+
 const TournamentGame = () => {
   const { game } = useParams();
   const { tournaments } = useSelector((store) => store.tournament);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
 
   if (!gameData[game]) {
     return (
@@ -44,13 +47,15 @@ const TournamentGame = () => {
   }
 
   const { name, icon, downloadLink, promoImages, filters } = gameData[game];
+
+  // Filter tournaments for the game
   const gameTournaments = Object.values(tournaments).filter(
     (t) => t.game === game
   );
 
+  // Filter based on activeFilter
   const filteredTournaments = useMemo(() => {
-    if (!activeFilter) return gameTournaments;
-    if (activeFilter === "All") return gameTournaments;
+    if (!activeFilter || activeFilter === "All") return gameTournaments;
     if (activeFilter === "Featured")
       return gameTournaments.filter((t) => t.isFeatured);
 
@@ -61,6 +66,19 @@ const TournamentGame = () => {
         tournament.category === activeFilter
     );
   }, [gameTournaments, activeFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTournaments.length / ITEMS_PER_PAGE);
+  const paginatedTournaments = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTournaments.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredTournaments, currentPage]);
+
+  // When filters change, reset page to 1
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
@@ -75,14 +93,25 @@ const TournamentGame = () => {
         {activeTab === "tournaments" && (
           <FilterSection
             activeFilter={activeFilter}
-            setActiveFilter={setActiveFilter}
+            setActiveFilter={handleFilterChange}
             filters={filters}
           />
         )}
       </div>
-      <div className="max-w-6xl mx-auto px-4 mt-2 space-y-10 pb-16">
+      <div className="max-w-6xl mx-auto px-4 mt-2 space-y-6 pb-16">
         {activeTab === "tournaments" ? (
-          <Tournament tournaments={filteredTournaments} />
+          <>
+            <Tournament tournaments={paginatedTournaments} />
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            )}
+          </>
         ) : (
           <p className="text-center text-gray-500">
             Section under construction
@@ -187,7 +216,7 @@ const TabsSection = ({ activeTab, onTabChange }) => {
 
 const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   return (
-    <div className="flex w-[100vw] md:w-full  overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
+    <div className="flex w-[100vw] md:w-full overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
       {["All", "Featured", ...filters].map((filter) => {
         const isActive = activeFilter === filter;
         return (
@@ -204,6 +233,40 @@ const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
           </button>
         );
       })}
+    </div>
+  );
+};
+
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  return (
+    <div className="flex justify-center items-center space-x-4 mt-8">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`px-4 py-2 rounded-md font-semibold ${
+          currentPage === 1
+            ? "bg-gray-700 cursor-not-allowed"
+            : "bg-red-600 hover:bg-red-700"
+        }`}
+      >
+        Previous
+      </button>
+
+      <span className="text-gray-300 font-medium">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`px-4 py-2 rounded-md font-semibold ${
+          currentPage === totalPages
+            ? "bg-gray-700 cursor-not-allowed"
+            : "bg-red-600 hover:bg-red-700"
+        }`}
+      >
+        Next
+      </button>
     </div>
   );
 };
