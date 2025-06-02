@@ -190,7 +190,6 @@ export const profile_file_update = createAsyncThunk(
 export const profile_data_update = createAsyncThunk(
   "users/profile_data_update",
   async (data, thunkAPI) => {
-    console.log(data);
     try {
       // Send POST request with form data
       const response = await api.post("/api/users/profile_data_update", data);
@@ -236,6 +235,21 @@ const authSlice = createSlice({
     },
     resetError: (state) => {
       state.error = null;
+    },
+    addJoinedTournament: (state, action) => {
+      const newTournament = action.payload;
+
+      if (!state.profile?.profile.tournaments) {
+        state.profile.tournaments = [];
+      }
+
+      const exists = state.profile.profile.tournaments.find(
+        (t) => t._id === newTournament._id
+      );
+
+      if (!exists) {
+        state.profile.profile.tournaments.push(newTournament);
+      }
     },
   },
 

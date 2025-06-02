@@ -9,6 +9,7 @@ import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
 import { tournamentAction } from "../store/tournamentSlice";
 import { showToast, types } from "../store/toastSlice";
+import { authAction } from "../store/authSlice";
 
 // Create a Context for the Socket
 const SocketContext = createContext();
@@ -55,6 +56,10 @@ export const SocketProvider = ({ children }) => {
 
     // Listen for Tournament Join
     socketRef.current.on("TOURNAMENT_JOIN_SUCCESS", (data) => {
+      if (data.tournament) {
+        // ✅ Update tournament in auth profile
+        dispatch(authAction.addJoinedTournament(data.tournament));
+      }
       dispatch(
         showToast({
           message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",

@@ -12,6 +12,9 @@ const TournamentPage = () => {
   }, [dispatch]);
 
   const { tournaments = {} } = useSelector((state) => state.tournament);
+  const { profile } = useSelector((state) => state.auth);
+  // console.log("tournaments", tournaments);
+  // console.log("profile", profile.profile.tournaments);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +49,7 @@ const TournamentPage = () => {
       <div id="tournament-section" className="min-h-screen bg-black text-white">
         <div className="sticky top-0 z-30 bg-gray-900 border-b border-gray-800 shadow-sm">
           <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
-          {activeTab === "tournaments" && (
+          {(activeTab === "tournaments" || activeTab === "my_tournaments") && (
             <FilterSection
               activeFilter={activeFilter}
               setActiveFilter={setActiveFilter}
@@ -56,7 +59,7 @@ const TournamentPage = () => {
         </div>
 
         <div className="max-w-6xl mx-auto px-4 mt-6 space-y-10 pb-20">
-          {activeTab === "tournaments" ? (
+          {activeTab === "tournaments" && (
             <>
               <Tournament tournaments={paginatedTournaments} />
               <Pagination
@@ -65,10 +68,11 @@ const TournamentPage = () => {
                 setCurrentPage={setCurrentPage}
               />
             </>
-          ) : (
-            <p className="text-center text-gray-500">
-              Section under construction
-            </p>
+          )}
+          {activeTab === "my_tournaments" && (
+            <>
+              <Tournament tournaments={profile.profile.tournaments} />
+            </>
           )}
         </div>
       </div>

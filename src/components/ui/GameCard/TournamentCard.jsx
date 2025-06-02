@@ -28,7 +28,14 @@ const TournamentCard = ({ tournament }) => {
     (gameObj) => gameObj.game.link === game
   );
 
-  const filledPercentage = 0; // Placeholder until backend provides data
+  const filledPercentage =
+    mode === "solo"
+      ? registeredPlayers
+        ? (registeredPlayers.length / maxParticipants) * 100
+        : 0
+      : registeredTeams
+      ? (registeredTeams.length / maxParticipants) * 100
+      : 0;
 
   const handleJoinClick = (e) => {
     e.preventDefault();
