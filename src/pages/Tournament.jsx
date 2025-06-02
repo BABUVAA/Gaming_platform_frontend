@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchTournaments } from "../store/tournamentSlice";
+import { useSelector } from "react-redux";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
 import GameSlider from "../components/ui/GameSlider/GameSlider";
 
 const TournamentPage = () => {
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    dispatch(fetchTournaments());
-  }, [dispatch]);
-
   const { tournaments = {} } = useSelector((state) => state.tournament);
   const { profile } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("tournaments");
