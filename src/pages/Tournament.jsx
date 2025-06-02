@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
 import GameSlider from "../components/ui/GameSlider/GameSlider";
@@ -39,7 +39,11 @@ const TournamentPage = () => {
 
       <div id="tournament-section" className="min-h-screen bg-black text-white">
         <div className="sticky top-0 z-30 bg-gray-900 border-b border-gray-800 shadow-sm">
-          <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
+          <TabsSection
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            joinedTournaments={profile.profile.tournaments.length}
+          />
           {(activeTab === "tournaments" || activeTab === "my_tournaments") && (
             <FilterSection
               activeFilter={activeFilter}
@@ -129,23 +133,51 @@ const HeroSection = () => {
   );
 };
 
-const TabsSection = ({ activeTab, onTabChange }) => {
+const TabsSection = ({ activeTab, onTabChange, joinedTournaments }) => {
   const tabs = ["tournaments", "my_tournaments", "teams", "Rules"];
+  const prevCountRef = useRef(joinedTournaments);
+  const [showNew, setShowNew] = useState(false);
+
+  useEffect(() => {
+    // Show NEW if tournament count increases and user is NOT on my_tournaments tab
+    if (
+      joinedTournaments > prevCountRef.current &&
+      activeTab !== "my_tournaments"
+    ) {
+      setShowNew(true);
+    }
+    prevCountRef.current = joinedTournaments;
+  }, [joinedTournaments, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "my_tournaments") {
+      setShowNew(false); // Hide NEW once user visits my_tournaments
+    }
+  }, [activeTab]);
+
   return (
     <div className="flex w-full overflow-x-auto scrollbar-hide px-2">
       {tabs.map((tab) => {
         const isActive = activeTab === tab;
+        const isMyTab = tab === "my_tournaments";
         return (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`flex-1 text-sm sm:text-base px-3 py-3 font-semibold border-b-2 transition-colors duration-200 whitespace-nowrap ${
+            className={`relative flex-1 text-sm sm:text-base px-3 py-3 font-semibold border-b-2 transition-colors duration-200 whitespace-nowrap ${
               isActive
                 ? "border-red-500 text-white"
                 : "border-transparent text-gray-400 hover:text-white"
             }`}
           >
             {tab.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+            {isMyTab && ` (${joinedTournaments})`}
+
+            {isMyTab && showNew && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                NEW
+              </span>
+            )}
           </button>
         );
       })}
