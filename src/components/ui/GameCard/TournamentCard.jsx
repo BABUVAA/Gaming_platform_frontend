@@ -4,7 +4,7 @@ import InviteModal from "../../feature/InviteModal";
 import { useSocket } from "../../../context/socketContext";
 import { useSelector } from "react-redux";
 
-const TournamentCard = ({ tournament }) => {
+const TournamentCard = ({ tournament, disableFetch }) => {
   const {
     _id,
     tournamentName,
@@ -100,12 +100,14 @@ const TournamentCard = ({ tournament }) => {
               Join
             </button>
           )}
-          <Link
-            to={`/tournamentDeatils/${_id}`}
-            className="text-xs text-indigo-600 hover:underline font-medium"
-          >
-            Details →
-          </Link>
+          {!disableFetch && (
+            <Link
+              to={`/tournamentDeatils/${_id}`}
+              className="text-xs text-indigo-600 hover:underline font-medium"
+            >
+              Details →
+            </Link>
+          )}
         </div>
       </div>
 

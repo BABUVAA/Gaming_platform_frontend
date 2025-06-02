@@ -13,8 +13,6 @@ const TournamentPage = () => {
 
   const { tournaments = {} } = useSelector((state) => state.tournament);
   const { profile } = useSelector((state) => state.auth);
-  // console.log("tournaments", tournaments);
-  // console.log("profile", profile.profile.tournaments);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +59,10 @@ const TournamentPage = () => {
         <div className="max-w-6xl mx-auto px-4 mt-6 space-y-10 pb-20">
           {activeTab === "tournaments" && (
             <>
-              <Tournament tournaments={paginatedTournaments} />
+              <Tournament
+                tournaments={paginatedTournaments}
+                activeTab={activeTab}
+              />
               <Pagination
                 totalPages={totalPages}
                 currentPage={currentPage}
@@ -182,14 +183,18 @@ const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   );
 };
 
-const Tournament = ({ tournaments }) => (
+const Tournament = ({ tournaments, activeTab }) => (
   <section>
     {tournaments.length === 0 ? (
       <p className="text-gray-400 text-center">No tournaments available</p>
     ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {tournaments.map((tournament) => (
-          <TournamentCard key={tournament._id} tournament={tournament} />
+          <TournamentCard
+            key={tournament._id}
+            tournament={tournament}
+            disableFetch={activeTab === "tournaments"}
+          />
         ))}
       </div>
     )}
