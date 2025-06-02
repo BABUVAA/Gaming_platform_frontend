@@ -57,7 +57,7 @@ export const SocketProvider = ({ children }) => {
     socketRef.current.on("TOURNAMENT_JOIN_SUCCESS", (data) => {
       dispatch(
         showToast({
-          message: "TOURNAMENT JOINED SUCCESSFULLY",
+          message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
           type: types.SUCCESS,
           position: "bottom-right",
         })

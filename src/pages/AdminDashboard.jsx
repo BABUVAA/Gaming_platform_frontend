@@ -67,6 +67,15 @@ const TournamentManagement = ({ socket }) => {
     category: "none",
     imageUrl: "",
     isFeatured: false,
+    preparationTime: 900,
+    battleDuration: 2700,
+    rewards: [],
+  });
+
+  const [rewardSlot, setRewardSlot] = useState({
+    slotStart: "",
+    slotEnd: "",
+    amount: "",
   });
 
   const handleChange = (e) => {
@@ -77,6 +86,37 @@ const TournamentManagement = ({ socket }) => {
     }));
   };
 
+  const handleRewardChange = (e) => {
+    const { name, value } = e.target;
+    setRewardSlot((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const addRewardSlot = () => {
+    const { slotStart, slotEnd, amount } = rewardSlot;
+    if (!slotStart || !slotEnd || !amount)
+      return alert("Complete all reward slot fields.");
+    setTournamentData((prev) => ({
+      ...prev,
+      rewards: [
+        ...prev.rewards,
+        {
+          ...rewardSlot,
+          slotStart: +slotStart,
+          slotEnd: +slotEnd,
+          amount: +amount,
+        },
+      ],
+    }));
+    setRewardSlot({ slotStart: "", slotEnd: "", amount: "" });
+  };
+
+  const removeRewardSlot = (index) => {
+    setTournamentData((prev) => ({
+      ...prev,
+      rewards: prev.rewards.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!tournamentData.tournamentName || !tournamentData.game) {
@@ -84,11 +124,7 @@ const TournamentManagement = ({ socket }) => {
       return;
     }
 
-    console.log(tournamentData);
-    // Emit to WebSocket
     socket.emit("newTournament", tournamentData);
-
-    // Reset Form
     setTournamentData({
       tournamentName: "",
       game: "",
@@ -102,11 +138,14 @@ const TournamentManagement = ({ socket }) => {
       category: "none",
       imageUrl: "",
       isFeatured: false,
+      preparationTime: 900,
+      battleDuration: 2700,
+      rewards: [],
     });
   };
 
   return (
-    <div className="bg-gray-900 text-white p-6 rounded-lg shadow-lg max-w-lg mx-auto mt-10">
+    <div className="bg-gray-900 text-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto mt-10">
       <h2 className="text-2xl font-semibold mb-4 text-center">
         Create New Tournament
       </h2>
@@ -320,6 +359,95 @@ const TournamentManagement = ({ socket }) => {
           />
           <label className="text-sm font-medium">Mark as Featured</label>
         </div>
+
+        {/* Preparation Time */}
+        <div>
+          <label className="block text-sm font-medium">
+            Preparation Time (sec)
+          </label>
+          <input
+            type="number"
+            name="preparationTime"
+            value={tournamentData.preparationTime}
+            onChange={handleChange}
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
+          />
+        </div>
+
+        {/* Battle Duration */}
+        <div>
+          <label className="block text-sm font-medium">
+            Battle Duration (sec)
+          </label>
+          <input
+            type="number"
+            name="battleDuration"
+            value={tournamentData.battleDuration}
+            onChange={handleChange}
+            className="w-full p-2 bg-gray-800 border border-gray-600 rounded"
+          />
+        </div>
+
+        {/* Reward Slots */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Reward Slot</label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              name="slotStart"
+              value={rewardSlot.slotStart}
+              onChange={handleRewardChange}
+              placeholder="From"
+              className="w-1/4 p-2 bg-gray-800 border border-gray-600 rounded"
+            />
+            <input
+              type="number"
+              name="slotEnd"
+              value={rewardSlot.slotEnd}
+              onChange={handleRewardChange}
+              placeholder="To"
+              className="w-1/4 p-2 bg-gray-800 border border-gray-600 rounded"
+            />
+            <input
+              type="number"
+              name="amount"
+              value={rewardSlot.amount}
+              onChange={handleRewardChange}
+              placeholder="Amount"
+              className="w-1/4 p-2 bg-gray-800 border border-gray-600 rounded"
+            />
+            <button
+              type="button"
+              onClick={addRewardSlot}
+              className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* List of Added Rewards */}
+        {tournamentData.rewards.length > 0 && (
+          <div className="mt-2 space-y-1 text-sm">
+            {tournamentData.rewards.map((slot, idx) => (
+              <div
+                key={idx}
+                className="flex justify-between bg-gray-800 p-2 rounded"
+              >
+                <span>
+                  Ranks {slot.slotStart} to {slot.slotEnd} — ₹{slot.amount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeRewardSlot(idx)}
+                  className="text-red-400 hover:text-red-600"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Submit Button */}
         <button
