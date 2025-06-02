@@ -239,16 +239,25 @@ const authSlice = createSlice({
     addJoinedTournament: (state, action) => {
       const newTournament = action.payload;
 
-      if (!state.profile?.profile.tournaments) {
-        state.profile.tournaments = [];
+      // Ensure tournaments array exists
+      if (!state.profile?.profile?.tournaments) {
+        state.profile.profile.tournaments = [];
       }
 
-      const exists = state.profile.profile.tournaments.find(
+      // Find index of existing tournament by _id
+      const index = state.profile.profile.tournaments.findIndex(
         (t) => t._id === newTournament._id
       );
 
-      if (!exists) {
+      if (index === -1) {
+        // Tournament not found, add new
         state.profile.profile.tournaments.push(newTournament);
+      } else {
+        // Tournament exists, update it
+        state.profile.profile.tournaments[index] = {
+          ...state.profile.profile.tournaments[index],
+          ...newTournament,
+        };
       }
     },
   },

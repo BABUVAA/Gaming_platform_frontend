@@ -68,6 +68,20 @@ export const SocketProvider = ({ children }) => {
         })
       );
     });
+    // Listen for Joined Tournament
+    socketRef.current.on("JOINED_TOURNAMENT_UPDATE", (data) => {
+      if (data.tournament) {
+        // ✅ Update tournament in auth profile
+        dispatch(authAction.addJoinedTournament(data.tournament));
+      }
+      dispatch(
+        showToast({
+          message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+    });
 
     // Listen for live ERROR updates
     socketRef.current.on("ERROR", (data) => {
