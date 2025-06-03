@@ -99,7 +99,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative w-full min-h-screen bg-gradient-to-b from-indigo-900 via-black to-black text-white py-24 px-6 flex flex-col items-center text-center overflow-hidden">
+    <section className="relative w-full min-h-screen bg-gradient-to-b from-indigo-900 via-black to-black text-white py-16 px-6 flex flex-col items-center text-center overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/90 pointer-events-none"></div>
 
       <h1 className="z-10 text-5xl md:text-6xl font-extrabold max-w-4xl leading-tight">
@@ -126,7 +126,7 @@ const HeroSection = () => {
         </button>
       </div>
 
-      <div className="z-10 mt-16 w-full max-w-5xl">
+      <div className="z-10 mt-12 w-full max-w-5xl">
         <GameSlider currentIndex={currentIndex} />
       </div>
     </section>
