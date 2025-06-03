@@ -11,7 +11,7 @@ const TournamentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  const filters = ["coc", "bgmi"];
+  const filters = ["coc", "bgmi", "Clash Royale"];
 
   const filteredTournaments = useMemo(() => {
     const tournamentList = Object.values(tournaments);
@@ -156,7 +156,7 @@ const TabsSection = ({ activeTab, onTabChange, joinedTournaments }) => {
   }, [activeTab]);
 
   return (
-    <div className="flex w-full overflow-x-auto scrollbar-hide px-2">
+    <div className="flex w-[100vw] md:w-full overflow-x-auto scrollbar-hide px-2">
       {tabs.map((tab) => {
         const isActive = activeTab === tab;
         const isMyTab = tab === "my_tournaments";
@@ -187,7 +187,7 @@ const TabsSection = ({ activeTab, onTabChange, joinedTournaments }) => {
 
 const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   return (
-    <div className="flex w-full overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
+    <div className="flex w-[100vw] md:w-full overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
       {["All", "Featured", ...filters].map((filter) => {
         const isActive = activeFilter === filter;
         return (
