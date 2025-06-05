@@ -8,6 +8,8 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
   const [teamId, setTeamId] = useState("");
   const { socket } = useSocket();
 
+  const { profile, user } = useSelector((store) => store.profile);
+
   const clanMembers = useSelector(
     (store) => store.clan.userClanData?.data?.members || []
   );
