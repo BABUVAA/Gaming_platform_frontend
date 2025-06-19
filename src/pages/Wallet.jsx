@@ -1,146 +1,212 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  fetchPlatformTransactions,
-  fetchWithdrawTransactions,
-} from "../store/transactionSlice"; // Redux actions for fetching data
+  fetchWalletBalance,
+  fetchUserTransactions,
+  initiatePhonePeOrder,
+} from "../store/paymentSlice";
 import { Button } from "../components";
 
 const Wallet = () => {
   const dispatch = useDispatch();
-  const gameCoins = "40245"; // Example static value, should come from the state
-  const { platformTransactions, withdrawTransactions } = useSelector(
-    (state) => state.transactions
-  );
-  const userBalance = "50"; // Example static value, should come from the state
+  const { wallet, platformTransactions, withdrawTransactions, isLoading } =
+    useSelector((state) => state.payment);
 
   const [activeTab, setActiveTab] = useState("platform");
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+
   useEffect(() => {
-    dispatch(fetchPlatformTransactions()); // Fetch platform transactions
-    dispatch(fetchWithdrawTransactions()); // Fetch withdraw transactions
+    dispatch(fetchWalletBalance());
+    dispatch(fetchUserTransactions());
   }, [dispatch]);
 
-  const handleDeposit = () => {
-    console.log("Deposit money action triggered.");
-    // Add logic for handling deposit here
+  const handleAddMoney = async () => {
+    const value = parseFloat(amount);
+    if (!value || value <= 0) return alert("Enter a valid amount");
+
+    try {
+      const response = await dispatch(
+        initiatePhonePeOrder({
+          amount: value,
+          name: "Bhupesh Patel",
+          mobile: "9602689822",
+        })
+      ).unwrap();
+      if (response.redirectUrl) {
+        window.location.href = response.redirectUrl;
+      } else {
+        alert("No redirect URL received.");
+      }
+    } catch (err) {
+      console.error("PhonePe initiation failed:", err);
+      alert("Something went wrong");
+    } finally {
+      setIsAddModalOpen(false);
+      setAmount("");
+    }
   };
 
-  const handleWithdraw = () => {
-    console.log("Withdraw money action triggered.");
-    // Add logic for handling withdrawal here
+  const handleWithdrawMoney = () => {
+    const value = parseFloat(amount);
+    if (!value || value <= 0) return alert("Enter a valid amount");
+
+    // TODO: Replace with actual withdraw logic
+    alert(`Withdraw ₹${value} initiated`);
+    setIsWithdrawModalOpen(false);
+    setAmount("");
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-  };
+  const renderModal = (title, onConfirm, onClose) => (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{title}</h2>
+        <input
+          type="number"
+          placeholder="Enter amount"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-full mb-4 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12 bg-gray-50 rounded-xl shadow-xl">
-      <h1 className="text-3xl font-bold text-center text-gray-900 mb-12">
-        Your Wallet
-      </h1>
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-10">
+      <div className="bg-gradient-to-br from-blue-100 to-purple-200 p-6 rounded-2xl shadow-lg text-center mb-8">
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Wallet</h2>
+        <p className="text-gray-600">Manage your balance and transactions</p>
+      </div>
 
-      {/* Wallet Balance Card */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-12">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Wallet Balance
-            </h3>
-            <p className="text-3xl font-bold">{userBalance}$</p>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Game Coins</h3>
-            <p className="text-3xl font-bold">{gameCoins} Coins</p>
-          </div>
+      {/* Balance Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl shadow text-center">
+          <h4 className="text-sm text-gray-500">Wallet Balance</h4>
+          <p className="text-3xl font-bold text-blue-600 mt-2">
+            ₹{wallet || 0}
+          </p>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow text-center">
+          <h4 className="text-sm text-gray-500">Game Coins</h4>
+          <p className="text-3xl font-bold text-green-600 mt-2">0</p>
         </div>
 
-        {/* Deposit and Withdraw Buttons */}
-        <div className="flex justify-between mt-6">
+        <div className="flex flex-col justify-center items-center gap-4">
           <Button
-            onClick={handleDeposit}
-            size="medium"
-            className=" bg-green-500 text-white rounded-md shadow-md hover:bg-green-600 transition"
+            onClick={() => {
+              setAmount("");
+              setIsAddModalOpen(true);
+            }}
+            className="w-full bg-blue-600 text-white hover:bg-blue-700"
           >
             Add Money
           </Button>
           <Button
-            onClick={handleWithdraw}
-            size="medium"
-            className=" bg-red-500 text-white rounded-md shadow-md hover:bg-red-600 transition"
+            onClick={() => {
+              setAmount("");
+              setIsWithdrawModalOpen(true);
+            }}
+            className="w-full bg-rose-500 text-white hover:bg-rose-600"
           >
             Withdraw
           </Button>
         </div>
       </div>
 
-      {/* Tabbed Interface for Transaction History */}
-      <div className="flex justify-center space-x-8 mb-6">
-        <button
-          onClick={() => handleTabChange("platform")}
-          className={`p-4 ${
-            activeTab === "platform"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-100 text-gray-600"
-          } rounded-md shadow-md hover:bg-blue-400 transition`}
-        >
-          Platform Transactions
-        </button>
-        <button
-          onClick={() => handleTabChange("withdraw")}
-          className={`p-4 ${
-            activeTab === "withdraw"
-              ? "bg-green-500 text-white"
-              : "bg-gray-100 text-gray-600"
-          } rounded-md shadow-md hover:bg-green-400 transition`}
-        >
-          Withdraw Transactions
-        </button>
+      {/* Tabs */}
+      <div className="flex justify-center gap-4 mb-6">
+        {["platform", "withdraw"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-5 py-2 rounded-full font-medium shadow transition ${
+              activeTab === tab
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-indigo-100"
+            }`}
+          >
+            {tab === "platform" ? "Platform Transactions" : "Withdraw History"}
+          </button>
+        ))}
       </div>
 
-      {/* Transaction History Section */}
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        {activeTab === "platform" ? (
-          <>
-            <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-              Platform Transactions
-            </h3>
-            <ul>
-              {/* Dummy Transactions */}
-              <li className="flex justify-between mb-2 text-gray-700">
-                <span>2024-12-28: Purchase Game Coins</span>
-                <span>+20 Coins</span>
-              </li>
-              <li className="flex justify-between mb-2 text-gray-700">
-                <span>2024-12-29: Platform Fee</span>
-                <span>-5 Coins</span>
-              </li>
-              <li className="flex justify-between mb-2 text-gray-700">
-                <span>2024-12-30: Gift Bonus</span>
-                <span>+100 Coins</span>
-              </li>
-            </ul>
-          </>
+      {/* Transactions List */}
+      <div className="bg-white rounded-xl shadow p-6">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">
+          {activeTab === "platform"
+            ? "Platform Transactions"
+            : "Withdraw Transactions"}
+        </h3>
+
+        {isLoading ? (
+          <p className="text-center text-gray-400">Loading...</p>
         ) : (
-          <>
-            <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-              Withdraw Transactions
-            </h3>
-            <ul>
-              {/* Dummy Withdraw Transactions */}
-              <li className="flex justify-between mb-2 text-gray-700">
-                <span>2024-12-30: Withdraw to Bank</span>
-                <span>-50$ (Pending)</span>
+          <ul className="space-y-4 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-gray-300">
+            {(activeTab === "platform"
+              ? platformTransactions
+              : withdrawTransactions
+            )?.map((txn, idx) => (
+              <li
+                key={idx}
+                className="flex justify-between items-center border-b pb-2"
+              >
+                <div className="text-sm text-gray-700">
+                  <p>{txn.description || "Transaction"}</p>
+                  <span className="text-xs text-gray-400">
+                    {new Date(txn.date).toLocaleString() || "Date Unknown"}
+                  </span>
+                </div>
+                <span
+                  className={`font-medium ${
+                    txn.amount >= 0 ? "text-green-600" : "text-red-500"
+                  }`}
+                >
+                  {txn.amount >= 0 ? "+" : ""}
+                  {activeTab === "platform"
+                    ? `${txn.amount} Coins`
+                    : `₹${txn.amount}`}
+                </span>
               </li>
-              <li className="flex justify-between mb-2 text-gray-700">
-                <span>2024-12-29: Withdraw to Wallet</span>
-                <span>-20$ (Completed)</span>
-              </li>
-            </ul>
-          </>
+            ))}
+
+            {/* Empty state */}
+            {!(activeTab === "platform"
+              ? platformTransactions?.length
+              : withdrawTransactions?.length) && (
+              <p className="text-center text-gray-400 text-sm">
+                No {activeTab} transactions found.
+              </p>
+            )}
+          </ul>
         )}
       </div>
+
+      {/* Modals */}
+      {isAddModalOpen &&
+        renderModal("Add Money", handleAddMoney, () =>
+          setIsAddModalOpen(false)
+        )}
+      {isWithdrawModalOpen &&
+        renderModal("Withdraw Money", handleWithdrawMoney, () =>
+          setIsWithdrawModalOpen(false)
+        )}
     </div>
   );
 };

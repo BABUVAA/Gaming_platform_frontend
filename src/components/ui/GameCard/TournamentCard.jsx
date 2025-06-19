@@ -34,7 +34,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         ? (registeredPlayers.length / maxParticipants) * 100
         : 0
       : registeredTeams
-      ? (registeredTeams.length / maxParticipants) * 100
+      ? (registeredPlayers.length / (maxParticipants * teamSize)) * 100
       : 0;
 
   const handleJoinClick = (e) => {

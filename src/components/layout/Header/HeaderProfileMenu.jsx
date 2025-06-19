@@ -18,10 +18,10 @@ const HeaderProfileMenu = () => {
         <div className="profile-links-container">
           <legend>Icon: Username</legend>
           <hr />
-          <Link to="profile">My Profile</Link>
-          <Link to="account">Account Settings</Link>
-          <Link to="wallet">Wallet</Link>
-          <Link to="refer">Refer a Friend</Link>
+          <Link to="/dashboard/profile">My Profile</Link>
+          <Link to="/dashboard/account">Account Settings</Link>
+          <Link to="/dashboard/wallet">Wallet</Link>
+          <Link to="/dashboard/refer">Refer a Friend</Link>
           <Link to="/" onClick={dispatch(logout)}>
             Logout
           </Link>

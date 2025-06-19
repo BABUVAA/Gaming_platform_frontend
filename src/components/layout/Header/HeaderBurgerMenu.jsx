@@ -108,7 +108,7 @@ const AuthenticatedMenu = ({ closeMenu }) => {
     <>
       {" "}
       <Link
-        to="/account"
+        to="#"
         onClick={() => setMenuOpen(false)}
         className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
       >
@@ -116,7 +116,7 @@ const AuthenticatedMenu = ({ closeMenu }) => {
       </Link>
       <hr />
       <Link
-        to="/wallet"
+        to="/dashboard/wallet"
         onClick={() => setMenuOpen(false)}
         className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
       >
@@ -124,7 +124,7 @@ const AuthenticatedMenu = ({ closeMenu }) => {
       </Link>
       <hr />
       <Link
-        to="/refer"
+        to="#"
         onClick={() => setMenuOpen(false)}
         className="w-full p-4 text-left hover:bg-blue-500 text-gray-800"
       >

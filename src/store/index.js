@@ -6,9 +6,9 @@ import loadingSlice from "./loadingSlice";
 import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import { combineReducers } from "@reduxjs/toolkit";
-import transactionSlice from "./transactionSlice";
 import clanSlice from "./clanSlice";
 import toastSlice from "./toastSlice";
+import paymentSlice from "./paymentSlice";
 
 const persistConfig = {
   key: "root",
@@ -22,7 +22,7 @@ const reducer = combineReducers({
   games: gameSlice.reducer,
   tournament: TournamentSlice.reducer,
   loading: loadingSlice.reducer,
-  transactions: transactionSlice.reducer,
+  payment: paymentSlice.reducer,
   clan: clanSlice.reducer,
   toast: toastSlice.reducer,
 });

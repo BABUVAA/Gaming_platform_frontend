@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useSocket } from "../../context/socketContext";
 
 const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
   const [activeTab, setActiveTab] = useState("clan");
-  const [selectedUsers, setSelectedUsers] = useState([]);
+
   const [teamId, setTeamId] = useState("");
   const { socket } = useSocket();
 
-  const { profile, user } = useSelector((store) => store.profile);
+  const { user } = useSelector((store) => store.auth);
+  const [selectedUsers, setSelectedUsers] = useState([user.userId]);
 
   const clanMembers = useSelector(
     (store) => store.clan.userClanData?.data?.members || []
@@ -70,6 +71,7 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
         <p className="text-sm text-gray-500">No {type} found.</p>
       ) : (
         list.map((item) => {
+          console.log(item);
           const id = item.user || item._id || item.id;
           const name =
             item.clanMemberName ||
