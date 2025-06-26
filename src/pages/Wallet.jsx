@@ -13,7 +13,6 @@ const Wallet = () => {
     useSelector((state) => state.payment);
 
   const [activeTab, setActiveTab] = useState("platform");
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
@@ -62,13 +61,13 @@ const Wallet = () => {
   const renderModal = (title, onConfirm, onClose) => (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">{title}</h2>
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">{title}</h2>
         <input
           type="number"
           placeholder="Enter amount"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-full mb-4 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
         />
         <div className="flex justify-end gap-3">
           <button
@@ -79,7 +78,7 @@ const Wallet = () => {
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow"
           >
             Confirm
           </button>
@@ -90,42 +89,44 @@ const Wallet = () => {
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-10">
-      <div className="bg-gradient-to-br from-blue-100 to-purple-200 p-6 rounded-2xl shadow-lg text-center mb-8">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Wallet</h2>
-        <p className="text-gray-600">Manage your balance and transactions</p>
+      {/* Header */}
+      <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-2xl shadow-2xl text-center text-white mb-8">
+        <h2 className="text-4xl font-extrabold mb-2">💰 Wallet</h2>
+        <p className="text-md opacity-90">
+          Manage your balance and transactions
+        </p>
       </div>
 
-      {/* Balance Card */}
+      {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow text-center">
+        <div className="bg-white p-6 rounded-2xl shadow-md border hover:shadow-lg transition-all text-center">
           <h4 className="text-sm text-gray-500">Wallet Balance</h4>
           <p className="text-3xl font-bold text-blue-600 mt-2">
-            ₹{wallet || 0}
+            ₹{wallet?.toLocaleString("en-IN") || "0"}
           </p>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow text-center">
+        <div className="bg-white p-6 rounded-2xl shadow-md border hover:shadow-lg transition-all text-center">
           <h4 className="text-sm text-gray-500">Game Coins</h4>
           <p className="text-3xl font-bold text-green-600 mt-2">0</p>
         </div>
-
         <div className="flex flex-col justify-center items-center gap-4">
           <Button
             onClick={() => {
               setAmount("");
               setIsAddModalOpen(true);
             }}
-            className="w-full bg-blue-600 text-white hover:bg-blue-700"
+            className="w-full py-3 text-lg bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-xl hover:from-indigo-600 hover:to-blue-700 shadow-lg transition"
           >
-            Add Money
+            ➕ Add Money
           </Button>
           <Button
             onClick={() => {
               setAmount("");
               setIsWithdrawModalOpen(true);
             }}
-            className="w-full bg-rose-500 text-white hover:bg-rose-600"
+            className="w-full py-3 text-lg bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-xl hover:from-rose-600 hover:to-red-700 shadow-lg transition"
           >
-            Withdraw
+            ➖ Withdraw
           </Button>
         </div>
       </div>
@@ -136,18 +137,20 @@ const Wallet = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-full font-medium shadow transition ${
+            className={`px-6 py-2 rounded-full text-sm font-semibold transition ${
               activeTab === tab
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-indigo-100"
+                ? "bg-indigo-600 text-white shadow"
+                : "bg-gray-200 text-gray-700 hover:bg-indigo-100"
             }`}
           >
-            {tab === "platform" ? "Platform Transactions" : "Withdraw History"}
+            {tab === "platform"
+              ? "💹 Platform Transactions"
+              : "🏦 Withdraw History"}
           </button>
         ))}
       </div>
 
-      {/* Transactions List */}
+      {/* Transactions */}
       <div className="bg-white rounded-xl shadow p-6">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">
           {activeTab === "platform"
@@ -158,27 +161,29 @@ const Wallet = () => {
         {isLoading ? (
           <p className="text-center text-gray-400">Loading...</p>
         ) : (
-          <ul className="space-y-4 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-gray-300">
+          <ul className="space-y-4 max-h-[300px] overflow-auto">
             {(activeTab === "platform"
               ? platformTransactions
               : withdrawTransactions
             )?.map((txn, idx) => (
               <li
                 key={idx}
-                className="flex justify-between items-center border-b pb-2"
+                className="flex justify-between items-center border-b pb-2 hover:bg-gray-50 px-2 py-2 rounded"
               >
-                <div className="text-sm text-gray-700">
-                  <p>{txn.description || "Transaction"}</p>
+                <div className="text-sm text-gray-800">
+                  <p className="font-medium">
+                    {txn.description || "Transaction"}
+                  </p>
                   <span className="text-xs text-gray-400">
-                    {new Date(txn.date).toLocaleString() || "Date Unknown"}
+                    {new Date(txn.date).toLocaleString("en-IN")}
                   </span>
                 </div>
                 <span
-                  className={`font-medium ${
+                  className={`font-semibold ${
                     txn.amount >= 0 ? "text-green-600" : "text-red-500"
                   }`}
                 >
-                  {txn.amount >= 0 ? "+" : ""}
+                  {txn.amount >= 0 ? "+" : "-"}{" "}
                   {activeTab === "platform"
                     ? `${txn.amount} Coins`
                     : `₹${txn.amount}`}
@@ -186,7 +191,6 @@ const Wallet = () => {
               </li>
             ))}
 
-            {/* Empty state */}
             {!(activeTab === "platform"
               ? platformTransactions?.length
               : withdrawTransactions?.length) && (
