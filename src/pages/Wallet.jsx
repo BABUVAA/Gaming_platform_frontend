@@ -40,11 +40,12 @@ const Wallet = () => {
           name: "Bhupesh Patel",
           mobile: "9602689822",
         })
-      ).unwrap();
+      );
+      console.log(response.payload);
 
-      if (response.redirectUrl && response.callbackUrl) {
-        api.post(response.callbackUrl);
-        window.location.href = response.redirectUrl;
+      if (response.payload.redirectUrl && response.payload.callbackUrl) {
+        api.post(response.payload.callbackUrl);
+        window.location.href = response.payload.redirectUrl;
       } else {
         alert("No redirect URL received.");
       }

@@ -34,20 +34,15 @@ export const fetchWalletBalance = createAsyncThunk(
 // ✅ Withdraw request
 export const withdrawRequest = createAsyncThunk(
   "transactions/withdrawRequest",
-  async (amount, { rejectWithValue }) => {
+  async (amount, thunkAPI) => {
     try {
-      const res = await fetch("/api/payment/withdraw", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ amount }),
-      });
-      if (!res.ok) throw new Error("Failed to submit withdrawal");
-      return res.json();
+      const res = await api.post("/api/payment/withdraw", amount);
+      return res.data; // { redirectUrl: "..." }
     } catch (err) {
-      return rejectWithValue(err.message);
+      console.log(err);
+      return thunkAPI.rejectWithValue(
+        err.response?.data || { error: "Server error" }
+      );
     }
   }
 );
@@ -105,7 +100,6 @@ const transactionSlice = createSlice({
         state.latestOrder = action.payload;
       })
       .addCase(fetchWalletBalance.fulfilled, (state, action) => {
-        console.log("hello", action.payload);
         state.wallet.realMoney = action.payload.realMoney || 0;
         state.wallet.platformMoney = action.payload.platformMoney || 0;
         state.wallet.realTransactions = action.payload.realTransactions || [];
