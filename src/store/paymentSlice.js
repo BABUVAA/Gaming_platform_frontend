@@ -23,11 +23,8 @@ export const fetchWalletBalance = createAsyncThunk(
   "transactions/fetchWalletBalance",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("/api/payment/wallet", {
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch wallet balance");
-      return res.json();
+      const res = await api.get("/api/users/wallet", { withCredentials: true });
+      return res.data;
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -85,17 +82,22 @@ export const checkTransactionStatus = createAsyncThunk(
   }
 );
 
+const initialState = {
+  wallet: {
+    realMoney: 0,
+    platformMoney: 0,
+    realTransactions: [],
+    platformTransactions: [],
+  },
+  latestOrder: null,
+  statusCheck: null,
+  isLoading: false,
+  error: null,
+};
+
 const transactionSlice = createSlice({
   name: "transactions",
-  initialState: {
-    wallet: 0,
-    deposits: [],
-    withdrawals: [],
-    latestOrder: null,
-    statusCheck: null,
-    isLoading: false,
-    error: null,
-  },
+  initialState: initialState,
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -103,7 +105,12 @@ const transactionSlice = createSlice({
         state.latestOrder = action.payload;
       })
       .addCase(fetchWalletBalance.fulfilled, (state, action) => {
-        state.wallet = action.payload.balance;
+        console.log("hello", action.payload);
+        state.wallet.realMoney = action.payload.realMoney || 0;
+        state.wallet.platformMoney = action.payload.platformMoney || 0;
+        state.wallet.realTransactions = action.payload.realTransactions || [];
+        state.wallet.platformTransactions =
+          action.payload.platformTransactions || [];
       })
       .addCase(fetchUserTransactions.fulfilled, (state, action) => {
         state.deposits = action.payload.deposits;

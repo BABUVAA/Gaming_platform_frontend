@@ -2,22 +2,32 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchWalletBalance,
-  fetchUserTransactions,
   initiatePhonePeOrder,
-  checkTransactionStatus,
 } from "../store/paymentSlice";
 import { Button } from "../components";
 import api from "../api/axios-api";
 
+const statusColor = {
+  completed: "text-green-600",
+  failed: "text-red-600",
+  pending: "text-yellow-500",
+};
+
 const Wallet = () => {
   const dispatch = useDispatch();
-  const { wallet, platformTransactions, withdrawTransactions, isLoading } =
-    useSelector((state) => state.payment);
+  const { wallet, isLoading } = useSelector((state) => state.payment);
 
-  const [activeTab, setActiveTab] = useState("platform");
+  const [activeTab, setActiveTab] = useState("real");
+  const [txnTypeFilter, setTxnTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    dispatch(fetchWalletBalance());
+  }, [dispatch]);
 
   const handleAddMoney = async () => {
     const value = parseFloat(amount);
@@ -31,6 +41,7 @@ const Wallet = () => {
           mobile: "9602689822",
         })
       ).unwrap();
+
       if (response.redirectUrl && response.callbackUrl) {
         api.post(response.callbackUrl);
         window.location.href = response.redirectUrl;
@@ -49,8 +60,6 @@ const Wallet = () => {
   const handleWithdrawMoney = () => {
     const value = parseFloat(amount);
     if (!value || value <= 0) return alert("Enter a valid amount");
-
-    // TODO: Replace with actual withdraw logic
     alert(`Withdraw ₹${value} initiated`);
     setIsWithdrawModalOpen(false);
     setAmount("");
@@ -85,9 +94,20 @@ const Wallet = () => {
     </div>
   );
 
+  const activeTransactions =
+    activeTab === "platform"
+      ? wallet?.platformTransactions || []
+      : wallet?.realTransactions || [];
+
+  const filteredTransactions = activeTransactions.filter((txn) => {
+    const matchesType = txnTypeFilter === "all" || txn.type === txnTypeFilter;
+    const txnStatus = txn?.transactionId?.status || "pending";
+    const matchesStatus = statusFilter === "all" || txnStatus === statusFilter;
+    return matchesType && matchesStatus;
+  });
+
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-10">
-      {/* Header */}
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-10 mb-8">
       <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-2xl shadow-2xl text-center text-white mb-8">
         <h2 className="text-4xl font-extrabold mb-2">💰 Wallet</h2>
         <p className="text-md opacity-90">
@@ -95,17 +115,18 @@ const Wallet = () => {
         </p>
       </div>
 
-      {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-md border hover:shadow-lg transition-all text-center">
+        <div className="bg-white p-6 rounded-2xl shadow-md text-center">
           <h4 className="text-sm text-gray-500">Wallet Balance</h4>
           <p className="text-3xl font-bold text-blue-600 mt-2">
-            ₹{wallet?.toLocaleString("en-IN") || "0"}
+            ₹{wallet?.realMoney.toLocaleString("en-IN") || "0"}
           </p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-md border hover:shadow-lg transition-all text-center">
+        <div className="bg-white p-6 rounded-2xl shadow-md text-center">
           <h4 className="text-sm text-gray-500">Game Coins</h4>
-          <p className="text-3xl font-bold text-green-600 mt-2">0</p>
+          <p className="text-3xl font-bold text-green-600 mt-2">
+            {wallet?.platformMoney || 0}
+          </p>
         </div>
         <div className="flex flex-col justify-center items-center gap-4">
           <Button
@@ -129,78 +150,100 @@ const Wallet = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex justify-center gap-4 mb-6">
-        {["platform", "withdraw"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition ${
-              activeTab === tab
-                ? "bg-indigo-600 text-white shadow"
-                : "bg-gray-200 text-gray-700 hover:bg-indigo-100"
-            }`}
-          >
-            {tab === "platform"
-              ? "💹 Platform Transactions"
-              : "🏦 Withdraw History"}
-          </button>
-        ))}
+      <div className="flex justify-center gap-4 mb-4">
+        <button
+          onClick={() => setActiveTab("real")}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${
+            activeTab === "real"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          💸 Wallet Transactions
+        </button>
+        <button
+          onClick={() => setActiveTab("platform")}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${
+            activeTab === "platform"
+              ? "bg-green-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          🎮 Platform Transactions
+        </button>
       </div>
 
-      {/* Transactions */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">
-          {activeTab === "platform"
-            ? "Platform Transactions"
-            : "Withdraw Transactions"}
-        </h3>
+      <div className="flex justify-between mb-4">
+        <select
+          className="border px-2 py-1 rounded text-sm"
+          value={txnTypeFilter}
+          onChange={(e) => setTxnTypeFilter(e.target.value)}
+        >
+          <option value="all">All Types</option>
+          <option value="credit">Credit</option>
+          <option value="debit">Debit</option>
+        </select>
 
-        {isLoading ? (
-          <p className="text-center text-gray-400">Loading...</p>
+        <select
+          className="border px-2 py-1 rounded text-sm"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All Status</option>
+          <option value="completed">Completed</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4 max-h-[400px] overflow-auto">
+        {filteredTransactions.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">
+            No transactions found.
+          </p>
         ) : (
-          <ul className="space-y-4 max-h-[300px] overflow-auto">
-            {(activeTab === "platform"
-              ? platformTransactions
-              : withdrawTransactions
-            )?.map((txn, idx) => (
-              <li
-                key={idx}
-                className="flex justify-between items-center border-b pb-2 hover:bg-gray-50 px-2 py-2 rounded"
-              >
-                <div className="text-sm text-gray-800">
-                  <p className="font-medium">
-                    {txn.description || "Transaction"}
-                  </p>
-                  <span className="text-xs text-gray-400">
-                    {new Date(txn.date).toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <span
-                  className={`font-semibold ${
-                    txn.amount >= 0 ? "text-green-600" : "text-red-500"
-                  }`}
-                >
-                  {txn.amount >= 0 ? "+" : "-"}{" "}
-                  {activeTab === "platform"
-                    ? `${txn.amount} Coins`
-                    : `₹${txn.amount}`}
-                </span>
-              </li>
-            ))}
+          <ul className="divide-y">
+            {filteredTransactions.map((txn, idx) => {
+              const status = txn?.transactionId?.status || "pending";
+              const amountColor =
+                txn.type === "credit" ? "text-green-600" : "text-red-500";
 
-            {!(activeTab === "platform"
-              ? platformTransactions?.length
-              : withdrawTransactions?.length) && (
-              <p className="text-center text-gray-400 text-sm">
-                No {activeTab} transactions found.
-              </p>
-            )}
+              return (
+                <li
+                  key={idx}
+                  className="flex justify-between items-start py-3 hover:bg-gray-50 px-2 rounded transition"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {txn.reason || "Transaction"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(txn.timestamp).toLocaleString("en-IN")}
+                    </p>
+                    {txn?.transactionId?.meta?.merchantTransactionId && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Txn ID:{" "}
+                        {txn.transactionId.meta.merchantTransactionId.slice(
+                          -12
+                        )}
+                      </p>
+                    )}
+                    <p
+                      className={`text-xs font-semibold mt-1 ${statusColor[status]}`}
+                    >
+                      Status: {status.toUpperCase()}
+                    </p>
+                  </div>
+                  <span className={`text-base font-bold ${amountColor}`}>
+                    {txn.type === "credit" ? "+" : "-"} ₹{txn.amount}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
 
-      {/* Modals */}
       {isAddModalOpen &&
         renderModal("Add Money", handleAddMoney, () =>
           setIsAddModalOpen(false)
