@@ -8,6 +8,7 @@ import { verifySession } from "../store/authSlice";
 import { fetchTournaments } from "../store/tournamentSlice";
 import { fetchUserClan } from "../store/clanSlice";
 import { user_profile } from "../store/authSlice";
+import { fetchNotifications } from "../store/notificationSlice";
 
 function App() {
   const dispatch = useDispatch();
@@ -37,6 +38,7 @@ function App() {
         const result = await dispatch(user_profile());
         currentProfile = result?.payload;
 
+        await dispatch(fetchNotifications());
         // Fetch clan if not available but profile has clan
         if (userClanData && currentProfile?.clan?._id) {
           await dispatch(fetchUserClan());

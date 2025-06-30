@@ -29,10 +29,7 @@ const Profile = () => {
     totalEarnings: 10000,
   };
 
-  const pastTournaments = [
-    { name: "PUBG Invitational", date: "2024-11-10", result: "Won" },
-    { name: "Coc World Cup", date: "2024-10-5", result: "Runner-Up" },
-  ];
+  const pastTournaments = [];
 
   //Section 1: Profile Information
 
@@ -47,7 +44,7 @@ const Profile = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
     const [socialAccounts, setSocialAccounts] = useState(
-      profile.profile.linkedAccounts || {
+      profile?.profile?.linkedAccounts || {
         instagram: "",
         youtube: "",
         twitter: "",
@@ -195,7 +192,7 @@ const Profile = () => {
 
           {/* Social Icons & Add Social Accounts */}
           <SocialAccounts
-            linkedAccounts={profile.profile.linkedAccounts}
+            linkedAccounts={profile?.profile?.linkedAccounts || {}}
             onUpdate={() => {
               setIsSocialModalOpen(true);
             }}
@@ -488,7 +485,7 @@ const Profile = () => {
     <div className="profile-container bg-gray-100 p-2 gap-1">
       <ProfileHeader profile={profile} />
       <CareerStatistics />
-      <ActiveTournaments tournament={profile.profile.tournaments} />
+      <ActiveTournaments tournament={profile?.profile?.tournaments || []} />
       <PastTournaments />
     </div>
   );

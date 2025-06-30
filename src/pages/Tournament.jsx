@@ -42,7 +42,7 @@ const TournamentPage = () => {
           <TabsSection
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            joinedTournaments={profile.profile.tournaments.length}
+            joinedTournaments={profile?.profile?.tournaments?.length}
           />
           {(activeTab === "tournaments" || activeTab === "my_tournaments") && (
             <FilterSection

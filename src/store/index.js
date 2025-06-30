@@ -9,6 +9,7 @@ import { combineReducers } from "@reduxjs/toolkit";
 import clanSlice from "./clanSlice";
 import toastSlice from "./toastSlice";
 import paymentSlice from "./paymentSlice";
+import notificationSlice from "./notificationSlice";
 
 const persistConfig = {
   key: "root",
@@ -25,6 +26,7 @@ const reducer = combineReducers({
   payment: paymentSlice.reducer,
   clan: clanSlice.reducer,
   toast: toastSlice.reducer,
+  notifications: notificationSlice.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, reducer);

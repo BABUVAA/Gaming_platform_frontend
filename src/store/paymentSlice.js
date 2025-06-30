@@ -76,7 +76,7 @@ export const checkTransactionStatus = createAsyncThunk(
   "transactions/checkTransactionStatus",
   async (transactionId, { rejectWithValue }) => {
     try {
-      const res = await fetch(`/api/payment/status/${transactionId}`);
+      const res = await api.post(`/api/payment/status`, transactionId);
       if (!res.ok) throw new Error("Failed to check status");
       return res.json();
     } catch (err) {

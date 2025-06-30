@@ -4,8 +4,10 @@ import {
   fetchWalletBalance,
   fetchUserTransactions,
   initiatePhonePeOrder,
+  checkTransactionStatus,
 } from "../store/paymentSlice";
 import { Button } from "../components";
+import api from "../api/axios-api";
 
 const Wallet = () => {
   const dispatch = useDispatch();
@@ -16,11 +18,6 @@ const Wallet = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
-
-  useEffect(() => {
-    dispatch(fetchWalletBalance());
-    dispatch(fetchUserTransactions());
-  }, [dispatch]);
 
   const handleAddMoney = async () => {
     const value = parseFloat(amount);
@@ -34,7 +31,8 @@ const Wallet = () => {
           mobile: "9602689822",
         })
       ).unwrap();
-      if (response.redirectUrl) {
+      if (response.redirectUrl && response.callbackUrl) {
+        api.post(response.callbackUrl);
         window.location.href = response.redirectUrl;
       } else {
         alert("No redirect URL received.");

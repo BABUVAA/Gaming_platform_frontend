@@ -10,6 +10,7 @@ import { io } from "socket.io-client";
 import { tournamentAction } from "../store/tournamentSlice";
 import { showToast, types } from "../store/toastSlice";
 import { authAction } from "../store/authSlice";
+import { notificationActions } from "../store/notificationSlice";
 
 // Create a Context for the Socket
 const SocketContext = createContext();
@@ -60,13 +61,13 @@ export const SocketProvider = ({ children }) => {
         // ✅ Update tournament in auth profile
         dispatch(authAction.addJoinedTournament(data.tournament));
       }
-      dispatch(
-        showToast({
-          message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
-          type: types.SUCCESS,
-          position: "bottom-right",
-        })
-      );
+      // dispatch(
+      //   showToast({
+      //     message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
+      //     type: types.SUCCESS,
+      //     position: "bottom-right",
+      //   })
+      // );
     });
     // Listen for Joined Tournament
     socketRef.current.on("JOINED_TOURNAMENT_UPDATE", (data) => {
@@ -74,13 +75,27 @@ export const SocketProvider = ({ children }) => {
         // ✅ Update tournament in auth profile
         dispatch(authAction.addJoinedTournament(data.tournament));
       }
+      // dispatch(
+      //   showToast({
+      //     message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
+      //     type: types.SUCCESS,
+      //     position: "bottom-right",
+      //   })
+      // );
+    });
+
+    // ✅ Listen for real-time notifications
+    socketRef.current.on("notification", (notification) => {
       dispatch(
         showToast({
-          message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
+          message: notification.title,
           type: types.SUCCESS,
           position: "bottom-right",
         })
       );
+
+      // Optionally: store notification in Redux state
+      dispatch(notificationActions.addNotification(notification));
     });
 
     // Listen for live ERROR updates
