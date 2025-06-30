@@ -41,7 +41,6 @@ const Wallet = () => {
           mobile: "9602689822",
         })
       );
-      console.log(response.payload);
 
       if (response.payload.redirectUrl && response.payload.callbackUrl) {
         api.post(response.payload.callbackUrl);
