@@ -10,6 +10,7 @@ import clanSlice from "./clanSlice";
 import toastSlice from "./toastSlice";
 import paymentSlice from "./paymentSlice";
 import notificationSlice from "./notificationSlice";
+import adminSlice from "./adminSlice";
 
 const persistConfig = {
   key: "root",
@@ -19,6 +20,7 @@ const persistConfig = {
 };
 
 const reducer = combineReducers({
+  admin: adminSlice.reducer,
   auth: authSlice.reducer,
   games: gameSlice.reducer,
   tournament: TournamentSlice.reducer,

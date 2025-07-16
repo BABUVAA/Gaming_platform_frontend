@@ -27,6 +27,6 @@ export { default as GameCard } from "./ui/GameCard/GameCard.jsx";
 
 //admin components
 export { default as TournamentManagement } from "./adminComponents/TournamentManagement.jsx";
-export { default as UserManagement } from "./adminComponents/UserManagement.jsx";
-export { default as WalletManagement } from "./adminComponents/WalletManagement.jsx";
+export { default as UserManagement } from "./adminComponents/userMangaement/UserManagement.jsx";
+export { default as WalletManagement } from "./adminComponents/walletManagement/WalletManagement.jsx";
 export { default as RewardManagement } from "./adminComponents/RewardManagement.jsx";
