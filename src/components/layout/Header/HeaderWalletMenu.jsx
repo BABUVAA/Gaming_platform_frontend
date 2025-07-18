@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 
 const HeaderWalletMenu = () => {
   const { wallet } = useSelector((store) => store.payment);
-  console.log(wallet);
+
   return (
     <>
       <div className="wallet-container">
