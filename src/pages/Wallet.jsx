@@ -8,9 +8,9 @@ import { Button } from "../components";
 import api from "../api/axios-api";
 
 const statusColor = {
-  completed: "text-green-600",
-  failed: "text-red-600",
-  pending: "text-yellow-500",
+  COMPLETED: "text-green-600 bg-green-100",
+  PENDING: "text-yellow-600 bg-yellow-100",
+  FAILED: "text-red-600 bg-red-100",
 };
 
 const Wallet = () => {
@@ -203,17 +203,26 @@ const Wallet = () => {
           </p>
         ) : (
           <ul className="divide-y">
-            {filteredTransactions.map((txn, idx) => {
-              const status = txn?.transactionId?.status || "pending";
-              const amountColor =
-                txn.type === "credit" ? "text-green-600" : "text-red-500";
+            {[...filteredTransactions].reverse().map((txn, idx) => {
+              const status =
+                txn?.transactionId?.status?.toUpperCase() || "PENDING";
+              const isFailed = status === "FAILED";
+              const isCredit = txn.type === "credit";
+              const amountColor = isFailed
+                ? "text-red-500"
+                : isCredit
+                ? "text-green-600"
+                : "text-red-600";
+
+              const badgeColor =
+                statusColor[status] || "text-gray-600 bg-gray-100";
 
               return (
                 <li
                   key={idx}
-                  className="flex justify-between items-start py-3 hover:bg-gray-50 px-2 rounded transition"
+                  className="flex justify-between items-start py-3 hover:bg-gray-50 px-2 rounded-lg transition"
                 >
-                  <div>
+                  <div className="space-y-1">
                     <p className="font-medium text-gray-800">
                       {txn.reason || "Transaction"}
                     </p>
@@ -221,21 +230,24 @@ const Wallet = () => {
                       {new Date(txn.timestamp).toLocaleString("en-IN")}
                     </p>
                     {txn?.transactionId?.meta?.merchantTransactionId && (
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400">
                         Txn ID:{" "}
                         {txn.transactionId.meta.merchantTransactionId.slice(
                           -12
                         )}
                       </p>
                     )}
-                    <p
-                      className={`text-xs font-semibold mt-1 ${statusColor[status]}`}
+                    <span
+                      className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}
                     >
-                      Status: {status.toUpperCase()}
-                    </p>
+                      {status}
+                    </span>
                   </div>
-                  <span className={`text-base font-bold ${amountColor}`}>
-                    {txn.type === "credit" ? "+" : "-"} ₹{txn.amount}
+
+                  <span
+                    className={`text-base font-bold ${amountColor} whitespace-nowrap`}
+                  >
+                    {isCredit ? "+" : "-"} ₹{txn.amount}
                   </span>
                 </li>
               );
