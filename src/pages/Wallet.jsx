@@ -25,11 +25,15 @@ const Wallet = () => {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
 
+  const [txnInProgress, setTxnInProgress] = useState(false);
+
   useEffect(() => {
     dispatch(fetchWalletBalance());
   }, [dispatch]);
 
   const handleAddMoney = async () => {
+    if (txnInProgress) return;
+    setTxnInProgress(true);
     const value = parseFloat(amount);
     if (!value || value <= 0) return alert("Enter a valid amount");
 
@@ -66,7 +70,11 @@ const Wallet = () => {
   };
 
   const renderModal = (title, onConfirm, onClose) => (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+    <div
+      className={`fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center ${
+        txnInProgress ? "disabled" : ""
+      }`}
+    >
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
         <h2 className="text-2xl font-semibold text-gray-800 mb-4">{title}</h2>
         <input
@@ -85,7 +93,9 @@ const Wallet = () => {
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow"
+            className={`px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow${
+              txnInProgress ? "disabled" : ""
+            }`}
           >
             Confirm
           </button>

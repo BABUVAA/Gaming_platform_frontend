@@ -62,11 +62,42 @@ export const findTransactions = createAsyncThunk(
   }
 );
 
+export const findTournaments = createAsyncThunk(
+  "admin/findTournaments",
+  async (data, thunkAPI) => {
+    try {
+      const response = await api.post("/api/admin/findTournaments", data);
+
+      thunkAPI.dispatch(
+        showToast({
+          message: "Tournament fetched successfully",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+
+      return response.data.data; // Assuming response.data.data is an array of transactions
+    } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message:
+            error.response?.data?.message || "Failed to fetch Tournament",
+          type: types.ERROR,
+          position: "bottom-right",
+        })
+      );
+
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
 const adminSlice = createSlice({
   name: "admin",
   initialState: {
     users: [],
     transactions: [],
+    tournaments: [],
     isLoading: false,
     error: null,
   },
@@ -94,6 +125,18 @@ const adminSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(findTransactions.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || "Failed to fetch transactions";
+      })
+      .addCase(findTournaments.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(findTournaments.fulfilled, (state, action) => {
+        state.tournaments = action.payload;
+        state.isLoading = false;
+      })
+      .addCase(findTournaments.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || "Failed to fetch transactions";
       });
