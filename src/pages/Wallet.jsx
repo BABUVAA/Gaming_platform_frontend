@@ -32,8 +32,8 @@ const Wallet = () => {
   }, [dispatch]);
 
   const handleAddMoney = async () => {
-    if (txnInProgress) return;
-    setTxnInProgress(true);
+    // if (txnInProgress) return;
+    // setTxnInProgress(true);
     const value = parseFloat(amount);
     if (!value || value <= 0) return alert("Enter a valid amount");
 

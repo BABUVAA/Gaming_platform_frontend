@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { TournamentCard } from "../components";
 import { useSelector } from "react-redux";
@@ -29,14 +29,18 @@ const gameData = {
   },
 };
 
-const ITEMS_PER_PAGE = 6;
-
 const TournamentGame = () => {
   const { game } = useParams();
+  const { profile } = useSelector((state) => state.auth);
   const { tournaments } = useSelector((store) => store.tournament);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const joinedTournaments = () => {
+    return (profile?.profile?.tournaments || []).filter((t) => t.game === game)
+      .length;
+  };
 
   if (!gameData[game]) {
     return (
@@ -53,25 +57,24 @@ const TournamentGame = () => {
     (t) => t.game === game
   );
 
-  // Filter based on activeFilter
   const filteredTournaments = useMemo(() => {
-    if (!activeFilter || activeFilter === "All") return gameTournaments;
+    const tournamentList = Object.values(gameTournaments);
+    if (!activeFilter || activeFilter === "All") return tournamentList;
     if (activeFilter === "Featured")
-      return gameTournaments.filter((t) => t.isFeatured);
-
-    return gameTournaments.filter(
+      return tournamentList.filter((t) => t.isFeatured);
+    return tournamentList.filter(
       (tournament) =>
         tournament.mode === activeFilter ||
         tournament.map === activeFilter ||
-        tournament.category === activeFilter
+        tournament.category === activeFilter ||
+        tournament.game === activeFilter
     );
-  }, [gameTournaments, activeFilter]);
+  }, [tournaments, activeFilter]);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredTournaments.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredTournaments.length / itemsPerPage);
   const paginatedTournaments = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredTournaments.slice(start, start + ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredTournaments.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTournaments, currentPage]);
 
   // When filters change, reset page to 1
@@ -89,8 +92,12 @@ const TournamentGame = () => {
         promoImages={promoImages}
       />
       <div className="sticky top-0 z-30 bg-gray-900 border-b border-gray-800 shadow-sm">
-        <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
-        {activeTab === "tournaments" && (
+        <TabsSection
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          joinedTournaments={joinedTournaments()}
+        />
+        {(activeTab === "tournaments" || activeTab === "my_tournaments") && (
           <FilterSection
             activeFilter={activeFilter}
             setActiveFilter={handleFilterChange}
@@ -99,23 +106,24 @@ const TournamentGame = () => {
         )}
       </div>
       <div className="max-w-6xl mx-auto px-4 mt-2 space-y-6 pb-16">
-        {activeTab === "tournaments" ? (
+        {activeTab === "tournaments" && (
           <>
-            <Tournament tournaments={paginatedTournaments} />
-
-            {/* Pagination controls */}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            )}
+            <Tournament
+              tournaments={paginatedTournaments}
+              activeTab={activeTab}
+              game={game}
+            />
+            <Pagination
+              totalPages={totalPages}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+            />
           </>
-        ) : (
-          <p className="text-center text-gray-500">
-            Section under construction
-          </p>
+        )}
+        {activeTab === "my_tournaments" && (
+          <>
+            <Tournament tournaments={profile.profile.tournaments} game={game} />
+          </>
         )}
       </div>
     </div>
@@ -123,20 +131,6 @@ const TournamentGame = () => {
 };
 
 export default TournamentGame;
-
-const Tournament = ({ tournaments }) => (
-  <section id="featured-tournaments">
-    {tournaments.length === 0 ? (
-      <p className="text-gray-400 text-center">No tournaments available</p>
-    ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tournaments.map((tournament) => (
-          <TournamentCard key={tournament._id} tournament={tournament} />
-        ))}
-      </div>
-    )}
-  </section>
-);
 
 const BannerSection = ({ name, icon, downloadLink, promoImages }) => {
   return (
@@ -189,24 +183,51 @@ const BannerSection = ({ name, icon, downloadLink, promoImages }) => {
   );
 };
 
-const TabsSection = ({ activeTab, onTabChange }) => {
+const TabsSection = ({ activeTab, onTabChange, joinedTournaments }) => {
   const tabs = ["tournaments", "my_tournaments", "teams", "Rules"];
+  const prevCountRef = useRef(joinedTournaments);
+  const [showNew, setShowNew] = useState(false);
+
+  useEffect(() => {
+    // Show NEW if tournament count increases and user is NOT on my_tournaments tab
+    if (
+      joinedTournaments > prevCountRef.current &&
+      activeTab !== "my_tournaments"
+    ) {
+      setShowNew(true);
+    }
+    prevCountRef.current = joinedTournaments;
+  }, [joinedTournaments, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === "my_tournaments") {
+      setShowNew(false); // Hide NEW once user visits my_tournaments
+    }
+  }, [activeTab]);
 
   return (
     <div className="flex w-[100vw] md:w-full overflow-x-auto scrollbar-hide px-2">
       {tabs.map((tab) => {
         const isActive = activeTab === tab;
+        const isMyTab = tab === "my_tournaments";
         return (
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`flex-1 text-sm sm:text-base px-3 py-3 font-semibold border-b-2 transition-colors duration-200 whitespace-nowrap ${
+            className={`relative flex-1 text-sm sm:text-base px-3 py-3 font-semibold border-b-2 transition-colors duration-200 whitespace-nowrap ${
               isActive
                 ? "border-red-500 text-white"
                 : "border-transparent text-gray-400 hover:text-white"
             }`}
           >
             {tab.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+            {isMyTab && ` (${joinedTournaments})`}
+
+            {isMyTab && showNew && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                NEW
+              </span>
+            )}
           </button>
         );
       })}
@@ -237,36 +258,44 @@ const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
   );
 };
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Tournament = ({ tournaments, activeTab, game }) => (
+  <section>
+    {tournaments.length === 0 ? (
+      <p className="text-gray-400 text-center">No tournaments available</p>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tournaments
+          .filter((tournament) => tournament.game === game)
+          .map((tournament) => (
+            <TournamentCard
+              key={tournament._id}
+              tournament={tournament}
+              disableFetch={activeTab === "tournaments"}
+            />
+          ))}
+      </div>
+    )}
+  </section>
+);
+
+const Pagination = ({ totalPages, currentPage, setCurrentPage }) => {
+  if (totalPages <= 1) return null;
+
   return (
-    <div className="flex justify-center items-center space-x-4 mt-8">
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={`px-4 py-2 rounded-md font-semibold ${
-          currentPage === 1
-            ? "bg-gray-700 cursor-not-allowed"
-            : "bg-red-600 hover:bg-red-700"
-        }`}
-      >
-        Previous
-      </button>
-
-      <span className="text-gray-300 font-medium">
-        Page {currentPage} of {totalPages}
-      </span>
-
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className={`px-4 py-2 rounded-md font-semibold ${
-          currentPage === totalPages
-            ? "bg-gray-700 cursor-not-allowed"
-            : "bg-red-600 hover:bg-red-700"
-        }`}
-      >
-        Next
-      </button>
+    <div className="flex justify-center mt-6 gap-2">
+      {Array.from({ length: totalPages }, (_, idx) => (
+        <button
+          key={idx}
+          onClick={() => setCurrentPage(idx + 1)}
+          className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors duration-150 ${
+            currentPage === idx + 1
+              ? "bg-red-600 text-white"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          {idx + 1}
+        </button>
+      ))}
     </div>
   );
 };
