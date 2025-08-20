@@ -78,8 +78,8 @@ const SignUp = () => {
     // Submit the data
     await dispatch(register(sanitized))
       .unwrap()
-      .then(() => {
-        goToDashboard();
+      .then((response) => {
+        if (response.success) goToDashboard();
       })
       .catch((err) => {
         console.error("Registration error:", err);

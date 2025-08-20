@@ -46,8 +46,8 @@ const Wallet = () => {
         })
       );
 
-      if (response.payload.redirectUrl && response.payload.callbackUrl) {
-        api.post(response.payload.callbackUrl);
+      if (response.payload.redirectUrl) {
+        // api.post(response.payload.callbackUrl);
         window.location.href = response.payload.redirectUrl;
       } else {
         alert("No redirect URL received.");
