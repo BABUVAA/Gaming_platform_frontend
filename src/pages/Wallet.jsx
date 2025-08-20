@@ -32,8 +32,8 @@ const Wallet = () => {
   }, [dispatch]);
 
   const handleAddMoney = async () => {
-    // if (txnInProgress) return;
-    // setTxnInProgress(true);
+    if (txnInProgress) return;
+    setTxnInProgress(true);
     const value = parseFloat(amount);
     if (!value || value <= 0) return alert("Enter a valid amount");
 
@@ -46,8 +46,8 @@ const Wallet = () => {
         })
       );
 
-      if (response.payload.redirectUrl) {
-        // api.post(response.payload.callbackUrl);
+      if (response.payload.redirectUrl && response.payload.callbackUrl) {
+        api.post(response.payload.callbackUrl);
         window.location.href = response.payload.redirectUrl;
       } else {
         alert("No redirect URL received.");
@@ -58,6 +58,7 @@ const Wallet = () => {
     } finally {
       setIsAddModalOpen(false);
       setAmount("");
+      setTxnInProgress(false);
     }
   };
 
