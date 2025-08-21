@@ -17,6 +17,8 @@ function App() {
   const { userClanData } = useSelector((store) => store.clan);
   const { globalLoading } = useSelector((store) => store.loading);
   const { isAuthenticated } = useSelector((store) => store.auth);
+  const games = useSelector((store) => store.games);
+  const { tournaments } = useSelector((store) => store.tournament);
   const { visible } = useSelector((store) => store.toast);
 
   useEffect(() => {
@@ -24,24 +26,27 @@ function App() {
       if (isAuthenticated) {
         await dispatch(verifySession());
       }
-      await dispatch(fetchGames());
-      await dispatch(fetchTournaments());
+      if (!games.data || games.data.length === 0) {
+        await dispatch(fetchGames());
+      }
+      if (!tournaments || Object.keys(tournaments).length === 0) {
+        await dispatch(fetchTournaments());
+      }
     };
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         let currentProfile = profile;
-
-        // Fetch profile if not already fetched
-        const result = await dispatch(user_profile());
-        currentProfile = result?.payload;
-        await dispatch(fetchWalletBalance());
-        await dispatch(fetchNotifications());
-        // Fetch clan if not available but profile has clan
-        if (userClanData && currentProfile?.clan?._id) {
+        if (true) {
+          const result = await dispatch(user_profile());
+          currentProfile = result?.payload;
+          await dispatch(fetchWalletBalance());
+          await dispatch(fetchNotifications());
+        }
+        if (!userClanData && currentProfile?.clan?._id) {
           await dispatch(fetchUserClan());
         }
       } catch (error) {
@@ -52,7 +57,7 @@ function App() {
     if (isAuthenticated) {
       fetchInitialData();
     }
-  }, [isAuthenticated]); // empty deps = on mount (refresh)
+  }, [isAuthenticated]);
 
   // Show loading spinner while fetching data
   if (globalLoading) {

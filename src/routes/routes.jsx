@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import React, { lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSelector } from "react-redux";
 

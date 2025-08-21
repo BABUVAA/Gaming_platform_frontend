@@ -27,9 +27,9 @@ const Wallet = () => {
 
   const [txnInProgress, setTxnInProgress] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchWalletBalance());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(fetchWalletBalance());
+  // }, [dispatch]);
 
   const handleAddMoney = async () => {
     if (txnInProgress) return;
@@ -46,6 +46,27 @@ const Wallet = () => {
         })
       );
 
+      // const data = response.payload.order;
+      //RAjorpay
+      // const options = {
+      //   key: import.meta.env.VITE_RAZORPAY_KEY_ID, // ✅ use env variable
+      //   amount: order.amount, // amount in paise
+      //   currency: order.currency,
+      //   name: "Gaming Platform",
+      //   description: "Wallet Top-up",
+      //   order_id: order.id, // backend order_id
+      //   callback_url: "http://localhost:8080/api/payment/verify", // ✅ Razorpay will call this
+      //   prefill: {
+      //     name: "Bhupesh Patel",
+      //     email: "bhupesh@example.com",
+      //     contact: "9602689822",
+      //   },
+      //   theme: {
+      //     color: "#3399cc",
+      //   },
+      // };
+      // const rzp1 = new window.Razorpay(options);
+      // rzp1.open();
       if (response.payload.redirectUrl && response.payload.callbackUrl) {
         api.post(response.payload.callbackUrl);
         window.location.href = response.payload.redirectUrl;
