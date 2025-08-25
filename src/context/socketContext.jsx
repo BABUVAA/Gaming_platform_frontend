@@ -11,6 +11,7 @@ import { tournamentAction } from "../store/tournamentSlice";
 import { showToast, types } from "../store/toastSlice";
 import { authAction } from "../store/authSlice";
 import { notificationActions } from "../store/notificationSlice";
+import platformStore from "../store";
 
 // Create a Context for the Socket
 const SocketContext = createContext();
@@ -74,6 +75,15 @@ export const SocketProvider = ({ children }) => {
       if (data.tournament) {
         // ✅ Update tournament in auth profile
         dispatch(authAction.addJoinedTournament(data.tournament));
+
+        // ✅ Access current state
+        const state = platformStore.getState(); // make sure store is imported
+        const currentTournament = state.tournament.tournamentId;
+
+        // ✅ Dispatch only if ids match
+        if (currentTournament?._id === data.tournament._id) {
+          dispatch(tournamentAction.updateTournamentById(data.tournament));
+        }
       }
       // dispatch(
       //   showToast({

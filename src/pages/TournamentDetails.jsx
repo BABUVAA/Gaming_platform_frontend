@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaDiscord,
   FaInstagram,
+  FaShareNodes,
   FaSteam,
   FaTwitch,
   FaTwitter,
@@ -10,9 +11,21 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import { fetchTournamentById } from "../store/tournamentSlice";
+import { FaClock, FaPlay } from "react-icons/fa6";
+
+const pad = (n) => String(n).padStart(2, "0");
+const formatHMS = (ms) => {
+  if (ms <= 0 || !Number.isFinite(ms)) return "00:00:00";
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+};
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
 const TournamentDetails = () => {
-  const [activeTab, setActiveTab] = useState("Rules"); // Default active tab
+  const [activeTab, setActiveTab] = useState("overview"); // Default active tab
   const { id } = useParams(); // Get tournament ID from URL
   const dispatch = useDispatch();
   const { tournamentId } = useSelector((store) => store.tournament);
@@ -31,273 +44,325 @@ const TournamentDetails = () => {
         100;
   const isJoinDisabled =
     tournamentId?.status === "completed" || filledPercentage >= 100;
-
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Hero Section */}
       <TournamentBanner
         title={tournamentId?.tournamentName}
         bannerUrl={tournamentId?.imageUrl}
+        status={tournamentId?.status}
+        matchStartDate={tournamentId?.matchStartDate}
+        preparationTime={tournamentId?.preparationTime}
+        battleDuration={tournamentId?.battleDuration}
       />
       <TournamentData
         title={tournamentId?.tournamentName}
         status={tournamentId?.status}
         prizePool={tournamentId?.prizePool}
         entry={tournamentId?.entryFee}
+        maxParticipants={tournamentId?.maxParticipants}
+        joinedParticipants={tournamentId?.registeredPlayers?.length}
+        gameName={tournamentId?.game}
       />
-      <TournamentTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-      {/* Tournament Info */}
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Players Progress */}
-        <div className="mt-6">
-          <p className="text-gray-300 text-sm">Players Joined</p>
-          <div className="relative w-full bg-gray-700 rounded-full h-4 mt-2">
-            <div
-              className="bg-green-500 h-4 rounded-full"
-              style={{ width: `${filledPercentage}%` }}
-            ></div>
-          </div>
-          <p className="text-gray-300 text-sm mt-1">
-            {tournamentId?.mode !== "solo"
-              ? `${tournamentId?.registeredTeams?.length} / ${tournamentId?.maxParticipants} Teams`
-              : `${tournamentId?.registeredPlayers?.length} / ${tournamentId?.maxParticipants} Players`}
+      <TournamentTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        rules={rulesData}
+      />
+    </div>
+  );
+};
+
+const TournamentData = ({
+  title,
+  gameName,
+  prizePool,
+  entry,
+  maxParticipants,
+  joinedParticipants,
+}) => {
+  return (
+    <div className="max-w-4xl mx-auto my-6 p-6 bg-gray-900 rounded-2xl shadow-xl text-white">
+      {/* Title */}
+      <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+        {title}
+      </h2>
+
+      {/* Game Name */}
+      <p className="text-sm sm:text-base text-gray-400 mb-6">
+        Game: <span className="text-white font-semibold">{gameName}</span>
+      </p>
+
+      {/* Info Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-gray-800 p-5 rounded-xl text-center shadow-md hover:shadow-xl transition hover:bg-gray-700">
+          <h3 className="text-sm font-medium text-gray-400 mb-2">
+            🏆 Prize Pool
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold text-blue-400">
+            ₹ {prizePool}
           </p>
         </div>
-
-        {/* Join Button */}
-        {tournamentId?.status === "registration_open" && (
-          <button
-            disabled={isJoinDisabled}
-            className={`mt-6 w-full py-3 rounded-lg text-lg font-semibold transition-all ${
-              isJoinDisabled
-                ? "bg-gray-500 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {isJoinDisabled && tournamentId?.status === "active"
-              ? "Tournament Full"
-              : "Join Tournament"}
-          </button>
-        )}
-
-        <div
-          className={`mt-6 text-center w-full py-3 rounded-lg text-lg font-semibold transition-all ${
-            isJoinDisabled
-              ? "bg-gray-500 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
-          }`}
-        >
-          {" "}
-          {isJoinDisabled && tournamentId?.status === "active"
-            ? "Tournament Full"
-            : "Join Tournament"}
+        <div className="bg-gray-800 p-5 rounded-xl text-center shadow-md hover:shadow-xl transition hover:bg-gray-700">
+          <h3 className="text-sm font-medium text-gray-400 mb-2">
+            🎟 Entry Fee
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold text-green-400">
+            ₹ {entry}
+          </p>
+        </div>
+        <div className="bg-gray-800 p-5 rounded-xl text-center shadow-md hover:shadow-xl transition hover:bg-gray-700">
+          <h3 className="text-sm font-medium text-gray-400 mb-2">
+            👥 Participants
+          </h3>
+          <p className="text-2xl sm:text-3xl font-bold text-yellow-400">
+            {joinedParticipants} / {maxParticipants}
+          </p>
         </div>
       </div>
     </div>
   );
 };
-
-const TournamentBanner = ({ bannerUrl, title }) => {
-  return (
-    <div className="relative w-full h-[250px] sm:h-[350px] md:h-[450px] lg:h-[500px]">
-      {/* Banner Image */}
-      <img
-        src={bannerUrl || "/pubg_background.jpg"}
-        alt={title}
-        className="w-full h-full object-cover"
-      />
-
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-        <h1 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center">
-          {title}
-        </h1>
-      </div>
-    </div>
-  );
-};
-const TournamentData = ({ title, status, prizePool, entry }) => {
-  return (
-    <>
-      {/* Tournament Details & Social Section */}
-      <div className="w-full mx-auto bg-white p-6 shadow-md flex flex-col gap-2 lg:flex-row justify-between items-center text-gray-800">
-        {/* Social Media Links */}
-        <div className="w-full flex flex-col md:flex-row gap-2">
-          <div className="flex sm:w-60 w-full md:order-2 justify-start items-center space-x-4">
-            <FaTwitch size={30} className="cursor-pointer text-purple-500" />
-            <FaYoutube size={30} className="cursor-pointer text-red-500" />
-            <FaTwitter size={30} className="cursor-pointer text-blue-400" />
-            <FaInstagram size={30} className="cursor-pointer text-pink-500" />
-            <FaDiscord size={30} className="cursor-pointer text-blue-500" />
-          </div>
-
-          {/* Tournament Name & Match Status */}
-          <div className=" w-full text-start md:order-1 md:text-left">
-            <h1 className="text-base font-bold text-gray-900">{title}</h1>
-            <p className="text-sm text-gray-600">{status}</p>
-          </div>
-        </div>
-
-        {/* Prize & Entry Details */}
-        <div className="w-full flex flex-row py-3 border-b items-center justify-between md:items-start">
-          <h3 className="text-sm font-bold">🏆 Prize Pool</h3>
-          <p className="text-sm font-semibold text-blue-600">₹ {prizePool}</p>
-        </div>
-        <div className="w-full flex flex-row py-3 border-b items-center justify-between md:items-start">
-          <h3 className="text-sm font-bold ">🎟 Entry Fees</h3>
-          <p className="text-sm font-semibold text-green-600">₹ {entry}</p>
-        </div>
-      </div>
-    </>
-  );
-};
-const TournamentTabs = ({ activeTab, setActiveTab }) => {
-  const tabs = [
-    "Overview",
-    "Leaderboard",
-    "Watch Live",
-    "Prize Pool",
-    "Scoring",
-    "Rules",
-  ];
+const TournamentTabs = ({
+  activeTab,
+  setActiveTab,
+  rules = [],
+  leaderboard = [],
+}) => {
+  const tabs = ["overview", "leaderboard"];
 
   return (
-    <div className="w-full bg-white shadow-md p-4">
-      {/* Tabs Container */}
-      <div className="flex flex-wrap border-b overflow-x-auto scrollbar-hide">
+    <div className="max-w-4xl mx-auto my-6 bg-gray-900 rounded-xl shadow-lg text-white overflow-hidden">
+      {/* Tab Buttons */}
+      <div className="flex border-b border-gray-700">
         {tabs.map((tab) => (
           <button
             key={tab}
-            className={`px-6 py-2 text-md font-semibold whitespace-nowrap transition-all duration-300 ${
-              activeTab === tab
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
             onClick={() => setActiveTab(tab)}
+            className={`flex-1 py-3 text-center font-semibold transition-all duration-300 ${
+              activeTab === tab
+                ? "text-blue-400 border-b-2 border-blue-400"
+                : "text-gray-400 hover:text-white"
+            }`}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* Tab Content Area */}
-      <div className="p-4 text-gray-700">
-        {activeTab === "Overview" && <p>Overview Content Goes Here...</p>}
-        {activeTab === "Leaderboard" && <p>Leaderboard Details...</p>}
-        {activeTab === "Watch Live" && <p>Live Streaming Information...</p>}
-        {activeTab === "Prize Pool" && <p>Prize Details & Distribution...</p>}
-        {activeTab === "Scoring" && <p>Scoring System Breakdown...</p>}
-        {activeTab === "Rules" && <Rules />}
+      {/* Tab Content */}
+      <div className="p-6 text-gray-200 space-y-6">
+        {activeTab === "Overview" && (
+          <div className="space-y-4">
+            {rules.length > 0 ? (
+              rules.map((rule, idx) => (
+                <div
+                  key={idx}
+                  className="bg-gray-800 border border-gray-700 p-4 rounded-lg shadow-md hover:scale-105 transition-transform duration-200"
+                >
+                  <h3 className="font-bold text-lg mb-2">{`${idx + 1}. ${
+                    rule.title
+                  }`}</h3>
+                  <ul className="list-disc list-inside space-y-1 text-gray-300">
+                    {rule.points.map((point, i) => (
+                      <li key={i}>{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No rules available.</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === "Leaderboard" && (
+          <div className="overflow-x-auto">
+            {leaderboard.length > 0 ? (
+              <table className="w-full table-auto text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-800">
+                    <th className="px-4 py-2 text-sm">Rank</th>
+                    <th className="px-4 py-2 text-sm">Player</th>
+                    <th className="px-4 py-2 text-sm">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((player, idx) => (
+                    <tr
+                      key={player.id || idx}
+                      className="border-b border-gray-700 hover:bg-gray-800 transition"
+                    >
+                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2">{player.name}</td>
+                      <td className="px-4 py-2">{player.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-gray-400">No leaderboard data available.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+const TournamentBanner = ({
+  bannerUrl,
+  title,
+  status,
+  matchStartDate,
+  preparationTime = 900,
+  battleDuration = 2700,
+}) => {
+  const startMs = useMemo(
+    () => (matchStartDate ? new Date(matchStartDate).getTime() : null),
+    [matchStartDate]
+  );
 
-const Rules = () => (
-  <div className="mt-6 bg-gray-700">
-    <h2 className="text-xl font-semibold">
-      📜 Clash of Clans Tournament Rules (Official)
-    </h2>
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
-    <ul className="text-gray-400 mt-4 space-y-6 list-disc pl-5">
-      {/* 1. Registration Requirements */}
-      <li>
-        <span className="font-semibold text-white">
-          1. Registration Requirements
-        </span>
-        <ul className="list-disc pl-5 mt-2 space-y-2">
-          <li>
-            All players must be registered on the platform before joining the
-            tournament.
-          </li>
-          <li>
-            Players must connect the required Clash of Clans (CoC) game account
-            to their profile.
-          </li>
-          <li>
-            Each player must have a valid and active Clash of Clans account.
-          </li>
-          <li>
-            Players must either join a valid clan or create a valid clan to
-            participate.
-          </li>
-          <li>
-            Only the registered account is allowed to play in the tournament
-            matches.
-          </li>
-        </ul>
-      </li>
+  let phaseMeta;
+  if (!startMs) {
+    phaseMeta = {
+      label: "Tournament not started yet",
+      timerLabel: "",
+      target: null,
+    };
+  } else {
+    const prepEnd = startMs + preparationTime * 1000;
+    const battleEnd = prepEnd + battleDuration * 1000;
 
-      {/* 2. Clan Requirements */}
-      <li>
-        <span className="font-semibold text-white">2. Clan Requirements</span>
-        <ul className="list-disc pl-5 mt-2 space-y-2">
-          <li>Clans must have Friendly War settings enabled.</li>
-          <li>War Log must be set to Public for transparency.</li>
-          <li>Only clans consisting of registered players are allowed.</li>
-          <li>
-            No outsiders or alternate accounts are allowed during tournament
-            matches.
-          </li>
-        </ul>
-      </li>
+    if (now < startMs) {
+      // Waiting for start
+      phaseMeta = {
+        label: "Upcoming",
+        timerLabel: "Starts in",
+        target: startMs,
+      };
+    } else if (now < prepEnd) {
+      // Preparation
+      phaseMeta = {
+        label: "Preparation",
+        timerLabel: "Prep ends in",
+        target: prepEnd,
+      };
+    } else if (now < battleEnd) {
+      // Battle
+      phaseMeta = {
+        label: "Battle Live",
+        timerLabel: "Ends in",
+        target: battleEnd,
+      };
+    } else {
+      // Completed
+      phaseMeta = { label: "Completed", timerLabel: "", target: null };
+    }
+  }
 
-      {/* 3. Tournament Start and Match Procedure */}
-      <li>
-        <span className="font-semibold text-white">
-          3. Tournament Start and Match Procedure
-        </span>
-        <ul className="list-disc pl-5 mt-2 space-y-2">
-          <li>
-            Once the tournament is full or started:
-            <ul className="list-disc pl-5 mt-1 space-y-1">
-              <li>
-                10 minutes to join the designated clan and send a Friendly
-                Battle request.
-              </li>
-              <li>5 minutes of preparation time after both teams are ready.</li>
-              <li>30 minutes battle time once the war is initiated.</li>
-            </ul>
-          </li>
-          <li>
-            Team A (first mentioned team) must send the Friendly War request.
-          </li>
-          <li>Team B must accept the Friendly War request promptly.</li>
-        </ul>
-      </li>
+  const msLeft = phaseMeta.target ? phaseMeta.target - now : 0;
 
-      {/* 4. Disqualification and Irregularities */}
-      <li>
-        <span className="font-semibold text-white">
-          4. Disqualification and Irregularities
-        </span>
-        <ul className="list-disc pl-5 mt-2 space-y-2">
-          <li>
-            Any irregularity (e.g., unregistered players, account mismatch, war
-            log hidden, refusal to start/accept battle) will lead to immediate
-            disqualification.
-          </li>
-          <li>
-            Deliberate delays or refusal to cooperate during match setup will
-            not be tolerated.
-          </li>
-        </ul>
-      </li>
+  const statusColor =
+    status === "completed"
+      ? "bg-emerald-500/90"
+      : status === "cancelled"
+      ? "bg-rose-600/90"
+      : status === "ongoing"
+      ? "bg-orange-500/90"
+      : status === "active"
+      ? "bg-yellow-500/90"
+      : status === "registration_open"
+      ? "bg-blue-600/90"
+      : "bg-gray-500/90";
 
-      {/* 5. Important Notes */}
-      <li>
-        <span className="font-semibold text-white">5. Important Notes</span>
-        <ul className="list-disc pl-5 mt-2 space-y-2">
-          <li>
-            Players are responsible for ensuring their account and clan setup is
-            complete before the match time.
-          </li>
-          <li>
-            Admins' decisions are final in any dispute or irregular situation.
-          </li>
-        </ul>
-      </li>
-    </ul>
-  </div>
-);
+  return (
+    <div className="relative w-full h-[280px] sm:h-[380px] md:h-[460px] lg:h-[540px] overflow-hidden rounded-xl shadow-xl">
+      {/* Background */}
+      <img
+        src={bannerUrl || "/pubg_background.jpg"}
+        alt={title}
+        className="w-full h-full object-cover brightness-90"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
+
+      {/* Center content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+        {/* Title */}
+        <h1 className="max-w-3xl text-white font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-tight drop-shadow-md">
+          {title || "Tournament"}
+        </h1>
+
+        {/* Phase Badge */}
+        {(status === "active" ||
+          status === "ongoing" ||
+          status === "registration_open" ||
+          status === "upcoming") && (
+          <span
+            className={`mt-2 inline-block px-4 py-1 rounded-full text-sm sm:text-base font-medium shadow-lg ${statusColor}`}
+          >
+            {phaseMeta.label}
+          </span>
+        )}
+
+        {/* Timer Box */}
+        {(status === "upcoming" ||
+          status === "registration_open" ||
+          status === "active" ||
+          status === "ongoing") && (
+          <div className="mt-4 sm:mt-6 bg-white/10 border border-white/20 text-white rounded-2xl shadow-lg backdrop-blur-md px-6 py-3 flex flex-col items-center">
+            <div className="flex items-center gap-2 justify-center text-xs sm:text-sm opacity-90">
+              <FaClock className="shrink-0" />
+              <span className="uppercase tracking-wider">
+                {phaseMeta.timerLabel}
+              </span>
+            </div>
+            <div className="mt-1 sm:mt-2 font-mono text-3xl sm:text-4xl md:text-5xl leading-none">
+              {formatHMS(msLeft)}
+            </div>
+            <div className="flex gap-3 mt-3">
+              <button className="flex items-center gap-1 bg-red-600 hover:bg-red-700 px-4 py-1 rounded-full font-semibold text-sm shadow-md transition">
+                <FaPlay /> Watch Live
+              </button>
+              <button className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-full font-semibold text-sm shadow-md transition">
+                <FaShareNodes /> Share
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+const rulesData = [
+  {
+    title: "Registration Requirements",
+    points: [
+      "All players must be registered on the platform before joining.",
+      "Players must connect the required game account.",
+      "Each player must have a valid and active account.",
+    ],
+  },
+  {
+    title: "Clan Requirements",
+    points: [
+      "Clans must have Friendly War settings enabled.",
+      "War Log must be set to Public for transparency.",
+    ],
+  },
+  {
+    title: "Tournament Start and Match Procedure",
+    points: [
+      "10 minutes to join the designated clan and send a Friendly Battle request.",
+      "5 minutes of preparation time after both teams are ready.",
+      "30 minutes battle time once the war is initiated.",
+    ],
+  },
+];
+
 export default TournamentDetails;

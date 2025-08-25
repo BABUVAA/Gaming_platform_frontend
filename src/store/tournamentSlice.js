@@ -106,6 +106,14 @@ const tournamentSlice = createSlice({
       const { tournamentId } = action.payload;
       delete state.tournaments[tournamentId];
     },
+
+    //update tournamentById
+    updateTournamentById(state, action) {
+      console.log(action.payload);
+      console.log("current", state.tournamentId);
+      state.tournamentId = action.payload;
+      console.log("updated", state.tournamentId);
+    },
   },
 
   extraReducers: (builder) => {
