@@ -68,6 +68,7 @@ const TournamentDetails = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         rules={rulesData}
+        leaderboard={tournamentId?.registeredPlayers}
       />
     </div>
   );
@@ -152,7 +153,7 @@ const TournamentTabs = ({
 
       {/* Tab Content */}
       <div className="p-6 text-gray-200 space-y-6">
-        {activeTab === "Overview" && (
+        {activeTab === "overview" && (
           <div className="space-y-4">
             {rules.length > 0 ? (
               rules.map((rule, idx) => (
@@ -176,32 +177,90 @@ const TournamentTabs = ({
           </div>
         )}
 
-        {activeTab === "Leaderboard" && (
-          <div className="overflow-x-auto">
-            {leaderboard.length > 0 ? (
-              <table className="w-full table-auto text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-800">
-                    <th className="px-4 py-2 text-sm">Rank</th>
-                    <th className="px-4 py-2 text-sm">Player</th>
-                    <th className="px-4 py-2 text-sm">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((player, idx) => (
-                    <tr
-                      key={player.id || idx}
-                      className="border-b border-gray-700 hover:bg-gray-800 transition"
-                    >
-                      <td className="px-4 py-2">{idx + 1}</td>
-                      <td className="px-4 py-2">{player.name}</td>
-                      <td className="px-4 py-2">{player.score}</td>
+        {activeTab === "leaderboard" && (
+          <div className="p-6 bg-white rounded-2xl shadow-lg">
+            <h3 className="text-2xl font-bold mb-6 text-gray-800">
+              🏆 Leaderboard
+            </h3>
+
+            {leaderboard && leaderboard.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-separate border-spacing-y-2">
+                  <thead>
+                    <tr className="text-gray-600 text-sm text-left">
+                      <th className="px-4 py-2">#</th>
+                      <th className="px-4 py-2">Player</th>
+                      <th className="px-4 py-2">Social</th>
+                      <th className="px-4 py-2 text-center">Score</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((player, index) => (
+                      <tr
+                        key={player.id || index}
+                        className="bg-gray-50 hover:bg-gray-100 transition rounded-lg shadow-sm"
+                      >
+                        {/* Rank */}
+                        <td className="px-4 py-3 text-center font-semibold text-gray-700">
+                          {index + 1}
+                        </td>
+
+                        {/* Player */}
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-800">
+                            {player?.profile.username || "Unknown"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {player.profile.games?.[0]?.accountId || "—"}
+                            {" - "}
+                            {player.profile.games?.[0]?.accountUsername}
+                          </div>
+                        </td>
+
+                        {/* Social */}
+                        <td className="px-4 py-3">
+                          <div className="flex gap-3">
+                            {player?.profile?.socialAccounts?.discord && (
+                              <a
+                                href={`https://discord.com/users/${player.profile.socialAccounts.discord}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FaDiscord className="w-5 h-5 text-indigo-600 hover:scale-110 transition" />
+                              </a>
+                            )}
+                            {player?.profile?.socialAccounts?.instagram && (
+                              <a
+                                href={`https://instagram.com/${player.profile.socialAccounts.instagram}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FaInstagram className="w-5 h-5 text-pink-500 hover:scale-110 transition" />
+                              </a>
+                            )}
+                            {player?.profile?.socialAccounts?.twitter && (
+                              <a
+                                href={`https://twitter.com/${player.profile.socialAccounts.twitter}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FaTwitter className="w-5 h-5 text-blue-400 hover:scale-110 transition" />
+                              </a>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Score */}
+                        <td className="px-4 py-3 text-center font-bold text-gray-700">
+                          {player.score ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <p className="text-gray-400">No leaderboard data available.</p>
+              <p className="text-gray-500 italic">No leaderboard data yet.</p>
             )}
           </div>
         )}
