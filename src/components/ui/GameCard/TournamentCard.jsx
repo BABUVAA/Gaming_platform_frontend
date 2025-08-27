@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import InviteModal from "../../feature/InviteModal";
 import { useSocket } from "../../../context/socketContext";
 import { useSelector } from "react-redux";
+import ClanVerify from "../../feature/ClanVerify";
 
 const TournamentCard = ({ tournament, disableFetch }) => {
   const {
@@ -19,10 +20,11 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     prizePool,
     status,
   } = tournament;
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { profile } = useSelector((store) => store.auth);
+  const { wallet } = useSelector((store) => store.payment);
   const { socket } = useSocket();
+  const [clanStatus, setClanStatus] = useState({ status: false, data: {} });
 
   const hasGame = profile?.profile?.games?.some(
     (gameObj) => gameObj.game.link === game
@@ -39,7 +41,9 @@ const TournamentCard = ({ tournament, disableFetch }) => {
 
   const handleJoinClick = (e) => {
     e.preventDefault();
-    if (mode !== "solo") {
+    if (wallet.realMoney < entryFee) {
+      alert("Charge your wallet first");
+    } else if (mode !== "solo") {
       setIsModalOpen(true);
     } else if (hasGame) {
       const payload = { tournamentId: _id };
@@ -110,9 +114,10 @@ const TournamentCard = ({ tournament, disableFetch }) => {
           )}
         </div>
       </div>
+      {isModalOpen && <ClanVerify isOpen={true} onClose={setIsModalOpen} />}
 
       {/* Modal */}
-      {isModalOpen && (
+      {clanStatus.data === true && (
         <InviteModal
           tournamentId={_id}
           maxParticipants={maxParticipants}

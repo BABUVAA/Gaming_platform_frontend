@@ -62,13 +62,6 @@ export const SocketProvider = ({ children }) => {
         // ✅ Update tournament in auth profile
         dispatch(authAction.addJoinedTournament(data.tournament));
       }
-      // dispatch(
-      //   showToast({
-      //     message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
-      //     type: types.SUCCESS,
-      //     position: "bottom-right",
-      //   })
-      // );
     });
     // Listen for Joined Tournament
     socketRef.current.on("JOINED_TOURNAMENT_UPDATE", (data) => {
@@ -85,13 +78,6 @@ export const SocketProvider = ({ children }) => {
           dispatch(tournamentAction.updateTournamentById(data.tournament));
         }
       }
-      // dispatch(
-      //   showToast({
-      //     message: data.message || "TOURNAMENT JOINED SUCCESSFULLY",
-      //     type: types.SUCCESS,
-      //     position: "bottom-right",
-      //   })
-      // );
     });
 
     // ✅ Listen for real-time notifications
