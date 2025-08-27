@@ -27,11 +27,9 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
       const res = await api.post("/api/games/checkClanStatus", { clanTag });
       const data = res.data;
 
-      // Map warState to readable status
       const warState = data?.warState || "unknown";
       setStatus(CLAN_STATES[warState] || "Unknown");
 
-      // Save all clan details including members and war log public
       setClanData({
         clanName: data.clanName,
         clanBadge: data.clanBadge,
@@ -49,8 +47,13 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
     }
   };
 
+  // Compute eligibility to proceed
+  const canProceed =
+    clanData?.isWarLogPublic &&
+    (clanData.warState === "notInWar" || clanData.warState === "warEnded");
+
   const handleNext = () => {
-    if (clanData?.isWarLogPublic) {
+    if (canProceed) {
       onValidationSuccess(clanData); // send full clanData including members
       onClose();
     }
@@ -64,7 +67,7 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
         <h2 className="text-lg font-bold mb-2">Clan Verification</h2>
         <p className="text-sm text-gray-600 mb-4">
           This step validates your clan before proceeding to the tournament.
-          Clan must have war log public to register.
+          Clan must have war log public and be not in war to register.
         </p>
 
         {/* Input + Validate */}
@@ -126,14 +129,23 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
           </div>
         )}
 
-        {/* Warning if war log not public */}
+        {/* Warnings */}
         {clanData && !clanData.isWarLogPublic && (
           <p className="text-red-600 text-sm mb-2">
             Clan war log is private. You cannot register for this tournament.
           </p>
         )}
+        {clanData &&
+          !canProceed &&
+          clanData.isWarLogPublic &&
+          clanData.warState !== "notInWar" &&
+          clanData.warState !== "warEnded" && (
+            <p className="text-red-600 text-sm mb-2">
+              Clan is currently in war. You cannot register for this tournament.
+            </p>
+          )}
 
-        {/* Next Button */}
+        {/* Buttons */}
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onClose}
@@ -143,7 +155,7 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
           </button>
           <button
             onClick={handleNext}
-            disabled={!clanData || !clanData.isWarLogPublic}
+            disabled={!canProceed}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm disabled:opacity-50"
           >
             Next
