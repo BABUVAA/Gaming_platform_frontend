@@ -11,7 +11,6 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     tournamentName,
     game,
     mode,
-    map,
     registeredPlayers,
     registeredTeams,
     maxParticipants,
@@ -20,11 +19,14 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     prizePool,
     status,
   } = tournament;
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [isClanVerifyOpen, setIsClanVerifyOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [clanStatus, setClanStatus] = useState(null);
+
   const { profile } = useSelector((store) => store.auth);
   const { wallet } = useSelector((store) => store.payment);
   const { socket } = useSocket();
-  const [clanStatus, setClanStatus] = useState({ status: false, data: {} });
 
   const hasGame = profile?.profile?.games?.some(
     (gameObj) => gameObj.game.link === game
@@ -41,16 +43,31 @@ const TournamentCard = ({ tournament, disableFetch }) => {
 
   const handleJoinClick = (e) => {
     e.preventDefault();
+
     if (wallet.realMoney < entryFee) {
       alert("Charge your wallet first");
-    } else if (mode !== "solo") {
-      setIsModalOpen(true);
-    } else if (hasGame) {
-      const payload = { tournamentId: _id };
-      socket.emit("join_tournament", payload);
-    } else {
-      alert("Please connect your game.");
+      return;
     }
+
+    if (!hasGame && mode === "solo") {
+      alert("Please connect your game.");
+      return;
+    }
+
+    // CoC specific flow
+    if (game.toLowerCase() === "coc") {
+      setIsClanVerifyOpen(true);
+    } else {
+      // For other games, directly open InviteModal
+      setIsInviteOpen(true);
+    }
+  };
+
+  // Callback from ClanVerify when validation succeeds
+  const handleClanValidationSuccess = (clanData) => {
+    setClanStatus(clanData); // Save clan status data
+    setIsClanVerifyOpen(false);
+    setIsInviteOpen(true); // Open invite modal next
   };
 
   return (
@@ -95,11 +112,11 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         </div>
 
         {/* Actions */}
-        <div className="mt-3 flex flex-row  gap-2 items-center justify-between">
+        <div className="mt-3 flex flex-row gap-2 items-center justify-between">
           {status === "registration_open" && (
             <button
               onClick={handleJoinClick}
-              className=" sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-xs font-medium transition-all"
+              className="sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-xs font-medium transition-all"
             >
               Join
             </button>
@@ -114,16 +131,25 @@ const TournamentCard = ({ tournament, disableFetch }) => {
           )}
         </div>
       </div>
-      {isModalOpen && <ClanVerify isOpen={true} onClose={setIsModalOpen} />}
 
-      {/* Modal */}
-      {clanStatus.data === true && (
+      {/* Clan Verification Modal for CoC */}
+      {isClanVerifyOpen && (
+        <ClanVerify
+          isOpen={isClanVerifyOpen}
+          onClose={() => setIsClanVerifyOpen(false)}
+          onValidationSuccess={handleClanValidationSuccess}
+        />
+      )}
+
+      {/* Invite Modal */}
+      {isInviteOpen && (
         <InviteModal
           tournamentId={_id}
           maxParticipants={maxParticipants}
           teamSize={teamSize}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isInviteOpen}
+          onClose={() => setIsInviteOpen(false)}
+          clanData={clanStatus} // pass clan status data
         />
       )}
     </>

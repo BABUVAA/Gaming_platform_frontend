@@ -1,9 +1,10 @@
 import { useState } from "react";
 import api from "../../api/axios-api";
 
-const ClanVerify = ({ isOpen, onClose }) => {
+const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
   const [clanTag, setClanTag] = useState("");
-  const [response, setResponse] = useState(null);
+  const [clanData, setClanData] = useState(null);
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleFetch = async () => {
@@ -12,15 +13,31 @@ const ClanVerify = ({ isOpen, onClose }) => {
       return;
     }
     setLoading(true);
-
     try {
-      // Send request to backend
-      const res = await api.post("/api/games/clanWar", { clanTag });
-      setResponse(res.data);
+      const res = await api.post("/api/games/checkClanStatus", { clanTag });
+      const { clanName, clanBadge, warState } = res.data;
+
+      setClanData({ clanName, clanBadge, warState });
+
+      // Determine eligibility
+      if (warState === "notInWar" || warState === "warEnded") {
+        setStatus({
+          label: "Eligible",
+          type: "success",
+        });
+        onValidationSuccess?.(clanTag);
+      } else {
+        setStatus({
+          label: "Not Eligible",
+          type: "error",
+        });
+      }
     } catch (err) {
-      setResponse({
-        error: err.response?.data?.message || "Failed to fetch clan data",
+      setStatus({
+        label: "Error",
+        type: "error",
       });
+      setClanData(null);
     } finally {
       setLoading(false);
     }
@@ -28,19 +45,27 @@ const ClanVerify = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const statusColors = {
+    success: "border-green-500 text-green-700 bg-green-50",
+    error: "border-red-500 text-red-700 bg-red-50",
+  };
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-2">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-5 relative">
-        {/* Header */}
-        <h2 className="text-lg font-bold mb-4">Verify Clan</h2>
+        <h2 className="text-lg font-bold mb-2">Clan Verification</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          This step checks if your clan is eligible to register for the
+          tournament.
+        </p>
 
-        {/* Input + Fetch */}
+        {/* Input + Validate */}
         <div className="flex gap-2 mb-3">
           <input
             type="text"
             value={clanTag}
             onChange={(e) => setClanTag(e.target.value)}
-            placeholder="Enter Clan ID"
+            placeholder="Enter Clan Tag"
             className="w-full p-2 border rounded text-gray-900 placeholder-gray-400 bg-white"
           />
           <button
@@ -48,16 +73,37 @@ const ClanVerify = ({ isOpen, onClose }) => {
             disabled={loading}
             className="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 disabled:opacity-50"
           >
-            {loading ? "Fetching..." : "Fetch"}
+            {loading ? "Checking..." : "Validate"}
           </button>
         </div>
 
-        {/* JSON Response */}
-        <textarea
-          readOnly
-          value={response ? JSON.stringify(response, null, 2) : ""}
-          className="w-full h-40 border border-gray-300 rounded p-2 text-xs font-mono resize-none overflow-auto"
-        />
+        {/* Clan Info */}
+        {clanData && (
+          <div className="flex items-center gap-3 mb-3 border rounded p-3">
+            <img
+              src={clanData.clanBadge}
+              alt="Clan Badge"
+              className="w-12 h-12 rounded"
+            />
+            <div>
+              <p className="font-bold  text-gray-700">{clanData.clanName}</p>
+              <p className="text-sm text-gray-700">
+                War State: {clanData.warState}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Eligibility Status */}
+        {status && (
+          <div
+            className={`border rounded p-3 text-sm ${
+              statusColors[status.type] || ""
+            }`}
+          >
+            <p className="font-bold">{status.label}</p>
+          </div>
+        )}
 
         {/* Close Button */}
         <div className="mt-4 flex justify-end">
