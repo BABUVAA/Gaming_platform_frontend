@@ -1,6 +1,19 @@
 import { useState } from "react";
 import api from "../../api/axios-api";
 
+const CLAN_STATES = {
+  clanNotFound: "Clan Not Found",
+  accessDenied: "Access Denied",
+  notInWar: "Not in War",
+  inMatchmaking: "In Matchmaking",
+  enterWar: "Entering War",
+  matched: "Matched",
+  preparation: "Preparation",
+  war: "War",
+  inWar: "In War",
+  warEnded: "War Ended",
+};
+
 const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
   const [clanTag, setClanTag] = useState("");
   const [clanData, setClanData] = useState(null);
@@ -8,55 +21,50 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
   const [loading, setLoading] = useState(false);
 
   const handleFetch = async () => {
-    if (!clanTag) {
-      alert("Enter a clan tag first");
-      return;
-    }
+    if (!clanTag) return alert("Enter a clan tag first");
     setLoading(true);
     try {
       const res = await api.post("/api/games/checkClanStatus", { clanTag });
-      const { clanName, clanBadge, warState } = res.data;
+      const data = res.data;
 
-      setClanData({ clanName, clanBadge, warState });
+      // Map warState to readable status
+      const warState = data?.warState || "unknown";
+      setStatus(CLAN_STATES[warState] || "Unknown");
 
-      // Determine eligibility
-      if (warState === "notInWar" || warState === "warEnded") {
-        setStatus({
-          label: "Eligible",
-          type: "success",
-        });
-        onValidationSuccess?.(clanTag);
-      } else {
-        setStatus({
-          label: "Not Eligible",
-          type: "error",
-        });
-      }
-    } catch (err) {
-      setStatus({
-        label: "Error",
-        type: "error",
+      // Save all clan details including members and war log public
+      setClanData({
+        clanName: data.clanName,
+        clanBadge: data.clanBadge,
+        warState: warState,
+        clanTag: data.clanTag,
+        clanLevel: data.clanLevel,
+        isWarLogPublic: data.isWarLogPublic,
+        members: data.members || [],
       });
+    } catch (err) {
+      setStatus("Error fetching clan data");
       setClanData(null);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
-  const statusColors = {
-    success: "border-green-500 text-green-700 bg-green-50",
-    error: "border-red-500 text-red-700 bg-red-50",
+  const handleNext = () => {
+    if (clanData?.isWarLogPublic) {
+      onValidationSuccess(clanData); // send full clanData including members
+      onClose();
+    }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 px-2">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-5 relative">
         <h2 className="text-lg font-bold mb-2">Clan Verification</h2>
         <p className="text-sm text-gray-600 mb-4">
-          This step checks if your clan is eligible to register for the
-          tournament.
+          This step validates your clan before proceeding to the tournament.
+          Clan must have war log public to register.
         </p>
 
         {/* Input + Validate */}
@@ -79,41 +87,73 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
 
         {/* Clan Info */}
         {clanData && (
-          <div className="flex items-center gap-3 mb-3 border rounded p-3">
-            <img
-              src={clanData.clanBadge}
-              alt="Clan Badge"
-              className="w-12 h-12 rounded"
-            />
-            <div>
-              <p className="font-bold  text-gray-700">{clanData.clanName}</p>
-              <p className="text-sm text-gray-700">
-                War State: {clanData.warState}
-              </p>
+          <div className="border p-3 rounded mb-3 flex flex-col gap-3 bg-gray-50">
+            <div className="flex items-center gap-3">
+              <img
+                src={clanData.clanBadge}
+                alt="Clan Badge"
+                className="w-12 h-12"
+              />
+              <div className="text-gray-800">
+                <p className="font-bold text-gray-900 text-sm">
+                  {clanData.clanName}
+                </p>
+                <p className="text-sm">
+                  Tag: <span className="font-medium">{clanData.clanTag}</span>
+                </p>
+                <p className="text-sm">
+                  Level:{" "}
+                  <span className="font-medium">{clanData.clanLevel}</span>
+                </p>
+                <p className="text-sm">
+                  War State:{" "}
+                  <span className="font-medium">{clanData.warState}</span>
+                </p>
+                <p className="text-sm">
+                  War Log Public:{" "}
+                  <span
+                    className={`font-medium ${
+                      clanData.isWarLogPublic
+                        ? "text-green-700"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {clanData.isWarLogPublic ? "Yes" : "No"}
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Eligibility Status */}
-        {status && (
-          <div
-            className={`border rounded p-3 text-sm ${
-              statusColors[status.type] || ""
-            }`}
-          >
-            <p className="font-bold">{status.label}</p>
-          </div>
+        {/* Warning if war log not public */}
+        {clanData && !clanData.isWarLogPublic && (
+          <p className="text-red-600 text-sm mb-2">
+            Clan war log is private. You cannot register for this tournament.
+          </p>
         )}
 
-        {/* Close Button */}
-        <div className="mt-4 flex justify-end">
+        {/* Next Button */}
+        <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm"
           >
             Close
           </button>
+          <button
+            onClick={handleNext}
+            disabled={!clanData || !clanData.isWarLogPublic}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
+
+        {/* Status if fetch fails */}
+        {status && !clanData && (
+          <p className="text-sm text-red-500 mt-2">{status}</p>
+        )}
       </div>
     </div>
   );

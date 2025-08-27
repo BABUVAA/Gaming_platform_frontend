@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useSocket } from "../../context/socketContext";
 
-const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
+const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
   const [activeTab, setActiveTab] = useState("clan");
 
   const [teamId, setTeamId] = useState("");
@@ -59,6 +59,7 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize }) => {
       tournamentId,
       members: selectedUsers,
       teamId,
+      clanData,
     };
 
     socket.emit("join_tournament", payload);

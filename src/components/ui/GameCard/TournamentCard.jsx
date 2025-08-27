@@ -20,8 +20,8 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     status,
   } = tournament;
 
-  const [isClanVerifyOpen, setIsClanVerifyOpen] = useState(false);
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // InviteModal
+  const [isClanVerifyOpen, setIsClanVerifyOpen] = useState(false); // ClanVerify
   const [clanStatus, setClanStatus] = useState(null);
 
   const { profile } = useSelector((store) => store.auth);
@@ -54,20 +54,21 @@ const TournamentCard = ({ tournament, disableFetch }) => {
       return;
     }
 
-    // CoC specific flow
+    // Show ClanVerify only for CoC
     if (game.toLowerCase() === "coc") {
       setIsClanVerifyOpen(true);
     } else {
-      // For other games, directly open InviteModal
-      setIsInviteOpen(true);
+      // Directly join for other games
+      const payload = { tournamentId: _id };
+      socket.emit("join_tournament", payload);
     }
   };
 
-  // Callback from ClanVerify when validation succeeds
+  // Callback after clan verification succeeds
   const handleClanValidationSuccess = (clanData) => {
-    setClanStatus(clanData); // Save clan status data
+    setClanStatus(clanData); // save clan info
     setIsClanVerifyOpen(false);
-    setIsInviteOpen(true); // Open invite modal next
+    setIsModalOpen(true); // show invite modal after clan validation
   };
 
   return (
@@ -132,7 +133,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         </div>
       </div>
 
-      {/* Clan Verification Modal for CoC */}
+      {/* Clan Verify Modal */}
       {isClanVerifyOpen && (
         <ClanVerify
           isOpen={isClanVerifyOpen}
@@ -142,14 +143,13 @@ const TournamentCard = ({ tournament, disableFetch }) => {
       )}
 
       {/* Invite Modal */}
-      {isInviteOpen && (
+      {isModalOpen && (
         <InviteModal
           tournamentId={_id}
-          maxParticipants={maxParticipants}
           teamSize={teamSize}
-          isOpen={isInviteOpen}
-          onClose={() => setIsInviteOpen(false)}
-          clanData={clanStatus} // pass clan status data
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          clanData={clanStatus} // pass clan info
         />
       )}
     </>
