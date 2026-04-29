@@ -13,6 +13,29 @@ import { authAction } from "../store/authSlice";
 import { notificationActions } from "../store/notificationSlice";
 import platformStore from "../store";
 
+const getMessageSignature = (message = {}, fallbackIndex = 0) =>
+  message?._id ||
+  [
+    message?.senderId || "unknown",
+    message?.receiverId || message?.clanId || message?.chatId || "thread",
+    message?.message || "",
+    String(message?.timestamp || message?.createdAt || ""),
+    fallbackIndex,
+  ].join("::");
+
+const appendUniqueMessage = (messageList = [], newMessage) => {
+  const existingSignatures = new Set(
+    messageList.map((entry, index) => getMessageSignature(entry, index))
+  );
+  const newSignature = getMessageSignature(newMessage, messageList.length);
+
+  if (existingSignatures.has(newSignature)) {
+    return messageList;
+  }
+
+  return [...messageList, newMessage];
+};
+
 // Create a Context for the Socket
 const SocketContext = createContext();
 
@@ -21,6 +44,7 @@ export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const dispatch = useDispatch();
   const [connected, setConnected] = useState(false);
+  const [lastError, setLastError] = useState("");
   const [messages, setMessages] = useState({}); // Store messages per chatId
 
   useEffect(() => {
@@ -31,10 +55,16 @@ export const SocketProvider = ({ children }) => {
 
     socketRef.current.on("connect", () => {
       setConnected(true);
+      setLastError("");
     });
 
     socketRef.current.on("disconnect", () => {
       setConnected(false);
+    });
+
+    socketRef.current.on("connect_error", (error) => {
+      setConnected(false);
+      setLastError(error?.message || "Unable to connect to live services.");
     });
 
     // Listen for messages from both clan and private chats
@@ -96,9 +126,10 @@ export const SocketProvider = ({ children }) => {
 
     // Listen for live ERROR updates
     socketRef.current.on("ERROR", (data) => {
+      const fallbackMessage = "A live update failed to process.";
       dispatch(
         showToast({
-          message: data.message || error,
+          message: data?.message || fallbackMessage,
           type: types.DANGER,
           position: "bottom-right",
         })
@@ -112,9 +143,37 @@ export const SocketProvider = ({ children }) => {
 
   // Function to handle messages and store them separately for each chat
   const handleNewMessage = (newMessage) => {
+    const currentUserId = platformStore.getState().auth?.profile?._id;
+    const chatId =
+      newMessage?.chatId ||
+      newMessage?.clanId ||
+      (newMessage?.receiverId && newMessage?.senderId && currentUserId
+        ? newMessage.senderId === currentUserId
+          ? newMessage.receiverId
+          : newMessage.senderId
+        : null) ||
+      newMessage?.receiverId ||
+      newMessage?.senderId;
+
+    if (!chatId) return;
+
+    if (
+      newMessage?.receiverId &&
+      newMessage?.senderId &&
+      currentUserId &&
+      newMessage.senderId !== currentUserId
+    ) {
+      dispatch(
+        authAction.upsertActiveChat({
+          userId: newMessage.senderId,
+          username: newMessage.senderName || "Player",
+        })
+      );
+    }
+
     setMessages((prev) => ({
       ...prev,
-      [newMessage.chatId]: [...(prev[newMessage.chatId] || []), newMessage],
+      [chatId]: appendUniqueMessage(prev[chatId] || [], newMessage),
     }));
   };
 
@@ -156,6 +215,7 @@ export const SocketProvider = ({ children }) => {
       value={{
         socket: socketRef.current,
         connected,
+        lastError,
         messages,
       }}
     >

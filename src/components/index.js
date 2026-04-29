@@ -1,5 +1,6 @@
 // Common Components
 export { default as AppProvider } from "./common/AppProvider.jsx";
+export { default as AuthShell } from "./common/AuthShell.jsx";
 
 // Layout Components
 
@@ -30,3 +31,4 @@ export { default as TournamentManagement } from "./adminComponents/tournamentMan
 export { default as UserManagement } from "./adminComponents/userMangaement/UserManagement.jsx";
 export { default as WalletManagement } from "./adminComponents/walletManagement/WalletManagement.jsx";
 export { default as RewardManagement } from "./adminComponents/RewardManagement.jsx";
+export { default as VerificationManagement } from "./adminComponents/VerificationManagement.jsx";

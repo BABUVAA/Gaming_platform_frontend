@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
-import GameSlider from "../components/ui/GameSlider/GameSlider";
 
 const TournamentPage = () => {
   const { tournaments = {} } = useSelector((state) => state.tournament);
@@ -11,13 +10,15 @@ const TournamentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  const filters = ["coc", "bgmi", "Clash Royale"];
+  const filters = ["coc", "bgmi", "solo", "5v5", "squad", "Featured"];
 
   const filteredTournaments = useMemo(() => {
     const tournamentList = Object.values(tournaments);
     if (!activeFilter || activeFilter === "All") return tournamentList;
-    if (activeFilter === "Featured")
-      return tournamentList.filter((t) => t.isFeatured);
+    if (activeFilter === "Featured") {
+      return tournamentList.filter((tournament) => tournament.isFeatured);
+    }
+
     return tournamentList.filter(
       (tournament) =>
         tournament.mode === activeFilter ||
@@ -33,217 +34,129 @@ const TournamentPage = () => {
     return filteredTournaments.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTournaments, currentPage]);
 
-  return (
-    <>
-      <HeroSection />
+  const myTournaments = profile?.profile?.tournaments || [];
 
-      <div id="tournament-section" className="min-h-screen bg-black text-white">
-        <div className="sticky top-0 z-30 bg-gray-900 border-b border-gray-800 shadow-sm">
-          <TabsSection
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            joinedTournaments={profile?.profile?.tournaments?.length}
-          />
-          {(activeTab === "tournaments" || activeTab === "my_tournaments") && (
-            <FilterSection
-              activeFilter={activeFilter}
-              setActiveFilter={setActiveFilter}
-              filters={filters}
-            />
-          )}
+  return (
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-amber-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
+        <p className="text-xs uppercase tracking-[0.3em] text-amber-300/80">
+          Tournament Control
+        </p>
+        <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
+          Browse live formats, join verified queues, and track your event load.
+        </h1>
+        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+          This area is now tuned for faster scanning: format filters, event
+          count, and a proper split between all tournaments and your active
+          commitments.
+        </p>
+      </section>
+
+      <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 pb-4">
+          {[
+            { key: "tournaments", label: "Tournament Feed" },
+            { key: "my_tournaments", label: `My Queue (${myTournaments.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setCurrentPage(1);
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition ${
+                activeTab === tab.key
+                  ? "bg-cyan-400/14 text-cyan-200"
+                  : "text-slate-500 hover:text-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="max-w-6xl mx-auto px-4 mt-6 space-y-10 pb-20">
-          {activeTab === "tournaments" && (
+        {activeTab === "tournaments" && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {["All", ...filters].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => {
+                  setActiveFilter(filter);
+                  setCurrentPage(1);
+                }}
+                className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+                  activeFilter === filter
+                    ? "border-cyan-400/30 bg-cyan-400/12 text-cyan-200"
+                    : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6">
+          {activeTab === "tournaments" ? (
             <>
-              <Tournament
-                tournaments={paginatedTournaments}
-                activeTab={activeTab}
-              />
+              <TournamentGrid tournaments={paginatedTournaments} activeTab={activeTab} />
               <Pagination
                 totalPages={totalPages}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
               />
             </>
-          )}
-          {activeTab === "my_tournaments" && (
-            <>
-              <Tournament tournaments={profile.profile.tournaments} />
-            </>
+          ) : (
+            <TournamentGrid tournaments={myTournaments} activeTab={activeTab} />
           )}
         </div>
-      </div>
-    </>
-  );
-};
-
-export default TournamentPage;
-
-const HeroSection = () => {
-  const games = useSelector((state) => state.games?.data || []);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    if (games.length > 0) {
-      const interval = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % games.length);
-      }, 3500);
-      return () => clearInterval(interval);
-    }
-  }, [games]);
-
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
-
-  return (
-    <section className="relative w-full min-h-screen bg-gradient-to-b from-indigo-900 via-black to-black text-white py-16 px-6 flex flex-col items-center text-center overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/90 pointer-events-none"></div>
-
-      <h1 className="z-10 text-5xl md:text-6xl font-extrabold max-w-4xl leading-tight">
-        Compete. Win. <span className="text-indigo-400">Conquer.</span>
-      </h1>
-
-      <p className="z-10 mt-5 text-lg md:text-xl max-w-2xl opacity-90">
-        Join the most competitive gaming tournaments and prove your skills
-        across your favorite games!
-      </p>
-
-      <div className="z-10 mt-8 flex flex-wrap gap-5 justify-center w-full max-w-md">
-        <button
-          onClick={() => scrollToSection("tournament-section")}
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700 transition rounded-lg py-3 font-semibold shadow-lg transform hover:scale-105"
-        >
-          Join Tournament
-        </button>
-        <button
-          onClick={() => scrollToSection("tournament-section")}
-          className="flex-1 bg-gray-800 hover:bg-gray-700 transition rounded-lg py-3 font-semibold shadow-lg transform hover:scale-105"
-        >
-          Quick Join
-        </button>
-      </div>
-
-      <div className="z-10 mt-12 w-full max-w-5xl">
-        <GameSlider currentIndex={currentIndex} />
-      </div>
-    </section>
-  );
-};
-
-const TabsSection = ({ activeTab, onTabChange, joinedTournaments }) => {
-  const tabs = ["tournaments", "my_tournaments", "teams", "Rules"];
-  const prevCountRef = useRef(joinedTournaments);
-  const [showNew, setShowNew] = useState(false);
-
-  useEffect(() => {
-    // Show NEW if tournament count increases and user is NOT on my_tournaments tab
-    if (
-      joinedTournaments > prevCountRef.current &&
-      activeTab !== "my_tournaments"
-    ) {
-      setShowNew(true);
-    }
-    prevCountRef.current = joinedTournaments;
-  }, [joinedTournaments, activeTab]);
-
-  useEffect(() => {
-    if (activeTab === "my_tournaments") {
-      setShowNew(false); // Hide NEW once user visits my_tournaments
-    }
-  }, [activeTab]);
-
-  return (
-    <div className="flex w-[100vw] md:w-full overflow-x-auto scrollbar-hide px-2">
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab;
-        const isMyTab = tab === "my_tournaments";
-        return (
-          <button
-            key={tab}
-            onClick={() => onTabChange(tab)}
-            className={`relative flex-1 text-sm sm:text-base px-3 py-3 font-semibold border-b-2 transition-colors duration-200 whitespace-nowrap ${
-              isActive
-                ? "border-red-500 text-white"
-                : "border-transparent text-gray-400 hover:text-white"
-            }`}
-          >
-            {tab.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-            {isMyTab && ` (${joinedTournaments})`}
-
-            {isMyTab && showNew && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                NEW
-              </span>
-            )}
-          </button>
-        );
-      })}
+      </section>
     </div>
   );
 };
 
-const FilterSection = ({ activeFilter, setActiveFilter, filters = [] }) => {
+const TournamentGrid = ({ tournaments, activeTab }) => {
+  if (!tournaments || tournaments.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+        No tournaments available for this view yet.
+      </div>
+    );
+  }
+
   return (
-    <div className="flex w-[100vw] md:w-full overflow-x-auto items-center gap-2 px-4 py-2 bg-gray-900 border-t border-gray-700">
-      {["All", "Featured", ...filters].map((filter) => {
-        const isActive = activeFilter === filter;
-        return (
-          <button
-            key={filter}
-            onClick={() => setActiveFilter(filter)}
-            className={`px-3 py-1 rounded-full text-sm font-medium border transition ${
-              isActive
-                ? "bg-red-600 border-red-500 text-white"
-                : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            {filter}
-          </button>
-        );
-      })}
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      {tournaments.map((tournament) => (
+        <TournamentCard
+          key={tournament._id}
+          tournament={tournament}
+          disableFetch={activeTab === "tournaments"}
+        />
+      ))}
     </div>
   );
 };
-
-const Tournament = ({ tournaments, activeTab }) => (
-  <section>
-    {tournaments.length === 0 ? (
-      <p className="text-gray-400 text-center">No tournaments available</p>
-    ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tournaments.map((tournament) => (
-          <TournamentCard
-            key={tournament._id}
-            tournament={tournament}
-            disableFetch={activeTab === "tournaments"}
-          />
-        ))}
-      </div>
-    )}
-  </section>
-);
 
 const Pagination = ({ totalPages, currentPage, setCurrentPage }) => {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex justify-center mt-6 gap-2">
-      {Array.from({ length: totalPages }, (_, idx) => (
+    <div className="mt-6 flex justify-center gap-2">
+      {Array.from({ length: totalPages }, (_, index) => (
         <button
-          key={idx}
-          onClick={() => setCurrentPage(idx + 1)}
-          className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors duration-150 ${
-            currentPage === idx + 1
-              ? "bg-red-600 text-white"
-              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          key={index}
+          onClick={() => setCurrentPage(index + 1)}
+          className={`h-10 w-10 rounded-full text-sm font-semibold transition ${
+            currentPage === index + 1
+              ? "bg-cyan-300 text-slate-950"
+              : "bg-slate-900 text-slate-300 hover:bg-slate-800"
           }`}
         >
-          {idx + 1}
+          {index + 1}
         </button>
       ))}
     </div>
   );
 };
+
+export default TournamentPage;

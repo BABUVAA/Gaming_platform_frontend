@@ -1,227 +1,113 @@
-import { GoTrophy } from "react-icons/go";
-import { Button, Footer, GameCard } from "../components";
 import { useSelector } from "react-redux";
+import { FaArrowRight, FaBolt, FaShieldAlt, FaTrophy } from "react-icons/fa";
+import { Footer, GameCard } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
-import { useEffect, useState } from "react";
 
 const Home = () => {
-  return (
-    <div className="bg-gray-900 text-white min-h-screen">
-      <IntroSection />
-      <AvailableGameSection />
-      <ContentSection />
-      <ContentSectionTwo />
-      <ContentSectionThree />
-      <Footer />
-    </div>
-  );
-};
-
-const IntroSection = () => {
-  const { goToSignUp } = useNavigateHook();
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-
-  // Load the video when the component is in the viewport
-  useEffect(() => {
-    const handleScroll = () => {
-      const section = document.getElementById("intro-section");
-      if (section && section.getBoundingClientRect().top < window.innerHeight) {
-        setIsVideoLoaded(true);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    handleScroll(); // Trigger check on mount
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
+  const { goToSignUp, goToLogin } = useNavigateHook();
+  const games = useSelector((store) => store.games?.data);
+  const availableGames = games || [];
 
   return (
-    <section
-      id="intro-section"
-      className="relative flex flex-wrap items-center justify-between h-[80vh] px-6 bg-black text-white"
-    >
-      {/* Background Video */}
-      {isVideoLoaded && (
-        <></>
-        // <video
-        //   src="Battlefield.mp4"
-        //   muted
-        //   autoPlay
-        //   preload="none"
-        //   loop
-        //   className="absolute inset-0 w-full h-full object-cover opacity-70"
-        //   typeof="video/mp4"
-        // />
-      )}
+    <div className="min-h-screen bg-[#020611] text-slate-100">
+      <section className="relative overflow-hidden border-b border-slate-800">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.14),_transparent_24%),linear-gradient(135deg,_#050b14,_#020611_55%,_#0f172a)]" />
+        <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl gap-10 px-4 py-14 md:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
+            <p className="text-xs uppercase tracking-[0.34em] text-cyan-300/80">
+              Real-Time Esports Platform
+            </p>
+            <h1 className="mt-4 max-w-4xl text-5xl font-black tracking-tight text-white md:text-7xl">
+              Tournaments, clans, wallets, and match control built for live
+              competition.
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
+              Enter quick 5v5 CoC battles, queue for custom BGMI formats, link
+              your verified game identities, and move into operator-managed
+              match flow without leaving the platform.
+            </p>
 
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-between w-full max-w-7xl mx-auto gap-8 pt-10 pb-1">
-        {/* Text Section */}
-        <div className="flex flex-col items-center text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-snug">
-            COMPETE ON{" "}
-            <span className="inline-block bg-blue-600 text-white px-4 py-2 mt-2 rounded-sm shadow-md">
-              E-GAMING
-            </span>
-          </h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-4 max-w-md">
-            Play the games you love. Compete in tournaments. Win real money and
-            prizes.
-          </p>
-        </div>
-      </div>
-      <div className="flex z-10 justify-center flex-wrap w-full md:justify-end">
-        <Button
-          onClick={goToSignUp}
-          size="xxl"
-          variant="primary"
-          startIcon={<GoTrophy size={50} />}
-          ariaLabel="Register"
-          className="shadow-md flex items-center gap-4 md:absolute md:-bottom-8"
-        >
-          <div className="flex flex-col items-start whitespace-nowrap leading-none">
-            <small className="text-gray-200 text-sm">Start Playing!</small>
-            <span className="text-lg font-semibold">Create Account Now</span>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={goToSignUp}
+                className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+              >
+                Start Competing
+                <FaArrowRight />
+              </button>
+              <button
+                onClick={goToLogin}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-950/40 px-5 py-3 text-sm font-bold text-slate-100 transition hover:border-slate-500"
+              >
+                Open Platform
+              </button>
+            </div>
+
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              <MetricCard icon={<FaTrophy />} label="Tournament Engine" value="Daily and custom formats" />
+              <MetricCard icon={<FaShieldAlt />} label="Account Trust" value="CoC instant, BGMI review" />
+              <MetricCard icon={<FaBolt />} label="Match Operations" value="Operator-assisted flow" />
+            </div>
           </div>
-        </Button>
-      </div>
-    </section>
-  );
-};
-const AvailableGameSection = () => {
-  const games = useSelector((store) => store.games);
-  return (
-    <section className="flex bg-slate-100 text-left lg:justify-center">
-      <div className="flex flex-col w-full lg:max-w-screen-lg py-4 md:p-8  p-4">
-        <h2 className="text-xl font-bold text-black mb-4">Available Games</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-2  lg:grid-cols-3 gap-4">
-          {games?.data?.length > 0 &&
-            games.data.map((game) => (
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {availableGames.slice(0, 4).map((game) => (
               <GameCard
                 key={game._id}
                 character={game.character}
                 title={game.title}
                 link={`/dashboard/tournament/${game.link}`}
                 background={game.background}
-                background_color={game.background_color}
                 div_color={game.div_color}
                 type="games"
               />
             ))}
-          <GameCard type="coming_soon" />
+            {availableGames.length === 0 && (
+              <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-950/50 p-8 text-sm text-slate-400">
+                Game discovery loads here once the backend feed is available.
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
+        <div className="grid gap-6 lg:grid-cols-3">
+          <FeatureBand
+            title="Verified identity before queue entry"
+            copy="Clash of Clans accounts can be linked through token verification, while BGMI accounts move through an operator review lane."
+          />
+          <FeatureBand
+            title="Clan-driven competition"
+            copy="Create lineups, coordinate social and competitive groups, and grow into larger tournament formats with a proper roster flow."
+          />
+          <FeatureBand
+            title="Wallet and settlement controls"
+            copy="Support deposits, entry fees, prizes, and later match-linked settlement states inside one competitive economy."
+          />
+        </div>
+      </section>
+
+      <Footer />
+    </div>
   );
 };
 
-const ContentSection = () => {
-  const { goToSignUp } = useNavigateHook();
+const MetricCard = ({ icon, label, value }) => (
+  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur">
+    <div className="flex items-center gap-2 text-cyan-300">
+      {icon}
+      <span className="text-xs uppercase tracking-[0.22em]">{label}</span>
+    </div>
+    <p className="mt-3 text-lg font-bold text-white">{value}</p>
+  </div>
+);
 
-  return (
-    <section className="p-16 bg-gray-700 flex flex-col items-center text-center">
-      {/* Image Section */}
-      <img
-        src="ETournament.png"
-        alt="EGaming Tournament"
-        className="w-full max-w-[50vw] object-cover mb-8 rounded-lg shadow-lg"
-      />
-
-      {/* Text Content */}
-      <div className="max-w-xl text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4 text-yellow-400">
-          Play Unlimited Tournaments
-        </h2>
-        <p className="mb-6 text-gray-300">
-          On <span className="text-yellow-400">E-Gaming</span>, you can join an
-          unlimited amount of tournaments at the same time across all our games.{" "}
-          <span className="text-yellow-400">E-Gaming</span> will automatically
-          track and score your relevant matches for every tournament you've
-          joined.
-        </p>
-
-        {/* Button */}
-        <button
-          onClick={goToSignUp}
-          className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-3 rounded-full shadow-md transition-transform duration-300 ease-in-out hover:scale-105"
-        >
-          Join Now!
-        </button>
-      </div>
-    </section>
-  );
-};
-
-const ContentSectionTwo = () => {
-  const { goToSignUp } = useNavigateHook();
-
-  return (
-    <section className="p-16  bg-gray-800 flex flex-col items-center text-center md:flex-row md:text-left md:items-center md:justify-around gap-8">
-      {/* Text Content */}
-      <div className="max-w-xl">
-        <h3 className="text-2xl md:text-3xl font-bold mb-4 text-yellow-400">
-          Climb to the Top of the Leaderboard
-        </h3>
-        <p className="mb-6 text-gray-300">
-          Your position on the leaderboard is based on your best qualified
-          matches, so keep grinding for higher placement. You'll never go
-          backwards after having a bad match. Your tournament score can only
-          ever get better or stay the same.
-        </p>
-
-        {/* Button */}
-        <button
-          onClick={goToSignUp}
-          className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-3 rounded-full shadow-md transition-transform duration-300 ease-in-out hover:scale-105"
-        >
-          Join Now!
-        </button>
-      </div>
-      {/* Image Section */}
-      <img
-        src="static-leaderboard.jpg"
-        alt="Leaderboard"
-        className="w-full max-w-[50vw] md:max-w-[25%] ml-4 md:mr-4 rounded-lg shadow-lg"
-      />
-    </section>
-  );
-};
-
-const ContentSectionThree = () => {
-  const { goToSignUp } = useNavigateHook();
-
-  return (
-    <section className="p-16 bg-gray-700 flex flex-col items-center text-center md:flex-row md:items-center md:text-left md:justify-around gap-8">
-      {/* Image Section */}
-      <img
-        src="Game-character.png"
-        alt="Game Character"
-        className="w-full max-w-[40vw] md:max-w-[25%] rounded-lg shadow-lg"
-      />
-
-      {/* Text Content */}
-      <div className="max-w-xl">
-        <h3 className="text-2xl md:text-3xl font-bold mb-4 text-yellow-400">
-          Stop Scrolling, Start Playing
-        </h3>
-        <p className="mb-6 text-gray-300">
-          Create your account now and start earning rewards. Don't wait—join the
-          action today!
-        </p>
-
-        {/* Button */}
-        <button
-          onClick={goToSignUp}
-          className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-3 rounded-full shadow-md transition-transform duration-300 ease-in-out hover:scale-105"
-        >
-          Join Now!
-        </button>
-      </div>
-    </section>
-  );
-};
+const FeatureBand = ({ title, copy }) => (
+  <div className="rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+    <h2 className="text-2xl font-black text-white">{title}</h2>
+    <p className="mt-4 text-sm leading-7 text-slate-300">{copy}</p>
+  </div>
+);
 
 export default Home;

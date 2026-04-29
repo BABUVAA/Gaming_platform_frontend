@@ -16,23 +16,27 @@ const toastSlice = createSlice({
 
   initialState: {
     visible: false,
-    toasts: [], // Store multiple toasts as an array
+    toasts: [],
   },
   reducers: {
     showToast: (state, action) => {
       state.visible = true;
       const newToast = {
-        id: Date.now(), // Unique identifier
-        message: action.payload.message || "message",
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: action.payload.title || "",
+        message: action.payload.message || "Something went wrong.",
         type: action.payload.type || types.SUCCESS,
         position: action.payload.position || "top-right",
+        duration: action.payload.duration || 5000,
+        createdAt: Date.now(),
       };
-      state.toasts.push(newToast); // Add new toast
+      state.toasts.push(newToast);
     },
     hideToast: (state, action) => {
       state.toasts = state.toasts.filter(
         (toast) => toast.id !== action.payload
       );
+      state.visible = state.toasts.length > 0;
     },
   },
 });

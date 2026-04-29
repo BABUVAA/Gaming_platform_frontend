@@ -20,25 +20,27 @@ const Input = ({
   ...props
 }) => {
   const inputBaseClasses =
-    "w-full px-4 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400";
-  const inputErrorClasses = error ? "border-red-500" : "border-gray-300";
+    "w-full rounded-2xl border px-4 py-3 text-sm outline-none transition";
+  const inputErrorClasses = error
+    ? "border-rose-500 focus:border-rose-400"
+    : "border-slate-800 focus:border-cyan-400";
   const inputDisabledClasses = disabled
-    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-    : "bg-white text-gray-900";
+    ? "cursor-not-allowed bg-slate-900/70 text-slate-500"
+    : "bg-slate-950/90 text-slate-100";
 
   return (
     <div className="mb-4">
       {label && (
         <label
           htmlFor={id}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="mb-2 block text-sm font-semibold text-slate-300"
         >
           {label}
         </label>
       )}
       <div className="relative">
         {iconStart && (
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500">
             {iconStart}
           </span>
         )}
@@ -55,18 +57,18 @@ const Input = ({
           disabled={disabled}
           aria-label={ariaLabel || placeholder}
           className={`${inputBaseClasses} ${inputErrorClasses} ${inputDisabledClasses} ${
-            iconStart ? "pl-10" : ""
-          } ${iconEnd ? "pr-10" : ""} ${className}`}
+            iconStart ? "pl-11" : ""
+          } ${iconEnd ? "pr-11" : ""} ${className}`}
           {...props}
         />
 
         {iconEnd && (
-          <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+          <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500">
             {iconEnd}
           </span>
         )}
       </div>
-      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+      {error && <p className="mt-2 text-sm text-rose-300">{error}</p>}
     </div>
   );
 };

@@ -1,101 +1,114 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { findTransactions } from "../../../store/adminSlice";
 import Fuse from "fuse.js";
+import { findTransactions } from "../../../store/adminSlice";
 
 const STATUS_COLORS = {
-  completed: "text-green-600 bg-green-100",
-  pending: "text-yellow-600 bg-yellow-100",
-  failed: "text-red-600 bg-red-100",
+  completed: "bg-emerald-500/15 text-emerald-300",
+  pending: "bg-amber-500/15 text-amber-200",
+  failed: "bg-rose-500/15 text-rose-200",
 };
+
+const getToday = () => new Date().toISOString().split("T")[0];
 
 const TransactionList = ({ transactions }) => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const fuse = useMemo(() => {
-    return new Fuse(transactions, {
-      keys: [
-        "_id",
-        "meta.merchantTransactionId",
-        "userId.email",
-        "userId.profile.username",
-        "reason",
-      ],
-      threshold: 0.4,
-    });
-  }, [transactions]);
+  const fuse = useMemo(
+    () =>
+      new Fuse(transactions, {
+        keys: [
+          "_id",
+          "meta.merchantTransactionId",
+          "userId.email",
+          "userId.profile.username",
+          "reason",
+        ],
+        threshold: 0.4,
+      }),
+    [transactions]
+  );
 
   const filteredTransactions = useMemo(() => {
-    if (!search) return transactions;
-    return fuse.search(search).map((res) => res.item);
-  }, [search, fuse]);
+    if (!search.trim()) return transactions;
+    return fuse.search(search).map((result) => result.item);
+  }, [fuse, search, transactions]);
 
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTransactions.length / itemsPerPage)
+  );
   const paginated = filteredTransactions
     .slice()
     .reverse()
     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
+    <div className="rounded-[24px] border border-slate-800 bg-[#020617] p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-xl font-bold">Transaction History</h3>
-          <p className="text-sm text-gray-600">
-            List of all wallet transactions by users.
+          <h3 className="text-xl font-black text-white">Transaction History</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Review wallet movement by merchant ID, user, or reason.
           </p>
         </div>
         <input
           type="text"
-          placeholder="Search by Txn ID, Email, Reason..."
-          className="border p-2 rounded w-80 text-sm"
+          placeholder="Search by Txn ID, email, reason..."
+          className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 lg:max-w-sm"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+          onChange={(event) => {
+            setSearch(event.target.value);
             setCurrentPage(1);
           }}
         />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full border text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 text-left">Txn ID</th>
-              <th className="p-2 text-left">PhonePe Txn ID</th>
-              <th className="p-2 text-left">Email</th>
-              <th className="p-2 text-left">Username</th>
-              <th className="p-2 text-left">Amount</th>
-              <th className="p-2 text-left">Direction</th>
-              <th className="p-2 text-left">Status</th>
-              <th className="p-2 text-left">Date</th>
+      <div className="mt-5 overflow-x-auto rounded-[20px] border border-slate-800">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-950 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
+            <tr>
+              <th className="p-3">Txn ID</th>
+              <th className="p-3">PhonePe Txn ID</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Username</th>
+              <th className="p-3">Amount</th>
+              <th className="p-3">Direction</th>
+              <th className="p-3">Status</th>
+              <th className="p-3">Date</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-800">
             {paginated.map((txn) => (
-              <tr key={txn._id} className="border-t">
-                <td className="p-2">{txn.meta?.merchantTransactionId}</td>
-                <td className="p-2 text-xs">
+              <tr key={txn._id} className="bg-[#020617]">
+                <td className="p-3 text-slate-200">
+                  {txn.meta?.merchantTransactionId || "-"}
+                </td>
+                <td className="p-3 text-xs text-slate-400">
                   {txn.meta?.phonePeOrderId || "-"}
                 </td>
-                <td className="p-2">{txn.userId?.email || "N/A"}</td>
-                <td className="p-2">{txn.userId?.profile?.username}</td>
-                <td className="p-2 text-green-600 font-semibold">
-                  ₹{txn.amount}
+                <td className="p-3 text-slate-300">{txn.userId?.email || "N/A"}</td>
+                <td className="p-3 text-slate-100">
+                  {txn.userId?.profile?.username || "Unknown"}
                 </td>
-                <td className="p-2 capitalize">{txn.direction}</td>
-                <td className="p-2">
+                <td className="p-3 font-semibold text-emerald-300">
+                  Rs {txn.amount}
+                </td>
+                <td className="p-3 capitalize text-slate-300">
+                  {txn.direction}
+                </td>
+                <td className="p-3">
                   <span
-                    className={`px-2 py-1 rounded text-xs font-semibold ${
-                      STATUS_COLORS[txn.status] || "bg-gray-200 text-gray-700"
+                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${
+                      STATUS_COLORS[txn.status] || "bg-slate-800 text-slate-300"
                     }`}
                   >
                     {txn.status}
                   </span>
                 </td>
-                <td className="p-2">
+                <td className="p-3 text-slate-400">
                   {new Date(txn.transactionDate).toLocaleString()}
                 </td>
               </tr>
@@ -104,24 +117,25 @@ const TransactionList = ({ transactions }) => {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <p className="text-xs text-gray-500">
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
           Showing {paginated.length} of {filteredTransactions.length} entries
         </p>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="rounded-xl border border-slate-800 px-3 py-2 text-sm text-slate-300 disabled:opacity-50"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
+            onClick={() => setCurrentPage((page) => page - 1)}
           >
             Prev
           </button>
-          <span className="px-2">{currentPage}</span>
+          <span className="px-2 text-sm text-slate-300">
+            {currentPage} / {totalPages}
+          </span>
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="rounded-xl border border-slate-800 px-3 py-2 text-sm text-slate-300 disabled:opacity-50"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
+            onClick={() => setCurrentPage((page) => page + 1)}
           >
             Next
           </button>
@@ -133,84 +147,100 @@ const TransactionList = ({ transactions }) => {
 
 const FundOperations = () => {
   return (
-    <div>
-      <h3 className="text-xl font-bold mb-4">Add/Deduct Funds</h3>
-      <p className="text-sm text-gray-600">
-        Perform wallet operations like adding or deducting funds.
+    <div className="rounded-[24px] border border-slate-800 bg-[#020617] p-5">
+      <h3 className="text-xl font-black text-white">Fund Operations</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        Manual ledger adjustments and operator-assisted wallet actions can land
+        here once the admin mutation endpoints are ready.
       </p>
+      <div className="mt-5 rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
+        This section is staged for backend fund-control integration.
+      </div>
     </div>
   );
 };
 
 const WalletManagement = () => {
   const [activeTab, setActiveTab] = useState("transactions");
-
-  const getToday = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0]; // yyyy-mm-dd
-  };
-
   const [startDate, setStartDate] = useState(getToday());
   const [endDate, setEndDate] = useState(getToday());
 
   const dispatch = useDispatch();
-  const { transactions } = useSelector((store) => store.admin);
+  const { transactions = [], isLoading } = useSelector((store) => store.admin);
 
   useEffect(() => {
     const isValidRange = startDate <= endDate && endDate <= getToday();
     if (startDate && endDate && isValidRange) {
       dispatch(findTransactions({ startDate, endDate }));
     }
-  }, [dispatch, startDate, endDate]);
+  }, [dispatch, endDate, startDate]);
 
   return (
-    <div className="bg-white p-6 rounded shadow-md">
-      <h2 className="text-2xl font-semibold mb-4">Wallets & Transactions</h2>
+    <div className="rounded-[28px] border border-slate-800 bg-slate-950/90 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/75">
+            Finance
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-white">
+            Wallets & Transactions
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Review deposit and withdrawal traffic through a darker operator ledger.
+          </p>
+        </div>
 
-      <div className="flex gap-4 border-b mb-4">
-        {["transactions", "funds"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-2 border-b-2 text-sm font-medium transition ${
-              activeTab === tab
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-blue-600"
-            }`}
-          >
-            {tab === "transactions" ? "Transactions" : "Fund Operations"}
-          </button>
-        ))}
+        <div className="flex gap-2">
+          {["transactions", "funds"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeTab === tab
+                  ? "bg-cyan-300 text-slate-950"
+                  : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {tab === "transactions" ? "Transactions" : "Fund Operations"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {activeTab === "transactions" && (
+      {activeTab === "transactions" ? (
         <>
-          <div className="flex flex-wrap gap-4 mb-4 items-center">
-            <div className="text-sm font-medium text-gray-700">
-              Filter by Date:
-            </div>
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <div className="text-sm font-medium text-slate-300">Filter by date:</div>
             <input
               type="date"
               value={startDate}
               max={getToday()}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border p-2 rounded text-sm"
+              onChange={(event) => setStartDate(event.target.value)}
+              className="rounded-2xl border border-slate-800 bg-[#020617] p-3 text-sm text-slate-100"
             />
-            <span>to</span>
+            <span className="text-slate-500">to</span>
             <input
               type="date"
               value={endDate}
               max={getToday()}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border p-2 rounded text-sm"
+              onChange={(event) => setEndDate(event.target.value)}
+              className="rounded-2xl border border-slate-800 bg-[#020617] p-3 text-sm text-slate-100"
             />
           </div>
 
-          <TransactionList transactions={transactions} />
+          <div className="mt-6">
+            {isLoading && transactions.length === 0 ? (
+              <div className="rounded-[24px] border border-slate-800 bg-[#020617] p-5 text-sm text-slate-400">
+                Loading transactions...
+              </div>
+            ) : (
+              <TransactionList transactions={transactions} />
+            )}
+          </div>
         </>
-      )}
+      ) : null}
 
-      {activeTab === "funds" && <FundOperations />}
+      {activeTab === "funds" ? <div className="mt-6"><FundOperations /></div> : null}
     </div>
   );
 };

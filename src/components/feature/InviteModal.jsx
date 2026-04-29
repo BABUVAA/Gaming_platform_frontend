@@ -11,15 +11,12 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
   const { user } = useSelector((store) => store.auth);
   const [selectedUsers, setSelectedUsers] = useState([user.userId]);
 
-  const clanMembers = useSelector(
-    (store) => store.clan.userClanData?.data?.members || []
-  );
-  const friends = useSelector(
-    (store) => store.auth.profile?.profile?.friends || []
-  );
-  const teams = useSelector(
-    (store) => store.auth.profile?.profile?.teams || []
-  );
+  const clanMembers = useSelector((store) => store.clan.userClanData?.data?.members);
+  const friends = useSelector((store) => store.auth.profile?.profile?.friends);
+  const teams = useSelector((store) => store.auth.profile?.profile?.teams);
+  const availableClanMembers = clanMembers || [];
+  const availableFriends = friends || [];
+  const availableTeams = teams || [];
 
   if (!isOpen) return null;
 
@@ -32,7 +29,7 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
     if (activeTab === "teams") return;
 
     // Clear team selection if switching to clan/friends
-    const isTeamSelected = teams.some((team) => team._id === teamId);
+    const isTeamSelected = availableTeams.some((team) => team._id === teamId);
     if (isTeamSelected) {
       setSelectedUsers([]);
       setTeamId("");
@@ -72,7 +69,6 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
         <p className="text-sm text-gray-500">No {type} found.</p>
       ) : (
         list.map((item) => {
-          console.log(item);
           const id = item.user || item._id || item.id;
           const name =
             item.clanMemberName ||
@@ -101,10 +97,10 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
 
   const renderTeam = () => (
     <ul className="space-y-2">
-      {teams.length === 0 ? (
+      {availableTeams.length === 0 ? (
         <p className="text-sm text-gray-500">No teams found.</p>
       ) : (
-        teams.map((team) => {
+        availableTeams.map((team) => {
           const id = team._id;
           const name = team.teamName;
           const playerIds = team.players.map((p) => p._id);
@@ -180,11 +176,11 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
         </div>
         {/* Content */}
         <div className="h-48 overflow-y-auto">
-          {activeTab === "clan" && renderList(clanMembers, "clan members")}
-          {activeTab === "friends" && renderList(friends, "friends")}
+          {activeTab === "clan" && renderList(availableClanMembers, "clan members")}
+          {activeTab === "friends" && renderList(availableFriends, "friends")}
           {activeTab === "teams" && renderTeam()}
         </div>
-        1{/* Selected Count */}
+        {/* Selected Count */}
         <div className="text-sm text-gray-500 mt-3">
           Selected: {selectedUsers.length}
         </div>

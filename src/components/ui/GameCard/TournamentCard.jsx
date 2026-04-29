@@ -20,8 +20,8 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     status,
   } = tournament;
 
-  const [isModalOpen, setIsModalOpen] = useState(false); // InviteModal
-  const [isClanVerifyOpen, setIsClanVerifyOpen] = useState(false); // ClanVerify
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isClanVerifyOpen, setIsClanVerifyOpen] = useState(false);
   const [clanStatus, setClanStatus] = useState(null);
 
   const { profile } = useSelector((store) => store.auth);
@@ -38,11 +38,11 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         ? (registeredPlayers.length / maxParticipants) * 100
         : 0
       : registeredTeams
-      ? (registeredPlayers.length / (maxParticipants * teamSize)) * 100
-      : 0;
+        ? (registeredPlayers.length / (maxParticipants * teamSize)) * 100
+        : 0;
 
-  const handleJoinClick = (e) => {
-    e.preventDefault();
+  const handleJoinClick = (event) => {
+    event.preventDefault();
 
     if (wallet.realMoney < entryFee) {
       alert("Charge your wallet first");
@@ -54,86 +54,83 @@ const TournamentCard = ({ tournament, disableFetch }) => {
       return;
     }
 
-    // Show ClanVerify only for CoC
     if (game.toLowerCase() === "coc") {
       setIsClanVerifyOpen(true);
     } else {
-      // Directly join for other games
       const payload = { tournamentId: _id };
       socket.emit("join_tournament", payload);
     }
   };
 
-  // Callback after clan verification succeeds
   const handleClanValidationSuccess = (clanData) => {
-    setClanStatus(clanData); // save clan info
+    setClanStatus(clanData);
     setIsClanVerifyOpen(false);
-    setIsModalOpen(true); // show invite modal after clan validation
+    setIsModalOpen(true);
   };
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-md p-3 w-full transition-all hover:shadow-lg hover:-translate-y-0.5 duration-300">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-3">
+      <div className="group rounded-3xl border border-slate-800 bg-[linear-gradient(180deg,_rgba(15,23,42,0.9),_rgba(2,6,23,0.98))] p-4 shadow-[0_18px_50px_rgba(2,8,23,0.45)] transition hover:-translate-y-1 hover:border-slate-700">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase text-indigo-600 font-semibold">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300/80">
               {game}
             </p>
-            <h2 className="text-sm font-bold text-gray-900 line-clamp-2">
+            <h2 className="mt-2 text-lg font-black text-white line-clamp-2">
               {tournamentName}
             </h2>
           </div>
           <span
-            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+            className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
               status === "registration_open"
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-200 text-gray-600"
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-slate-800 text-slate-300"
             }`}
           >
-            {status.replace("_", " ").toUpperCase()}
+            {status.replace("_", " ")}
           </span>
         </div>
 
-        {/* Key Info Chips */}
-        <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 text-xs mb-3">
-          <InfoChip label="Entry Fee" value={`₹${entryFee}`} color="green" />
-          <InfoChip label="Prize Pool" value={`₹${prizePool}`} color="yellow" />
-          <InfoChip label="Total Slots" value={maxParticipants} color="gray" />
+        <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+          <InfoChip label="Entry" value={`Rs ${entryFee}`} />
+          <InfoChip label="Prize" value={`Rs ${prizePool}`} />
+          <InfoChip label="Slots" value={maxParticipants} />
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-3">
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+        <div className="mt-4 rounded-full bg-slate-900 p-1">
+          <div className="h-2 overflow-hidden rounded-full bg-slate-800">
             <div
-              className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-700"
+              className="h-full rounded-full bg-[linear-gradient(90deg,_#22d3ee,_#fbbf24)] transition-all duration-700"
               style={{ width: `${filledPercentage}%` }}
             />
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="mt-3 flex flex-row gap-2 items-center justify-between">
+        <div className="mt-4 flex items-center justify-between text-sm text-slate-400">
+          <span>{mode.toUpperCase()}</span>
+          <span>{registeredPlayers?.length || 0} joined</span>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-3">
           {status === "registration_open" && (
             <button
               onClick={handleJoinClick}
-              className="sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded text-xs font-medium transition-all"
+              className="rounded-2xl bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
             >
-              Join
+              Join Now
             </button>
           )}
           {!disableFetch && (
             <Link
               to={`/tournamentDeatils/${_id}`}
-              className="text-xs text-indigo-600 hover:underline font-medium"
+              className="text-sm font-semibold text-cyan-200"
             >
-              Details →
+              Match Intel
             </Link>
           )}
         </div>
       </div>
 
-      {/* Clan Verify Modal */}
       {isClanVerifyOpen && (
         <ClanVerify
           isOpen={isClanVerifyOpen}
@@ -142,34 +139,26 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         />
       )}
 
-      {/* Invite Modal */}
       {isModalOpen && (
         <InviteModal
           tournamentId={_id}
           teamSize={teamSize}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          clanData={clanStatus} // pass clan info
+          clanData={clanStatus}
         />
       )}
     </>
   );
 };
 
-// Chip Component
-const InfoChip = ({ label, value, color }) => {
-  const colorMap = {
-    green: "text-green-600",
-    yellow: "text-yellow-600",
-    gray: "text-gray-800",
-  };
-
-  return (
-    <div className="bg-gray-100 px-2 py-1 rounded text-center">
-      <p className="text-[10px] text-gray-500">{label}</p>
-      <p className={`text-xs font-semibold ${colorMap[color]}`}>{value}</p>
-    </div>
-  );
-};
+const InfoChip = ({ label, value }) => (
+  <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-3 text-center">
+    <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">
+      {label}
+    </p>
+    <p className="mt-1 text-sm font-bold text-white">{value}</p>
+  </div>
+);
 
 export default TournamentCard;

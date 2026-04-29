@@ -1,78 +1,108 @@
-// store/transactionSlice.js
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
+import { showToast, types } from "./toastSlice";
 
-// ✅ Initiate PhonePe payment
 export const initiatePhonePeOrder = createAsyncThunk(
   "payment/initiatePhonePeOrder",
-  async (amount, thunkAPI) => {
+  async (payload, thunkAPI) => {
     try {
-      const res = await api.post("/api/payment/order", amount);
-      return res.data; // { redirectUrl: "..." }
-    } catch (err) {
-      console.log(err);
-      return thunkAPI.rejectWithValue(
-        err.response?.data || { error: "Server error" }
-      );
-    }
-  }
-);
-
-// ✅ Get wallet balance
-export const fetchWalletBalance = createAsyncThunk(
-  "transactions/fetchWalletBalance",
-  async (_, { rejectWithValue }) => {
-    try {
-      const res = await api.get("/api/users/wallet", { withCredentials: true });
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.message);
-    }
-  }
-);
-
-// ✅ Withdraw request
-export const withdrawRequest = createAsyncThunk(
-  "transactions/withdrawRequest",
-  async (amount, thunkAPI) => {
-    try {
-      const res = await api.post("/api/payment/withdraw", amount);
-      return res.data; // { redirectUrl: "..." }
-    } catch (err) {
-      console.log(err);
-      return thunkAPI.rejectWithValue(
-        err.response?.data || { error: "Server error" }
-      );
-    }
-  }
-);
-
-// ✅ Get user transactions
-export const fetchUserTransactions = createAsyncThunk(
-  "transactions/fetchUserTransactions",
-  async (_, { rejectWithValue }) => {
-    try {
-      const res = await fetch("/api/payment/transactions", {
-        credentials: "include",
+      const response = await api.post("/api/payment/order", payload, {
+        withCredentials: true,
       });
-      if (!res.ok) throw new Error("Failed to fetch transactions");
-      return res.json();
-    } catch (err) {
-      return rejectWithValue(err.message);
+      return response.data?.data || response.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Unable to start wallet top-up.";
+      thunkAPI.dispatch(
+        showToast({
+          message,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
 
-// ✅ Check PhonePe transaction status
-export const checkTransactionStatus = createAsyncThunk(
-  "transactions/checkTransactionStatus",
-  async (transactionId, { rejectWithValue }) => {
+export const fetchWalletBalance = createAsyncThunk(
+  "payment/fetchWalletBalance",
+  async (_, thunkAPI) => {
     try {
-      const res = await api.post(`/api/payment/status`, transactionId);
-      if (!res.ok) throw new Error("Failed to check status");
-      return res.json();
-    } catch (err) {
-      return rejectWithValue(err.message);
+      const response = await api.get("/api/users/wallet", {
+        withCredentials: true,
+      });
+      return response.data?.data || response.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Unable to fetch wallet balance.";
+      return thunkAPI.rejectWithValue(message);
+    }
+  }
+);
+
+export const withdrawRequest = createAsyncThunk(
+  "payment/withdrawRequest",
+  async (payload, thunkAPI) => {
+    try {
+      const response = await api.post("/api/payment/withdraw", payload, {
+        withCredentials: true,
+      });
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data?.message || "Withdraw request submitted.",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+      return response.data?.data || response.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Unable to request withdrawal.";
+      thunkAPI.dispatch(
+        showToast({
+          message,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const fetchUserTransactions = createAsyncThunk(
+  "payment/fetchUserTransactions",
+  async (_, thunkAPI) => {
+    try {
+      const response = await api.get("/api/payment/transactions", {
+        withCredentials: true,
+      });
+      return response.data?.data || response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch transactions."
+      );
+    }
+  }
+);
+
+export const checkTransactionStatus = createAsyncThunk(
+  "payment/checkTransactionStatus",
+  async (transactionId, thunkAPI) => {
+    try {
+      const response = await api.post(
+        "/api/payment/status",
+        transactionId,
+        {
+          withCredentials: true,
+        }
+      );
+      return response.data?.data || response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to check transaction status."
+      );
     }
   }
 );
@@ -85,14 +115,16 @@ const initialState = {
     platformTransactions: [],
   },
   latestOrder: null,
+  latestWithdrawal: null,
   statusCheck: null,
+  transactions: [],
   isLoading: false,
   error: null,
 };
 
-const transactionSlice = createSlice({
-  name: "transactions",
-  initialState: initialState,
+const paymentSlice = createSlice({
+  name: "payment",
+  initialState,
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -100,41 +132,40 @@ const transactionSlice = createSlice({
         state.latestOrder = action.payload;
       })
       .addCase(fetchWalletBalance.fulfilled, (state, action) => {
-        state.wallet.realMoney = action.payload.realMoney || 0;
-        state.wallet.platformMoney = action.payload.platformMoney || 0;
-        state.wallet.realTransactions = action.payload.realTransactions || [];
+        state.wallet.realMoney = action.payload?.realMoney || 0;
+        state.wallet.platformMoney = action.payload?.platformMoney || 0;
+        state.wallet.realTransactions = action.payload?.realTransactions || [];
         state.wallet.platformTransactions =
-          action.payload.platformTransactions || [];
+          action.payload?.platformTransactions || [];
       })
       .addCase(fetchUserTransactions.fulfilled, (state, action) => {
-        state.deposits = action.payload.deposits;
-        state.withdrawals = action.payload.withdrawals;
+        state.transactions = Array.isArray(action.payload)
+          ? action.payload
+          : action.payload?.transactions || [];
       })
       .addCase(withdrawRequest.fulfilled, (state, action) => {
-        state.withdrawals.push({
-          amount: action.meta.arg,
-          status: "pending",
-          date: new Date(),
-        });
+        state.latestWithdrawal = action.payload;
       })
       .addCase(checkTransactionStatus.fulfilled, (state, action) => {
         state.statusCheck = action.payload;
       })
       .addMatcher(
-        (action) => action.type.endsWith("/pending"),
+        (action) => action.type.startsWith("payment/") && action.type.endsWith("/pending"),
         (state) => {
           state.isLoading = true;
           state.error = null;
         }
       )
       .addMatcher(
-        (action) => action.type.endsWith("/fulfilled"),
+        (action) =>
+          action.type.startsWith("payment/") && action.type.endsWith("/fulfilled"),
         (state) => {
           state.isLoading = false;
         }
       )
       .addMatcher(
-        (action) => action.type.endsWith("/rejected"),
+        (action) =>
+          action.type.startsWith("payment/") && action.type.endsWith("/rejected"),
         (state, action) => {
           state.isLoading = false;
           state.error = action.payload;
@@ -143,4 +174,4 @@ const transactionSlice = createSlice({
   },
 });
 
-export default transactionSlice;
+export default paymentSlice;

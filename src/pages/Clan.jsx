@@ -1,11 +1,23 @@
-import { useEffect, useId, useState } from "react";
-import { states } from "../utils/states";
-import { Form, useNavigate } from "react-router-dom";
-import { Button, Input } from "../components";
-import { formData } from "../utils/utility";
+import { useEffect, useMemo, useState } from "react";
+import { Form } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  clan_data_update,
+  FiBookmark,
+  FiCopy,
+  FiMapPin,
+  FiPlusCircle,
+  FiSearch,
+  FiShield,
+  FiUserMinus,
+  FiUserPlus,
+  FiUsers,
+} from "react-icons/fi";
+import { FaCrown, FaRegBookmark } from "react-icons/fa6";
+import { Button, Input } from "../components";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import { states } from "../utils/states";
+import { formData } from "../utils/utility";
+import {
   createClan,
   fetchUserClan,
   joinClan,
@@ -13,1328 +25,992 @@ import {
   searchClan,
 } from "../store/clanSlice";
 import {
-  FaBookmark,
-  FaShareAlt,
-  FaMapMarkerAlt,
-  FaCrown,
-  FaUsers,
-  FaCalendarAlt,
-  FaTrophy,
-  FaFire,
-  FaClock,
-  FaEye,
-  FaTrash,
-  FaSignInAlt,
-  FaTimes,
-  FaUser,
-  FaChevronDown,
-  FaUserCircle,
-} from "react-icons/fa";
-import { MdPersonRemove, MdArrowUpward, MdArrowDownward } from "react-icons/md";
-import { HiOutlineEye } from "react-icons/hi";
-
-import {
   profile_data_update,
   searchPlayer,
   user_profile,
 } from "../store/authSlice";
-import { FaRegBookmark, FaRegCopy } from "react-icons/fa6";
 
 const Clan = () => {
+  const dispatch = useDispatch();
   const { profile } = useSelector((store) => store.auth);
-  const { userClanData } = useSelector((store) => store.clan);
+  const { userClanData, searchClanData } = useSelector((store) => store.clan);
   const { globalLoading } = useSelector((store) => store.loading);
-  const [loading, setLoading] = useState(false);
-  const dispatch = useDispatch();
+  const [activeTab, setActiveTab] = useState(profile?.clan ? "myClan" : "createClan");
+  const [socialTab, setSocialTab] = useState("friends");
+  const [isCreatingClan, setIsCreatingClan] = useState(false);
+  const [searchTag, setSearchTag] = useState("");
+  const [searchingPlayer, setSearchingPlayer] = useState(false);
+  const [searchingClan, setSearchingClan] = useState(false);
+  const [playerQuery, setPlayerQuery] = useState("");
+  const [playerCard, setPlayerCard] = useState(null);
+  const [playerError, setPlayerError] = useState("");
+  const [clanError, setClanError] = useState("");
 
-  const [activeMainTab, setActiveMainTab] = useState(
-    profile?.clan ? "myClan" : "createClan"
+  useEffect(() => {
+    setActiveTab(profile?.clan ? "myClan" : "createClan");
+  }, [profile?.clan]);
+
+  useEffect(() => {
+    if (profile?.clan?._id && !userClanData) {
+      dispatch(fetchUserClan());
+    }
+  }, [dispatch, profile?.clan?._id, userClanData]);
+
+  const playerProfile = profile?.profile || {};
+  const clanData = userClanData?.data || null;
+  const friends = playerProfile.friends || [];
+  const friendRequests = playerProfile.friendRequests || [];
+  const sentRequests = playerProfile.sentRequests || [];
+  const bookmarkedClanIds = new Set(
+    (playerProfile.bookmarkedClans || []).map((clan) => String(clan._id || clan))
   );
-  const [activeSearchTab, setActiveSearchTab] = useState("searchClans");
-  const [activeSocialTab, setActiveSocialTab] = useState("friends");
 
-  useEffect(() => {
-    setActiveMainTab(profile?.clan ? "myClan" : "createClan");
-  }, [profile]);
+  const overviewStats = useMemo(
+    () => [
+      { label: "Clan Status", value: clanData ? "Enlisted" : "Open slot" },
+      { label: "Friends", value: friends.length || 0 },
+      { label: "Requests", value: friendRequests.length || 0 },
+      { label: "Bookmarks", value: bookmarkedClanIds.size || 0 },
+    ],
+    [bookmarkedClanIds.size, clanData, friendRequests.length, friends.length]
+  );
 
-  useEffect(() => {
-    setLoading(true);
-
-    const fetchClan = async () => {
-      try {
-        if (profile?.clan?._id && userClanData === null) {
-          await dispatch(fetchUserClan());
-        }
-      } catch (error) {
-        console.error("Error fetching profile or clan:", error);
-      }
-    };
-    fetchClan();
-    setLoading(false);
-  }, [profile]);
-
-  if (globalLoading || loading) return <LoadingSpinner />;
-  else
-    return (
-      <div className="max-w-5xl mx-auto p-2 bg-gray-50 rounded-lg  mb-12">
-        {/* Main Tabs */}
-        <div className="flex justify-between bg-gray-800 text-white rounded-lg shadow-md">
-          {[
-            {
-              id: profile?.clan ? "myClan" : "createClan",
-              label: profile?.clan ? "My Clan" : "Create Clan",
-            },
-            { id: "searchClan", label: "Search Clan" },
-            { id: "social", label: "Social" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveMainTab(tab.id)}
-              className={`flex-1 p-1 md:p-2 lg:p-4 text-center font-semibold transition duration-200 ${
-                activeMainTab === tab.id ? "bg-gray-700" : "hover:bg-gray-600"
-              } rounded-lg`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        <div className="bg-white rounded-lg shadow-md mt-4">
-          {activeMainTab === "createClan" && <CreateClan state={states} />}
-          {activeMainTab === "myClan" && (
-            <MyClan userClanData={userClanData} profile={profile} />
-          )}
-          {activeMainTab === "searchClan" && (
-            <SearchClan
-              activeTab={activeSearchTab}
-              setActiveTab={setActiveSearchTab}
-            />
-          )}
-          {activeMainTab === "social" && (
-            <Social
-              activeTab={activeSocialTab}
-              setActiveTab={setActiveSocialTab}
-            />
-          )}
-        </div>
-      </div>
-    );
-};
-
-const CreateClan = ({ state }) => {
-  const dispatch = useDispatch();
-  const handleSubmit = async (event) => {
+  const handleCreateClan = async (event) => {
     event.preventDefault();
-    const clanData = formData(event);
+    setIsCreatingClan(true);
     try {
-      const response = await dispatch(createClan(clanData))
-        .unwrap()
-        .then(async () => {
-          await dispatch(user_profile());
-          await dispatch(fetchUserClan());
-        });
+      await dispatch(createClan(formData(event))).unwrap();
+      await dispatch(user_profile());
+      await dispatch(fetchUserClan());
+      setActiveTab("myClan");
     } catch (error) {
-      console.error(error);
+      console.error("Clan creation failed:", error);
+    } finally {
+      setIsCreatingClan(false);
     }
   };
 
-  return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Create Clan</h2>
-      <Form
-        onSubmit={handleSubmit}
-        method="POST"
-        className="bg-gray-100 p-6 rounded-lg shadow"
-      >
-        <div className="mb-4">
-          <Input
-            type="text"
-            name="clanName"
-            placeholder="Enter your clan name"
-            label="Clan Name"
-            required
-            className="text-gray-700"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1 text-gray-700">Description</label>
-          <textarea
-            name="description"
-            placeholder="Enter clan description"
-            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          ></textarea>
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1 text-gray-700">Clan Type</label>
-          <select
-            name="clanType"
-            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option>Anyone Can Join</option>
-            <option>Invite Only</option>
-            <option>Closed</option>
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <label className="block mb-1 text-gray-700">State</label>
-          <select
-            name="location"
-            className="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="" disabled>
-              Select State
-            </option>
-            {state.map((state) => (
-              <option key={state} value={state}>
-                {state}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Button
-          type="submit"
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg"
-        >
-          {" "}
-          Create Clan
-        </Button>
-      </Form>
-    </div>
-  );
-};
-
-const MyClan = ({ userClanData, profile }) => {
-  const [activeTab, setActiveTab] = useState("badge"); // State to switch between badge and stats
-  const dispatch = useDispatch();
-  const [clanData, setClanData] = useState(null); // Start as null
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState(null);
-  const roleHierarchy = ["MEMBER", "ELDER", "COLEADER", "LEADER"];
-  const roleColors = {
-    LEADER: "bg-red-500 text-white",
-    COLEADER: "bg-blue-500 text-white",
-    ELDER: "bg-green-500 text-white",
-    MEMBER: "bg-gray-500 text-white",
-  };
-
-  const currentUserRole = clanData?.members?.find(
-    (member) => member.user === profile._id
-  )?.role;
-
-  const canPromote = (userRole, targetRole) => {
-    return roleHierarchy.indexOf(userRole) > roleHierarchy.indexOf(targetRole);
-  };
-  const canDemote = (userRole, targetRole) => {
-    return (
-      roleHierarchy.indexOf(userRole) > roleHierarchy.indexOf(targetRole) &&
-      targetRole !== "MEMBER"
-    );
-  };
-
-  const canKick = (userRole, targetRole) => {
-    return roleHierarchy.indexOf(userRole) > roleHierarchy.indexOf(targetRole);
-  };
-
-  useEffect(() => {
-    if (userClanData?.data) {
-      setClanData(userClanData.data);
-    }
-  }, [userClanData]);
-
-  useEffect(() => {
-    if (profile?.profile?.bookmarkedClans && clanData?._id) {
-      const found = profile.profile.bookmarkedClans.some(
-        (clan) => String(clan._id) === String(clanData._id)
-      );
-      setIsBookmarked(found);
-    }
-  }, [profile, clanData]);
-  {
-    /** copy feature */
-  }
-  const [copied, setCopied] = useState(false);
-  const copyToClipboard = async () => {
-    if (!clanData?.clanTag) return;
+  const handleClanSearch = async () => {
+    if (!searchTag.trim()) return;
+    setSearchingClan(true);
+    setClanError("");
     try {
-      await navigator.clipboard.writeText(clanData.clanTag);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500); // Reset copied state after 1.5 sec
-    } catch (err) {
-      console.error("Failed to copy: ", err);
+      await dispatch(searchClan({ clanTag: searchTag.trim() })).unwrap();
+    } catch (error) {
+      console.error("Clan search failed:", error);
+      setClanError("Clan not found.");
+    } finally {
+      setSearchingClan(false);
     }
   };
 
-  //Bookmark functionality
-  const [loading, setLoading] = useState(false);
-
-  const handleBookmark = async () => {
-    if (loading) return;
-    setLoading(true);
-
+  const handleJoinClan = async (clanTag) => {
+    if (!clanTag) return;
     try {
-      if (isBookmarked) {
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.bookmarkedClans",
-            data: clanData._id,
-          })
-        );
-      } else {
-        await dispatch(
-          profile_data_update({
-            action: "add",
-            field: "profile.bookmarkedClans",
-            data: clanData._id,
-          })
-        );
-      }
+      await dispatch(joinClan({ clanTag })).unwrap();
+      await dispatch(user_profile());
+      await dispatch(fetchUserClan());
+      setActiveTab("myClan");
+    } catch (error) {
+      console.error("Join clan failed:", error);
+    }
+  };
+
+  const handleLeaveClan = async () => {
+    try {
+      await dispatch(leaveClan()).unwrap();
+      await dispatch(user_profile());
+      setActiveTab("createClan");
+    } catch (error) {
+      console.error("Leave clan failed:", error);
+    }
+  };
+
+  const toggleBookmark = async (clanId, isBookmarked) => {
+    if (!clanId) return;
+    try {
+      await dispatch(
+        profile_data_update({
+          action: isBookmarked ? "remove" : "add",
+          field: "profile.bookmarkedClans",
+          data: clanId,
+        })
+      ).unwrap();
       await dispatch(user_profile());
     } catch (error) {
-      console.error("Error updating bookmark:", error);
-    }
-    setLoading(false);
-  };
-
-  const handleLeave = async () => {
-    try {
-      const response = await dispatch(leaveClan());
-      await dispatch(user_profile());
-    } catch (error) {
-      console.error(error);
+      console.error("Bookmark update failed:", error);
     }
   };
 
-  if (!userClanData) {
-    return (
-      <div className="p-6 text-gray-600">
-        <p>You are not part of any clan yet.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className=" max-w-7xl mx-auto bg-gray-50">
-      <div className="flex flex-col md:flex-row min-h-[360px] shadow-lg rounded-lg overflow-hidden bg-white">
-        {/* Tabs Section (Vertical on tablets and larger) */}
-        <div className="md:w-1/4 flex md:flex-col gap-1 p-1 bg-gray-200 rounded-lg md:rounded-none md:shadow-md">
-          <button
-            className={`flex items-center justify-center p-2 md:p-4 w-full transition-all duration-300 rounded-lg ${
-              activeTab === "badge"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-blue-100"
-            }`}
-            onClick={() => setActiveTab("badge")}
-          >
-            <img
-              src="/clan-badge.png" // Clan Badge
-              alt="Clan Badge"
-              className="w-12 h-6 md:h-12 object-contain"
-            />
-          </button>
-          <button
-            className={`flex items-center justify-center p-2 md:p-4 w-full transition-all duration-300 rounded-lg ${
-              activeTab === "stats"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-blue-100"
-            }`}
-            onClick={() => setActiveTab("stats")}
-          >
-            <img
-              src="/bar-chart.png" // Placeholder for statistics image
-              alt="Clan Statistics"
-              className="w-12 h-6 md:h-12 object-contain"
-            />
-          </button>
-        </div>
-
-        {/* Content Section (Bio and Details) */}
-        <div className="md:w-3/4 py-6 px-6">
-          {/* Clan Info */}
-          <div className=" flex items-center justify-between">
-            <div>
-              <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-gray-800">
-                {clanData?.clanName}
-              </h2>
-              <span className="flex gap-2">
-                <p className="text-xs sm:text-sm md:text-base text-gray-500">
-                  {clanData?.clanTag}
-                </p>
-                <FaRegCopy
-                  className={`cursor-pointer text-gray-500 hover:text-gray-700 ${
-                    copied ? "text-green-600" : ""
-                  }`}
-                  onClick={copyToClipboard}
-                  title="Copy to clipboard"
-                />
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Bookmark Button */}
-              <button
-                onClick={handleBookmark}
-                disabled={loading}
-                className="relative"
-              >
-                {isBookmarked ? (
-                  <FaBookmark className="text-blue-500 w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-transform transform hover:scale-110" />
-                ) : (
-                  <FaRegBookmark className="text-gray-600 hover:text-blue-500 cursor-pointer w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-transform transform hover:scale-110" />
-                )}
-              </button>
-
-              {/* Share Button */}
-              <FaShareAlt className="text-gray-600 hover:text-blue-500 cursor-pointer w-6 h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 transition-transform transform hover:scale-110" />
-            </div>
-          </div>
-          {/* First Tab - Clan Info (Badge Tab) */}
-          <ClanProfile activeTab={activeTab} clanData={clanData} />
-        </div>
-      </div>
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 w-full justify-center md:justify-start my-2">
-        <button className="w-full md:w-auto bg-gray-600 text-sm text-white px-3 py-2 rounded-xl shadow-md hover:bg-gray-700 transition-all">
-          War Log
-        </button>
-        <button className="w-full md:w-auto bg-green-600 text-sm text-white px-3 py-2 rounded-xl shadow-md hover:bg-green-700 transition-all">
-          Send Mail
-        </button>
-        <button
-          onClick={handleLeave}
-          className="w-full md:w-auto bg-red-600 text-sm text-white px-4 py-2 rounded-xl shadow-md hover:bg-red-700 transition-all"
-        >
-          Leave
-        </button>
-      </div>
-
-      {/* Member List Section */}
-      <div className="bg-white p-4 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">
-          Clan Members
-        </h3>
-        <ul className="space-y-2">
-          {clanData?.members?.map((member, index) => (
-            <li
-              key={index}
-              className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 transition relative"
-            >
-              {/* Left Section - Avatar & Name */}
-              <div className="flex items-center space-x-3">
-                <FaUserCircle className="text-gray-500 text-2xl" />
-                <div>
-                  <span className="text-base font-medium">
-                    {member.clanMemberName}
-                  </span>
-                  <div
-                    className={`mt-1 text-xs font-bold px-2 py-1 rounded ${
-                      roleColors[member.role]
-                    }`}
-                  >
-                    {member.role}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Section - Dropdown Menu */}
-              <div className="relative">
-                <button
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === index ? null : index)
-                  }
-                  className="flex items-center text-sm text-gray-600 hover:text-gray-800"
-                >
-                  Options <FaChevronDown size={14} className="ml-1" />
-                </button>
-
-                {openDropdown === index && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md z-10">
-                    <button
-                      className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
-                      onClick={() => console.log("View Profile")}
-                    >
-                      <HiOutlineEye className="mr-2 text-blue-500" /> View
-                      Profile
-                    </button>
-
-                    {canPromote(currentUserRole, member.role) && (
-                      <button
-                        className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
-                        onClick={() => console.log("Promote")}
-                      >
-                        <MdArrowUpward className="mr-2 text-green-500" />{" "}
-                        Promote
-                      </button>
-                    )}
-
-                    {canDemote(currentUserRole, member.role) && (
-                      <button
-                        className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
-                        onClick={() => console.log("Demote")}
-                      >
-                        <MdArrowDownward className="mr-2 text-yellow-500" />{" "}
-                        Demote
-                      </button>
-                    )}
-
-                    {canKick(currentUserRole, member.role) && (
-                      <button
-                        className="flex items-center px-3 py-2 w-full text-left text-sm text-red-600 hover:bg-red-100"
-                        onClick={() => {
-                          console.log("Kick Out");
-                          dispatch(
-                            clan_data_update({ "clan.members": "elder" })
-                          );
-                        }}
-                      >
-                        <MdPersonRemove className="mr-2" /> Kick Out
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-};
-
-const ClanProfile = ({ clanData, activeTab }) => {
-  return (
-    <div className="bg-white  rounded-lg p-6 md:p-8 transition-all duration-300">
-      {/* First Tab - Clan Info (Badge Tab) */}
-      {activeTab === "badge" && (
-        <div className="space-y-6">
-          {/* Clan Bio */}
-          <p className="text-gray-800 text-sm sm:text-lg font-medium border-l-4 border-blue-500 pl-4">
-            {clanData?.bio}
-          </p>
-
-          {/* Clan Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-gray-700">
-            <div className="flex items-center space-x-3">
-              <FaMapMarkerAlt className="text-blue-600 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">Location:</span>{" "}
-                {clanData?.location}
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <FaCrown className="text-yellow-500 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">Leader:</span>{" "}
-                {clanData?.leader?.leaderName}
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <FaUsers className="text-green-500 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">Members:</span>{" "}
-                {clanData?.members?.length}
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <FaCalendarAlt className="text-purple-500 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">Created At:</span>{" "}
-                {new Date(clanData?.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Second Tab - Clan Statistics */}
-      {activeTab === "stats" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-gray-700">
-            <div className="flex items-center space-x-3">
-              <FaTrophy className="text-yellow-500 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">Wars Won:</span>{" "}
-                {clanData?.stats?.warsWon || 0}
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <FaFire className="text-red-500 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">War Win Streak:</span>{" "}
-                {clanData?.stats?.warWinStreak || 0}
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <FaClock className="text-blue-600 text-sm" />
-              <p className="text-sm">
-                <span className="font-semibold">War Frequency:</span>{" "}
-                {clanData?.stats?.warFrequency}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const SearchClan = ({ activeTab, setActiveTab }) => (
-  <div className="p-6">
-    <TabNavigation
-      tabs={[
-        { id: "searchClans", label: "Search Clans" },
-        { id: "bookmarkedClans", label: "Bookmarked Clans" },
-      ]}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-    />
-    {activeTab === "searchClans" && <SearchClans />}
-    {activeTab === "bookmarkedClans" && <BookmarkedClans />}
-  </div>
-);
-
-const SearchClans = () => {
-  const { searchClanData, loading, error } = useSelector((store) => store.clan); // Assuming you have a loading state
-  const [input, setInput] = useState("");
-  const dispatch = useDispatch();
-
-  const handleSearch = async () => {
-    try {
-      const response = await dispatch(searchClan({ clanTag: input }));
-    } catch (error) {
-      console.error("Error while searching for clan:", error);
-    }
-  };
-
-  const handleJoin = async (clanTag) => {
-    if (clanTag) {
-      try {
-        await dispatch(joinClan({ clanTag: clanTag }));
-        await dispatch(user_profile());
-        await dispatch(fetchUserClan());
-      } catch (error) {
-        console.error("Error while joining the clan:", error);
-      }
-    }
-  };
-
-  return (
-    <>
-      <div className="flex flex-wrap gap-1 items-center p-6">
-        <Input
-          type="text"
-          name="searchClan"
-          label="Search Clan"
-          placeholder="Enter Clan Tag #ABCD1234"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-
-        <Button variant="success" size="xs" onClick={handleSearch}>
-          Search
-        </Button>
-      </div>
-
-      {loading && <div>Loading...</div>}
-
-      {error && <div className="text-red-500">{error}</div>}
-
-      {searchClanData ? (
-        <div className="mt-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <div className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <img
-              src={`/${searchClanData?.data?.badge}`} // Assuming `badge` is a URL or image path
-              alt="Clan Badge"
-              className="w-24 h-24 rounded-full object-cover mb-4"
-            />
-            <h4 className="text-xl font-semibold text-center">
-              {searchClanData?.data?.clanName}
-            </h4>
-            <p className="text-sm text-center text-gray-600">
-              {searchClanData?.data?.clanTag}
-            </p>
-            <p className="text-sm text-center text-gray-500">
-              {searchClanData?.data?.stats?.type}
-            </p>
-            <div className="flex justify-between">
-              <button
-                onClick={() => handleJoin(searchClanData.data.clanTag)}
-                className="mt-4 px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 transition duration-300"
-              >
-                Join CLan
-              </button>
-              <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300">
-                View Clan
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        input && !loading && !error && <div>No clans found</div>
-      )}
-    </>
-  );
-};
-
-const BookmarkedClans = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { profile } = useSelector((store) => store.auth);
-
-  const [bookmarkedClans, setBookmarkedClans] = useState(
-    profile?.profile?.bookmarkedClans || []
-  );
-  const [joinRequests, setJoinRequests] = useState({});
-
-  // Handle removing a clan from bookmarks
-  const handleRemoveBookmark = async (clanId) => {
-    setBookmarkedClans(bookmarkedClans.filter((clan) => clan._id !== clanId));
-    // Dispatch action to remove from backend
-    await dispatch(
-      profile_data_update({
-        action: "remove",
-        field: "profile.bookmarkedClans",
-        data: clanId,
-      })
-    );
-    await dispatch(user_profile());
-  };
-
-  // Handle sending a join request
-  const handleJoinClan = (clanId) => {
-    setJoinRequests((prev) => ({ ...prev, [clanId]: "Pending..." }));
-
-    // Simulate sending request (Replace with API call)
-    setTimeout(() => {
-      setJoinRequests((prev) => ({ ...prev, [clanId]: "Request Sent" }));
-    }, 2000);
-  };
-
-  return (
-    <div className="max-w-md md:max-w-2xl mx-auto p-4 md:p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-lg md:text-xl font-bold mb-4">🔥 Bookmarked Clans</h2>
-
-      {bookmarkedClans.length === 0 ? (
-        <p className="text-gray-600 text-sm md:text-base">
-          No bookmarked clans yet.
-        </p>
-      ) : (
-        <ul className="space-y-4">
-          {bookmarkedClans.map((clan) => (
-            <li
-              key={clan._id}
-              className="flex flex-wrap md:flex-nowrap justify-between items-center bg-gray-100 p-3 md:p-4 rounded-lg hover:bg-gray-200 transition cursor-pointer"
-            >
-              {/* Clan Badge & Name */}
-              <div className="flex items-center space-x-3">
-                <img
-                  src={`/${clan.badge}`}
-                  alt={clan.clanName}
-                  className="w-8 h-8 md:w-10 md:h-10 rounded-full border"
-                />
-                <span className="text-sm md:text-lg font-semibold">
-                  {clan.clanName}
-                </span>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-wrap space-x-2 mt-2 md:mt-0">
-                {/* View Profile */}
-                <button
-                  className="flex items-center space-x-1 bg-blue-500 text-white px-2 md:px-3 py-1 rounded-md text-xs md:text-sm hover:bg-blue-600 transition"
-                  onClick={() => navigate(`/clan/${clan._id}`)}
-                >
-                  <FaEye /> <span>Profile</span>
-                </button>
-
-                {/* Remove from Bookmarks */}
-                <button
-                  className="flex items-center space-x-1 bg-red-500 text-white px-2 md:px-3 py-1 rounded-md text-xs md:text-sm hover:bg-red-600 transition"
-                  onClick={() => handleRemoveBookmark(clan._id)}
-                >
-                  <FaTrash /> <span>Remove</span>
-                </button>
-
-                {/* Send Join Request */}
-                {joinRequests[clan._id] ? (
-                  <span className="text-gray-500 text-xs md:text-sm">
-                    {joinRequests[clan._id]}
-                  </span>
-                ) : (
-                  <button
-                    className="flex items-center space-x-1 bg-green-500 text-white px-2 md:px-3 py-1 rounded-md text-xs md:text-sm hover:bg-green-600 transition"
-                    onClick={() => handleJoinClan(clan._id)}
-                  >
-                    <FaSignInAlt /> <span>Join</span>
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
-
-const Social = ({ activeTab, setActiveTab }) => (
-  <div className="p-6">
-    <TabNavigation
-      tabs={[
-        { id: "friends", label: "Friends" },
-        { id: "friendRequests", label: "Friend Requests" },
-        { id: "searchPlayers", label: "Search Players" },
-      ]}
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-    />
-    {activeTab === "friends" && <Friends />}
-    {activeTab === "friendRequests" && <FriendRequests />}
-    {activeTab === "searchPlayers" && <SearchPlayers />}
-  </div>
-);
-
-const Friends = () => {
-  const { profile } = useSelector((store) => store.auth);
-  const dispatch = useDispatch();
-
-  // Friends & Sent Requests
-  const [friends, setFriends] = useState(profile.profile.friends || []);
-  const [sentRequests, setSentRequests] = useState(
-    profile.profile.sentRequests || []
-  );
-  const [selectedFriend, setSelectedFriend] = useState(null);
-  const [openDropdown, setOpenDropdown] = useState(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest(".dropdown-container")) {
-        setOpenDropdown(null);
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  // Cancel Friend Request
-  const cancelRequest = async (friendId) => {
-    setSentRequests(sentRequests.filter((requestId) => requestId !== friendId));
-    if (friendId) {
-      try {
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.sentRequests",
-            data: friendId,
-          })
-        );
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.friendRequests",
-            data: profile._id,
-            playerId: friendId,
-          })
-        );
-        await dispatch(user_profile()); // Refresh user data
-      } catch (error) {
-        console.error("Error while canceling friend request:", error);
-      }
-    }
-    // Dispatch API call to cancel friend request (if needed)
-  };
-
-  // Remove Friend
-  const removeFriend = async (id) => {
-    setFriends(friends.filter((friend) => friend._id !== id));
-    setSelectedFriend(null);
-    // Dispatch API call to remove friend (if needed)
-    if (id) {
-      try {
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.friends",
-            data: id,
-          })
-        );
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.friends",
-            data: profile._id,
-            playerId: id,
-          })
-        );
-        await dispatch(user_profile()); // Refresh user data
-      } catch (error) {
-        console.error("Error while canceling friend request:", error);
-      }
-    }
-  };
-
-  return (
-    <div className="p-4 bg-white shadow-lg rounded-lg">
-      {/* Sent Friend Requests Section */}
-      <div className="mb-4">
-        <h3 className="text-lg font-medium">Sent Requests</h3>
-        {sentRequests.length === 0 ? (
-          <p>No sent requests.</p>
-        ) : (
-          <ul>
-            {sentRequests.map((request) => (
-              <li
-                key={request._id}
-                className="flex items-center justify-between p-2 border-b"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={request.profile.avatar || "/default-avatar.png"}
-                    alt="Avatar"
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <span className="text-gray-700 font-medium">
-                    {request.profile.username}
-                  </span>
-                </div>
-                <button
-                  onClick={() => cancelRequest(request._id)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <FaTimes size={18} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Friends List Section */}
-      <div className="bg-white  rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">
-          Friends List
-        </h3>
-        <ul className="space-y-2">
-          {friends?.map((friend, index) => (
-            <li
-              key={index}
-              className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100 transition relative"
-            >
-              {/* Left Section - Avatar & Name */}
-              <div className="flex items-center space-x-3">
-                <img
-                  src={friend.profile.avatar || "/default-avatar.png"}
-                  alt="Avatar"
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-                <span className="text-base font-medium">
-                  {friend.profile.username}
-                </span>
-              </div>
-
-              {/* Right Section - Dropdown Menu */}
-              <div className="relative dropdown-container">
-                <button
-                  onClick={() =>
-                    setOpenDropdown(openDropdown === index ? null : index)
-                  }
-                  className="flex items-center text-sm text-gray-600 hover:text-gray-800"
-                >
-                  Options <FaChevronDown size={14} className="ml-1" />
-                </button>
-
-                {openDropdown === index && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-md z-10">
-                    <button
-                      className="flex items-center px-3 py-2 w-full text-left text-sm hover:bg-gray-100"
-                      onClick={() => console.log("View Profile")}
-                    >
-                      <HiOutlineEye className="mr-2 text-blue-500" /> View
-                      Profile
-                    </button>
-
-                    <button
-                      className="flex items-center px-3 py-2 w-full text-left text-sm text-red-600 hover:bg-red-100"
-                      onClick={() => removeFriend(friend._id)}
-                    >
-                      <MdPersonRemove className="mr-2" /> Remove Friend
-                    </button>
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-};
-
-const FriendRequests = () => {
-  const { profile } = useSelector((state) => state.auth); // Fetching profile
-
-  // Incoming friend requests list
-  const friendRequests = profile?.profile.friendRequests || [];
-
-  return (
-    <div className="p-4 bg-white shadow-lg rounded-lg">
-      <h2 className="text-xl font-semibold mb-4">Friend Requests</h2>
-
-      {friendRequests.length === 0 ? (
-        <p>No friend requests yet.</p>
-      ) : (
-        <ul>
-          {friendRequests.map((requesterId) => (
-            <FriendRequestCard
-              key={requesterId}
-              userId={profile._id}
-              requesterId={requesterId}
-            />
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-};
-const FriendRequestCard = ({ requesterId, userId }) => {
-  const dispatch = useDispatch();
-  // Accept Friend Request
-  const handleAcceptRequest = async () => {
-    try {
-      await dispatch(
-        profile_data_update({
-          action: "add",
-          field: "profile.friends",
-          data: requesterId._id,
-        })
-      );
-      await dispatch(
-        profile_data_update({
-          action: "add",
-          field: "profile.friends",
-          data: userId,
-          playerId: requesterId._id,
-        })
-      );
-
-      await dispatch(
-        profile_data_update({
-          action: "remove",
-          field: "profile.friendRequests",
-          data: requesterId._id,
-        })
-      );
-      await dispatch(
-        profile_data_update({
-          action: "remove",
-          field: "profile.sentRequests",
-          data: userId,
-          playerId: requesterId._id,
-        })
-      );
-      await dispatch(user_profile()); // Refresh profile
-    } catch (error) {
-      console.error("Error accepting friend request:", error);
-    }
-  };
-
-  // Reject Friend Request
-  const handleRejectRequest = async () => {
-    try {
-      await dispatch(
-        profile_data_update({
-          action: "remove",
-          field: "profile.friendRequests",
-          data: requesterId._id,
-        })
-      );
-
-      await dispatch(
-        profile_data_update({
-          action: "remove",
-          field: "profile.sentRequests",
-          data: profile._id,
-          playerId: requesterId._id,
-        })
-      );
-
-      await dispatch(user_profile()); // Refresh profile
-    } catch (error) {
-      console.error("Error rejecting friend request:", error);
-    }
-  };
-
-  if (!requesterId) return <p>Loading...</p>;
-
-  return (
-    <li className="flex items-center justify-between p-3 border-b">
-      <div className="flex items-center gap-3">
-        <img
-          src={requesterId?.profile?.avatar || "/profile-pic.png"}
-          alt="User Avatar"
-          className="w-10 h-10 rounded-full object-cover"
-        />
-        <span className="font-medium">
-          {requesterId?.profile?.username || "player"}
-        </span>
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={handleAcceptRequest}
-          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Accept
-        </button>
-        <button
-          onClick={handleRejectRequest}
-          className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Reject
-        </button>
-      </div>
-    </li>
-  );
-};
-
-const SearchPlayers = () => {
-  const { profile } = useSelector((store) => store.auth);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [searchPlayerData, setSearchPlayerData] = useState(null);
-  const dispatch = useDispatch();
-
-  const handleSearch = async () => {
-    if (!input.trim()) return;
-    setLoading(true);
-    setError("");
-    setSearchPlayerData(null);
+  const runPlayerSearch = async () => {
+    if (!playerQuery.trim()) return;
+    setSearchingPlayer(true);
+    setPlayerError("");
+    setPlayerCard(null);
 
     try {
       const response = await dispatch(
-        searchPlayer({ playerTag: input })
-      ).unwrap(); // Ensure we get the data
-      setSearchPlayerData(response.data); // Store player data
+        searchPlayer({ playerTag: playerQuery.trim() })
+      ).unwrap();
+      setPlayerCard(response.data);
     } catch (error) {
-      console.error("Error while searching for player:", error);
-      setError("Player Not Found");
+      console.error("Player search failed:", error);
+      setPlayerError("Player not found.");
     } finally {
-      setLoading(false);
+      setSearchingPlayer(false);
     }
   };
 
+  const syncSocialState = async (updates) => {
+    await Promise.all(updates.map((payload) => dispatch(profile_data_update(payload)).unwrap()));
+    await dispatch(user_profile());
+  };
+
   const handleAddFriend = async (friendId) => {
-    if (friendId) {
-      try {
-        await dispatch(
-          profile_data_update({
-            action: "add",
-            field: "profile.sentRequests",
-            data: friendId,
-          })
-        );
-        await dispatch(
-          profile_data_update({
-            action: "add",
-            field: "profile.friendRequests",
-            data: profile._id,
-            playerId: friendId,
-          })
-        );
-        setSearchPlayerData((prev) => ({
-          ...prev,
-          friendshipStatus: "request_sent",
-        }));
-        await dispatch(user_profile()); // Refresh user data
-      } catch (error) {
-        console.error("Error while sending friend request:", error);
-      }
+    if (!friendId) return;
+    try {
+      await syncSocialState([
+        {
+          action: "add",
+          field: "profile.sentRequests",
+          data: friendId,
+        },
+        {
+          action: "add",
+          field: "profile.friendRequests",
+          data: profile._id,
+          playerId: friendId,
+        },
+      ]);
+      setPlayerCard((prev) =>
+        prev ? { ...prev, friendshipStatus: "request_sent" } : prev
+      );
+    } catch (error) {
+      console.error("Add friend failed:", error);
     }
   };
 
   const handleCancelRequest = async (friendId) => {
-    if (friendId) {
-      try {
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.sentRequests",
-            data: friendId,
-          })
-        );
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.friendRequests",
-            data: profile._id,
-            playerId: friendId,
-          })
-        );
-
-        setSearchPlayerData((prev) => ({
-          ...prev,
-          friendshipStatus: "not_friends",
-        }));
-
-        await dispatch(user_profile()); // Refresh user data
-      } catch (error) {
-        console.error("Error while canceling friend request:", error);
-      }
+    if (!friendId) return;
+    try {
+      await syncSocialState([
+        {
+          action: "remove",
+          field: "profile.sentRequests",
+          data: friendId,
+        },
+        {
+          action: "remove",
+          field: "profile.friendRequests",
+          data: profile._id,
+          playerId: friendId,
+        },
+      ]);
+      setPlayerCard((prev) =>
+        prev ? { ...prev, friendshipStatus: "not_friends" } : prev
+      );
+    } catch (error) {
+      console.error("Cancel request failed:", error);
     }
   };
 
   const handleAcceptRequest = async (friendId) => {
-    if (friendId) {
-      try {
-        // Remove from friendRequests
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.friendRequests",
-            data: friendId,
-          })
-        );
-
-        // Remove from sender's sentRequests
-        await dispatch(
-          profile_data_update({
-            action: "remove",
-            field: "profile.sentRequests",
-            data: profile._id,
-            playerId: friendId,
-          })
-        );
-
-        // Add to friends list
-        await dispatch(
-          profile_data_update({
-            action: "add",
-            field: "profile.friends",
-            data: friendId,
-          })
-        );
-        await dispatch(
-          profile_data_update({
-            action: "add",
-            field: "profile.friends",
-            data: profile._id,
-            playerId: friendId,
-          })
-        );
-
-        setSearchPlayerData((prev) => ({
-          ...prev,
-          friendshipStatus: "friends",
-        }));
-
-        await dispatch(user_profile()); // Refresh user data
-      } catch (error) {
-        console.error("Error while accepting friend request:", error);
-      }
+    if (!friendId) return;
+    try {
+      await syncSocialState([
+        {
+          action: "remove",
+          field: "profile.friendRequests",
+          data: friendId,
+        },
+        {
+          action: "remove",
+          field: "profile.sentRequests",
+          data: profile._id,
+          playerId: friendId,
+        },
+        {
+          action: "add",
+          field: "profile.friends",
+          data: friendId,
+        },
+        {
+          action: "add",
+          field: "profile.friends",
+          data: profile._id,
+          playerId: friendId,
+        },
+      ]);
+      setPlayerCard((prev) =>
+        prev ? { ...prev, friendshipStatus: "friends" } : prev
+      );
+    } catch (error) {
+      console.error("Accept request failed:", error);
     }
   };
 
+  const handleRejectRequest = async (requesterId) => {
+    if (!requesterId) return;
+    try {
+      await syncSocialState([
+        {
+          action: "remove",
+          field: "profile.friendRequests",
+          data: requesterId,
+        },
+        {
+          action: "remove",
+          field: "profile.sentRequests",
+          data: profile._id,
+          playerId: requesterId,
+        },
+      ]);
+    } catch (error) {
+      console.error("Reject request failed:", error);
+    }
+  };
+
+  const handleRemoveFriend = async (friendId) => {
+    if (!friendId) return;
+    try {
+      await syncSocialState([
+        {
+          action: "remove",
+          field: "profile.friends",
+          data: friendId,
+        },
+        {
+          action: "remove",
+          field: "profile.friends",
+          data: profile._id,
+          playerId: friendId,
+        },
+      ]);
+    } catch (error) {
+      console.error("Remove friend failed:", error);
+    }
+  };
+
+  const copyTag = async (value) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch (error) {
+      console.error("Copy failed:", error);
+    }
+  };
+
+  if (globalLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <>
-      <div className="flex flex-wrap gap-1 items-center p-6">
-        <Input
-          type="text"
-          name="searchFriend"
-          label="Search Friend"
-          placeholder="Enter Username or Tag"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <Button variant="success" size="xs" onClick={handleSearch}>
-          Search
-        </Button>
-      </div>
-
-      {loading && <div>Loading...</div>}
-      {error && <div className="text-red-500">{error}</div>}
-
-      {searchPlayerData ? (
-        <div className="mt-4 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <div className="border rounded-lg p-4 flex flex-col items-center bg-white shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <img
-              src={searchPlayerData.avatar || "/profile-pic.png"} // Default avatar fallback
-              alt="User Avatar"
-              className="w-24 h-24 rounded-full object-cover mb-4"
-            />
-            <h4 className="text-xl font-semibold text-center">
-              {searchPlayerData.username}
-            </h4>
-
-            {/* Display friendship status-based actions */}
-            <div className="flex flex-col items-center gap-2 mt-4">
-              {searchPlayerData.friendshipStatus === "not_friends" &&
-                profile._id !== searchPlayerData._id && (
-                  <button
-                    onClick={() => handleAddFriend(searchPlayerData._id)}
-                    className="px-4 py-2 bg-green-400 text-white rounded-lg hover:bg-green-600 transition duration-300"
-                  >
-                    Add Friend
-                  </button>
-                )}
-
-              {searchPlayerData.friendshipStatus === "request_received" && (
-                <button
-                  onClick={() => handleCancelRequest(searchPlayerData._id)}
-                  className="px-4 py-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-600 transition duration-300"
-                >
-                  Pending... (Cancel)
-                </button>
-              )}
-
-              {searchPlayerData.friendshipStatus === "request_sent" && (
-                <button
-                  onClick={() => handleAcceptRequest(searchPlayerData._id)}
-                  className="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-600 transition duration-300"
-                >
-                  Accept Request
-                </button>
-              )}
-
-              {searchPlayerData.friendshipStatus === "friends" && (
-                <button
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg cursor-not-allowed"
-                  disabled
-                >
-                  ✅ Friends
-                </button>
-              )}
-
-              <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition duration-300">
-                View Profile
-              </button>
-            </div>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_26%),linear-gradient(180deg,_rgba(8,15,28,0.96),_rgba(2,6,17,0.98))] p-6 shadow-[0_24px_70px_rgba(2,8,23,0.45)] md:p-8">
+        <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/80">
+          Clan Command
+        </p>
+        <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-white md:text-4xl">
+              Build squads, find teammates, and manage clan identity.
+            </h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+              This is your social and roster hub for the platform. Create a clan,
+              manage your current group, search for other communities, and keep
+              friend requests moving without leaving the competition shell.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {overviewStats.map((stat) => (
+              <MetricCard key={stat.label} label={stat.label} value={stat.value} />
+            ))}
           </div>
         </div>
-      ) : (
-        input && !loading && !error && <div>No players found</div>
-      )}
-    </>
+      </section>
+
+      <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-4 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+        <div className="flex flex-wrap gap-2">
+          {[
+            {
+              id: "myClan",
+              label: clanData ? "My Clan" : "Clan Overview",
+            },
+            { id: "createClan", label: "Create Clan" },
+            { id: "searchClan", label: "Search Clan" },
+            { id: "social", label: "Social" },
+          ].map((tab) => (
+            <TabButton
+              key={tab.id}
+              active={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </TabButton>
+          ))}
+        </div>
+      </section>
+
+      {activeTab === "myClan" ? (
+        <ClanOverviewPanel
+          clanData={clanData}
+          bookmarkedClanIds={bookmarkedClanIds}
+          onToggleBookmark={toggleBookmark}
+          onLeaveClan={handleLeaveClan}
+          onCopyTag={copyTag}
+        />
+      ) : null}
+
+      {activeTab === "createClan" ? (
+        <CreateClanPanel
+          onSubmit={handleCreateClan}
+          isCreatingClan={isCreatingClan}
+        />
+      ) : null}
+
+      {activeTab === "searchClan" ? (
+        <SearchClanPanel
+          searchTag={searchTag}
+          setSearchTag={setSearchTag}
+          onSearch={handleClanSearch}
+          result={searchClanData?.data}
+          clanError={clanError}
+          searchingClan={searchingClan}
+          onJoinClan={handleJoinClan}
+          onToggleBookmark={toggleBookmark}
+          bookmarkedClanIds={bookmarkedClanIds}
+        />
+      ) : null}
+
+      {activeTab === "social" ? (
+        <SocialPanel
+          activeTab={socialTab}
+          setActiveTab={setSocialTab}
+          friends={friends}
+          friendRequests={friendRequests}
+          sentRequests={sentRequests}
+          playerCard={playerCard}
+          playerError={playerError}
+          playerQuery={playerQuery}
+          searchingPlayer={searchingPlayer}
+          setPlayerQuery={setPlayerQuery}
+          onSearchPlayer={runPlayerSearch}
+          onAddFriend={handleAddFriend}
+          onCancelRequest={handleCancelRequest}
+          onAcceptRequest={handleAcceptRequest}
+          onRejectRequest={handleRejectRequest}
+          onRemoveFriend={handleRemoveFriend}
+          currentUserId={profile?._id}
+        />
+      ) : null}
+    </div>
   );
 };
 
-const TabNavigation = ({ tabs, activeTab, setActiveTab }) => (
-  <div className="border-b mb-4">
-    {tabs.map((tab) => (
-      <button
-        key={tab.id}
-        onClick={() => setActiveTab(tab.id)}
-        className={`px-4 py-2 font-semibold transition duration-200 ${
-          activeTab === tab.id
-            ? "border-b-2 border-blue-500 text-blue-500"
-            : "text-gray-500 hover:text-blue-500"
-        }`}
+const CreateClanPanel = ({ onSubmit, isCreatingClan }) => (
+  <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+    <div className="mb-6">
+      <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+        New Clan
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-white">Create your clan</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">
+        Start with the basics. We can layer in richer roster controls and
+        tournament-specific lineups on top of this foundation.
+      </p>
+    </div>
+
+    <Form onSubmit={onSubmit} className="grid gap-5 xl:grid-cols-2">
+      <div className="xl:col-span-1">
+        <Input
+          type="text"
+          name="clanName"
+          placeholder="Enter your clan name"
+          label="Clan name"
+          required
+        />
+      </div>
+
+      <label className="block xl:col-span-1">
+        <span className="mb-2 block text-sm font-semibold text-slate-300">
+          Clan type
+        </span>
+        <select
+          name="clanType"
+          className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+        >
+          <option>Anyone Can Join</option>
+          <option>Invite Only</option>
+          <option>Closed</option>
+        </select>
+      </label>
+
+      <label className="block xl:col-span-2">
+        <span className="mb-2 block text-sm font-semibold text-slate-300">
+          Description
+        </span>
+        <textarea
+          name="description"
+          placeholder="Tell players what your clan focuses on."
+          rows={5}
+          className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+        />
+      </label>
+
+      <label className="block xl:col-span-1">
+        <span className="mb-2 block text-sm font-semibold text-slate-300">
+          Location
+        </span>
+        <select
+          name="location"
+          defaultValue=""
+          className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+        >
+          <option value="" disabled>
+            Select state
+          </option>
+          {states.map((state) => (
+            <option key={state} value={state}>
+              {state}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="flex items-end xl:col-span-1">
+        <Button
+          type="submit"
+          isLoading={isCreatingClan}
+          className="h-14 w-full rounded-2xl bg-cyan-300 text-sm font-black uppercase tracking-[0.14em] text-slate-950 hover:bg-cyan-200"
+        >
+          Create Clan
+        </Button>
+      </div>
+    </Form>
+  </section>
+);
+
+const ClanOverviewPanel = ({
+  clanData,
+  bookmarkedClanIds,
+  onToggleBookmark,
+  onLeaveClan,
+  onCopyTag,
+}) => {
+  if (!clanData) {
+    return (
+      <EmptyPanel
+        title="You are not in a clan yet"
+        copy="Create a new clan or search existing ones to start building your roster."
+      />
+    );
+  }
+
+  const isBookmarked = bookmarkedClanIds.has(String(clanData._id));
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+              Active Clan
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-white">
+              {clanData.clanName}
+            </h2>
+            <button
+              type="button"
+              onClick={() => onCopyTag(clanData.clanTag)}
+              className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-200"
+            >
+              <FiCopy />
+              {clanData.clanTag}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onToggleBookmark(clanData._id, isBookmarked)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-200"
+            >
+              {isBookmarked ? <FiBookmark /> : <FaRegBookmark />}
+              {isBookmarked ? "Bookmarked" : "Bookmark"}
+            </button>
+            <button
+              type="button"
+              onClick={onLeaveClan}
+              className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-200 transition hover:bg-rose-500/15"
+            >
+              Leave Clan
+            </button>
+          </div>
+        </div>
+
+        <p className="mt-6 text-sm leading-7 text-slate-300">
+          {clanData.bio || "No clan description has been added yet."}
+        </p>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <InfoBlock icon={<FiMapPin />} label="Location" value={clanData.location || "Not set"} />
+          <InfoBlock
+            icon={<FaCrown />}
+            label="Leader"
+            value={clanData?.leader?.leaderName || "Unknown"}
+          />
+          <InfoBlock
+            icon={<FiUsers />}
+            label="Members"
+            value={String(clanData?.members?.length || 0)}
+          />
+          <InfoBlock
+            icon={<FiShield />}
+            label="Created"
+            value={new Date(clanData.createdAt).toLocaleDateString()}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+        <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+          Member Roster
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-white">Current lineup</h2>
+
+        <div className="mt-6 grid gap-3">
+          {(clanData.members || []).map((member, index) => (
+            <div
+              key={`${member.user}-${index}`}
+              className="flex items-center justify-between rounded-[24px] border border-white/10 bg-black/20 px-4 py-4"
+            >
+              <div>
+                <p className="font-semibold text-white">
+                  {member.clanMemberName || "Player"}
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">
+                  {member.role}
+                </p>
+              </div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+                Member
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+};
+
+const SearchClanPanel = ({
+  searchTag,
+  setSearchTag,
+  onSearch,
+  result,
+  clanError,
+  searchingClan,
+  onJoinClan,
+  onToggleBookmark,
+  bookmarkedClanIds,
+}) => {
+  const isBookmarked = result ? bookmarkedClanIds.has(String(result._id)) : false;
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+        <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+          Discovery
+        </p>
+        <h2 className="mt-2 text-2xl font-black text-white">Search by clan tag</h2>
+        <div className="mt-6 space-y-3">
+          <Input
+            type="text"
+            name="searchClan"
+            label="Clan tag"
+            placeholder="#CLAN123"
+            value={searchTag}
+            onChange={(event) => setSearchTag(event.target.value)}
+            iconStart={<FiSearch />}
+          />
+          <Button
+            onClick={onSearch}
+            isLoading={searchingClan}
+            className="h-14 w-full rounded-2xl bg-cyan-300 text-sm font-black uppercase tracking-[0.14em] text-slate-950 hover:bg-cyan-200"
+          >
+            Search Clan
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+        {result ? (
+          <>
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+              Search Result
+            </p>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-white">{result.clanName}</h2>
+                <p className="mt-2 text-sm text-slate-400">{result.clanTag}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToggleBookmark(result._id, isBookmarked)}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                >
+                  {isBookmarked ? "Bookmarked" : "Bookmark"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onJoinClan(result.clanTag)}
+                  className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+                >
+                  Join Clan
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <InfoBlock
+                icon={<FiUsers />}
+                label="Members"
+                value={String(result?.members?.length || 0)}
+              />
+              <InfoBlock
+                icon={<FiShield />}
+                label="Type"
+                value={result?.stats?.type || result?.clanType || "Open"}
+              />
+            </div>
+          </>
+        ) : (
+          <EmptyPanel
+            title={clanError || "No clan selected"}
+            copy="Search with a clan tag to preview details and join from here."
+          />
+        )}
+      </section>
+    </div>
+  );
+};
+
+const SocialPanel = ({
+  activeTab,
+  setActiveTab,
+  friends,
+  friendRequests,
+  sentRequests,
+  playerCard,
+  playerError,
+  playerQuery,
+  searchingPlayer,
+  setPlayerQuery,
+  onSearchPlayer,
+  onAddFriend,
+  onCancelRequest,
+  onAcceptRequest,
+  onRejectRequest,
+  onRemoveFriend,
+  currentUserId,
+}) => (
+  <div className="space-y-6">
+    <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-4 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+      <div className="flex flex-wrap gap-2">
+        {[
+          { id: "friends", label: `Friends (${friends.length})` },
+          { id: "friendRequests", label: `Requests (${friendRequests.length})` },
+          { id: "searchPlayers", label: "Search Players" },
+        ].map((tab) => (
+          <TabButton
+            key={tab.id}
+            active={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </TabButton>
+        ))}
+      </div>
+    </section>
+
+    {activeTab === "friends" ? (
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <RosterPanel title="Friends" emptyCopy="Your friends list will appear here.">
+          {friends.map((friend) => (
+            <PersonRow
+              key={friend._id}
+              name={friend.profile.username}
+              avatar={friend.profile.avatar}
+              subtitle="Connected player"
+              actionLabel="Remove"
+              actionIcon={<FiUserMinus />}
+              actionTone="danger"
+              onAction={() => onRemoveFriend(friend._id)}
+            />
+          ))}
+        </RosterPanel>
+
+        <RosterPanel
+          title="Sent requests"
+          emptyCopy="Outgoing requests are shown here until they are accepted or cancelled."
+        >
+          {sentRequests.map((request) => (
+            <PersonRow
+              key={request._id}
+              name={request.profile.username}
+              avatar={request.profile.avatar}
+              subtitle="Pending request"
+              actionLabel="Cancel"
+              actionIcon={<FiUserMinus />}
+              actionTone="danger"
+              onAction={() => onCancelRequest(request._id)}
+            />
+          ))}
+        </RosterPanel>
+      </div>
+    ) : null}
+
+    {activeTab === "friendRequests" ? (
+      <RosterPanel
+        title="Incoming requests"
+        emptyCopy="No incoming friend requests right now."
       >
-        {tab.label}
-      </button>
-    ))}
+        {friendRequests.map((requester) => (
+          <div
+            key={requester._id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/10 bg-black/20 px-4 py-4"
+          >
+            <div className="flex items-center gap-3">
+              <img
+                src={requester?.profile?.avatar || "/profile-pic.png"}
+                alt={requester?.profile?.username || "Player"}
+                className="h-12 w-12 rounded-2xl object-cover"
+              />
+              <div>
+                <p className="font-semibold text-white">
+                  {requester?.profile?.username || "Player"}
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">
+                  Wants to connect
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => onAcceptRequest(requester._id)}
+                className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+              >
+                Accept
+              </button>
+              <button
+                type="button"
+                onClick={() => onRejectRequest(requester._id)}
+                className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-200 transition hover:bg-rose-500/15"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </RosterPanel>
+    ) : null}
+
+    {activeTab === "searchPlayers" ? (
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+          <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+            Search
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-white">Find players by tag</h2>
+          <div className="mt-6 space-y-3">
+            <Input
+              type="text"
+              name="searchFriend"
+              label="Player tag"
+              placeholder="Enter username or player tag"
+              value={playerQuery}
+              onChange={(event) => setPlayerQuery(event.target.value)}
+              iconStart={<FiSearch />}
+            />
+            <Button
+              onClick={onSearchPlayer}
+              isLoading={searchingPlayer}
+              className="h-14 w-full rounded-2xl bg-cyan-300 text-sm font-black uppercase tracking-[0.14em] text-slate-950 hover:bg-cyan-200"
+            >
+              Search Player
+            </Button>
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+          {playerCard ? (
+            <div className="flex h-full flex-col justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+                  Player Result
+                </p>
+                <div className="mt-6 flex items-center gap-4">
+                  <img
+                    src={playerCard.avatar || "/profile-pic.png"}
+                    alt={playerCard.username}
+                    className="h-20 w-20 rounded-[24px] object-cover"
+                  />
+                  <div>
+                    <h3 className="text-2xl font-black text-white">
+                      {playerCard.username}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-400">
+                      Friendship status: {playerCard.friendshipStatus}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                {playerCard.friendshipStatus === "not_friends" &&
+                currentUserId !== playerCard._id ? (
+                  <ActionButton onClick={() => onAddFriend(playerCard._id)}>
+                    <FiUserPlus />
+                    Add Friend
+                  </ActionButton>
+                ) : null}
+
+                {playerCard.friendshipStatus === "request_received" ? (
+                  <ActionButton onClick={() => onAcceptRequest(playerCard._id)}>
+                    <FiUserPlus />
+                    Accept Request
+                  </ActionButton>
+                ) : null}
+
+                {playerCard.friendshipStatus === "request_sent" ? (
+                  <ActionButton onClick={() => onCancelRequest(playerCard._id)}>
+                    <FiUserMinus />
+                    Cancel Request
+                  </ActionButton>
+                ) : null}
+
+                {playerCard.friendshipStatus === "friends" ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200">
+                    Already friends
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <EmptyPanel
+              title={playerError || "No player selected"}
+              copy="Search for a player to see their current relationship state and connect from here."
+            />
+          )}
+        </section>
+      </div>
+    ) : null}
+  </div>
+);
+
+const RosterPanel = ({ title, emptyCopy, children }) => {
+  const items = Array.isArray(children) ? children.filter(Boolean) : children;
+  const hasItems = Array.isArray(items) ? items.length > 0 : Boolean(items);
+
+  return (
+    <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+      <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+        Social
+      </p>
+      <h2 className="mt-2 text-2xl font-black text-white">{title}</h2>
+      <div className="mt-6 grid gap-3">
+        {hasItems ? items : <EmptyPanel title={title} copy={emptyCopy} />}
+      </div>
+    </section>
+  );
+};
+
+const PersonRow = ({
+  name,
+  avatar,
+  subtitle,
+  actionLabel,
+  actionIcon,
+  actionTone = "default",
+  onAction,
+}) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
+    <div className="flex items-center gap-3">
+      <img
+        src={avatar || "/default-avatar.png"}
+        alt={name}
+        className="h-12 w-12 rounded-2xl object-cover"
+      />
+      <div>
+        <p className="font-semibold text-white">{name}</p>
+        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={onAction}
+      className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${
+        actionTone === "danger"
+          ? "border border-rose-500/20 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15"
+          : "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
+      }`}
+    >
+      {actionIcon}
+      {actionLabel}
+    </button>
+  </div>
+);
+
+const MetricCard = ({ label, value }) => (
+  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4">
+    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</p>
+    <p className="mt-3 text-lg font-black text-white">{value}</p>
+  </div>
+);
+
+const InfoBlock = ({ icon, label, value }) => (
+  <div className="rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
+    <div className="flex items-center gap-2 text-cyan-300">
+      {icon}
+      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</p>
+    </div>
+    <p className="mt-3 text-lg font-bold text-white">{value}</p>
+  </div>
+);
+
+const TabButton = ({ active, onClick, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`rounded-full px-4 py-3 text-sm font-bold transition ${
+      active
+        ? "bg-cyan-300 text-slate-950"
+        : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+    }`}
+  >
+    {children}
+  </button>
+);
+
+const ActionButton = ({ onClick, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+  >
+    {children}
+  </button>
+);
+
+const EmptyPanel = ({ title, copy }) => (
+  <div className="rounded-[24px] border border-dashed border-white/10 bg-black/10 px-5 py-6">
+    <p className="font-semibold text-white">{title}</p>
+    <p className="mt-2 text-sm leading-6 text-slate-400">{copy}</p>
   </div>
 );
 

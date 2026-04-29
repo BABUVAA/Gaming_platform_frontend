@@ -57,7 +57,15 @@ export const searchClan = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      return response.data; // return error message in case of failure
+      thunkAPI.dispatch(
+        showToast({
+          message:
+            error.response?.data?.message || "Unable to find that clan tag.",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -181,11 +189,13 @@ const clanSlice = createSlice({
       })
       .addCase(fetchUserClan.fulfilled, (state, action) => {
         state.userClanData = action.payload;
+        state.loading = false;
       })
       .addCase(fetchUserClan.pending, (state) => {
-        state.userClanData = "Fetching Clan....";
+        state.loading = true;
       })
       .addCase(fetchUserClan.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload;
         state.userClanData = null;
       })
@@ -194,6 +204,7 @@ const clanSlice = createSlice({
       })
       .addCase(searchClan.rejected, (state, action) => {
         state.error = action.payload;
+        state.searchClanData = null;
       })
       .addCase(logout.fulfilled, (state) => {
         state.userClanData = null;

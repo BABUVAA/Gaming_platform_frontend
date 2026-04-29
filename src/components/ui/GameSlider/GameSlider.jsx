@@ -3,13 +3,14 @@ import { useSelector } from "react-redux";
 import GameCard from "../GameCard/GameCard";
 
 const GameSlider = () => {
-  const games = useSelector((store) => store.games?.data || []);
+  const games = useSelector((store) => store.games?.data);
   const sliderRef = useRef(null);
   const [scrollX, setScrollX] = useState(0);
   const [cardsPerView, setCardsPerView] = useState(2); // Default for mobile
+  const availableGames = games || [];
 
   // Duplicate games for smooth infinite scroll effect
-  const gameList = [...games, ...games];
+  const gameList = [...availableGames, ...availableGames];
 
   useEffect(() => {
     updateCardsPerView();

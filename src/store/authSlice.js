@@ -6,20 +6,28 @@ import { showToast, types } from "./toastSlice";
 export const verifySession = createAsyncThunk(
   "auth/verifySession",
   async (_, thunkAPI) => {
-    // ✅ Add `thunkAPI` here
     try {
       const response = await api.post("/api/auth/verifySession", {
         withCredentials: true,
       });
       return response.data;
     } catch (error) {
-      thunkAPI.dispatch(
-        showToast({
-          message: error.response.data.message || error,
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
+      const statusCode = error.response?.status;
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Unable to verify the current session.";
+
+      if (statusCode && statusCode !== 401) {
+        thunkAPI.dispatch(
+          showToast({
+            message,
+            type: types.DANGER,
+            position: "bottom-right",
+          })
+        );
+      }
+
       return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -117,19 +125,20 @@ export const register = createAsyncThunk(
 // Async thunk for user Profile
 export const user_profile = createAsyncThunk(
   "users/profile",
-  async (_, { rejectWithValue }) => {
+  async (_, thunkAPI) => {
     try {
       const response = await api.get("/api/users/profile");
       return response.data;
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message: error.response.data.error,
+          message:
+            error.response?.data?.error || "Unable to load player profile.",
           type: types.DANGER,
           position: "bottom-right",
         })
       );
-      return rejectWithValue(error.response?.data || error.message);
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -145,7 +154,7 @@ export const searchPlayer = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      return response.data; // return error message in case of failure
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
     }
   }
 );
@@ -260,6 +269,32 @@ const authSlice = createSlice({
         };
       }
     },
+    upsertActiveChat: (state, action) => {
+      if (!state.profile) return;
+
+      if (!Array.isArray(state.profile.activeChats)) {
+        state.profile.activeChats = [];
+      }
+
+      const incomingChat = action.payload;
+      if (!incomingChat?.userId) return;
+
+      const existingIndex = state.profile.activeChats.findIndex(
+        (chat) =>
+          chat?.userId === incomingChat.userId ||
+          chat?._id === incomingChat.userId ||
+          chat?.id === incomingChat.userId
+      );
+
+      if (existingIndex === -1) {
+        state.profile.activeChats.unshift(incomingChat);
+      } else {
+        state.profile.activeChats[existingIndex] = {
+          ...state.profile.activeChats[existingIndex],
+          ...incomingChat,
+        };
+      }
+    },
   },
 
   extraReducers: (builder) => {
@@ -287,6 +322,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.profile = null;
         state.error = "";
       })
       .addCase(login.rejected, (state, action) => {
@@ -296,6 +332,7 @@ const authSlice = createSlice({
       .addCase(register.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.profile = null;
       })
       .addCase(register.rejected, (state, action) => {
         state.error = action.payload;

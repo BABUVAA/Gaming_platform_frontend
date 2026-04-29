@@ -1,181 +1,256 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import { FiAlertCircle, FiMessageCircle, FiSend } from "react-icons/fi";
 import { useSocket } from "../../context/socketContext";
-import { FiMessageCircle } from "react-icons/fi";
+
+const getMessageSignature = (message = {}, fallbackIndex = 0) =>
+  message?._id ||
+  [
+    message?.senderId || "unknown",
+    message?.receiverId || message?.clanId || message?.chatId || "thread",
+    message?.message || "",
+    String(message?.timestamp || message?.createdAt || ""),
+    fallbackIndex,
+  ].join("::");
+
+const dedupeMessages = (messageList = []) => {
+  const seenSignatures = new Set();
+
+  return messageList.filter((entry, index) => {
+    const signature = getMessageSignature(entry, index);
+    if (seenSignatures.has(signature)) return false;
+    seenSignatures.add(signature);
+    return true;
+  });
+};
 
 const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
-  const { profile } = useSelector((store) => store.auth); // User profile
-  const { userClanData } = useSelector((store) => store.clan); // Clan data
-  const [message, setMessage] = useState(""); // To hold the current message
-  const [messages, setMessages] = useState([]); // To hold all the chat messages
+  const { profile } = useSelector((store) => store.auth);
+  const { userClanData } = useSelector((store) => store.clan);
   const socket = useSocket();
+  const chatDisplayRef = useRef(null);
+  const shouldStickToBottomRef = useRef(true);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
 
-  // Determine chat ID based on type
-  const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat; // ✅ Fixed chatId
-  const senderId = profile._id; // ✅ Fixed senderId
-  const senderName = profile.profile.username || "unknown";
-  // Join chat room and listen for messages
+  const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat;
+  const senderId = profile?._id;
+  const senderName = profile?.profile?.username || "unknown";
+  const cachedMessages = useMemo(
+    () => socket?.messages?.[chatId] || [],
+    [chatId, socket?.messages]
+  );
+  const isConnected = Boolean(socket?.socket && socket?.connected);
+  const canSend = Boolean(
+    message.trim() && isConnected && chatId && senderId && !isJoiningRoom
+  );
+
+  useEffect(() => {
+    setMessages(dedupeMessages(cachedMessages));
+  }, [cachedMessages, chatId]);
+
   useEffect(() => {
     if (!socket?.socket || !chatId || !senderId) return;
 
-    // Listen for previous messages
+    setIsJoiningRoom(true);
+
     const loadMessagesListener = (loadedMessages) => {
-      setMessages(loadedMessages); // ✅ Store previous messages
+      setMessages(
+        dedupeMessages(Array.isArray(loadedMessages) ? loadedMessages : [])
+      );
+      setIsJoiningRoom(false);
     };
 
-    // Listen for new messages
     const messageListener = (newMessage) => {
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      setMessages((prevMessages) => {
+        return dedupeMessages([...prevMessages, newMessage]);
+      });
     };
 
+    socket.socket.off(`${chatType}_load_messages`, loadMessagesListener);
+    socket.socket.off(`${chatType}_message`, messageListener);
     socket.socket.on(`${chatType}_load_messages`, loadMessagesListener);
-    socket.socket.on(`${chatType}_message`, messageListener); // ✅ Use event constant
-
-    // Join chat room
+    socket.socket.on(`${chatType}_message`, messageListener);
     socket.socket.emit(`join_${chatType}_room`, chatId);
 
-    // Cleanup on unmount
     return () => {
+      setIsJoiningRoom(false);
       socket.socket.emit(`leave_${chatType}_room`, chatId);
       socket.socket.off(`${chatType}_message`, messageListener);
       socket.socket.off(`${chatType}_load_messages`, loadMessagesListener);
     };
-  }, [chatType, chatId, senderId]);
+  }, [chatType, chatId, senderId, socket?.socket]);
 
   useEffect(() => {
-    const chatDisplay = document.getElementById("chatDisplay");
-    if (chatDisplay) {
-      chatDisplay.scrollTop = chatDisplay.scrollHeight;
-    }
-  }, [messages]); // ✅ Scrolls down on new messages
+    const container = chatDisplayRef.current;
+    if (!container || !shouldStickToBottomRef.current) return;
 
-  // Send a new message
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages]);
+
+  const handleScroll = () => {
+    const container = chatDisplayRef.current;
+    if (!container) return;
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    shouldStickToBottomRef.current = distanceFromBottom < 96;
+  };
+
   const sendMessage = () => {
-    if (!message.trim()) return;
+    if (!canSend) return;
 
+    const trimmedMessage = message.trim();
     let messageData = {
-      clanId: chatId, // ✅ Ensure correct reference
-      senderId: senderId, // ✅ Ensure correct sender
-      senderName: senderName,
-      message,
+      clanId: chatId,
+      senderId,
+      senderName,
+      message: trimmedMessage,
     };
+
     if (chatType === "personal") {
       messageData = {
         receiverId: selectedChat,
         receiverName: chatName,
-        senderId: senderId, // ✅ Ensure correct sender
-        senderName: senderName,
-        message,
+        senderId,
+        senderName,
+        message: trimmedMessage,
       };
     }
 
-    // Emit the message to the server
-    socket.socket.emit(`${chatType}_message`, messageData); // ✅ Use event constant
-
-    // Clear the input field after sending
+    shouldStickToBottomRef.current = true;
+    socket.socket.emit(`${chatType}_message`, messageData);
     setMessage("");
   };
 
+  if (!chatType) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+        <FiMessageCircle size={40} className="mb-3 text-slate-500" />
+        <h2 className="text-base font-medium text-slate-100">
+          No Chat Selected
+        </h2>
+        <p className="text-sm text-slate-400">
+          Select a chat to start messaging.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative mx-auto w-full h-full bg-white dark:bg-zinc-800 shadow-md rounded-lg overflow-hidden">
-      {!chatType ? (
-        <div className="flex flex-col items-center justify-center h-full text-center p-6">
-          <FiMessageCircle
-            size={40}
-            className="text-gray-400 dark:text-gray-600 mb-3"
-          />
-          <h2 className="text-base font-medium text-gray-700 dark:text-gray-300">
-            No Chat Selected
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Select a chat to start messaging!
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col h-full w-full">
-          <div className="flex justify-between items-center p-2 border-b dark:border-zinc-700">
-            <div className="flex items-center gap-2">
-              <button
-                className="md:hidden text-zinc-800 dark:text-white"
-                onClick={() => onBack()}
-              >
-                ←
-              </button>
-              <h2 className="text-base font-medium text-zinc-800 dark:text-white">
-                {chatType === "clan" ? "Clan Chat" : `${chatName}`}
-              </h2>
-            </div>
-            <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-              Online
-            </div>
-          </div>
-
-          <div
-            className="flex-1 p-2 overflow-y-auto flex flex-col space-y-1.5"
-            id="chatDisplay"
+    <div className="relative mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-slate-950 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <button
+            className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 md:hidden"
+            onClick={() => onBack()}
           >
-            {/* {userClanData?.data?.chat.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.senderId === senderId ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`rounded-lg px-3 py-1.5 text-sm max-w-[80%] ${
-                    msg.senderId === senderId
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-300 text-black"
-                  }`}
-                >
-                  <span className="font-medium">{msg.senderName}: </span>
-                  {msg.message}
-                </div>
-              </div>
-            ))} */}
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.senderId === senderId ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`rounded-lg px-3 py-1.5 text-sm max-w-[80%] ${
-                    msg.senderId === senderId
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-300 text-black"
-                  }`}
-                >
-                  {chatType === "clan" && (
-                    <span className="font-medium">{msg.senderName}: </span>
-                  )}
-                  {msg.message}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className=" p-2 border-t w-full dark:border-zinc-700">
-            <div className="flex items-center gap-2">
-              <input
-                placeholder="Type a message..."
-                className="flex-1 p-2 border rounded-full dark:bg-zinc-700 dark:text-white dark:border-zinc-600 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              />
-
-              <button
-                disabled={!message.trim()}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 px-4 rounded-full transition duration-300 ease-in-out text-sm"
-                onClick={sendMessage}
-              >
-                ➤
-              </button>
-            </div>
+            Back
+          </button>
+          <div>
+            <h2 className="text-base font-medium text-white">
+              {chatType === "clan" ? "Clan Chat" : chatName}
+            </h2>
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+              {chatType === "clan" ? "Squad channel" : "Direct player chat"}
+            </p>
           </div>
         </div>
-      )}
+        <div
+          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${
+            isConnected
+              ? "bg-emerald-500/15 text-emerald-300"
+              : "bg-amber-500/15 text-amber-200"
+          }`}
+        >
+          {isConnected ? "Connected" : "Offline"}
+        </div>
+      </div>
+
+      {!isConnected ? (
+        <div className="flex items-center gap-2 border-b border-amber-500/15 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <FiAlertCircle className="shrink-0" />
+          <span>
+            Live chat is disconnected. Make sure the backend socket server is
+            running.
+          </span>
+        </div>
+      ) : null}
+
+      <div
+        ref={chatDisplayRef}
+        onScroll={handleScroll}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+      >
+        {isJoiningRoom ? (
+          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
+            Joining channel and syncing messages...
+          </div>
+        ) : null}
+
+        {!isJoiningRoom && messages.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
+            No messages yet. Start the conversation from here.
+          </div>
+        ) : null}
+
+        {messages.map((msg, index) => {
+          const isOwnMessage = msg.senderId === senderId;
+
+          return (
+            <div
+              key={getMessageSignature(msg, index)}
+              className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                  isOwnMessage
+                    ? "bg-cyan-300 text-slate-950"
+                    : "border border-slate-800 bg-slate-900 text-slate-100"
+                }`}
+              >
+                {chatType === "clan" && !isOwnMessage ? (
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-cyan-300">
+                    {msg.senderName || "Player"}
+                  </span>
+                ) : null}
+                <p className="leading-6">{msg.message}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="w-full border-t border-slate-800 p-3">
+        <div className="flex items-center gap-2">
+          <input
+            placeholder={
+              isConnected
+                ? "Type a message..."
+                : "Reconnect live services to send messages"
+            }
+            className="flex-1 rounded-full border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && sendMessage()}
+            disabled={!isConnected || !chatId || !senderId}
+          />
+
+          <button
+            disabled={!canSend}
+            className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+            onClick={sendMessage}
+          >
+            <FiSend />
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

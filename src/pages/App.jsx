@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { fetchGames } from "../store/gameSlice";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Header, Toast } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Outlet } from "react-router-dom";
@@ -13,13 +13,13 @@ import { fetchWalletBalance } from "../store/paymentSlice";
 
 function App() {
   const dispatch = useDispatch();
+  const hasLoadedInitialData = useRef(false);
   const { profile } = useSelector((store) => store.auth);
   const { userClanData } = useSelector((store) => store.clan);
   const { globalLoading } = useSelector((store) => store.loading);
   const { isAuthenticated } = useSelector((store) => store.auth);
   const games = useSelector((store) => store.games);
   const { tournaments } = useSelector((store) => store.tournament);
-  const { visible } = useSelector((store) => store.toast);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,12 +40,10 @@ function App() {
     const fetchInitialData = async () => {
       try {
         let currentProfile = profile;
-        if (true) {
-          const result = await dispatch(user_profile());
-          currentProfile = result?.payload;
-          await dispatch(fetchWalletBalance());
-          await dispatch(fetchNotifications());
-        }
+        const result = await dispatch(user_profile());
+        currentProfile = result?.payload;
+        await dispatch(fetchWalletBalance());
+        await dispatch(fetchNotifications());
         if (!userClanData && currentProfile?.clan?._id) {
           await dispatch(fetchUserClan());
         }
@@ -55,9 +53,13 @@ function App() {
     };
 
     if (isAuthenticated) {
+      if (hasLoadedInitialData.current) return;
+      hasLoadedInitialData.current = true;
       fetchInitialData();
+    } else {
+      hasLoadedInitialData.current = false;
     }
-  }, [isAuthenticated]);
+  }, [dispatch, isAuthenticated, profile, userClanData]);
 
   // Show loading spinner while fetching data
   if (globalLoading) {
@@ -72,7 +74,7 @@ function App() {
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
-      {visible && <Toast />}
+      <Toast />
     </div>
   );
 }

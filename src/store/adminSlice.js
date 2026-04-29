@@ -22,7 +22,7 @@ export const findUsers = createAsyncThunk(
       thunkAPI.dispatch(
         showToast({
           message: error.response?.data?.message || "Failed to fetch users",
-          type: types.ERROR, // ✅ Fix: was SUCCESS
+          type: types.DANGER,
           position: "bottom-right",
         })
       );
@@ -52,7 +52,7 @@ export const findTransactions = createAsyncThunk(
         showToast({
           message:
             error.response?.data?.message || "Failed to fetch transactions",
-          type: types.ERROR,
+          type: types.DANGER,
           position: "bottom-right",
         })
       );
@@ -82,7 +82,69 @@ export const findTournaments = createAsyncThunk(
         showToast({
           message:
             error.response?.data?.message || "Failed to fetch Tournament",
-          type: types.ERROR,
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const findVerificationRequests = createAsyncThunk(
+  "admin/findVerificationRequests",
+  async (status = "pending", thunkAPI) => {
+    try {
+      const response = await api.get("/api/admin/verification-requests", {
+        params: { status },
+      });
+
+      return response.data.data;
+    } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message:
+            error.response?.data?.message ||
+            "Failed to fetch verification requests",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const reviewVerificationRequest = createAsyncThunk(
+  "admin/reviewVerificationRequest",
+  async ({ requestId, status, reviewNote }, thunkAPI) => {
+    try {
+      const response = await api.patch(
+        `/api/admin/verification-requests/${requestId}`,
+        {
+          status,
+          reviewNote,
+        }
+      );
+
+      thunkAPI.dispatch(
+        showToast({
+          message: `Verification request ${status}.`,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
+
+      return response.data.data;
+    } catch (error) {
+      thunkAPI.dispatch(
+        showToast({
+          message:
+            error.response?.data?.message ||
+            "Failed to update verification request",
+          type: types.DANGER,
           position: "bottom-right",
         })
       );
@@ -98,6 +160,7 @@ const adminSlice = createSlice({
     users: [],
     transactions: [],
     tournaments: [],
+    verificationRequests: [],
     isLoading: false,
     error: null,
   },
@@ -139,6 +202,31 @@ const adminSlice = createSlice({
       .addCase(findTournaments.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || "Failed to fetch transactions";
+      })
+      .addCase(findVerificationRequests.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(findVerificationRequests.fulfilled, (state, action) => {
+        state.verificationRequests = action.payload;
+        state.isLoading = false;
+      })
+      .addCase(findVerificationRequests.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || "Failed to fetch verification requests";
+      })
+      .addCase(reviewVerificationRequest.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(reviewVerificationRequest.fulfilled, (state, action) => {
+        state.verificationRequests = state.verificationRequests.map((request) =>
+          request._id === action.payload._id ? action.payload : request
+        );
+        state.isLoading = false;
+      })
+      .addCase(reviewVerificationRequest.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || "Failed to update verification request";
       });
   },
 });

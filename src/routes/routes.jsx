@@ -1,7 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { user_profile } from "../store/authSlice";
 
 // Centralized Route Paths
 const ROUTES = {
@@ -32,6 +33,7 @@ const LazyComponents = {
   Dashboard: lazy(() => import("../pages/Dashboard")),
   Game: lazy(() => import("../pages/Game")),
   Tournament: lazy(() => import("../pages/Tournament")),
+  Matches: lazy(() => import("../pages/Matches.jsx")),
   TournamentGame: lazy(() => import("../pages/TournamentGame.jsx")),
   TournamentDetails: lazy(() => import("../pages/TournamentDetails.jsx")),
   Profile: lazy(() => import("../pages/Profile")),
@@ -53,6 +55,33 @@ const Loading = () => <LoadingSpinner />;
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useSelector((store) => store.auth);
   return isAuthenticated ? children : <Navigate to={ROUTES.LOGIN} replace />;
+};
+
+const AdminRoute = ({ children }) => {
+  const dispatch = useDispatch();
+  const [hasRequestedProfile, setHasRequestedProfile] = useState(false);
+  const { isAuthenticated, profile } = useSelector((store) => store.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated || profile || hasRequestedProfile) return;
+
+    setHasRequestedProfile(true);
+    dispatch(user_profile());
+  }, [dispatch, hasRequestedProfile, isAuthenticated, profile]);
+
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  if (!profile) {
+    return <Loading />;
+  }
+
+  if (profile.role !== "admin") {
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  }
+
+  return children;
 };
 
 // Landing Page Logic
@@ -99,6 +128,10 @@ const routes = createBrowserRouter([
             path: "tournament",
             element: <LazyComponents.Tournament />,
           },
+          {
+            path: "matches",
+            element: <LazyComponents.Matches />,
+          },
           // Dynamic Game Tournament Route
           {
             path: "tournament/:game",
@@ -121,9 +154,11 @@ const routes = createBrowserRouter([
   {
     path: ROUTES.ADMIN_PANEL,
     element: (
-      <Suspense fallback={<Loading />}>
-        <LazyComponents.AdminDashboard />
-      </Suspense>
+      <AdminRoute>
+        <Suspense fallback={<Loading />}>
+          <LazyComponents.AdminDashboard />
+        </Suspense>
+      </AdminRoute>
     ),
   },
 ]);

@@ -8,6 +8,26 @@ const initialState = {
   error: null,
 };
 
+const getNotificationSignature = (notification = {}, fallbackIndex = 0) =>
+  notification?._id ||
+  [
+    notification?.title || "",
+    notification?.message || "",
+    String(notification?.createdAt || ""),
+    fallbackIndex,
+  ].join("::");
+
+const dedupeNotifications = (notifications = []) => {
+  const seenSignatures = new Set();
+
+  return notifications.filter((notification, index) => {
+    const signature = getNotificationSignature(notification, index);
+    if (seenSignatures.has(signature)) return false;
+    seenSignatures.add(signature);
+    return true;
+  });
+};
+
 // ✅ Fetch user notifications
 export const fetchNotifications = createAsyncThunk(
   "notifications/fetch",
@@ -16,7 +36,7 @@ export const fetchNotifications = createAsyncThunk(
       const response = await api.get("/api/notifications", {
         withCredentials: true,
       });
-      return response.data;
+      return response.data?.data || response.data || [];
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
@@ -43,7 +63,7 @@ export const markNotificationAsRead = createAsyncThunk(
           withCredentials: true,
         }
       );
-      return response.data;
+      return response.data?.data || response.data;
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
@@ -64,7 +84,22 @@ const notificationSlice = createSlice({
   initialState,
   reducers: {
     addNotification: (state, action) => {
-      state.items.unshift(action.payload);
+      const notification = action.payload;
+      const existingIndex = state.items.findIndex(
+        (item, index) =>
+          getNotificationSignature(item, index) ===
+          getNotificationSignature(notification, state.items.length)
+      );
+
+      if (existingIndex === -1) {
+        state.items = dedupeNotifications([notification, ...state.items]);
+        return;
+      }
+
+      state.items[existingIndex] = {
+        ...state.items[existingIndex],
+        ...notification,
+      };
     },
   },
   extraReducers: (builder) => {
@@ -76,7 +111,7 @@ const notificationSlice = createSlice({
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = dedupeNotifications(action.payload);
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
         state.loading = false;

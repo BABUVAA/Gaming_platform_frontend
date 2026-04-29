@@ -4,7 +4,7 @@ import api from "../api/axios-api"; // Ensure you have the correct axios instanc
 // Async thunk to fetch all games from the server
 export const fetchGames = createAsyncThunk("/", async (_, thunkAPI) => {
   try {
-    const response = await api.get("/"); // Replace with your API endpoint
+    const response = await api.get("/api/games");
     return response.data; // Expected array of games
   } catch (error) {
     return thunkAPI.rejectWithValue(

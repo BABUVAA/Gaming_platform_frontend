@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  fetchWalletBalance,
-  initiatePhonePeOrder,
-} from "../store/paymentSlice";
+import { FiArrowDownLeft, FiArrowUpRight, FiClock } from "react-icons/fi";
 import { Button } from "../components";
 import api from "../api/axios-api";
+import {
+  initiatePhonePeOrder,
+  withdrawRequest,
+} from "../store/paymentSlice";
+import { showToast, types } from "../store/toastSlice";
 
 const statusColor = {
-  COMPLETED: "text-green-600 bg-green-100",
-  PENDING: "text-yellow-600 bg-yellow-100",
-  FAILED: "text-red-600 bg-red-100",
+  COMPLETED: "bg-emerald-500/15 text-emerald-300",
+  PENDING: "bg-amber-500/15 text-amber-200",
+  FAILED: "bg-rose-500/15 text-rose-200",
 };
+
+const quickAmounts = [100, 250, 500, 1000];
 
 const Wallet = () => {
   const dispatch = useDispatch();
@@ -20,284 +24,366 @@ const Wallet = () => {
   const [activeTab, setActiveTab] = useState("real");
   const [txnTypeFilter, setTxnTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
-
-  const [txnInProgress, setTxnInProgress] = useState(false);
-
-  // useEffect(() => {
-  //   dispatch(fetchWalletBalance());
-  // }, [dispatch]);
-
-  const handleAddMoney = async () => {
-    if (txnInProgress) return;
-    setTxnInProgress(true);
-    const value = parseFloat(amount);
-    if (!value || value <= 0) return alert("Enter a valid amount");
-
-    try {
-      const response = await dispatch(
-        initiatePhonePeOrder({
-          amount: value,
-          name: "Bhupesh Patel",
-          mobile: "9602689822",
-        })
-      );
-
-      // const data = response.payload.order;
-      //RAjorpay
-      // const options = {
-      //   key: import.meta.env.VITE_RAZORPAY_KEY_ID, // ✅ use env variable
-      //   amount: order.amount, // amount in paise
-      //   currency: order.currency,
-      //   name: "Gaming Platform",
-      //   description: "Wallet Top-up",
-      //   order_id: order.id, // backend order_id
-      //   callback_url: "http://localhost:8080/api/payment/verify", // ✅ Razorpay will call this
-      //   prefill: {
-      //     name: "Bhupesh Patel",
-      //     email: "bhupesh@example.com",
-      //     contact: "9602689822",
-      //   },
-      //   theme: {
-      //     color: "#3399cc",
-      //   },
-      // };
-      // const rzp1 = new window.Razorpay(options);
-      // rzp1.open();
-      if (response.payload.redirectUrl && response.payload.callbackUrl) {
-        api.post(response.payload.callbackUrl);
-        window.location.href = response.payload.redirectUrl;
-      } else {
-        alert("No redirect URL received.");
-      }
-    } catch (err) {
-      console.error("PhonePe initiation failed:", err);
-      alert("Something went wrong");
-    } finally {
-      setIsAddModalOpen(false);
-      setAmount("");
-      setTxnInProgress(false);
-    }
-  };
-
-  const handleWithdrawMoney = () => {
-    const value = parseFloat(amount);
-    if (!value || value <= 0) return alert("Enter a valid amount");
-    alert(`Withdraw ₹${value} initiated`);
-    setIsWithdrawModalOpen(false);
-    setAmount("");
-  };
-
-  const renderModal = (title, onConfirm, onClose) => (
-    <div
-      className={`fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center ${
-        txnInProgress ? "disabled" : ""
-      }`}
-    >
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">{title}</h2>
-        <input
-          type="number"
-          placeholder="Enter amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-        />
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow${
-              txnInProgress ? "disabled" : ""
-            }`}
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   const activeTransactions =
     activeTab === "platform"
       ? wallet?.platformTransactions || []
       : wallet?.realTransactions || [];
 
-  const filteredTransactions = activeTransactions.filter((txn) => {
-    const matchesType = txnTypeFilter === "all" || txn.type === txnTypeFilter;
-    const txnStatus = txn?.transactionId?.status || "pending";
-    const matchesStatus = statusFilter === "all" || txnStatus === statusFilter;
-    return matchesType && matchesStatus;
-  });
+  const filteredTransactions = useMemo(
+    () =>
+      activeTransactions.filter((txn) => {
+        const matchesType = txnTypeFilter === "all" || txn.type === txnTypeFilter;
+        const txnStatus = (txn?.transactionId?.status || "pending").toLowerCase();
+        const matchesStatus =
+          statusFilter === "all" || txnStatus === statusFilter.toLowerCase();
+        return matchesType && matchesStatus;
+      }),
+    [activeTransactions, statusFilter, txnTypeFilter]
+  );
+
+  const closeModals = () => {
+    setIsAddModalOpen(false);
+    setIsWithdrawModalOpen(false);
+    setAmount("");
+  };
+
+  const validateAmount = (value) => {
+    const parsedValue = Number(value);
+    if (!parsedValue || parsedValue <= 0) {
+      dispatch(
+        showToast({
+          message: "Enter a valid wallet amount.",
+          type: types.WARNING,
+          position: "bottom-right",
+        })
+      );
+      return null;
+    }
+
+    return parsedValue;
+  };
+
+  const handleAddMoney = async () => {
+    const value = validateAmount(amount);
+    if (!value) return;
+
+    try {
+      const response = await dispatch(
+        initiatePhonePeOrder({
+          amount: value,
+          name: "Player",
+          mobile: "9999999999",
+        })
+      ).unwrap();
+
+      if (response?.redirectUrl) {
+        if (response.callbackUrl) {
+          await api.post(response.callbackUrl);
+        }
+
+        window.location.href = response.redirectUrl;
+        return;
+      }
+
+      dispatch(
+        showToast({
+          message: "No payment redirect URL was returned.",
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
+    } catch (error) {
+      console.error("PhonePe initiation failed:", error);
+    } finally {
+      closeModals();
+    }
+  };
+
+  const handleWithdrawMoney = async () => {
+    const value = validateAmount(amount);
+    if (!value) return;
+
+    try {
+      await dispatch(withdrawRequest({ amount: value })).unwrap();
+      closeModals();
+    } catch (error) {
+      console.error("Withdraw request failed:", error);
+    }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-10 mb-8">
-      <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-2xl shadow-2xl text-center text-white mb-8">
-        <h2 className="text-4xl font-extrabold mb-2">💰 Wallet</h2>
-        <p className="text-md opacity-90">
-          Manage your balance and transactions
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
+        <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/80">
+          Wallet Command
         </p>
-      </div>
+        <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-4xl font-black text-white md:text-5xl">
+              Manage deposits, platform balance, and settlement history.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
+              This is your cash and competition ledger. Keep real funds topped
+              up, review platform credits, and watch the status of every wallet move.
+            </p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-md text-center">
-          <h4 className="text-sm text-gray-500">Wallet Balance</h4>
-          <p className="text-3xl font-bold text-blue-600 mt-2">
-            ₹{wallet?.realMoney.toLocaleString("en-IN") || "0"}
-          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MetricCard
+              label="Real Wallet"
+              value={`Rs ${wallet?.realMoney || 0}`}
+              accent="text-cyan-300"
+              icon={<FiArrowDownLeft />}
+            />
+            <MetricCard
+              label="Platform Coins"
+              value={wallet?.platformMoney || 0}
+              accent="text-emerald-300"
+              icon={<FiArrowUpRight />}
+            />
+            <MetricCard
+              label="Recent Activity"
+              value={activeTransactions.length}
+              accent="text-amber-200"
+              icon={<FiClock />}
+            />
+          </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-md text-center">
-          <h4 className="text-sm text-gray-500">Game Coins</h4>
-          <p className="text-3xl font-bold text-green-600 mt-2">
-            {wallet?.platformMoney || 0}
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_0.8fr]">
+        <ActionPanel
+          title="Add funds"
+          copy="Top up your real wallet before joining paid brackets and tournaments."
+          actionLabel="Add Money"
+          onClick={() => {
+            setAmount("");
+            setIsAddModalOpen(true);
+          }}
+          tone="primary"
+        />
+        <ActionPanel
+          title="Withdraw funds"
+          copy="Move eligible winnings out with a withdrawal request from the same command deck."
+          actionLabel="Withdraw"
+          onClick={() => {
+            setAmount("");
+            setIsWithdrawModalOpen(true);
+          }}
+          tone="danger"
+        />
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Quick Rules
           </p>
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
+            <li>Deposits redirect you to the payment provider securely.</li>
+            <li>Platform ledger entries track in-app rewards and usage.</li>
+            <li>Pending statuses usually settle after backend confirmation.</li>
+          </ul>
         </div>
-        <div className="flex flex-col justify-center items-center gap-4">
-          <Button
-            onClick={() => {
-              setAmount("");
-              setIsAddModalOpen(true);
-            }}
-            className="w-full py-3 text-lg bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-xl hover:from-indigo-600 hover:to-blue-700 shadow-lg transition"
-          >
-            ➕ Add Money
-          </Button>
-          <Button
-            onClick={() => {
-              setAmount("");
-              setIsWithdrawModalOpen(true);
-            }}
-            className="w-full py-3 text-lg bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-xl hover:from-rose-600 hover:to-red-700 shadow-lg transition"
-          >
-            ➖ Withdraw
-          </Button>
+      </section>
+
+      <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-2">
+            {[
+              { key: "real", label: "Real Wallet" },
+              { key: "platform", label: "Platform Ledger" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition ${
+                  activeTab === tab.key
+                    ? "bg-cyan-400/14 text-cyan-200"
+                    : "text-slate-500 hover:text-slate-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200"
+              value={txnTypeFilter}
+              onChange={(event) => setTxnTypeFilter(event.target.value)}
+            >
+              <option value="all">All Types</option>
+              <option value="credit">Credit</option>
+              <option value="debit">Debit</option>
+            </select>
+
+            <select
+              className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">All Status</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div className="flex justify-center gap-4 mb-4">
-        <button
-          onClick={() => setActiveTab("real")}
-          className={`px-4 py-2 rounded-full text-sm font-semibold ${
-            activeTab === "real"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-gray-700"
-          }`}
-        >
-          💸 Wallet Transactions
-        </button>
-        <button
-          onClick={() => setActiveTab("platform")}
-          className={`px-4 py-2 rounded-full text-sm font-semibold ${
-            activeTab === "platform"
-              ? "bg-green-600 text-white"
-              : "bg-gray-200 text-gray-700"
-          }`}
-        >
-          🎮 Platform Transactions
-        </button>
-      </div>
-
-      <div className="flex justify-between mb-4">
-        <select
-          className="border px-2 py-1 rounded text-sm"
-          value={txnTypeFilter}
-          onChange={(e) => setTxnTypeFilter(e.target.value)}
-        >
-          <option value="all">All Types</option>
-          <option value="credit">Credit</option>
-          <option value="debit">Debit</option>
-        </select>
-
-        <select
-          className="border px-2 py-1 rounded text-sm"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All Status</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
-          <option value="failed">Failed</option>
-        </select>
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-4 max-h-[400px] overflow-auto">
-        {filteredTransactions.length === 0 ? (
-          <p className="text-gray-400 text-center py-4">
-            No transactions found.
-          </p>
-        ) : (
-          <ul className="divide-y">
-            {[...filteredTransactions].reverse().map((txn, idx) => {
+        <div className="mt-5 space-y-3">
+          {filteredTransactions.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              No transactions found for this view.
+            </div>
+          ) : (
+            [...filteredTransactions].reverse().map((txn, index) => {
               const status =
                 txn?.transactionId?.status?.toUpperCase() || "PENDING";
-              const isFailed = status === "FAILED";
               const isCredit = txn.type === "credit";
-              const amountColor = isFailed
-                ? "text-red-500"
-                : isCredit
-                ? "text-green-600"
-                : "text-red-600";
-
-              const badgeColor =
-                statusColor[status] || "text-gray-600 bg-gray-100";
 
               return (
-                <li
-                  key={idx}
-                  className="flex justify-between items-start py-3 hover:bg-gray-50 px-2 rounded-lg transition"
+                <article
+                  key={txn._id || index}
+                  className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"
                 >
-                  <div className="space-y-1">
-                    <p className="font-medium text-gray-800">
+                  <div>
+                    <p className="font-semibold text-white">
                       {txn.reason || "Transaction"}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(txn.timestamp).toLocaleString("en-IN")}
+                    <p className="mt-1 text-sm text-slate-400">
+                      {new Date(txn.timestamp || txn.createdAt).toLocaleString("en-IN")}
                     </p>
-                    {txn?.transactionId?.meta?.merchantTransactionId && (
-                      <p className="text-xs text-gray-400">
+                    {txn?.transactionId?.meta?.merchantTransactionId ? (
+                      <p className="mt-1 text-xs text-slate-500">
                         Txn ID:{" "}
-                        {txn.transactionId.meta.merchantTransactionId.slice(
-                          -12
-                        )}
+                        {txn.transactionId.meta.merchantTransactionId.slice(-12)}
                       </p>
-                    )}
+                    ) : null}
+                  </div>
+
+                  <div className="text-right">
                     <span
-                      className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        statusColor[status] || "bg-slate-800 text-slate-200"
+                      }`}
                     >
                       {status}
                     </span>
+                    <p
+                      className={`mt-3 text-lg font-black ${
+                        isCredit ? "text-emerald-300" : "text-rose-300"
+                      }`}
+                    >
+                      {isCredit ? "+" : "-"} Rs {txn.amount}
+                    </p>
                   </div>
-
-                  <span
-                    className={`text-base font-bold ${amountColor} whitespace-nowrap`}
-                  >
-                    {isCredit ? "+" : "-"} ₹{txn.amount}
-                  </span>
-                </li>
+                </article>
               );
-            })}
-          </ul>
-        )}
-      </div>
+            })
+          )}
+        </div>
+      </section>
 
-      {isAddModalOpen &&
-        renderModal("Add Money", handleAddMoney, () =>
-          setIsAddModalOpen(false)
-        )}
-      {isWithdrawModalOpen &&
-        renderModal("Withdraw Money", handleWithdrawMoney, () =>
-          setIsWithdrawModalOpen(false)
-        )}
+      {isAddModalOpen ? (
+        <AmountModal
+          title="Add Money"
+          amount={amount}
+          setAmount={setAmount}
+          onClose={closeModals}
+          onConfirm={handleAddMoney}
+          isLoading={isLoading}
+        />
+      ) : null}
+
+      {isWithdrawModalOpen ? (
+        <AmountModal
+          title="Withdraw Money"
+          amount={amount}
+          setAmount={setAmount}
+          onClose={closeModals}
+          onConfirm={handleWithdrawMoney}
+          isLoading={isLoading}
+        />
+      ) : null}
     </div>
   );
 };
+
+const AmountModal = ({ title, amount, setAmount, onConfirm, onClose, isLoading }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-[0_24px_60px_rgba(2,8,23,0.55)]">
+      <h2 className="text-2xl font-black text-white">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        Choose a clean amount to continue the wallet flow.
+      </p>
+
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        {quickAmounts.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setAmount(String(value))}
+            className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-3 text-sm font-semibold text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
+          >
+            Rs {value}
+          </button>
+        ))}
+      </div>
+
+      <input
+        type="number"
+        placeholder="Enter amount"
+        value={amount}
+        onChange={(event) => setAmount(event.target.value)}
+        className="mt-4 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+      />
+      <div className="mt-5 flex justify-end gap-3">
+        <button
+          onClick={onClose}
+          className="rounded-2xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isLoading}
+          className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+        >
+          {isLoading ? "Processing..." : "Confirm"}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const MetricCard = ({ label, value, accent, icon }) => (
+  <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{label}</p>
+      <span className="rounded-xl bg-white/5 p-2 text-slate-300">{icon}</span>
+    </div>
+    <p className={`mt-3 text-3xl font-black ${accent}`}>{value}</p>
+  </div>
+);
+
+const ActionPanel = ({ title, copy, actionLabel, onClick, tone }) => (
+  <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+    <h2 className="text-xl font-black text-white">{title}</h2>
+    <p className="mt-3 text-sm leading-7 text-slate-400">{copy}</p>
+    <Button
+      onClick={onClick}
+      className={`mt-5 w-full rounded-2xl py-3 ${
+        tone === "danger"
+          ? "bg-rose-500 text-white hover:bg-rose-400"
+          : "bg-cyan-300 text-slate-950"
+      }`}
+    >
+      {actionLabel}
+    </Button>
+  </div>
+);
 
 export default Wallet;

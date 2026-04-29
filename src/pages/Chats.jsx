@@ -1,160 +1,241 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import ChatBox from "../components/common/ChatBox";
+import { FiMessageSquare, FiUsers } from "react-icons/fi";
 
 const Chats = () => {
   const { profile } = useSelector((store) => store.auth);
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatType, setChatType] = useState(null);
   const [chatName, setChatName] = useState(null);
-  const [personalChats, setPersonalChats] = useState(
-    profile?.activeChats || []
-  );
+  const [personalChats, setPersonalChats] = useState(profile?.activeChats || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const clanChat = profile?.clan || null;
+  const totalChats = (clanChat ? 1 : 0) + personalChats.length;
+
+  useEffect(() => {
+    setPersonalChats(profile?.activeChats || []);
+  }, [profile?.activeChats]);
+
+  const helperStats = useMemo(
+    () => [
+      { label: "Open threads", value: totalChats },
+      { label: "Direct chats", value: personalChats.length },
+      { label: "Clan room", value: clanChat ? "Live" : "Not joined" },
+    ],
+    [clanChat, personalChats.length, totalChats]
+  );
+
+  const openChat = ({ id, type, name }) => {
+    setSelectedChat(id);
+    setChatType(type);
+    setChatName(name);
+    setIsModalOpen(false);
+  };
 
   return (
-    <div className="flex h-[calc(100vh-96px)]">
-      {/* Sidebar */}
-      <div
-        className={`transition-all bg-blue-50 border-r border-blue-300 shadow-lg w-full md:w-1/3 flex flex-col ${
-          selectedChat ? "hidden md:flex" : "flex"
-        }`}
-      >
-        <ChatSidebar
-          selectedChat={selectedChat}
-          onSelectChat={setSelectedChat}
-          onChatType={setChatType}
-          clanChat={profile?.clan}
-          personalChats={personalChats}
-          onNewChat={() => setIsModalOpen(true)}
-          chatName={setChatName}
-        />
-      </div>
+    <div className="flex min-h-0 flex-col space-y-6">
+      <section className="rounded-3xl border border-violet-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(167,139,250,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-violet-300/80">
+              Communications
+            </p>
+            <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
+              Coordinate clan traffic, match notes, and private player messages.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
+              Keep your squad channel active, open direct player threads, and
+              move between conversations without losing the live match shell.
+            </p>
+          </div>
 
-      {/* Chat Box */}
-      {selectedChat && (
-        <div className="transition-all bg-white flex flex-col flex-1 md:pb-0">
-          <ChatBox
-            selectedChat={selectedChat}
-            chatType={chatType}
-            chatName={chatName}
-            onBack={() => setSelectedChat(null)}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {helperStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+              >
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                  {stat.label}
+                </p>
+                <p className="mt-3 text-lg font-black text-white">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] lg:[height:calc(100vh-16rem)]">
+        <div
+          className={`min-h-0 ${selectedChat ? "hidden lg:block" : "block"}`}
+        >
+          <ChatSidebar
+            onOpenChat={openChat}
+            clanChat={clanChat}
+            personalChats={personalChats}
+            onNewChat={() => setIsModalOpen(true)}
           />
         </div>
-      )}
 
-      {/* New Chat Modal */}
+        <div
+          className={`min-h-0 ${selectedChat ? "block" : "hidden lg:block"}`}
+        >
+          {selectedChat ? (
+            <div className="h-full min-h-0 rounded-3xl border border-slate-800 bg-slate-950/90 p-2 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+              <ChatBox
+                selectedChat={selectedChat}
+                chatType={chatType}
+                chatName={chatName}
+                onBack={() => setSelectedChat(null)}
+              />
+            </div>
+          ) : (
+            <div className="flex h-full min-h-[20rem] items-center justify-center rounded-3xl border border-dashed border-slate-800 bg-slate-950/70 p-6 text-center text-sm text-slate-400">
+              Pick a clan or private thread to open the live communication pane.
+            </div>
+          )}
+        </div>
+      </div>
+
       {isModalOpen && (
         <NewChatModal
           onClose={() => setIsModalOpen(false)}
           personalChats={personalChats}
           setPersonalChats={setPersonalChats}
-          setChatName={setChatName}
+          onOpenChat={openChat}
         />
       )}
     </div>
   );
 };
 
-export default Chats;
-
-const ChatSidebar = ({
-  selectedChat,
-  onSelectChat,
-  onChatType,
-  clanChat,
-  personalChats,
-  onNewChat,
-  chatName,
-}) => {
+const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
   return (
-    <div className="absolute bottom-1 h-full md:pb-0 bg-blue-50 border-r border-blue-300 shadow-lg w-full flex flex-col">
-      {/* Sidebar Header */}
-      <div className="p-2 bg-blue-500 text-white text-xs font-semibold shadow-md flex justify-between items-center">
-        <span>Chats</span>
-      </div>
-
-      {/* Chat List */}
-      <div className="flex flex-col flex-1 overflow-y-auto">
-        {clanChat && (
-          <div
-            className="p-2 mx-1 my-0.5 bg-white rounded-md shadow-sm border border-blue-300 cursor-pointer hover:bg-blue-100 transition"
-            onClick={() => {
-              onSelectChat(clanChat._id);
-              onChatType("clan");
-            }}
-          >
-            <span className="text-xs font-medium text-blue-600">
-              🏆 {clanChat.clanName} (Clan)
-            </span>
-          </div>
-        )}
-        {personalChats.map((chat) => (
-          <div
-            key={chat._id}
-            className="p-2 mx-1 my-0.5 bg-white rounded-md shadow-sm border border-gray-300 cursor-pointer hover:bg-blue-100 transition"
-            onClick={() => {
-              onSelectChat(chat.userId || chat.id || chat._id || "unknown");
-              onChatType("personal");
-              chatName(chat.username || chat.profile.username);
-            }}
-          >
-            <span className="text-xs font-medium text-gray-800">
-              {chat.username || chat.profile.username}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom Actions */}
-      <div className="p-1 bg-gray-100 border-t border-gray-300 shadow-md flex justify-between items-center">
-        <button className="text-blue-600 text-[10px] font-medium hover:underline">
-          Settings
-        </button>
+    <div className="h-full min-h-0 overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/90 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+      <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Match Feed
+          </p>
+          <h2 className="mt-1 text-xl font-black text-white">Chats</h2>
+        </div>
         <button
-          className="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded hover:bg-blue-600 transition"
-          onClick={onNewChat} // Open New Chat Modal
+          className="rounded-2xl bg-cyan-300 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-950"
+          onClick={onNewChat}
         >
-          New Chat
+          New
         </button>
+      </div>
+
+      <div className="h-full space-y-2 overflow-y-auto p-3">
+        {clanChat && (
+          <button
+            type="button"
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4 text-left transition hover:border-slate-700"
+            onClick={() => {
+              onOpenChat({
+                id: clanChat._id,
+                type: "clan",
+                name: clanChat.clanName,
+              });
+            }}
+          >
+            <span className="flex items-start gap-3">
+              <span className="rounded-2xl bg-violet-500/10 p-3 text-violet-300">
+                <FiUsers />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-white">
+                  {clanChat.clanName}
+                </span>
+                <span className="block text-xs text-slate-500">
+                  Clan channel
+                </span>
+              </span>
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+              Live
+            </span>
+          </button>
+        )}
+
+        {personalChats.map((chat, index) => (
+          <button
+            key={chat._id || chat.userId || chat.id || `chat-${index}`}
+            type="button"
+            className="block w-full rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4 text-left transition hover:border-slate-700"
+            onClick={() => {
+              onOpenChat({
+                id: chat.userId || chat.id || chat._id || "unknown",
+                type: "personal",
+                name: chat.username || chat.profile?.username || "Unknown player",
+              });
+            }}
+          >
+            <span className="flex items-start gap-3">
+              <span className="rounded-2xl bg-cyan-400/10 p-3 text-cyan-200">
+                <FiMessageSquare />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-white">
+                  {chat.username || chat.profile?.username}
+                </span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  Direct player channel
+                </span>
+              </span>
+            </span>
+          </button>
+        ))}
+
+        {!clanChat && personalChats.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 px-4 py-5 text-sm text-slate-400">
+            No chat threads yet. Start a new direct chat to begin.
+          </div>
+        ) : null}
       </div>
     </div>
   );
 };
 
-const NewChatModal = ({
-  onClose,
-  personalChats,
-  setPersonalChats,
-  setChatName,
-}) => {
+const NewChatModal = ({ onClose, personalChats, setPersonalChats, onOpenChat }) => {
   const { profile } = useSelector((store) => store.auth);
-  const friends = profile.profile.friends || [];
-
+  const friends = profile?.profile?.friends || [];
   const [selectedUser, setSelectedUser] = useState(null);
 
   const startChat = () => {
     if (!selectedUser) return;
 
-    // Find friend details
-    const friend = friends.find((f) => f._id === selectedUser);
-    // Check if already in personalChats
-    if (!personalChats.find((chat) => chat._id === friend._id)) {
+    const friend = friends.find((entry) => entry._id === selectedUser);
+    if (!friend) return;
+
+    const existingChat = personalChats.find(
+      (chat) =>
+        chat._id === friend._id ||
+        chat.userId === friend._id ||
+        chat.id === friend._id
+    );
+
+    if (!existingChat) {
       setPersonalChats([...personalChats, { ...friend, type: "personal" }]);
-      setChatName(friend.profile.username);
     }
 
-    onClose(); // Close modal
+    onOpenChat({
+      id: friend._id,
+      type: "personal",
+      name: friend.profile?.username || "Player",
+    });
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white p-4 rounded-lg shadow-lg w-80">
-        <h2 className="text-lg font-semibold mb-2">Start a New Chat</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-[0_24px_60px_rgba(2,8,23,0.55)]">
+        <h2 className="text-2xl font-black text-white">Start a New Chat</h2>
         <select
-          className="w-full p-2 border rounded-md"
+          className="mt-4 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
           value={selectedUser || ""}
-          onChange={(e) => setSelectedUser(e.target.value)}
+          onChange={(event) => setSelectedUser(event.target.value)}
         >
           <option value="">Select a friend</option>
           {friends.map((friend) => (
@@ -164,15 +245,15 @@ const NewChatModal = ({
           ))}
         </select>
 
-        <div className="flex justify-end mt-3">
+        <div className="mt-5 flex justify-end gap-3">
           <button
-            className="px-3 py-1 bg-gray-300 rounded-md mr-2"
+            className="rounded-2xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
-            className="px-3 py-1 bg-blue-500 text-white rounded-md"
+            className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950"
             onClick={startChat}
           >
             Start Chat
@@ -182,3 +263,5 @@ const NewChatModal = ({
     </div>
   );
 };
+
+export default Chats;

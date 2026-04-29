@@ -1,494 +1,430 @@
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FaDiscord,
-  FaEdit,
   FaFacebook,
   FaInstagram,
-  FaPlus,
-  FaRegCopy,
   FaSteam,
   FaTwitch,
   FaTwitter,
   FaYoutube,
 } from "react-icons/fa";
-import { useState } from "react";
+import {
+  FiCamera,
+  FiCopy,
+  FiEdit3,
+  FiImage,
+  FiSave,
+  FiUsers,
+} from "react-icons/fi";
 import {
   profile_data_update,
   profile_file_update,
   user_profile,
 } from "../store/authSlice";
 
-const Profile = () => {
-  const { profile } = useSelector((store) => store.auth);
+const SOCIAL_PLATFORMS = [
+  { key: "discord", label: "Discord", icon: FaDiscord, color: "text-indigo-300" },
+  { key: "instagram", label: "Instagram", icon: FaInstagram, color: "text-pink-300" },
+  { key: "twitter", label: "X / Twitter", icon: FaTwitter, color: "text-cyan-300" },
+  { key: "youtube", label: "YouTube", icon: FaYoutube, color: "text-rose-300" },
+  { key: "facebook", label: "Facebook", icon: FaFacebook, color: "text-blue-300" },
+  { key: "steam", label: "Steam", icon: FaSteam, color: "text-slate-300" },
+  { key: "twitch", label: "Twitch", icon: FaTwitch, color: "text-violet-300" },
+];
 
-  // Example data, replace with actual data from user profile
-  const games = ["pubg", "Coc", "valorant", "fortnite"];
-  const tournamentStats = {
-    tournamentsEntered: 5,
-    gamesPlayed: 150,
-    totalEarnings: 10000,
+const Profile = () => {
+  const dispatch = useDispatch();
+  const { profile } = useSelector((store) => store.auth);
+  const playerProfile = profile?.profile || {};
+  const [copied, setCopied] = useState(false);
+  const [selectedImageType, setSelectedImageType] = useState("");
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
+  const [draftSocials, setDraftSocials] = useState(
+    playerProfile.linkedAccounts || {}
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  const linkedGames = playerProfile.games || [];
+  const tournaments = playerProfile.tournaments || [];
+  const friendCount = playerProfile.friends?.length || 0;
+
+  const socialLinks = useMemo(
+    () =>
+      SOCIAL_PLATFORMS.filter(({ key }) => playerProfile.linkedAccounts?.[key]),
+    [playerProfile.linkedAccounts]
+  );
+
+  const stats = [
+    { label: "Linked Games", value: linkedGames.length || 0 },
+    { label: "Tournaments", value: tournaments.length || 0 },
+    { label: "Friends", value: friendCount },
+    { label: "Bookmarked Clans", value: playerProfile.bookmarkedClans?.length || 0 },
+  ];
+
+  const openSocialEditor = () => {
+    setDraftSocials(playerProfile.linkedAccounts || {});
+    setIsSocialModalOpen(true);
   };
 
-  const pastTournaments = [];
-
-  //Section 1: Profile Information
-
-  const ProfileHeader = ({ profile }) => {
-    const [profilePic, setProfilePic] = useState(
-      profile?.profile.avatar || "/profile-pic.png"
-    );
-    const [bannerPic, setBannerPic] = useState(
-      profile?.profile.banner || "/pubg_background.jpg"
-    );
-    const [selectedImageType, setSelectedImageType] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
-    const [socialAccounts, setSocialAccounts] = useState(
-      profile?.profile?.linkedAccounts || {
-        instagram: "",
-        youtube: "",
-        twitter: "",
-        facebook: "",
-      }
-    );
-
-    const dispatch = useDispatch();
-
-    const handleImageChange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const imageUrl = URL.createObjectURL(file);
-        if (selectedImageType === "profile") {
-          setProfilePic(imageUrl);
-          handleProfileUpdate("profile.avatar", file);
-        } else if (selectedImageType === "banner") {
-          setBannerPic(imageUrl);
-          handleProfileUpdate("profile.banner", file);
-        }
-        setIsModalOpen(false);
-      }
-    };
-
-    {
-      /* Social accounts handling */
+  const copyProfileTag = async () => {
+    if (!profile?.profileTag) return;
+    try {
+      await navigator.clipboard.writeText(profile.profileTag);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch (error) {
+      console.error("Failed to copy profile tag:", error);
     }
-    const [editableFields, setEditableFields] = useState({});
+  };
 
-    const handleEditClick = (platform) => {
-      setEditableFields((prev) => ({ ...prev, [platform]: true }));
-    };
-
-    const handleBlur = (e) => {
-      const { name, value } = e.target;
-
-      setSocialAccounts((prev) => {
-        const updatedAccounts = { ...prev };
-
-        if (value.trim()) {
-          // If there's a value, update it
-          updatedAccounts[name] = value;
-        } else {
-          // If empty, remove the key
-          updatedAccounts[name] = null;
-        }
-
-        return updatedAccounts;
-      });
-
-      setEditableFields((prev) => ({ ...prev, [name]: false })); // Disable input again
-    };
-
-    {
-      /** copy feature */
+  const uploadAsset = async (file) => {
+    if (!file || !selectedImageType) return;
+    try {
+      setIsSaving(true);
+      await dispatch(
+        profile_file_update({
+          field:
+            selectedImageType === "profile" ? "profile.avatar" : "profile.banner",
+          data: file,
+        })
+      ).unwrap();
+      await dispatch(user_profile());
+      setIsImageModalOpen(false);
+    } catch (error) {
+      console.error("Profile media update failed:", error);
+    } finally {
+      setIsSaving(false);
     }
-    const [copied, setCopied] = useState(false);
-    const copyToClipboard = async () => {
-      if (!profile?.profileTag) return;
-      try {
-        await navigator.clipboard.writeText(profile.profileTag);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500); // Reset copied state after 1.5 sec
-      } catch (err) {
-        console.error("Failed to copy: ", err);
-      }
-    };
+  };
 
-    {
-      /*profile data update function */
+  const saveSocialLinks = async () => {
+    try {
+      setIsSaving(true);
+      const payload = Object.fromEntries(
+        Object.entries(draftSocials || {}).map(([key, value]) => [key, value || null])
+      );
+      await dispatch(
+        profile_data_update({
+          field: "profile.linkedAccounts",
+          data: payload,
+        })
+      ).unwrap();
+      await dispatch(user_profile());
+      setIsSocialModalOpen(false);
+    } catch (error) {
+      console.error("Social link update failed:", error);
+    } finally {
+      setIsSaving(false);
     }
-    const handleProfileUpdate = async (field, data) => {
-      try {
-        await dispatch(profile_file_update({ field: field, data: data }));
-        await dispatch(user_profile());
-      } catch (error) {
-        console.log(error);
-      }
-    };
+  };
 
-    return (
-      <div className="bg-white relative rounded-lg mb-6 overflow-hidden h-[300px]">
-        {/* Banner */}
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/85 shadow-[0_24px_70px_rgba(2,8,23,0.45)]">
         <div
-          className="absolute top-0 left-0 w-full h-[160px] bg-cover bg-center cursor-pointer"
-          style={{ backgroundImage: `url(${bannerPic})` }}
-          onClick={() => {
-            setSelectedImageType("banner");
-            setIsModalOpen(true);
+          className="relative h-52 bg-cover bg-center md:h-64"
+          style={{
+            backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.82)), url(${playerProfile.banner || "/pubg_background.jpg"})`,
           }}
         >
-          {/* Edit Button for Banner */}
           <button
-            className="absolute z-40 top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full hover:bg-opacity-80 transition"
+            type="button"
             onClick={() => {
               setSelectedImageType("banner");
-              setIsModalOpen(true);
+              setIsImageModalOpen(true);
             }}
+            className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/55"
           >
-            <FaEdit className="text-lg" />
+            <FiImage />
+            Update Banner
           </button>
         </div>
 
-        {/* Overlay for Banner */}
-        <div className="absolute inset-0 bg-white opacity-30"></div>
+        <div className="relative px-5 pb-6 md:px-8">
+          <div className="-mt-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end">
+              <div className="relative">
+                <img
+                  src={playerProfile.avatar || "/profile-pic.png"}
+                  alt={playerProfile.username || "Player avatar"}
+                  className="h-28 w-28 rounded-[28px] border-4 border-slate-950 object-cover shadow-xl md:h-32 md:w-32"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedImageType("profile");
+                    setIsImageModalOpen(true);
+                  }}
+                  className="absolute -bottom-2 -right-2 rounded-full border border-cyan-300/30 bg-cyan-300 px-3 py-3 text-slate-950 shadow-lg transition hover:bg-cyan-200"
+                >
+                  <FiCamera />
+                </button>
+              </div>
 
-        {/* Profile Picture, Username, and Social Icons */}
-        <div className="relative flex items-start justify-between p-4 pt-[160px] pt- sm:p-6 sm:pt-[160px] h-full">
-          {/* Profile Picture */}
-          <div className="flex flex-col items-center absolute bottom-10">
-            {/* Profile Picture with Edit Button at Bottom-Right */}
-            <div className="relative">
-              <img
-                src={profilePic}
-                alt="Profile"
-                className="w-28 h-28 rounded-full border-4 border-white"
-              />
-              <button
-                className="absolute bottom-2 right-2 bg-blue-600 text-white p-1 rounded-full shadow-md hover:bg-blue-700 transition duration-200"
-                onClick={() => {
-                  setSelectedImageType("profile");
-                  setIsModalOpen(true);
-                }}
-              >
-                <FaEdit className="text-sm" />
-              </button>
+              <div className="pt-2">
+                <p className="text-xs uppercase tracking-[0.26em] text-cyan-300/80">
+                  Player Identity
+                </p>
+                <h1 className="mt-2 text-3xl font-black text-white">
+                  {playerProfile.username || "Player"}
+                </h1>
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-300">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
+                    {profile?.email || "No email available"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyProfileTag}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 font-semibold transition hover:border-cyan-300/30 hover:text-cyan-200"
+                  >
+                    <FiCopy />
+                    {profile?.profileTag || "No player tag"}
+                    {copied ? " Copied" : ""}
+                  </button>
+                </div>
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-black">
-              {profile?.profile.username || "Player"}
-            </h2>
-            <div className="right-2 mt-2 flex items-center space-x-2">
-              <h2 className="text-sm font-bold text-black">
-                {profile?.profileTag}
-              </h2>
 
-              <FaRegCopy
-                className={`cursor-pointer text-gray-500 hover:text-gray-700 ${
-                  copied ? "text-green-600" : ""
-                }`}
-                onClick={copyToClipboard}
-                title="Copy to clipboard"
-              />
+            <button
+              type="button"
+              onClick={openSocialEditor}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-400/15"
+            >
+              <FiEdit3 />
+              Edit Social Links
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-[28px] border border-white/10 bg-slate-950/80 p-5 shadow-[0_18px_40px_rgba(2,8,23,0.35)]"
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+              {stat.label}
+            </p>
+            <p className="mt-3 text-3xl font-black text-white">{stat.value}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+                Competition Snapshot
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-white">Linked game accounts</h2>
             </div>
+            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+              {linkedGames.length} Connected
+            </span>
           </div>
 
-          {/* Social Icons & Add Social Accounts */}
-          <SocialAccounts
-            linkedAccounts={profile?.profile?.linkedAccounts || {}}
-            onUpdate={() => {
-              setIsSocialModalOpen(true);
-            }}
-          />
+          <div className="mt-6 grid gap-4">
+            {linkedGames.length > 0 ? (
+              linkedGames.map((game, index) => (
+                <div
+                  key={`${game.accountId}-${index}`}
+                  className="rounded-[24px] border border-white/10 bg-black/20 p-5"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                        {game.name || "Game"}
+                      </p>
+                      <h3 className="mt-2 text-lg font-bold text-white">
+                        {game.accountUsername || game.accountId || "Unspecified account"}
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {game.accountId || "No account identifier saved"}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-200">
+                      {game.verificationStatus || "linked"}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <EmptyPanel
+                title="No game accounts linked yet"
+                copy="Connect your game identities from the account page to unlock tournament entry and match verification."
+              />
+            )}
+          </div>
         </div>
 
-        {/* Image Change Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-              <h2 className="text-xl font-bold mb-4">
-                Change {selectedImageType === "profile" ? "Profile" : "Banner"}{" "}
-                Picture
-              </h2>
-              <img
-                src={selectedImageType === "profile" ? profilePic : bannerPic}
-                alt="Current"
-                className="w-full h-[200px] object-cover rounded-md mb-4"
-              />
-              <label className="block text-center bg-blue-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-700">
-                Select New Image
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageChange}
+        <div className="space-y-6">
+          <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-300">
+                <FiUsers />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+                  Social Reach
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-white">Linked platforms</h2>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              {socialLinks.length > 0 ? (
+                socialLinks.map(({ key, label, icon: Icon, color }) => (
+                  <a
+                    key={key}
+                    href={playerProfile.linkedAccounts[key]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 transition hover:border-cyan-300/25 hover:bg-black/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`text-lg ${color}`} />
+                      <span className="font-semibold text-white">{label}</span>
+                    </div>
+                    <span className="text-sm text-slate-400">Open</span>
+                  </a>
+                ))
+              ) : (
+                <EmptyPanel
+                  title="No social links added"
+                  copy="Add socials to make your profile feel active and easier to recognize in tournaments and clans."
                 />
-              </label>
-              <button
-                className="mt-4 w-full bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-                onClick={() => setIsModalOpen(false)}
-              >
-                Cancel
-              </button>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Social Accounts Modal */}
-        {isSocialModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4">Add Social Accounts</h2>
-              <div className="space-y-3">
-                {Object.keys(socialAccounts).map((platform) => (
+          <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+              Activity
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-white">Tournament history</h2>
+            <div className="mt-6 grid gap-3">
+              {tournaments.length > 0 ? (
+                tournaments.slice(0, 5).map((tournament) => (
                   <div
-                    key={platform}
-                    className="flex items-center justify-between border p-2 rounded"
+                    key={tournament._id || tournament.tournamentName}
+                    className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4"
                   >
-                    <span className="capitalize">{platform}</span>
-                    <div className="flex items-center w-2/3">
-                      <input
-                        type="text"
-                        name={platform}
-                        defaultValue={socialAccounts[platform] || ""}
-                        placeholder={`Enter ${platform} URL`}
-                        className="border rounded px-2 py-1 w-full"
-                        disabled={
-                          socialAccounts[platform]
-                            ? !editableFields[platform]
-                            : ""
-                        } // Disable unless editing
-                        onBlur={handleBlur} // Update on losing focus
-                      />
-                      {!editableFields[platform] &&
-                        socialAccounts[platform] && (
-                          <button
-                            className="ml-2 text-blue-600 hover:underline"
-                            onClick={() => handleEditClick(platform)}
-                          >
-                            Edit
-                          </button>
-                        )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-white">
+                          {tournament.tournamentName || "Tournament"}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-400">
+                          {tournament.game || "Game"}{tournament.mode ? ` - ${tournament.mode}` : ""}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+                        {tournament.status || "active"}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-                  onClick={() => setIsSocialModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  onClick={async () => {
-                    await dispatch(
-                      profile_data_update({
-                        field: "profile.linkedAccounts",
-                        data: socialAccounts,
-                      })
-                    );
-                    await dispatch(user_profile());
-                    setIsSocialModalOpen(false);
-                  }}
-                >
-                  Save
-                </button>
-              </div>
+                ))
+              ) : (
+                <EmptyPanel
+                  title="No tournaments joined yet"
+                  copy="As you register and play, your recent tournament activity will appear here."
+                />
+              )}
             </div>
           </div>
-        )}
-      </div>
-    );
-  };
-  const SocialAccounts = ({ linkedAccounts, onUpdate }) => {
-    const socialIcons = {
-      discord: <FaDiscord className="text-purple-600" />,
-      instagram: <FaInstagram className="text-pink-500" />,
-      steam: <FaSteam className="text-gray-600" />,
-      twitch: <FaTwitch className="text-purple-500" />,
-      twitter: <FaTwitter className="text-blue-400" />,
-      youtube: <FaYoutube className="text-red-600" />,
-    };
-    return (
-      <div className="absolute bottom-2 right-2 flex flex-wrap items-center w-20 gap-2">
-        {/* Render linked accounts */}
-        {Object.entries(linkedAccounts).map(([platform, link]) =>
-          link ? (
-            <a
-              key={platform}
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:scale-110 transition-transform"
-            >
-              {socialIcons[platform] || null}
-            </a>
-          ) : null
-        )}
+        </div>
+      </section>
 
-        {/* Button to update accounts */}
-        <button
-          onClick={onUpdate}
-          className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 flex items-center justify-center"
+      {isImageModalOpen ? (
+        <ModalCard
+          title={`Update ${selectedImageType === "profile" ? "profile picture" : "banner image"}`}
+          onClose={() => setIsImageModalOpen(false)}
         >
-          <FaPlus size={15} />
-        </button>
-      </div>
-    );
-  };
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-white/15 bg-white/5 px-6 py-10 text-center text-sm text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => uploadAsset(event.target.files?.[0])}
+            />
+            <span className="text-base font-semibold text-white">Choose image</span>
+            <span className="mt-2">PNG, JPG, or WEBP work well here.</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => setIsImageModalOpen(false)}
+            className="mt-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
+          >
+            Cancel
+          </button>
+        </ModalCard>
+      ) : null}
 
-  // Section 2: Career Statistics with Tab System
-  const CareerStatistics = () => {
-    const [activeTab, setActiveTab] = useState("PUBG");
-
-    // Example data for games
-    const gameStats = {
-      PUBG: {
-        tournamentsEntered: 3,
-        gamesPlayed: 120,
-        totalEarnings: 5000,
-      },
-      CoC: {
-        tournamentsEntered: 2,
-        gamesPlayed: 30,
-        totalEarnings: 2000,
-      },
-    };
-
-    const games = ["PUBG", "CoC"];
-    const activeGameStats = gameStats[activeTab];
-
-    return (
-      <div className="career-statistics-wrapper mb-6 bg-gradient-to-b from-blue-50 to-blue-100 ">
-        {/* Container */}
-        <div className="career-statistics  bg-white p-8 rounded-lg shadow-lg mx-auto">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-            Career Statistics
-          </h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Explore your performance across different games
-          </p>
-
-          {/* Tabs */}
-          <div className="tabs flex justify-start gap-6 border-b pb-2 mb-6">
-            {games.map((game) => (
-              <button
-                key={game}
-                className={`relative py-2 px-4 text-sm font-medium rounded-t-md focus:outline-none transition-colors ${
-                  activeTab === game
-                    ? "text-blue-600 border-b-4 border-blue-500"
-                    : "text-gray-500 hover:text-blue-400"
-                }`}
-                onClick={() => setActiveTab(game)}
-              >
-                {game}
-              </button>
+      {isSocialModalOpen ? (
+        <ModalCard title="Edit social links" onClose={() => setIsSocialModalOpen(false)}>
+          <div className="grid gap-3">
+            {SOCIAL_PLATFORMS.map(({ key, label, icon: Icon, color }) => (
+              <label key={key} className="block">
+                <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-300">
+                  <Icon className={color} />
+                  {label}
+                </span>
+                <input
+                  value={draftSocials?.[key] || ""}
+                  onChange={(event) =>
+                    setDraftSocials((prev) => ({
+                      ...(prev || {}),
+                      [key]: event.target.value,
+                    }))
+                  }
+                  placeholder={`Add your ${label} profile link`}
+                  className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+                />
+              </label>
             ))}
           </div>
-
-          {/* Active Game Stats */}
-          <div className="game-stats grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="stat-card bg-blue-50 p-6 rounded-md shadow-md text-center">
-              <h4 className="text-lg font-semibold text-gray-700">
-                Tournaments Entered
-              </h4>
-              <p className="text-2xl font-bold text-blue-600 mt-2">
-                {activeGameStats.tournamentsEntered}
-              </p>
-            </div>
-            <div className="stat-card bg-blue-50 p-6 rounded-md shadow-md text-center">
-              <h4 className="text-lg font-semibold text-gray-700">
-                Games Played
-              </h4>
-              <p className="text-2xl font-bold text-blue-600 mt-2">
-                {activeGameStats.gamesPlayed}
-              </p>
-            </div>
-            <div className="stat-card bg-blue-50 p-6 rounded-md shadow-md text-center">
-              <h4 className="text-lg font-semibold text-gray-700">
-                Total Earnings
-              </h4>
-              <p className="text-2xl font-bold text-blue-600 mt-2">
-                ${activeGameStats.totalEarnings}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Section 3: Active Tournaments
-  const ActiveTournaments = ({ tournament }) => {
-    return (
-      <div className="active-tournaments-wrapper mb-6 bg-gradient-to-b from-purple-50 to-purple-100 ">
-        <div className="active-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-            Active Tournaments
-          </h3>
-          {tournament.length > 0 ? (
-            <div className="tournament-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {tournament.map((tournament, index) => (
-                <div
-                  key={index}
-                  className="tournament-card bg-purple-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                >
-                  <h4 className="text-lg font-bold text-gray-700 mb-2">
-                    {tournament.tournamentName}
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    <strong>Date:</strong> {tournament.startDate}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-gray-500">No active tournaments</p>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Section 4: Past Tournaments
-  const PastTournaments = () => (
-    <div className="past-tournaments-wrapper bg-gradient-to-b from-blue-50 to-blue-100 mb-12">
-      <div className="past-tournaments bg-white p-8 rounded-lg shadow-lg  mx-auto">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-4">
-          Past Tournaments
-        </h3>
-        {pastTournaments.length > 0 ? (
-          <div className="tournament-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pastTournaments.map((tournament, index) => (
-              <div
-                key={index}
-                className="tournament-card bg-blue-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              >
-                <h4 className="text-lg font-bold text-gray-700 mb-2">
-                  {tournament.name}
-                </h4>
-                <p className="text-sm text-gray-600">
-                  <strong>Date:</strong> {tournament.date}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Result:</strong> {tournament.result}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-gray-500">No past tournaments</p>
-        )}
-      </div>
-    </div>
-  );
-  return (
-    <div className="profile-container bg-gray-100 p-2 gap-1">
-      <ProfileHeader profile={profile} />
-      <CareerStatistics />
-      <ActiveTournaments tournament={profile?.profile?.tournaments || []} />
-      <PastTournaments />
+          <button
+            type="button"
+            onClick={saveSocialLinks}
+            disabled={isSaving}
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
+          >
+            <FiSave />
+            Save Links
+          </button>
+        </ModalCard>
+      ) : null}
     </div>
   );
 };
+
+const EmptyPanel = ({ title, copy }) => (
+  <div className="rounded-[24px] border border-dashed border-white/10 bg-black/10 px-5 py-6">
+    <p className="font-semibold text-white">{title}</p>
+    <p className="mt-2 text-sm leading-6 text-slate-400">{copy}</p>
+  </div>
+);
+
+const ModalCard = ({ title, children, onClose }) => (
+  <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+    <div className="w-full max-w-xl rounded-[32px] border border-white/10 bg-slate-950 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.55)]">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-2xl font-black text-white">{title}</h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+        >
+          Close
+        </button>
+      </div>
+      <div className="mt-5">{children}</div>
+    </div>
+  </div>
+);
 
 export default Profile;
