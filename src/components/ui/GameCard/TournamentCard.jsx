@@ -122,7 +122,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
           )}
           {!disableFetch && (
             <Link
-              to={`/tournamentDeatils/${_id}`}
+              to={`/tournamentDetails/${_id}`}
               className="text-sm font-semibold text-cyan-200"
             >
               Match Intel

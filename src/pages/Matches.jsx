@@ -84,7 +84,7 @@ const Matches = () => {
             {matches.length === 0 && !isLoading ? (
               <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
                 No matches are assigned yet. Once tournaments begin creating
-                real match instances, this feed becomes the player’s live
+                real match instances, this feed becomes the player&apos;s live
                 operation rail.
               </div>
             ) : (
@@ -96,7 +96,7 @@ const Matches = () => {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        {match.game} • {match.mode}
+                        {match.game} - {match.mode}
                       </p>
                       <h3 className="mt-1 text-lg font-bold text-white">
                         {match.title}
@@ -125,6 +125,13 @@ const Matches = () => {
                         "Operator not assigned"}
                     </span>
                   </div>
+                  <Link
+                    to={`/dashboard/matches/${match._id}`}
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-200"
+                  >
+                    Open match room
+                    <FaArrowRight />
+                  </Link>
                 </article>
               ))
             )}
@@ -192,3 +199,4 @@ const Matches = () => {
 };
 
 export default Matches;
+

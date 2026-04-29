@@ -21,7 +21,7 @@ export const dashboardNavigation = [
     description: "Join active formats",
     to: "/dashboard/tournament",
     icon: FaTrophy,
-    match: ["/dashboard/tournament", "/tournamentDeatils"],
+    match: ["/dashboard/tournament", "/tournamentDetails"],
   },
   {
     label: "Clans",

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 import {
   FaDiscord,
   FaFacebook,
@@ -18,6 +19,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import {
+  searchPlayer,
   profile_data_update,
   profile_file_update,
   user_profile,
@@ -35,7 +37,13 @@ const SOCIAL_PLATFORMS = [
 
 const Profile = () => {
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
   const { profile } = useSelector((store) => store.auth);
+  const externalPlayerTag = searchParams.get("playerTag");
+  const isViewingExternal =
+    Boolean(externalPlayerTag) && externalPlayerTag !== profile?.profileTag;
+  const [externalPlayer, setExternalPlayer] = useState(null);
+  const [externalLoading, setExternalLoading] = useState(false);
   const playerProfile = profile?.profile || {};
   const [copied, setCopied] = useState(false);
   const [selectedImageType, setSelectedImageType] = useState("");
@@ -45,6 +53,29 @@ const Profile = () => {
     playerProfile.linkedAccounts || {}
   );
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const loadExternalPlayer = async () => {
+      if (!isViewingExternal) {
+        setExternalPlayer(null);
+        return;
+      }
+      setExternalLoading(true);
+      try {
+        const response = await dispatch(
+          searchPlayer({ playerTag: externalPlayerTag })
+        ).unwrap();
+        setExternalPlayer(response?.data || null);
+      } catch (error) {
+        console.error("Unable to load external profile:", error);
+        setExternalPlayer(null);
+      } finally {
+        setExternalLoading(false);
+      }
+    };
+
+    loadExternalPlayer();
+  }, [dispatch, externalPlayerTag, isViewingExternal]);
 
   const linkedGames = playerProfile.games || [];
   const tournaments = playerProfile.tournaments || [];
@@ -122,6 +153,13 @@ const Profile = () => {
 
   return (
     <div className="space-y-6">
+      {isViewingExternal ? (
+        <section className="rounded-[28px] border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-100">
+          {externalLoading
+            ? "Loading player profile preview..."
+            : "Viewing a player preview. Full player stats API is not available yet in backend."}
+        </section>
+      ) : null}
       <section className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/85 shadow-[0_24px_70px_rgba(2,8,23,0.45)]">
         <div
           className="relative h-52 bg-cover bg-center md:h-64"
@@ -131,11 +169,12 @@ const Profile = () => {
         >
           <button
             type="button"
+            disabled={isViewingExternal}
             onClick={() => {
               setSelectedImageType("banner");
               setIsImageModalOpen(true);
             }}
-            className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/55"
+            className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <FiImage />
             Update Banner
@@ -147,17 +186,26 @@ const Profile = () => {
             <div className="flex flex-col gap-4 md:flex-row md:items-end">
               <div className="relative">
                 <img
-                  src={playerProfile.avatar || "/profile-pic.png"}
-                  alt={playerProfile.username || "Player avatar"}
+                  src={
+                    isViewingExternal
+                      ? externalPlayer?.avatar || "/profile-pic.png"
+                      : playerProfile.avatar || "/profile-pic.png"
+                  }
+                  alt={
+                    isViewingExternal
+                      ? externalPlayer?.username || "Player avatar"
+                      : playerProfile.username || "Player avatar"
+                  }
                   className="h-28 w-28 rounded-[28px] border-4 border-slate-950 object-cover shadow-xl md:h-32 md:w-32"
                 />
                 <button
                   type="button"
+                  disabled={isViewingExternal}
                   onClick={() => {
                     setSelectedImageType("profile");
                     setIsImageModalOpen(true);
                   }}
-                  className="absolute -bottom-2 -right-2 rounded-full border border-cyan-300/30 bg-cyan-300 px-3 py-3 text-slate-950 shadow-lg transition hover:bg-cyan-200"
+                  className="absolute -bottom-2 -right-2 rounded-full border border-cyan-300/30 bg-cyan-300 px-3 py-3 text-slate-950 shadow-lg transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <FiCamera />
                 </button>
@@ -168,11 +216,15 @@ const Profile = () => {
                   Player Identity
                 </p>
                 <h1 className="mt-2 text-3xl font-black text-white">
-                  {playerProfile.username || "Player"}
+                  {isViewingExternal
+                    ? externalPlayer?.username || "Player"
+                    : playerProfile.username || "Player"}
                 </h1>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-300">
                   <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                    {profile?.email || "No email available"}
+                    {isViewingExternal
+                      ? externalPlayerTag || "Player preview"
+                      : profile?.email || "No email available"}
                   </span>
                   <button
                     type="button"
@@ -189,8 +241,9 @@ const Profile = () => {
 
             <button
               type="button"
+              disabled={isViewingExternal}
               onClick={openSocialEditor}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-400/15"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FiEdit3 />
               Edit Social Links

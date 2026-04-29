@@ -13,12 +13,13 @@ const STATUS_STYLES = {
 
 const VerificationManagement = () => {
   const dispatch = useDispatch();
-  const { verificationRequests = [], isLoading } = useSelector(
+  const { verificationRequests = [], isLoading, error } = useSelector(
     (store) => store.admin
   );
   const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     dispatch(findVerificationRequests(statusFilter));
@@ -39,13 +40,17 @@ const VerificationManagement = () => {
   const handleReview = async (status) => {
     if (!selectedRequest) return;
 
-    await dispatch(
+    setIsSubmitting(true);
+    const result = await dispatch(
       reviewVerificationRequest({
         requestId: selectedRequest._id,
         status,
         reviewNote,
       })
     );
+    setIsSubmitting(false);
+
+    if (result.type?.endsWith("/rejected")) return;
 
     setSelectedRequest(null);
     setReviewNote("");
@@ -87,6 +92,13 @@ const VerificationManagement = () => {
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-[24px] border border-slate-800">
+        {error ? (
+          <div className="border-b border-rose-800 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {typeof error === "string"
+              ? error
+              : error?.message || "Verification queue failed to load."}
+          </div>
+        ) : null}
         <table className="min-w-full text-sm">
           <thead className="bg-[#020617] text-left text-xs uppercase tracking-[0.18em] text-slate-500">
             <tr>
@@ -99,6 +111,13 @@ const VerificationManagement = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                  Loading verification requests...
+                </td>
+              </tr>
+            ) : null}
             {verificationRequests.length === 0 && !isLoading ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
@@ -194,6 +213,22 @@ const VerificationManagement = () => {
                 label="Submitted"
                 value={new Date(selectedRequest.createdAt).toLocaleString()}
               />
+              <InfoBlock
+                label="Reviewed By"
+                value={
+                  selectedRequest.reviewedBy?.profile?.username ||
+                  selectedRequest.reviewedBy?.email ||
+                  "-"
+                }
+              />
+              <InfoBlock
+                label="Reviewed At"
+                value={
+                  selectedRequest.reviewedAt
+                    ? new Date(selectedRequest.reviewedAt).toLocaleString()
+                    : "-"
+                }
+              />
             </div>
 
             <div className="mt-5 rounded-xl border border-slate-800 bg-[#020617] p-4">
@@ -218,20 +253,31 @@ const VerificationManagement = () => {
               />
             </div>
 
+            <div className="mt-5 rounded-xl border border-slate-800 bg-[#020617] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                Existing Review Note
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                {selectedRequest.reviewNote || "No previous review note."}
+              </p>
+            </div>
+
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => handleReview("rejected")}
-                className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700"
+                className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reject
               </button>
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => handleReview("approved")}
-                className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Approve
+                {isSubmitting ? "Saving..." : "Approve"}
               </button>
             </div>
           </div>

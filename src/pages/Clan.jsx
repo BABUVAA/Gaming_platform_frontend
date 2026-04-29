@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Form } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FiBookmark,
@@ -32,6 +33,7 @@ import {
 
 const Clan = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { profile } = useSelector((store) => store.auth);
   const { userClanData, searchClanData } = useSelector((store) => store.clan);
   const { globalLoading } = useSelector((store) => store.loading);
@@ -46,23 +48,28 @@ const Clan = () => {
   const [playerError, setPlayerError] = useState("");
   const [clanError, setClanError] = useState("");
 
-  useEffect(() => {
-    setActiveTab(profile?.clan ? "myClan" : "createClan");
-  }, [profile?.clan]);
+  const clanData = userClanData?.data || null;
+  const hasClan = Boolean(profile?.clan || clanData);
 
   useEffect(() => {
-    if (profile?.clan?._id && !userClanData) {
+    setActiveTab(hasClan ? "myClan" : "createClan");
+  }, [hasClan]);
+
+  useEffect(() => {
+    if (hasClan && !userClanData) {
       dispatch(fetchUserClan());
     }
-  }, [dispatch, profile?.clan?._id, userClanData]);
+  }, [dispatch, hasClan, userClanData]);
 
   const playerProfile = profile?.profile || {};
-  const clanData = userClanData?.data || null;
   const friends = playerProfile.friends || [];
   const friendRequests = playerProfile.friendRequests || [];
   const sentRequests = playerProfile.sentRequests || [];
   const bookmarkedClanIds = new Set(
     (playerProfile.bookmarkedClans || []).map((clan) => String(clan._id || clan))
+  );
+  const bookmarkedClans = (playerProfile.bookmarkedClans || []).filter(
+    (clan) => typeof clan === "object" && clan !== null
   );
 
   const overviewStats = useMemo(
@@ -332,11 +339,15 @@ const Clan = () => {
       <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-4 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
         <div className="flex flex-wrap gap-2">
           {[
-            {
-              id: "myClan",
-              label: clanData ? "My Clan" : "Clan Overview",
-            },
-            { id: "createClan", label: "Create Clan" },
+            ...(hasClan
+              ? [
+                  {
+                    id: "myClan",
+                    label: "My Clan",
+                  },
+                ]
+              : [{ id: "createClan", label: "Create Clan" }]),
+            { id: "bookmarks", label: `Bookmarks (${bookmarkedClans.length})` },
             { id: "searchClan", label: "Search Clan" },
             { id: "social", label: "Social" },
           ].map((tab) => (
@@ -351,9 +362,10 @@ const Clan = () => {
         </div>
       </section>
 
-      {activeTab === "myClan" ? (
+      {hasClan && activeTab === "myClan" ? (
         <ClanOverviewPanel
           clanData={clanData}
+          hasClan={hasClan}
           bookmarkedClanIds={bookmarkedClanIds}
           onToggleBookmark={toggleBookmark}
           onLeaveClan={handleLeaveClan}
@@ -361,10 +373,19 @@ const Clan = () => {
         />
       ) : null}
 
-      {activeTab === "createClan" ? (
+      {!hasClan && activeTab === "createClan" ? (
         <CreateClanPanel
           onSubmit={handleCreateClan}
           isCreatingClan={isCreatingClan}
+        />
+      ) : null}
+
+      {activeTab === "bookmarks" ? (
+        <BookmarkedClanPanel
+          bookmarkedClans={bookmarkedClans}
+          onToggleBookmark={toggleBookmark}
+          onJoinClan={handleJoinClan}
+          hasClan={hasClan}
         />
       ) : null}
 
@@ -400,6 +421,10 @@ const Clan = () => {
           onAcceptRequest={handleAcceptRequest}
           onRejectRequest={handleRejectRequest}
           onRemoveFriend={handleRemoveFriend}
+          onViewProfile={(tag) => {
+            if (!tag) return;
+            navigate(`/dashboard/profile?playerTag=${encodeURIComponent(tag)}`);
+          }}
           currentUserId={profile?._id}
         />
       ) : null}
@@ -492,11 +517,21 @@ const CreateClanPanel = ({ onSubmit, isCreatingClan }) => (
 
 const ClanOverviewPanel = ({
   clanData,
+  hasClan,
   bookmarkedClanIds,
   onToggleBookmark,
   onLeaveClan,
   onCopyTag,
 }) => {
+  if (hasClan && !clanData) {
+    return (
+      <EmptyPanel
+        title="Loading your clan details"
+        copy="You are already in a clan. Syncing full roster data now."
+      />
+    );
+  }
+
   if (!clanData) {
     return (
       <EmptyPanel
@@ -713,6 +748,7 @@ const SocialPanel = ({
   onAcceptRequest,
   onRejectRequest,
   onRemoveFriend,
+  onViewProfile,
   currentUserId,
 }) => (
   <div className="space-y-6">
@@ -747,6 +783,10 @@ const SocialPanel = ({
               actionIcon={<FiUserMinus />}
               actionTone="danger"
               onAction={() => onRemoveFriend(friend._id)}
+              secondaryActionLabel="View Profile"
+              onSecondaryAction={() =>
+                onViewProfile(friend.profileTag || friend.profile?.profileTag)
+              }
             />
           ))}
         </RosterPanel>
@@ -936,6 +976,8 @@ const PersonRow = ({
   actionIcon,
   actionTone = "default",
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
 }) => (
   <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
     <div className="flex items-center gap-3">
@@ -951,19 +993,88 @@ const PersonRow = ({
         </p>
       </div>
     </div>
-    <button
-      type="button"
-      onClick={onAction}
-      className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${
-        actionTone === "danger"
-          ? "border border-rose-500/20 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15"
-          : "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
-      }`}
-    >
-      {actionIcon}
-      {actionLabel}
-    </button>
+    <div className="flex items-center gap-2">
+      {secondaryActionLabel ? (
+        <button
+          type="button"
+          onClick={onSecondaryAction}
+          className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100"
+        >
+          {secondaryActionLabel}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onAction}
+        className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${
+          actionTone === "danger"
+            ? "border border-rose-500/20 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15"
+            : "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
+        }`}
+      >
+        {actionIcon}
+        {actionLabel}
+      </button>
+    </div>
   </div>
+);
+
+const BookmarkedClanPanel = ({
+  bookmarkedClans,
+  onToggleBookmark,
+  onJoinClan,
+  hasClan,
+}) => (
+  <section className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+    <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
+      Bookmarked Clans
+    </p>
+    <h2 className="mt-2 text-2xl font-black text-white">Saved for later</h2>
+
+    <div className="mt-6 grid gap-4">
+      {bookmarkedClans.length > 0 ? (
+        bookmarkedClans.map((clan) => (
+          <div
+            key={clan._id || clan.clanTag}
+            className="rounded-[24px] border border-white/10 bg-black/20 p-5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-lg font-bold text-white">{clan.clanName || "Clan"}</p>
+                <p className="mt-1 text-sm text-slate-400">{clan.clanTag || "-"}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">
+                  {clan?.stats?.type || "Open"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {!hasClan ? (
+                  <button
+                    type="button"
+                    onClick={() => onJoinClan(clan.clanTag)}
+                    className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+                  >
+                    Join Clan
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => onToggleBookmark(clan._id, true)}
+                  className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-bold text-rose-200 transition hover:bg-rose-500/15"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <EmptyPanel
+          title="No bookmarked clans"
+          copy="Bookmark clans from the search tab and they will appear here."
+        />
+      )}
+    </div>
+  </section>
 );
 
 const MetricCard = ({ label, value }) => (

@@ -34,6 +34,7 @@ const LazyComponents = {
   Game: lazy(() => import("../pages/Game")),
   Tournament: lazy(() => import("../pages/Tournament")),
   Matches: lazy(() => import("../pages/Matches.jsx")),
+  MatchRoom: lazy(() => import("../pages/MatchRoom.jsx")),
   TournamentGame: lazy(() => import("../pages/TournamentGame.jsx")),
   TournamentDetails: lazy(() => import("../pages/TournamentDetails.jsx")),
   Profile: lazy(() => import("../pages/Profile")),
@@ -132,6 +133,10 @@ const routes = createBrowserRouter([
             path: "matches",
             element: <LazyComponents.Matches />,
           },
+          {
+            path: "matches/:id",
+            element: <LazyComponents.MatchRoom />,
+          },
           // Dynamic Game Tournament Route
           {
             path: "tournament/:game",
@@ -144,6 +149,10 @@ const routes = createBrowserRouter([
           { path: "wallet", element: <LazyComponents.Wallet /> },
           { path: "refer", element: <LazyComponents.Refer /> },
         ],
+      },
+      {
+        path: "tournamentDetails/:id",
+        element: <LazyComponents.TournamentDetails />,
       },
       {
         path: "tournamentDeatils/:id",
