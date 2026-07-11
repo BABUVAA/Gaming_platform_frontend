@@ -1,14 +1,36 @@
 import {
+  FaCrown,
   FaGamepad,
   FaLayerGroup,
   FaMapMarkedAlt,
+  FaSatelliteDish,
   FaShieldAlt,
   FaTrophy,
   FaWallet,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
 
-export const dashboardNavigation = [
+const adminNavigation = [
+  {
+    label: "Admin",
+    description: "Platform operations",
+    to: "/panelAdmin",
+    icon: FaCrown,
+    match: ["/panelAdmin"],
+  },
+];
+
+const operatorNavigation = [
+  {
+    label: "Operations",
+    description: "Lobby ops and dispute flow",
+    to: "/dashboard/operations",
+    icon: FaSatelliteDish,
+    match: ["/dashboard/operations"],
+  },
+];
+
+const playerNavigation = [
   {
     label: "Compete",
     description: "Overview and readiness",
@@ -60,10 +82,29 @@ export const dashboardNavigation = [
   },
 ];
 
+const allNavigation = [
+  ...adminNavigation,
+  ...operatorNavigation,
+  ...playerNavigation,
+];
+
+export const getDefaultRouteForRole = (role) => {
+  if (role === "admin") return "/panelAdmin";
+  if (role === "operator") return "/dashboard/operations";
+  return "/dashboard";
+};
+
+export const getDashboardNavigation = (role) => {
+  if (role === "admin") return adminNavigation;
+  if (role === "operator") return operatorNavigation;
+  return playerNavigation;
+};
+
 export const getNavigationTitle = (pathname) => {
-  const found = dashboardNavigation.find((item) =>
-    item.match.some((prefix) => pathname.startsWith(prefix))
-  );
+  const found = allNavigation
+    .flatMap((item) => item.match.map((prefix) => ({ item, prefix })))
+    .filter(({ prefix }) => pathname.startsWith(prefix))
+    .sort((a, b) => b.prefix.length - a.prefix.length)[0]?.item;
 
   if (!found) {
     return {

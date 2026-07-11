@@ -1,10 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useRef,
-} from "react";
+import PropTypes from "prop-types";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
 import { tournamentAction } from "../store/tournamentSlice";
@@ -36,96 +31,137 @@ const appendUniqueMessage = (messageList = [], newMessage) => {
   return [...messageList, newMessage];
 };
 
-// Create a Context for the Socket
+const getCurrentUserId = () => platformStore.getState().auth?.profile?._id;
+
+const getCurrentTournamentId = () =>
+  platformStore.getState().tournament.tournamentId?._id;
+
+const getTournamentCategory = (tournament) => {
+  if (tournament.isFeatured) return "featuredTournaments";
+
+  switch (tournament.status) {
+    case "registration_open":
+      return "activeTournaments";
+    case "upcoming":
+      return "upcomingTournaments";
+    case "completed":
+      return "pastTournaments";
+    default:
+      return "tournament";
+  }
+};
+
 const SocketContext = createContext();
 
-// SocketProvider component
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const dispatch = useDispatch();
   const [connected, setConnected] = useState(false);
   const [lastError, setLastError] = useState("");
-  const [messages, setMessages] = useState({}); // Store messages per chatId
+  const [messages, setMessages] = useState({});
 
   useEffect(() => {
-    // Initialize socket connection
-    socketRef.current = io(import.meta.env.VITE_SERVER_URL, {
+    // The app shell owns one socket connection. Event handlers read current
+    // Redux state on demand instead of reconnecting whenever auth changes.
+    const socket = io(import.meta.env.VITE_SERVER_URL, {
       withCredentials: true,
     });
 
-    socketRef.current.on("connect", () => {
+    socketRef.current = socket;
+
+    const handleNewMessage = (newMessage) => {
+      // We resolve the active user from the store at event time so incoming
+      // socket payloads always compare against fresh auth state.
+      const currentUserId = getCurrentUserId();
+      const chatId =
+        newMessage?.chatId ||
+        newMessage?.clanId ||
+        (newMessage?.receiverId && newMessage?.senderId && currentUserId
+          ? newMessage.senderId === currentUserId
+            ? newMessage.receiverId
+            : newMessage.senderId
+          : null) ||
+        newMessage?.receiverId ||
+        newMessage?.senderId;
+
+      if (!chatId) return;
+
+      // Personal messages from another user also keep the chat roster warm.
+      if (
+        newMessage?.receiverId &&
+        newMessage?.senderId &&
+        currentUserId &&
+        newMessage.senderId !== currentUserId
+      ) {
+        dispatch(
+          authAction.upsertActiveChat({
+            userId: newMessage.senderId,
+            username: newMessage.senderName || "Player",
+          })
+        );
+      }
+
+      setMessages((prev) => ({
+        ...prev,
+        [chatId]: appendUniqueMessage(prev[chatId] || [], newMessage),
+      }));
+    };
+
+    const handleTournamentUpdate = (updatedTournament) => {
+      // Every live tournament event is normalized through one reducer path so
+      // list screens and detail screens stay consistent.
+      const foundCategory = getTournamentCategory(updatedTournament);
+      if (!foundCategory) {
+        console.warn("Tournament doesn't match any updateable category.");
+        return;
+      }
+
+      dispatch(
+        tournamentAction.addTournament({
+          category: foundCategory,
+          tournament: updatedTournament,
+        })
+      );
+    };
+
+    const onConnect = () => {
       setConnected(true);
       setLastError("");
-    });
+    };
 
-    socketRef.current.on("disconnect", () => {
+    const onDisconnect = () => {
       setConnected(false);
-    });
+    };
 
-    socketRef.current.on("connect_error", (error) => {
+    const onConnectError = (error) => {
       setConnected(false);
       setLastError(error?.message || "Unable to connect to live services.");
-    });
+    };
 
-    // Listen for messages from both clan and private chats
-    socketRef.current.on("clan_message", (newMessage) => {
-      handleNewMessage(newMessage);
-    });
+    const onTournamentJoin = (data) => {
+      if (!data?.tournament) return;
 
-    socketRef.current.on("personal_message", (newMessage) => {
-      handleNewMessage(newMessage);
-    });
+      dispatch(authAction.addJoinedTournament(data.tournament));
 
-    // ✅ Listen for live new tournament updates
-    socketRef.current.on("newTournament", (updatedTournament) => {
-      handleTournamentUpdate(updatedTournament);
-    });
-
-    // ✅ Listen for live tournament updates
-    socketRef.current.on("updateTournament", (updatedTournament) => {
-      handleTournamentUpdate(updatedTournament);
-    });
-
-    // Listen for Tournament Join
-    socketRef.current.on("TOURNAMENT_JOIN_SUCCESS", (data) => {
-      if (data.tournament) {
-        // ✅ Update tournament in auth profile
-        dispatch(authAction.addJoinedTournament(data.tournament));
+      // If the user is already inspecting this tournament, patch the detail
+      // view immediately instead of waiting for another fetch cycle.
+      if (getCurrentTournamentId() === data.tournament._id) {
+        dispatch(tournamentAction.updateTournamentById(data.tournament));
       }
-    });
-    // Listen for Joined Tournament
-    socketRef.current.on("JOINED_TOURNAMENT_UPDATE", (data) => {
-      if (data.tournament) {
-        // ✅ Update tournament in auth profile
-        dispatch(authAction.addJoinedTournament(data.tournament));
+    };
 
-        // ✅ Access current state
-        const state = platformStore.getState(); // make sure store is imported
-        const currentTournament = state.tournament.tournamentId;
-
-        // ✅ Dispatch only if ids match
-        if (currentTournament?._id === data.tournament._id) {
-          dispatch(tournamentAction.updateTournamentById(data.tournament));
-        }
-      }
-    });
-
-    // ✅ Listen for real-time notifications
-    socketRef.current.on("notification", (notification) => {
+    const onNotification = (notification) => {
       dispatch(
         showToast({
-          message: notification.title,
+          message: notification?.title || "New notification received.",
           type: types.SUCCESS,
           position: "bottom-right",
         })
       );
-
-      // Optionally: store notification in Redux state
       dispatch(notificationActions.addNotification(notification));
-    });
+    };
 
-    // Listen for live ERROR updates
-    socketRef.current.on("ERROR", (data) => {
+    const onError = (data) => {
       const fallbackMessage = "A live update failed to process.";
       dispatch(
         showToast({
@@ -134,81 +170,36 @@ export const SocketProvider = ({ children }) => {
           position: "bottom-right",
         })
       );
-    });
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
+    socket.on("clan_message", handleNewMessage);
+    socket.on("personal_message", handleNewMessage);
+    socket.on("newTournament", handleTournamentUpdate);
+    socket.on("updateTournament", handleTournamentUpdate);
+    socket.on("TOURNAMENT_JOIN_SUCCESS", onTournamentJoin);
+    socket.on("JOINED_TOURNAMENT_UPDATE", onTournamentJoin);
+    socket.on("notification", onNotification);
+    socket.on("ERROR", onError);
 
     return () => {
-      socketRef.current?.disconnect();
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.off("clan_message", handleNewMessage);
+      socket.off("personal_message", handleNewMessage);
+      socket.off("newTournament", handleTournamentUpdate);
+      socket.off("updateTournament", handleTournamentUpdate);
+      socket.off("TOURNAMENT_JOIN_SUCCESS", onTournamentJoin);
+      socket.off("JOINED_TOURNAMENT_UPDATE", onTournamentJoin);
+      socket.off("notification", onNotification);
+      socket.off("ERROR", onError);
+      socket.disconnect();
+      socketRef.current = null;
     };
-  }, []);
-
-  // Function to handle messages and store them separately for each chat
-  const handleNewMessage = (newMessage) => {
-    const currentUserId = platformStore.getState().auth?.profile?._id;
-    const chatId =
-      newMessage?.chatId ||
-      newMessage?.clanId ||
-      (newMessage?.receiverId && newMessage?.senderId && currentUserId
-        ? newMessage.senderId === currentUserId
-          ? newMessage.receiverId
-          : newMessage.senderId
-        : null) ||
-      newMessage?.receiverId ||
-      newMessage?.senderId;
-
-    if (!chatId) return;
-
-    if (
-      newMessage?.receiverId &&
-      newMessage?.senderId &&
-      currentUserId &&
-      newMessage.senderId !== currentUserId
-    ) {
-      dispatch(
-        authAction.upsertActiveChat({
-          userId: newMessage.senderId,
-          username: newMessage.senderName || "Player",
-        })
-      );
-    }
-
-    setMessages((prev) => ({
-      ...prev,
-      [chatId]: appendUniqueMessage(prev[chatId] || [], newMessage),
-    }));
-  };
-
-  // Function to find tournament Category
-  const getTournamentCategory = (tournament) => {
-    if (tournament.isFeatured) return "featuredTournaments";
-
-    switch (tournament.status) {
-      case "registration_open":
-        return "activeTournaments";
-      case "upcoming":
-        return "upcomingTournaments";
-      case "completed":
-        return "pastTournaments";
-      default:
-        return "tournament"; // Optional: skip other statuses like "completed"
-    }
-  };
-
-  // ✅ Function to handle real-time tournament updates
-  const handleTournamentUpdate = (updatedTournament) => {
-    // 🧠 Usage
-    const foundCategory = getTournamentCategory(updatedTournament);
-    if (!foundCategory) {
-      console.warn("Tournament doesn't match any updateable category.");
-      return;
-    }
-    // Dispatch updated tournament to the correct category
-    dispatch(
-      tournamentAction.addTournament({
-        category: foundCategory,
-        tournament: updatedTournament,
-      })
-    );
-  };
+  }, [dispatch]);
 
   return (
     <SocketContext.Provider
@@ -224,5 +215,8 @@ export const SocketProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use socket context
+SocketProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 export const useSocket = () => useContext(SocketContext);

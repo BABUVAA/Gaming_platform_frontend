@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { FiDownload, FiGrid, FiLayers, FiUsers } from "react-icons/fi";
@@ -37,25 +38,27 @@ const TournamentGame = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-
-  if (!gameData[game]) {
-    return (
-      <div className="rounded-[32px] border border-rose-400/20 bg-rose-500/10 p-8 text-center text-rose-200">
-        Game not found.
-      </div>
-    );
-  }
+  const selectedGame = gameData[game] || null;
 
   const joinedTournamentsCount = (profile?.profile?.tournaments || []).filter(
     (tournament) => tournament.game === game
   ).length;
 
-  const { name, icon, downloadLink, promoImages, filters } = gameData[game];
+  const { name, icon, downloadLink, promoImages, filters } = selectedGame || {
+    name: "",
+    icon: "",
+    downloadLink: "",
+    promoImages: [],
+    filters: [],
+  };
   const gameTournaments = Object.values(tournaments).filter(
     (tournament) => tournament.game === game
   );
 
   const filteredTournaments = useMemo(() => {
+    // Hooks stay above the "game not found" return so route-param changes do
+    // not reorder hooks between renders.
+    if (!selectedGame) return [];
     if (!activeFilter || activeFilter === "All") return gameTournaments;
     if (activeFilter === "Featured") {
       return gameTournaments.filter((tournament) => tournament.isFeatured);
@@ -67,7 +70,7 @@ const TournamentGame = () => {
         tournament.map === activeFilter ||
         tournament.category === activeFilter
     );
-  }, [activeFilter, gameTournaments]);
+  }, [activeFilter, gameTournaments, selectedGame]);
 
   const totalPages = Math.ceil(filteredTournaments.length / itemsPerPage);
   const paginatedTournaments = useMemo(() => {
@@ -78,6 +81,14 @@ const TournamentGame = () => {
   const myTournaments = (profile?.profile?.tournaments || []).filter(
     (tournament) => tournament.game === game
   );
+
+  if (!selectedGame) {
+    return (
+      <div className="rounded-[32px] border border-rose-400/20 bg-rose-500/10 p-8 text-center text-rose-200">
+        Game not found.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -255,6 +266,24 @@ const Pagination = ({ totalPages, currentPage, setCurrentPage }) => {
       ))}
     </div>
   );
+};
+
+TabButton.propTypes = {
+  active: PropTypes.bool.isRequired,
+  onClick: PropTypes.func.isRequired,
+  icon: PropTypes.node.isRequired,
+  children: PropTypes.node.isRequired,
+};
+
+TournamentGrid.propTypes = {
+  tournaments: PropTypes.arrayOf(PropTypes.object).isRequired,
+  game: PropTypes.string.isRequired,
+};
+
+Pagination.propTypes = {
+  totalPages: PropTypes.number.isRequired,
+  currentPage: PropTypes.number.isRequired,
+  setCurrentPage: PropTypes.func.isRequired,
 };
 
 export default TournamentGame;

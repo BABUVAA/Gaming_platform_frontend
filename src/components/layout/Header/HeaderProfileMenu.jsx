@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { FiLogOut, FiSettings, FiUser, FiUsers } from "react-icons/fi";
+import {
+  FiActivity,
+  FiLogOut,
+  FiSettings,
+  FiShield,
+  FiUser,
+  FiUsers,
+} from "react-icons/fi";
 import { logout } from "../../../store/authSlice";
 
 const HeaderProfileMenu = () => {
@@ -9,6 +16,31 @@ const HeaderProfileMenu = () => {
   const { profile } = useSelector((store) => store.auth);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
+  const roleLabel = profile?.role
+    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
+    : "Player";
+
+  const menuItems =
+    profile?.role === "admin"
+      ? [{ to: "/panelAdmin", label: "Admin Panel", icon: FiShield }]
+      : profile?.role === "operator"
+        ? [
+            {
+              to: "/dashboard/operations",
+              label: "Operator Control",
+              icon: FiActivity,
+            },
+          ]
+        : [
+            { to: "/dashboard/profile", label: "My Profile", icon: FiUser },
+            {
+              to: "/dashboard/account",
+              label: "Account Settings",
+              icon: FiSettings,
+            },
+            { to: "/dashboard/clan", label: "Clan & Social", icon: FiUsers },
+            { to: "/dashboard/refer", label: "Refer a Friend", icon: FiUsers },
+          ];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -32,7 +64,7 @@ const HeaderProfileMenu = () => {
         </div>
         <div className="hidden xl:block">
           <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
-            Player
+            {roleLabel}
           </p>
           <p className="max-w-32 truncate text-sm font-semibold text-white">
             {profile?.profile?.username || "Account"}
@@ -55,41 +87,22 @@ const HeaderProfileMenu = () => {
           </div>
 
           <ul className="divide-y divide-white/10 text-sm text-slate-200">
-            <li>
-              <Link
-                to="/dashboard/profile"
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5"
-              >
-                <FiUser />
-                My Profile
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/dashboard/account"
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5"
-              >
-                <FiSettings />
-                Account Settings
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/dashboard/clan"
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5"
-              >
-                <FiUsers />
-                Clan & Social
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/dashboard/refer"
-                className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5"
-              >
-                Refer a Friend
-              </Link>
-            </li>
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5"
+                  >
+                    <Icon />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
             <li>
               <button
                 onClick={() => dispatch(logout())}

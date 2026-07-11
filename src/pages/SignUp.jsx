@@ -15,17 +15,36 @@ const SignUp = () => {
   const [errors, setErrors] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
     username: "",
-    date: "",
+    dob: "",
+    form: "",
   });
   const authStats = useMemo(
     () => [
-      { label: "Verification", value: "CoC auto, BGMI review" },
-      { label: "Modes", value: "Quick battle and customs" },
-      { label: "Clans", value: "Roster and social progression" },
+      { label: "Rewards", value: "Cash pools and coins" },
+      { label: "Games", value: "CoC and BGMI" },
+      { label: "Clans", value: "Friends and squads" },
     ],
     []
   );
+
+  const getAgeFromDob = (dobValue) => {
+    const today = new Date();
+    const birthDate = new Date(dobValue);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDelta = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDelta < 0 ||
+      (monthDelta === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age -= 1;
+    }
+
+    return age;
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
@@ -36,6 +55,7 @@ const SignUp = () => {
       username: validator.trim(validator.escape(rawData.username || "")),
       email: validator.normalizeEmail(rawData.email || "") || "",
       password: validator.trim(rawData.password || ""),
+      confirmPassword: validator.trim(rawData.confirmPassword || ""),
       dob: validator.trim(rawData.dob || ""),
     };
 
@@ -44,8 +64,8 @@ const SignUp = () => {
     // Validate each field
     if (!sanitized.username) {
       newErrors.username = "Username is required.";
-    } else if (!validator.isLength(sanitized.username, { min: 5, max: 20 })) {
-      newErrors.username = "Username must be 5-20 characters long.";
+    } else if (!validator.isLength(sanitized.username, { min: 3, max: 20 })) {
+      newErrors.username = "Username must be 3-20 characters long.";
     } else if (!/^[a-zA-Z0-9_]+$/.test(sanitized.username)) {
       newErrors.username =
         "Username can only contain letters, numbers, and underscores.";
@@ -68,15 +88,20 @@ const SignUp = () => {
         "Password must be 8+ characters with uppercase, lowercase, number & symbol.";
     }
 
+    if (sanitized.password !== sanitized.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
     if (!validator.isDate(sanitized.dob, { format: "YYYY-MM-DD" })) {
-      newErrors.date = "Invalid date format.";
+      newErrors.dob = "Invalid date format.";
     } else {
       const dob = new Date(sanitized.dob);
-      const ageDifMs = Date.now() - dob.getTime();
-      const ageDate = new Date(ageDifMs); // miliseconds from epoch
-      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+      const age = getAgeFromDob(sanitized.dob);
+      if (dob > new Date()) {
+        newErrors.dob = "Date of birth cannot be in the future.";
+      }
       if (age < 13) {
-        newErrors.date = "You must be at least 13 years old to sign up.";
+        newErrors.dob = "You must be at least 13 years old to sign up.";
       }
     }
     if (Object.keys(newErrors).length > 0) {
@@ -87,13 +112,29 @@ const SignUp = () => {
     setErrors({});
     setIsSubmitting(true);
 
-    await dispatch(register(sanitized))
+    const payload = {
+      username: sanitized.username,
+      email: sanitized.email,
+      password: sanitized.password,
+      dob: sanitized.dob,
+    };
+
+    await dispatch(register(payload))
       .unwrap()
       .then((response) => {
         if (response.success) goToDashboard();
       })
       .catch((err) => {
-        console.error("Registration error:", err);
+        setErrors({
+          username: err?.errors?.username || "",
+          email: err?.errors?.email || "",
+          password: err?.errors?.password || "",
+          dob: err?.errors?.dob || "",
+          form:
+            err?.message ||
+            Object.values(err?.errors || {}).find(Boolean) ||
+            "Unable to create account. Please review your details.",
+        });
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -104,10 +145,10 @@ const SignUp = () => {
     <AuthShell
       eyebrow="Player Onboarding"
       title="Build your competition identity."
-      description="Create the player account that will hold your verified game profiles, clan membership, wallet history, and live tournament activity."
-      badges={["Clan Ready", "Wallet Enabled", "Multi-Game Expansion"]}
-      asideTitle="What unlocks next"
-      asideCopy="Once you're in, we can connect your game accounts, send BGMI verification for review, and move you into tournaments, clans, and live match rooms."
+      description="Create the account that carries your player profile, verified game IDs, clan identity, wallet history, and tournament rewards."
+      badges={["Real Rewards", "Clan Ready", "Wallet Enabled"]}
+      asideTitle="Your player base"
+      asideCopy="After signup, you can connect game accounts, join tournaments, build your clan circle, and track rewards from your wallet."
       asideStats={authStats}
       footer={
         <p>
@@ -115,7 +156,7 @@ const SignUp = () => {
           <button
             type="button"
             onClick={goToLogin}
-            className="font-semibold text-cyan-300 transition hover:text-cyan-200"
+            className="font-semibold text-amber-200 transition hover:text-amber-100"
           >
             Return to login
           </button>
@@ -137,6 +178,7 @@ const SignUp = () => {
           label="Username"
           iconStart={<FiUser />}
           error={errors.username}
+          autoComplete="username"
         />
         <Input
           name="email"
@@ -145,6 +187,7 @@ const SignUp = () => {
           label="Email address"
           iconStart={<FiMail />}
           error={errors.email}
+          autoComplete="email"
         />
         <Input
           name="password"
@@ -153,21 +196,38 @@ const SignUp = () => {
           label="Password"
           iconStart={<FiLock />}
           error={errors.password}
+          autoComplete="new-password"
+        />
+        <Input
+          name="confirmPassword"
+          type="password"
+          placeholder="Confirm your password"
+          label="Confirm password"
+          iconStart={<FiLock />}
+          error={errors.confirmPassword}
+          autoComplete="new-password"
         />
         <Input
           name="dob"
           type="date"
           label="Date of birth"
           iconStart={<FiCalendar />}
-          error={errors.date}
+          error={errors.dob}
+          max={new Date().toISOString().split("T")[0]}
         />
         <p className="pt-1 text-xs leading-6 text-slate-500">
           You need to be at least 13 years old. Strong passwords help protect linked accounts and wallet activity.
         </p>
+        {errors.form ? (
+          <div className="rounded-xl border border-rose-400/30 bg-rose-950/30 px-4 py-3 text-sm text-rose-100">
+            {errors.form}
+          </div>
+        ) : null}
         <Button
           type="submit"
           isLoading={isSubmitting}
-          className="mt-3 h-14 w-full rounded-2xl bg-cyan-300 text-sm font-black uppercase tracking-[0.16em] text-slate-950 hover:bg-cyan-200"
+          size="large"
+          className="mt-3 w-full"
           endIcon={!isSubmitting ? <FaArrowRight /> : null}
         >
           Create Player Account

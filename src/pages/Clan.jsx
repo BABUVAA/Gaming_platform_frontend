@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Form } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import api from "../api/axios-api";
 import {
   FiBookmark,
   FiCopy,
@@ -47,6 +48,9 @@ const Clan = () => {
   const [playerCard, setPlayerCard] = useState(null);
   const [playerError, setPlayerError] = useState("");
   const [clanError, setClanError] = useState("");
+  const [previewTag, setPreviewTag] = useState("");
+  const [previewPlayer, setPreviewPlayer] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const clanData = userClanData?.data || null;
   const hasClan = Boolean(profile?.clan || clanData);
@@ -307,6 +311,22 @@ const Clan = () => {
     }
   };
 
+  const openPlayerPreview = async (tag) => {
+    if (!tag) return;
+    setPreviewTag(tag);
+    setPreviewLoading(true);
+    setPreviewPlayer(null);
+    try {
+      const response = await api.get(`/api/users/public/${encodeURIComponent(tag)}`);
+      setPreviewPlayer(response?.data?.data || null);
+    } catch (error) {
+      console.error("Profile preview failed:", error);
+      setPreviewPlayer(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   if (globalLoading) {
     return <LoadingSpinner />;
   }
@@ -421,11 +441,25 @@ const Clan = () => {
           onAcceptRequest={handleAcceptRequest}
           onRejectRequest={handleRejectRequest}
           onRemoveFriend={handleRemoveFriend}
-          onViewProfile={(tag) => {
-            if (!tag) return;
-            navigate(`/dashboard/profile?playerTag=${encodeURIComponent(tag)}`);
-          }}
+          onViewProfile={openPlayerPreview}
           currentUserId={profile?._id}
+        />
+      ) : null}
+
+      {previewTag ? (
+        <PlayerPreviewModal
+          player={previewPlayer}
+          loading={previewLoading}
+          playerTag={previewTag}
+          onClose={() => {
+            setPreviewTag("");
+            setPreviewPlayer(null);
+          }}
+          onOpenFullProfile={(tag) => {
+            navigate(`/dashboard/profile?playerTag=${encodeURIComponent(tag)}`);
+            setPreviewTag("");
+            setPreviewPlayer(null);
+          }}
         />
       ) : null}
     </div>
@@ -840,6 +874,15 @@ const SocialPanel = ({
             <div className="flex gap-2">
               <button
                 type="button"
+                onClick={() =>
+                  onViewProfile(requester.profileTag || requester.profile?.profileTag)
+                }
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100"
+              >
+                View Profile
+              </button>
+              <button
+                type="button"
                 onClick={() => onAcceptRequest(requester._id)}
                 className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
               >
@@ -933,9 +976,20 @@ const SocialPanel = ({
                 ) : null}
 
                 {playerCard.friendshipStatus === "friends" ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200">
-                    Already friends
-                  </div>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onViewProfile(playerCard.playerTag || playerQuery.trim())
+                      }
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100"
+                    >
+                      View Profile
+                    </button>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200">
+                      Already friends
+                    </div>
+                  </>
                 ) : null}
               </div>
             </div>
@@ -1122,6 +1176,77 @@ const EmptyPanel = ({ title, copy }) => (
   <div className="rounded-[24px] border border-dashed border-white/10 bg-black/10 px-5 py-6">
     <p className="font-semibold text-white">{title}</p>
     <p className="mt-2 text-sm leading-6 text-slate-400">{copy}</p>
+  </div>
+);
+
+const PlayerPreviewModal = ({
+  player,
+  loading,
+  playerTag,
+  onClose,
+  onOpenFullProfile,
+}) => (
+  <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+    <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-slate-950 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.55)]">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-2xl font-black text-white">Player Preview</h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+        >
+          Close
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="mt-6 text-sm text-slate-300">Loading player details...</p>
+      ) : !player ? (
+        <p className="mt-6 text-sm text-slate-300">
+          Unable to load player details right now.
+        </p>
+      ) : (
+        <div className="mt-6 space-y-5">
+          <div className="flex items-center gap-4">
+            <img
+              src={player.avatar || "/profile-pic.png"}
+              alt={player.username || "Player"}
+              className="h-16 w-16 rounded-2xl object-cover"
+            />
+            <div>
+              <p className="text-xl font-black text-white">{player.username}</p>
+              <p className="text-sm text-slate-400">{player.playerTag || playerTag}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-cyan-300/80">
+                {player.friendshipStatus || "not_friends"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-4">
+            <InfoBlock label="Friends" value={player.stats?.friends ?? 0} />
+            <InfoBlock label="Games" value={player.stats?.linkedGames ?? 0} />
+            <InfoBlock
+              label="Tournaments"
+              value={player.stats?.tournaments ?? 0}
+            />
+            <InfoBlock
+              label="Bookmarks"
+              value={player.stats?.bookmarkedClans ?? 0}
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => onOpenFullProfile(player.playerTag || playerTag)}
+              className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+            >
+              Open Full Profile
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   </div>
 );
 

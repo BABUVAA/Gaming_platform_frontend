@@ -2,6 +2,11 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
 import { showToast, types } from "./toastSlice";
 
+const getPaymentErrorMessage = (error, fallback) =>
+  error.response?.data?.message ||
+  error.response?.data?.error ||
+  fallback;
+
 export const initiatePhonePeOrder = createAsyncThunk(
   "payment/initiatePhonePeOrder",
   async (payload, thunkAPI) => {
@@ -11,8 +16,10 @@ export const initiatePhonePeOrder = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Unable to start wallet top-up.";
+      const message = getPaymentErrorMessage(
+        error,
+        "Unable to start wallet top-up."
+      );
       thunkAPI.dispatch(
         showToast({
           message,
@@ -34,8 +41,10 @@ export const fetchWalletBalance = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Unable to fetch wallet balance.";
+      const message = getPaymentErrorMessage(
+        error,
+        "Unable to fetch wallet balance."
+      );
       return thunkAPI.rejectWithValue(message);
     }
   }
@@ -57,8 +66,10 @@ export const withdrawRequest = createAsyncThunk(
       );
       return response.data?.data || response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Unable to request withdrawal.";
+      const message = getPaymentErrorMessage(
+        error,
+        "Unable to request withdrawal."
+      );
       thunkAPI.dispatch(
         showToast({
           message,
@@ -81,7 +92,7 @@ export const fetchUserTransactions = createAsyncThunk(
       return response.data?.data || response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch transactions."
+        getPaymentErrorMessage(error, "Failed to fetch transactions.")
       );
     }
   }
@@ -101,7 +112,7 @@ export const checkTransactionStatus = createAsyncThunk(
       return response.data?.data || response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to check transaction status."
+        getPaymentErrorMessage(error, "Failed to check transaction status.")
       );
     }
   }
@@ -119,6 +130,7 @@ const initialState = {
   statusCheck: null,
   transactions: [],
   isLoading: false,
+  pendingRequests: 0,
   error: null,
 };
 
@@ -127,6 +139,18 @@ const paymentSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
+    const beginRequest = (state) => {
+      // Payment requests can overlap, so a counter is safer than a boolean.
+      state.pendingRequests += 1;
+      state.isLoading = true;
+      state.error = null;
+    };
+
+    const finishRequest = (state) => {
+      state.pendingRequests = Math.max(0, state.pendingRequests - 1);
+      state.isLoading = state.pendingRequests > 0;
+    };
+
     builder
       .addCase(initiatePhonePeOrder.fulfilled, (state, action) => {
         state.latestOrder = action.payload;
@@ -150,24 +174,20 @@ const paymentSlice = createSlice({
         state.statusCheck = action.payload;
       })
       .addMatcher(
-        (action) => action.type.startsWith("payment/") && action.type.endsWith("/pending"),
-        (state) => {
-          state.isLoading = true;
-          state.error = null;
-        }
+        (action) =>
+          action.type.startsWith("payment/") && action.type.endsWith("/pending"),
+        beginRequest
       )
       .addMatcher(
         (action) =>
           action.type.startsWith("payment/") && action.type.endsWith("/fulfilled"),
-        (state) => {
-          state.isLoading = false;
-        }
+        finishRequest
       )
       .addMatcher(
         (action) =>
           action.type.startsWith("payment/") && action.type.endsWith("/rejected"),
         (state, action) => {
-          state.isLoading = false;
+          finishRequest(state);
           state.error = action.payload;
         }
       );

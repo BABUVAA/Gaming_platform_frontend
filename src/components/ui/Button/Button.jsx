@@ -19,27 +19,30 @@ const Button = ({
   // Helper function to combine classes manually
   const combineClasses = (...classes) => {
     return classes.filter(Boolean).join(" ");
-    buttonClasses;
   };
 
   // Button class based on variant, size, disabled, and loading states
   const buttonClasses = combineClasses(
-    "inline-flex items-center justify-center font-medium  transition-all",
-    variant === "primary" && "bg-blue-600 text-white hover:bg-blue-500",
-    variant === "secondary" && "bg-gray-600 text-white hover:bg-gray-500",
-    variant === "success" && "bg-green-600 text-white hover:bg-green-500",
-    variant === "danger" && "bg-red-600 text-white hover:bg-red-500",
+    "inline-flex items-center justify-center rounded-xl font-black uppercase tracking-[0.12em] transition-all focus:outline-none focus:ring-2 focus:ring-amber-200/50",
+    variant === "primary" &&
+      "bg-amber-300 text-slate-950 shadow-[0_12px_30px_rgba(251,191,36,0.22)] hover:bg-amber-200",
+    variant === "secondary" &&
+      "border border-slate-700 bg-slate-900 text-slate-100 hover:border-amber-200/60 hover:text-amber-100",
+    variant === "success" &&
+      "bg-emerald-500 text-slate-950 hover:bg-emerald-400",
+    variant === "danger" && "bg-rose-600 text-white hover:bg-rose-500",
     variant === "link" &&
-      "bg-transparent text-blue-600 hover:text-blue-400 underline",
+      "bg-transparent text-amber-200 underline-offset-4 hover:text-amber-100 hover:underline",
     variant === "transparent" &&
-      "bg-transparent text-gray-600 border-2 border-gray-400 hover:text-blue-600 hover:border-blue-600",
-    size === "xs" &&" text-sm w-24 h-10",
-    size === "small" && "text-sm  px-3 py-1.5 w-24 h-11",
-    size === "medium" && "text-base px-4 py-2 w-36 h-12",
-    size === "large" && "text-lg px-6 py-3 w-48 h-14",
-    size === "xl" && "text-xl px-8 py-4 w-60 h-16",
-    size === "xxl" && "text-xl px-8 py-5 w-72 h-20",
-    (disabled || isLoading) && "bg-gray-300 text-gray-600 cursor-not-allowed",
+      "border border-white/15 bg-white/5 text-slate-100 backdrop-blur hover:border-amber-200/60 hover:bg-white/10 hover:text-amber-100",
+    size === "xs" && "h-9 px-3 text-xs",
+    size === "small" && "h-11 px-4 text-xs",
+    size === "medium" && "h-12 px-5 text-sm",
+    size === "large" && "h-14 px-6 text-sm",
+    size === "xl" && "h-16 px-8 text-base",
+    size === "xxl" && "h-20 px-10 text-lg",
+    (disabled || isLoading) &&
+      "cursor-not-allowed border-slate-700 bg-slate-800 text-slate-500 shadow-none hover:bg-slate-800 hover:text-slate-500",
     className // Custom classes
   );
 
@@ -54,7 +57,7 @@ const Button = ({
       {...props} // Spread any additional props (e.g., data-* attributes)
     >
       {isLoading && (
-        <span className="mr-2 w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> // Spinner
+        <span className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"></span> // Spinner
       )}
       {startIcon && <span className="mr-2">{startIcon}</span>}{" "}
       {/* Start icon */}

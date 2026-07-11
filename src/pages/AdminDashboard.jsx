@@ -45,7 +45,7 @@ const AdminDashboard = () => {
       <div className="mx-auto grid min-h-screen max-w-[1600px] md:grid-cols-[18rem_1fr]">
         <aside className="border-r border-slate-800 bg-[#030812] px-4 py-6">
           <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">
-            Operator Console
+            Admin Console
           </p>
           <h1 className="mt-3 text-3xl font-black text-white">Admin Panel</h1>
           <p className="mt-3 text-sm leading-6 text-slate-400">
@@ -93,7 +93,7 @@ const AdminDashboard = () => {
               <div className="grid gap-3 sm:grid-cols-3">
                 <StatusCard label="Live socket" value={connected ? "Online" : "Offline"} />
                 <StatusCard label="Active section" value={menu.find((item) => item.key === activeSection)?.label || "Overview"} />
-                <StatusCard label="Mode" value="Operator" />
+                <StatusCard label="Mode" value="Admin" />
               </div>
             </div>
           </section>

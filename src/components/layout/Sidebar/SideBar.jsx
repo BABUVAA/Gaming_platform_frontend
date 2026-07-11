@@ -1,7 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { dashboardNavigation } from "../../../utils/navigation";
+import { useSelector } from "react-redux";
+import { getDashboardNavigation } from "../../../utils/navigation";
 
 const SideBar = () => {
+  const role = useSelector((store) => store.auth?.profile?.role);
+  const dashboardNavigation = getDashboardNavigation(role);
+
   return (
     <>
       <aside className="hidden md:flex md:w-72 md:flex-col md:border-r md:border-slate-800 md:bg-[#050b14] md:px-4 md:py-5">

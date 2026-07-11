@@ -12,12 +12,12 @@ const AuthShell = ({
   footer,
 }) => {
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#020611] text-slate-100">
+    <div className="min-h-[calc(100vh-5rem)] bg-[#04070d] text-slate-100">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl gap-10 px-4 py-8 md:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-12">
-        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(251,191,36,0.14),_transparent_28%),linear-gradient(180deg,_rgba(8,15,28,0.96),_rgba(2,6,17,0.98))] p-6 shadow-[0_28px_90px_rgba(2,8,23,0.5)] md:p-10">
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%,rgba(34,211,238,0.06))]" />
+        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.12),_transparent_28%),linear-gradient(180deg,_rgba(12,16,23,0.96),_rgba(4,7,13,0.98))] p-6 shadow-[0_28px_90px_rgba(2,8,23,0.5)] md:p-10">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%,rgba(251,191,36,0.06))]" />
           <div className="relative">
-            <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">
+            <p className="text-xs uppercase tracking-[0.32em] text-amber-200/90">
               {eyebrow}
             </p>
             <h1 className="mt-4 max-w-xl text-4xl font-black tracking-tight text-white md:text-5xl">
@@ -41,7 +41,7 @@ const AuthShell = ({
             <div className="mt-10 rounded-[28px] border border-white/10 bg-slate-950/70 p-5 backdrop-blur">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-300/75">
+                  <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">
                     {asideTitle}
                   </p>
                   <p className="mt-2 max-w-md text-sm leading-6 text-slate-300">
@@ -50,9 +50,9 @@ const AuthShell = ({
                 </div>
                 <Link
                   to="/home"
-                  className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-cyan-300/40 hover:text-cyan-200 md:inline-flex"
+                  className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-amber-200/50 hover:text-amber-100 md:inline-flex"
                 >
-                  Platform Preview
+                  Preview
                 </Link>
               </div>
 

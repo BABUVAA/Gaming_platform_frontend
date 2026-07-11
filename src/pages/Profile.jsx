@@ -1,6 +1,8 @@
+import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
+import api from "../api/axios-api";
 import {
   FaDiscord,
   FaFacebook,
@@ -19,7 +21,6 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import {
-  searchPlayer,
   profile_data_update,
   profile_file_update,
   user_profile,
@@ -40,11 +41,12 @@ const Profile = () => {
   const [searchParams] = useSearchParams();
   const { profile } = useSelector((store) => store.auth);
   const externalPlayerTag = searchParams.get("playerTag");
+  const playerProfile = profile?.profile || {};
+  const internalPlayerTag = profile?.profileTag || playerProfile?.profileTag || "";
   const isViewingExternal =
-    Boolean(externalPlayerTag) && externalPlayerTag !== profile?.profileTag;
+    Boolean(externalPlayerTag) && externalPlayerTag !== internalPlayerTag;
   const [externalPlayer, setExternalPlayer] = useState(null);
   const [externalLoading, setExternalLoading] = useState(false);
-  const playerProfile = profile?.profile || {};
   const [copied, setCopied] = useState(false);
   const [selectedImageType, setSelectedImageType] = useState("");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -62,10 +64,10 @@ const Profile = () => {
       }
       setExternalLoading(true);
       try {
-        const response = await dispatch(
-          searchPlayer({ playerTag: externalPlayerTag })
-        ).unwrap();
-        setExternalPlayer(response?.data || null);
+        const response = await api.get(
+          `/api/users/public/${encodeURIComponent(externalPlayerTag)}`
+        );
+        setExternalPlayer(response?.data?.data || null);
       } catch (error) {
         console.error("Unable to load external profile:", error);
         setExternalPlayer(null);
@@ -75,23 +77,57 @@ const Profile = () => {
     };
 
     loadExternalPlayer();
-  }, [dispatch, externalPlayerTag, isViewingExternal]);
+  }, [externalPlayerTag, isViewingExternal]);
 
-  const linkedGames = playerProfile.games || [];
-  const tournaments = playerProfile.tournaments || [];
+  const displayProfile = isViewingExternal ? externalPlayer || {} : playerProfile;
+  const linkedGames = useMemo(() => playerProfile.games || [], [playerProfile.games]);
+  const tournaments = useMemo(
+    () => playerProfile.tournaments || [],
+    [playerProfile.tournaments]
+  );
   const friendCount = playerProfile.friends?.length || 0;
+  const displayLinkedGames = useMemo(
+    () => (isViewingExternal ? externalPlayer?.linkedGames || [] : linkedGames),
+    [externalPlayer?.linkedGames, isViewingExternal, linkedGames]
+  );
+  const displaySocials = useMemo(
+    () =>
+      isViewingExternal
+        ? externalPlayer?.linkedAccounts || {}
+        : playerProfile.linkedAccounts || {},
+    [externalPlayer?.linkedAccounts, isViewingExternal, playerProfile.linkedAccounts]
+  );
 
   const socialLinks = useMemo(
-    () =>
-      SOCIAL_PLATFORMS.filter(({ key }) => playerProfile.linkedAccounts?.[key]),
-    [playerProfile.linkedAccounts]
+    () => SOCIAL_PLATFORMS.filter(({ key }) => displaySocials?.[key]),
+    [displaySocials]
   );
 
   const stats = [
-    { label: "Linked Games", value: linkedGames.length || 0 },
-    { label: "Tournaments", value: tournaments.length || 0 },
-    { label: "Friends", value: friendCount },
-    { label: "Bookmarked Clans", value: playerProfile.bookmarkedClans?.length || 0 },
+    {
+      label: "Linked Games",
+      value: isViewingExternal
+        ? externalPlayer?.stats?.linkedGames || 0
+        : linkedGames.length || 0,
+    },
+    {
+      label: "Tournaments",
+      value: isViewingExternal
+        ? externalPlayer?.stats?.tournaments || 0
+        : tournaments.length || 0,
+    },
+    {
+      label: "Friends",
+      value: isViewingExternal
+        ? externalPlayer?.stats?.friends || 0
+        : friendCount,
+    },
+    {
+      label: "Bookmarked Clans",
+      value: isViewingExternal
+        ? externalPlayer?.stats?.bookmarkedClans || 0
+        : playerProfile.bookmarkedClans?.length || 0,
+    },
   ];
 
   const openSocialEditor = () => {
@@ -100,9 +136,12 @@ const Profile = () => {
   };
 
   const copyProfileTag = async () => {
-    if (!profile?.profileTag) return;
+    const tagToCopy = isViewingExternal
+      ? externalPlayer?.playerTag || externalPlayerTag
+      : internalPlayerTag;
+    if (!tagToCopy) return;
     try {
-      await navigator.clipboard.writeText(profile.profileTag);
+      await navigator.clipboard.writeText(tagToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
     } catch (error) {
@@ -114,12 +153,16 @@ const Profile = () => {
     if (!file || !selectedImageType) return;
     try {
       setIsSaving(true);
+      const formPayload = new FormData();
+      // The upload thunk sends multipart data, so we construct the payload
+      // explicitly instead of relying on axios to infer a File wrapper shape.
+      formPayload.append(
+        "field",
+        selectedImageType === "profile" ? "profile.avatar" : "profile.banner"
+      );
+      formPayload.append("data", file);
       await dispatch(
-        profile_file_update({
-          field:
-            selectedImageType === "profile" ? "profile.avatar" : "profile.banner",
-          data: file,
-        })
+        profile_file_update(formPayload)
       ).unwrap();
       await dispatch(user_profile());
       setIsImageModalOpen(false);
@@ -157,14 +200,14 @@ const Profile = () => {
         <section className="rounded-[28px] border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-100">
           {externalLoading
             ? "Loading player profile preview..."
-            : "Viewing a player preview. Full player stats API is not available yet in backend."}
+            : "Viewing external player profile and public stats."}
         </section>
       ) : null}
       <section className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/85 shadow-[0_24px_70px_rgba(2,8,23,0.45)]">
         <div
           className="relative h-52 bg-cover bg-center md:h-64"
           style={{
-            backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.82)), url(${playerProfile.banner || "/pubg_background.jpg"})`,
+            backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.82)), url(${displayProfile.banner || "/pubg_background.jpg"})`,
           }}
         >
           <button
@@ -221,7 +264,7 @@ const Profile = () => {
                     : playerProfile.username || "Player"}
                 </h1>
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-300">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
+            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
                     {isViewingExternal
                       ? externalPlayerTag || "Player preview"
                       : profile?.email || "No email available"}
@@ -232,7 +275,9 @@ const Profile = () => {
                     className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 font-semibold transition hover:border-cyan-300/30 hover:text-cyan-200"
                   >
                     <FiCopy />
-                    {profile?.profileTag || "No player tag"}
+                    {(isViewingExternal
+                      ? externalPlayer?.playerTag || externalPlayerTag
+                      : internalPlayerTag) || "No player tag"}
                     {copied ? " Copied" : ""}
                   </button>
                 </div>
@@ -276,13 +321,13 @@ const Profile = () => {
               <h2 className="mt-2 text-2xl font-black text-white">Linked game accounts</h2>
             </div>
             <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
-              {linkedGames.length} Connected
+              {displayLinkedGames.length} Connected
             </span>
           </div>
 
           <div className="mt-6 grid gap-4">
-            {linkedGames.length > 0 ? (
-              linkedGames.map((game, index) => (
+            {displayLinkedGames.length > 0 ? (
+              displayLinkedGames.map((game, index) => (
                 <div
                   key={`${game.accountId}-${index}`}
                   className="rounded-[24px] border border-white/10 bg-black/20 p-5"
@@ -290,7 +335,7 @@ const Profile = () => {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                        {game.name || "Game"}
+                        {game.name || game.game?.name || "Game"}
                       </p>
                       <h3 className="mt-2 text-lg font-bold text-white">
                         {game.accountUsername || game.accountId || "Unspecified account"}
@@ -333,7 +378,7 @@ const Profile = () => {
                 socialLinks.map(({ key, label, icon: Icon, color }) => (
                   <a
                     key={key}
-                    href={playerProfile.linkedAccounts[key]}
+                    href={displaySocials[key]}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-between rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 transition hover:border-cyan-300/25 hover:bg-black/30"
@@ -360,7 +405,7 @@ const Profile = () => {
             </p>
             <h2 className="mt-2 text-2xl font-black text-white">Tournament history</h2>
             <div className="mt-6 grid gap-3">
-              {tournaments.length > 0 ? (
+              {!isViewingExternal && tournaments.length > 0 ? (
                 tournaments.slice(0, 5).map((tournament) => (
                   <div
                     key={tournament._id || tournament.tournamentName}
@@ -381,10 +426,15 @@ const Profile = () => {
                     </div>
                   </div>
                 ))
-              ) : (
+              ) : !isViewingExternal ? (
                 <EmptyPanel
                   title="No tournaments joined yet"
                   copy="As you register and play, your recent tournament activity will appear here."
+                />
+              ) : (
+                <EmptyPanel
+                  title="External tournament timeline"
+                  copy="Detailed external match history can be added as a dedicated API endpoint when needed."
                 />
               )}
             </div>
@@ -479,5 +529,16 @@ const ModalCard = ({ title, children, onClose }) => (
     </div>
   </div>
 );
+
+EmptyPanel.propTypes = {
+  title: PropTypes.string.isRequired,
+  copy: PropTypes.string.isRequired,
+};
+
+ModalCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
 
 export default Profile;

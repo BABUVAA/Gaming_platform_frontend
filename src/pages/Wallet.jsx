@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { FiArrowDownLeft, FiArrowUpRight, FiClock } from "react-icons/fi";
@@ -28,10 +29,13 @@ const Wallet = () => {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
 
-  const activeTransactions =
-    activeTab === "platform"
-      ? wallet?.platformTransactions || []
-      : wallet?.realTransactions || [];
+  const activeTransactions = useMemo(
+    () =>
+      activeTab === "platform"
+        ? wallet?.platformTransactions || []
+        : wallet?.realTransactions || [],
+    [activeTab, wallet?.platformTransactions, wallet?.realTransactions]
+  );
 
   const filteredTransactions = useMemo(
     () =>
@@ -51,12 +55,25 @@ const Wallet = () => {
     setAmount("");
   };
 
-  const validateAmount = (value) => {
+  const validateAmount = (value, { maxAmount } = {}) => {
     const parsedValue = Number(value);
     if (!parsedValue || parsedValue <= 0) {
       dispatch(
         showToast({
           message: "Enter a valid wallet amount.",
+          type: types.WARNING,
+          position: "bottom-right",
+        })
+      );
+      return null;
+    }
+
+    // Withdrawals should be blocked in the UI before we ask the backend to
+    // process an impossible amount.
+    if (typeof maxAmount === "number" && parsedValue > maxAmount) {
+      dispatch(
+        showToast({
+          message: "Entered amount is higher than your available balance.",
           type: types.WARNING,
           position: "bottom-right",
         })
@@ -86,6 +103,7 @@ const Wallet = () => {
         }
 
         window.location.href = response.redirectUrl;
+        closeModals();
         return;
       }
 
@@ -98,13 +116,13 @@ const Wallet = () => {
       );
     } catch (error) {
       console.error("PhonePe initiation failed:", error);
-    } finally {
-      closeModals();
     }
   };
 
   const handleWithdrawMoney = async () => {
-    const value = validateAmount(amount);
+    const value = validateAmount(amount, {
+      maxAmount: Number(wallet?.realMoney || 0),
+    });
     if (!value) return;
 
     try {
@@ -295,6 +313,7 @@ const Wallet = () => {
           onClose={closeModals}
           onConfirm={handleAddMoney}
           isLoading={isLoading}
+          disableWhileLoading={false}
         />
       ) : null}
 
@@ -312,7 +331,15 @@ const Wallet = () => {
   );
 };
 
-const AmountModal = ({ title, amount, setAmount, onConfirm, onClose, isLoading }) => (
+const AmountModal = ({
+  title,
+  amount,
+  setAmount,
+  onConfirm,
+  onClose,
+  isLoading,
+  disableWhileLoading = true,
+}) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
     <div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-[0_24px_60px_rgba(2,8,23,0.55)]">
       <h2 className="text-2xl font-black text-white">{title}</h2>
@@ -349,10 +376,10 @@ const AmountModal = ({ title, amount, setAmount, onConfirm, onClose, isLoading }
         </button>
         <button
           onClick={onConfirm}
-          disabled={isLoading}
+          disabled={disableWhileLoading && isLoading}
           className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
         >
-          {isLoading ? "Processing..." : "Confirm"}
+          {disableWhileLoading && isLoading ? "Processing..." : "Confirm"}
         </button>
       </div>
     </div>
@@ -385,5 +412,30 @@ const ActionPanel = ({ title, copy, actionLabel, onClick, tone }) => (
     </Button>
   </div>
 );
+
+AmountModal.propTypes = {
+  title: PropTypes.string.isRequired,
+  amount: PropTypes.string.isRequired,
+  setAmount: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  isLoading: PropTypes.bool.isRequired,
+  disableWhileLoading: PropTypes.bool,
+};
+
+MetricCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  accent: PropTypes.string.isRequired,
+  icon: PropTypes.node.isRequired,
+};
+
+ActionPanel.propTypes = {
+  title: PropTypes.string.isRequired,
+  copy: PropTypes.string.isRequired,
+  actionLabel: PropTypes.string.isRequired,
+  onClick: PropTypes.func.isRequired,
+  tone: PropTypes.string.isRequired,
+};
 
 export default Wallet;

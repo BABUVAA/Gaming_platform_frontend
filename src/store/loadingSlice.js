@@ -16,104 +16,62 @@ const loadingSlice = createSlice({
   name: "loading",
   initialState: {
     globalLoading: false,
+    pendingRequests: 0,
   },
   reducers: {
-    setLoading: (state) => {
-      state.globalLoading = action.payload;
+    setLoading: (state, action) => {
+      // This escape hatch is kept for local/manual toggles.
+      // We also realign the counter so future async completions do not
+      // leave the global spinner in a contradictory state.
+      state.globalLoading = Boolean(action.payload);
+      state.pendingRequests = action.payload ? 1 : 0;
     },
   },
   extraReducers: (builder) => {
+    const beginRequest = (state) => {
+      // A counter is safer than a boolean when multiple thunks overlap.
+      state.pendingRequests += 1;
+      state.globalLoading = true;
+    };
+
+    const finishRequest = (state) => {
+      // Clamp at zero so rejected/duplicate completions cannot make the
+      // counter negative and break the spinner state.
+      state.pendingRequests = Math.max(0, state.pendingRequests - 1);
+      state.globalLoading = state.pendingRequests > 0;
+    };
+
     builder
-      .addCase(verifySession.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(verifySession.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(verifySession.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(login.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(login.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(login.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(logout.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(logout.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(logout.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(register.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(register.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(register.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(user_profile.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(user_profile.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(user_profile.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(profile_data_update.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(profile_data_update.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(profile_data_update.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(profile_file_update.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(profile_file_update.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(profile_file_update.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(fetchGames.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(fetchGames.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(fetchGames.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(createClan.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(createClan.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(createClan.rejected, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(fetchUserClan.pending, (state) => {
-        state.globalLoading = true;
-      })
-      .addCase(fetchUserClan.fulfilled, (state) => {
-        state.globalLoading = false;
-      })
-      .addCase(fetchUserClan.rejected, (state) => {
-        state.globalLoading = false;
-      });
+      .addCase(verifySession.pending, beginRequest)
+      .addCase(verifySession.fulfilled, finishRequest)
+      .addCase(verifySession.rejected, finishRequest)
+      .addCase(login.pending, beginRequest)
+      .addCase(login.fulfilled, finishRequest)
+      .addCase(login.rejected, finishRequest)
+      .addCase(logout.pending, beginRequest)
+      .addCase(logout.fulfilled, finishRequest)
+      .addCase(logout.rejected, finishRequest)
+      .addCase(register.pending, beginRequest)
+      .addCase(register.fulfilled, finishRequest)
+      .addCase(register.rejected, finishRequest)
+      .addCase(user_profile.pending, beginRequest)
+      .addCase(user_profile.fulfilled, finishRequest)
+      .addCase(user_profile.rejected, finishRequest)
+      .addCase(profile_data_update.pending, beginRequest)
+      .addCase(profile_data_update.fulfilled, finishRequest)
+      .addCase(profile_data_update.rejected, finishRequest)
+      .addCase(profile_file_update.pending, beginRequest)
+      .addCase(profile_file_update.fulfilled, finishRequest)
+      .addCase(profile_file_update.rejected, finishRequest)
+      .addCase(fetchGames.pending, beginRequest)
+      .addCase(fetchGames.fulfilled, finishRequest)
+      .addCase(fetchGames.rejected, finishRequest)
+      .addCase(createClan.pending, beginRequest)
+      .addCase(createClan.fulfilled, finishRequest)
+      .addCase(createClan.rejected, finishRequest)
+      .addCase(fetchUserClan.pending, beginRequest)
+      .addCase(fetchUserClan.fulfilled, finishRequest)
+      .addCase(fetchUserClan.rejected, finishRequest);
   },
 });
 

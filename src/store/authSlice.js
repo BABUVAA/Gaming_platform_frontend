@@ -2,14 +2,23 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../api/axios-api";
 import { showToast, types } from "./toastSlice";
 
+const getApiErrorMessage = (error, fallback) =>
+  error.response?.data?.message ||
+  error.response?.data?.error ||
+  Object.values(error.response?.data?.errors || {}).find(Boolean) ||
+  fallback;
+
 // Async thunk for session verification
 export const verifySession = createAsyncThunk(
   "auth/verifySession",
   async (_, thunkAPI) => {
     try {
-      const response = await api.post("/api/auth/verifySession", {
-        withCredentials: true,
-      });
+      // Keep the request body empty and pass axios config in the correct slot.
+      const response = await api.post(
+        "/api/auth/verifySession",
+        {},
+        { withCredentials: true }
+      );
       return response.data;
     } catch (error) {
       const statusCode = error.response?.status;
@@ -41,18 +50,19 @@ export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
       {},
       { withCredentials: true }
     );
-    thunkAPI.dispatch(
-      showToast({
-        message: response.data.message,
-        type: types.SUCCESS,
-        position: "bootom-right",
-      })
-    );
+      thunkAPI.dispatch(
+        showToast({
+          message: response.data.message,
+          type: types.SUCCESS,
+          position: "bottom-right",
+        })
+      );
     return response.data;
   } catch (error) {
+    const message = getApiErrorMessage(error, "Unable to logout.");
     thunkAPI.dispatch(
       showToast({
-        message: error.response.data.error,
+        message,
         type: types.DANGER,
         position: "bottom-right",
       })
@@ -78,9 +88,10 @@ export const login = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      const message = getApiErrorMessage(error, "Login failed.");
       thunkAPI.dispatch(
         showToast({
-          message: error.response.data.error,
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
@@ -110,9 +121,10 @@ export const register = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      const message = getApiErrorMessage(error, "Signup failed.");
       thunkAPI.dispatch(
         showToast({
-          message: error.response.data.error,
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
@@ -236,6 +248,7 @@ const authSlice = createSlice({
     user: null,
     isAuthenticated: false,
     profile: null,
+    profileStatus: "idle",
     error: null,
   },
   reducers: {
@@ -248,8 +261,14 @@ const authSlice = createSlice({
     addJoinedTournament: (state, action) => {
       const newTournament = action.payload;
 
-      // Ensure tournaments array exists
-      if (!state.profile?.profile?.tournaments) {
+      // Live socket events can arrive before the profile bootstrap finishes.
+      // Bail out safely instead of trying to write through a null profile object.
+      if (!state.profile?.profile) {
+        return;
+      }
+
+      // Ensure tournaments array exists before we insert/update the record.
+      if (!state.profile.profile.tournaments) {
         state.profile.profile.tournaments = [];
       }
 
@@ -309,12 +328,14 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.profile = null;
+        state.profileStatus = "idle";
         state.error = action.payload;
       })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.isAuthenticated = false;
         state.profile = null;
+        state.profileStatus = "idle";
       })
       .addCase(logout.rejected, (state, action) => {
         state.error = action.payload;
@@ -323,6 +344,7 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.profile = null;
+        state.profileStatus = "idle";
         state.error = "";
       })
       .addCase(login.rejected, (state, action) => {
@@ -333,14 +355,23 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.isAuthenticated = true;
         state.profile = null;
+        state.profileStatus = "idle";
       })
       .addCase(register.rejected, (state, action) => {
         state.error = action.payload;
       })
+      .addCase(user_profile.pending, (state) => {
+        // We track profile bootstrap separately so route guards can tell the
+        // difference between "still loading" and "failed, show recovery UI".
+        state.profileStatus = "loading";
+        state.error = null;
+      })
       .addCase(user_profile.fulfilled, (state, action) => {
         state.profile = action.payload;
+        state.profileStatus = "succeeded";
       })
       .addCase(user_profile.rejected, (state, action) => {
+        state.profileStatus = "failed";
         state.error = action.payload;
       });
   },

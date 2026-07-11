@@ -15,12 +15,13 @@ const Login = () => {
   const [errors, setErrors] = useState({
     email: "",
     password: "",
+    form: "",
   });
   const authStats = useMemo(
     () => [
-      { label: "Account Trust", value: "Linked game identity" },
-      { label: "Queue Ready", value: "Tournament and match access" },
-      { label: "Ops Coverage", value: "Live operator oversight" },
+      { label: "Prize access", value: "Wallet and rewards" },
+      { label: "Match ready", value: "Rooms and check-ins" },
+      { label: "Account trust", value: "Verified game IDs" },
     ],
     []
   );
@@ -42,23 +43,15 @@ const Login = () => {
       newErrors.email = "Invalid email address.";
     }
 
-    if (
-      !validator.isStrongPassword(sanitized.password, {
-        minLength: 8,
-        minLowercase: 1,
-        minUppercase: 1,
-        minNumbers: 1,
-        minSymbols: 1,
-      })
-    ) {
-      newErrors.password = "Incorrect Password";
+    if (!sanitized.password) {
+      newErrors.password = "Password is required.";
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    setErrors({ email: "", password: "" });
+    setErrors({ email: "", password: "", form: "" });
     setIsSubmitting(true);
 
     await dispatch(login(sanitized))
@@ -67,7 +60,15 @@ const Login = () => {
         goToDashboard();
       })
       .catch((err) => {
-        console.error("Login error:", err);
+        setErrors({
+          email: err?.errors?.email || "",
+          password: err?.errors?.password || "",
+          form:
+            err?.message ||
+            err?.errors?.email ||
+            err?.errors?.password ||
+            "Unable to login. Please check your details.",
+        });
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -78,10 +79,10 @@ const Login = () => {
     <AuthShell
       eyebrow="Player Access"
       title="Get back into the arena."
-      description="Sign in to manage your linked accounts, join live tournaments, and step into operator-managed match flow without losing your place."
-      badges={["Tournament Ready", "Wallet Access", "Live Match Alerts"]}
-      asideTitle="Competition access"
-      asideCopy="The same account gets you into match check-in, clan coordination, wallet history, and verification review updates."
+      description="Sign in to manage your player profile, wallet, clans, tournaments, match rooms, and reward history."
+      badges={["Tournament Ready", "Wallet Access", "Clan Ready"]}
+      asideTitle="Secure player access"
+      asideCopy="Your session protects wallet activity, linked game identities, friend activity, and tournament entries."
       asideStats={authStats}
       footer={
         <p>
@@ -89,7 +90,7 @@ const Login = () => {
           <button
             type="button"
             onClick={goToSignUp}
-            className="font-semibold text-cyan-300 transition hover:text-cyan-200"
+            className="font-semibold text-amber-200 transition hover:text-amber-100"
           >
             Create your player account
           </button>
@@ -98,7 +99,7 @@ const Login = () => {
     >
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-cyan-300">
+          <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-amber-200">
             <FiShield className="text-xl" />
           </div>
           <div>
@@ -119,6 +120,7 @@ const Login = () => {
           ariaLabel="Email"
           iconStart={<FiMail />}
           error={errors.email}
+          autoComplete="email"
         />
         <Input
           name="password"
@@ -128,14 +130,21 @@ const Login = () => {
           ariaLabel="Password"
           iconStart={<FiLock />}
           error={errors.password}
+          autoComplete="current-password"
         />
 
+        {errors.form ? (
+          <div className="rounded-xl border border-rose-400/30 bg-rose-950/30 px-4 py-3 text-sm text-rose-100">
+            {errors.form}
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between gap-3 py-2 text-sm">
-          <span className="text-slate-500">Secure session with account verification</span>
+          <span className="text-slate-500">Protected session for wallet and tournaments</span>
           <button
             type="button"
             onClick={goToForgetPWD}
-            className="font-semibold text-cyan-300 transition hover:text-cyan-200"
+            className="font-semibold text-amber-200 transition hover:text-amber-100"
           >
             Forgot password?
           </button>
@@ -144,7 +153,8 @@ const Login = () => {
         <Button
           type="submit"
           isLoading={isSubmitting}
-          className="mt-3 h-14 w-full rounded-2xl bg-cyan-300 text-sm font-black uppercase tracking-[0.16em] text-slate-950 hover:bg-cyan-200"
+          size="large"
+          className="mt-3 w-full"
           endIcon={!isSubmitting ? <FaArrowRight /> : null}
         >
           Enter Platform

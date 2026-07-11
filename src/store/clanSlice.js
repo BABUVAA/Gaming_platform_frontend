@@ -3,6 +3,11 @@ import api from "../api/axios-api"; // Ensure you have the correct axios instanc
 import { logout } from "./authSlice";
 import { showToast, types } from "./toastSlice";
 
+const getClanErrorMessage = (error, fallback) =>
+  error.response?.data?.message ||
+  error.response?.data?.error ||
+  fallback;
+
 // Async thunk to fetch all games from the server
 export const createClan = createAsyncThunk(
   "/auth/clan/create",
@@ -18,10 +23,11 @@ export const createClan = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      const message = getClanErrorMessage(error, "Unable to create clan.");
       thunkAPI.dispatch(
         showToast({
-          message: error.response.data.message,
-          type: types.SUCCESS,
+          message,
+          type: types.DANGER,
           position: "bottom-right",
         })
       );
@@ -86,10 +92,11 @@ export const joinClan = createAsyncThunk(
       );
       return response.data; // return data to be used in the reducer
     } catch (error) {
+      const message = getClanErrorMessage(error, "Unable to join clan.");
       thunkAPI.dispatch(
         showToast({
-          message: error.response.data.message,
-          type: types.SUCCESS,
+          message,
+          type: types.DANGER,
           position: "bottom-right",
         })
       );
@@ -158,7 +165,7 @@ const clanSlice = createSlice({
     error: null, // Tracks any error
   },
   reducers: {
-    setSearchClanData: (state, action) => {
+    setSearchClanData: (state) => {
       state.searchClanData = null;
     },
   },
@@ -181,7 +188,7 @@ const clanSlice = createSlice({
       .addCase(joinClan.rejected, (state, action) => {
         state.error = action.payload;
       })
-      .addCase(leaveClan.fulfilled, (state, action) => {
+      .addCase(leaveClan.fulfilled, (state) => {
         state.userClanData = null;
       })
       .addCase(leaveClan.rejected, (state, action) => {
