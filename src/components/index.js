@@ -1,5 +1,4 @@
 // Common Components
-export { default as AppProvider } from "./common/AppProvider.jsx";
 export { default as AuthShell } from "./common/AuthShell.jsx";
 
 // Layout Components
