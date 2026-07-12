@@ -1,16 +1,3 @@
-import { useDispatch, useSelector, useStore as useReduxStore } from "react-redux";
-
-export const useStore = () => {
-  // This file is intentionally lightweight for now.
-  // We will centralize shared Redux Toolkit access helpers here later.
-  const dispatch = useDispatch();
-  const store = useReduxStore();
-
-  return {
-    dispatch,
-    store,
-    useSelector,
-  };
-};
-
-export default useStore;
+// This file stays as a compatibility bridge so current imports keep working
+// while we gradually migrate code toward the new store hook location.
+export { useStore, default } from "./hooks/useStore";

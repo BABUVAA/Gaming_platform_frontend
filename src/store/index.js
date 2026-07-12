@@ -1,46 +1,21 @@
 import { configureStore } from "@reduxjs/toolkit";
-import authSlice from "./authSlice";
-import gameSlice from "./gameSlice";
-import TournamentSlice from "./tournamentSlice";
-import loadingSlice from "./loadingSlice";
-import { persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage";
-import { combineReducers } from "@reduxjs/toolkit";
-import clanSlice from "./clanSlice";
-import toastSlice from "./toastSlice";
-import paymentSlice from "./paymentSlice";
-import notificationSlice from "./notificationSlice";
-import adminSlice from "./adminSlice";
+import { persistReducer, persistStore } from "redux-persist";
+import createStoreMiddleware from "./middleware";
+import persistConfig from "./persistConfig";
+import rootReducer from "./rootReducer";
 
-const persistConfig = {
-  key: "root",
-  version: 1,
-  storage,
-  whitelist: ["auth"],
-};
+// redux-persist wraps the root reducert so selected slices can survive refreshes.
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-const reducer = combineReducers({
-  admin: adminSlice.reducer,
-  auth: authSlice.reducer,
-  games: gameSlice.reducer,
-  tournament: TournamentSlice.reducer,
-  loading: loadingSlice.reducer,
-  payment: paymentSlice.reducer,
-  clan: clanSlice.reducer,
-  toast: toastSlice.reducer,
-  notifications: notificationSlice.reducer,
-});
-
-const persistedReducer = persistReducer(persistConfig, reducer);
-
+// This creates the Redux Toolkit store used by the entire application.
+// We pass the persisted reducer and the centralized middleware setup so
+// store initialization stays readable and consistent.
 const platformStore = configureStore({
   reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
-      },
-    }),
+  middleware: createStoreMiddleware,
 });
 
+// The persistor is exported alongside the store so app bootstrap can treat
+// persistence as state infrastructure instead of rebuilding it in provider code.
+export const persistor = persistStore(platformStore);
 export default platformStore;
