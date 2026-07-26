@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import GameCard from "../GameCard/GameCard";
+import { selectGames } from "../../../store/selectors/gameSelectors";
 
 const GameSlider = () => {
-  const games = useSelector((store) => store.games?.data);
+  const games = useSelector(selectGames);
   const sliderRef = useRef(null);
   const [scrollX, setScrollX] = useState(0);
   const [cardsPerView, setCardsPerView] = useState(2); // Default for mobile
@@ -18,13 +19,6 @@ const GameSlider = () => {
     return () => window.removeEventListener("resize", updateCardsPerView);
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      handleSlide("next");
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [cardsPerView]);
-
   const updateCardsPerView = () => {
     if (window.innerWidth < 640) {
       setCardsPerView(2); // Mobile: 2 cards max
@@ -35,20 +29,29 @@ const GameSlider = () => {
     }
   };
 
-  const handleSlide = (direction) => {
-    if (!sliderRef.current) return;
+  const handleSlide = useCallback(
+    (direction) => {
+      if (!sliderRef.current) return;
 
-    const cardWidth = sliderRef.current.offsetWidth / cardsPerView;
-    let newScrollX = scrollX + (direction === "next" ? cardWidth : -cardWidth);
+      const cardWidth = sliderRef.current.offsetWidth / cardsPerView;
+      let newScrollX =
+        scrollX + (direction === "next" ? cardWidth : -cardWidth);
 
-    if (newScrollX >= sliderRef.current.scrollWidth / 2) {
-      newScrollX = 0;
-    } else if (newScrollX < 0) {
-      newScrollX = sliderRef.current.scrollWidth / 2 - cardWidth;
-    }
-    setScrollX(newScrollX);
-    sliderRef.current.scrollTo({ left: newScrollX, behavior: "smooth" });
-  };
+      if (newScrollX >= sliderRef.current.scrollWidth / 2) {
+        newScrollX = 0;
+      } else if (newScrollX < 0) {
+        newScrollX = sliderRef.current.scrollWidth / 2 - cardWidth;
+      }
+      setScrollX(newScrollX);
+      sliderRef.current.scrollTo({ left: newScrollX, behavior: "smooth" });
+    },
+    [cardsPerView, scrollX],
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => handleSlide("next"), 3000);
+    return () => clearInterval(interval);
+  }, [handleSlide]);
 
   return (
     <div className="relative max-w-[85vw] mx-auto mt-10 ">

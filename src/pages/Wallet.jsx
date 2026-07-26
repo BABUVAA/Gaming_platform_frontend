@@ -7,8 +7,8 @@ import api from "../api/axios-api";
 import {
   initiatePhonePeOrder,
   withdrawRequest,
-} from "../store/paymentSlice";
-import { showToast, types } from "../store/toastSlice";
+} from "../store/slices/paymentSlice";
+import { showToast, types } from "../store/slices/toastSlice";
 
 const statusColor = {
   COMPLETED: "bg-emerald-500/15 text-emerald-300",

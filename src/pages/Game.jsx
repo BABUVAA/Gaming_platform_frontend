@@ -1,6 +1,6 @@
-import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { selectTournamentList } from "../store/selectors/tournamentSelectors";
 import {
   FaArrowRight,
   FaBolt,
@@ -8,17 +8,12 @@ import {
   FaShieldAlt,
   FaSitemap,
   FaTrophy,
-  FaWallet,
 } from "react-icons/fa";
 
 const Game = () => {
   const profile = useSelector((store) => store.auth?.profile);
-  const tournamentMap = useSelector((store) => store.tournament?.tournaments);
+  const tournaments = useSelector(selectTournamentList);
   const wallet = useSelector((store) => store.payment?.wallet);
-  const tournaments = useMemo(
-    () => Object.values(tournamentMap || {}),
-    [tournamentMap]
-  );
 
   const connectedGames = profile?.profile?.games || [];
   const joinedTournaments = profile?.profile?.tournaments || [];

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   findVerificationRequests,
   reviewVerificationRequest,
-} from "../../store/adminSlice";
+} from "../../store/slices/adminSlice";
 
 const STATUS_STYLES = {
   pending: "bg-amber-500/15 text-amber-200",

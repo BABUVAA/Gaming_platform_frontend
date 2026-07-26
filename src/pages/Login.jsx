@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Form } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { login } from "../store/authSlice";
+import { login } from "../store/slices/authSlice";
 import useNavigateHook from "../hooks/useNavigateHook";
 import { AuthShell, Input, Button } from "../components";
 import validator from "validator";
@@ -60,13 +60,14 @@ const Login = () => {
         goToDashboard();
       })
       .catch((err) => {
+        const fieldErrors = err?.fieldErrors || {};
         setErrors({
-          email: err?.errors?.email || "",
-          password: err?.errors?.password || "",
+          email: fieldErrors.email || "",
+          password: fieldErrors.password || "",
           form:
             err?.message ||
-            err?.errors?.email ||
-            err?.errors?.password ||
+            fieldErrors.email ||
+            fieldErrors.password ||
             "Unable to login. Please check your details.",
         });
       })

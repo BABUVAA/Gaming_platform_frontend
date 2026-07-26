@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { hideToast } from "../../../store/toastSlice";
+import { hideToast } from "../../../store/slices/toastSlice";
 import { FiAlertCircle, FiBell, FiCheckCircle, FiInfo, FiX } from "react-icons/fi";
 
 const Toast = () => {

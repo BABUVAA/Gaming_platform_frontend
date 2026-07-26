@@ -9,14 +9,19 @@ import {
   FaWallet,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
+import { ROUTES } from "../routes/routeConstants";
+import { USER_ROLES } from "./accessControl";
+
+// Navigation data reuses route constants so the menu, guards, and router all
+// point at the same URLs. That keeps future role/domain splits from drifting.
 
 const adminNavigation = [
   {
     label: "Admin",
     description: "Platform operations",
-    to: "/panelAdmin",
+    to: ROUTES.ADMIN_PANEL,
     icon: FaCrown,
-    match: ["/panelAdmin"],
+    match: [ROUTES.ADMIN_PANEL],
   },
 ];
 
@@ -24,9 +29,9 @@ const operatorNavigation = [
   {
     label: "Operations",
     description: "Lobby ops and dispute flow",
-    to: "/dashboard/operations",
+    to: ROUTES.OPERATIONS,
     icon: FaSatelliteDish,
-    match: ["/dashboard/operations"],
+    match: [ROUTES.OPERATIONS],
   },
 ];
 
@@ -34,51 +39,51 @@ const playerNavigation = [
   {
     label: "Compete",
     description: "Overview and readiness",
-    to: "/dashboard",
+    to: ROUTES.DASHBOARD,
     icon: FaGamepad,
-    match: ["/dashboard"],
+    match: [ROUTES.DASHBOARD],
   },
   {
     label: "Tournaments",
     description: "Join active formats",
-    to: "/dashboard/tournament",
+    to: ROUTES.TOURNAMENT,
     icon: FaTrophy,
-    match: ["/dashboard/tournament", "/tournamentDetails"],
+    match: [ROUTES.TOURNAMENT, "/tournamentDetails"],
   },
   {
     label: "Clans",
     description: "Manage your roster",
-    to: "/dashboard/clan",
+    to: ROUTES.CLAN,
     icon: MdOutlineCastle,
-    match: ["/dashboard/clan"],
+    match: [ROUTES.CLAN],
   },
   {
     label: "Matches",
     description: "Rooms, check-in, and results",
-    to: "/dashboard/matches",
+    to: ROUTES.MATCHES,
     icon: FaMapMarkedAlt,
-    match: ["/dashboard/matches"],
+    match: [ROUTES.MATCHES],
   },
   {
     label: "Chats",
     description: "Messages and social coordination",
-    to: "/dashboard/chats",
+    to: ROUTES.CHATS,
     icon: FaLayerGroup,
-    match: ["/dashboard/chats"],
+    match: [ROUTES.CHATS],
   },
   {
     label: "Wallet",
     description: "Balance and settlements",
-    to: "/dashboard/wallet",
+    to: ROUTES.WALLET,
     icon: FaWallet,
-    match: ["/dashboard/wallet"],
+    match: [ROUTES.WALLET],
   },
   {
     label: "Account",
     description: "Verification and links",
-    to: "/dashboard/account",
+    to: ROUTES.ACCOUNT,
     icon: FaShieldAlt,
-    match: ["/dashboard/account", "/dashboard/profile"],
+    match: [ROUTES.ACCOUNT, ROUTES.PROFILE],
   },
 ];
 
@@ -89,14 +94,16 @@ const allNavigation = [
 ];
 
 export const getDefaultRouteForRole = (role) => {
-  if (role === "admin") return "/panelAdmin";
-  if (role === "operator") return "/dashboard/operations";
-  return "/dashboard";
+  // This helper is the single redirect source for role-based landings.
+  // If a new role is introduced later, add its safe default destination here.
+  if (role === USER_ROLES.ADMIN) return ROUTES.ADMIN_PANEL;
+  if (role === USER_ROLES.OPERATOR) return ROUTES.OPERATIONS;
+  return ROUTES.DASHBOARD;
 };
 
 export const getDashboardNavigation = (role) => {
-  if (role === "admin") return adminNavigation;
-  if (role === "operator") return operatorNavigation;
+  if (role === USER_ROLES.ADMIN) return adminNavigation;
+  if (role === USER_ROLES.OPERATOR) return operatorNavigation;
   return playerNavigation;
 };
 

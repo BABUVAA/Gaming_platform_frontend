@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Fuse from "fuse.js";
 import { useDispatch, useSelector } from "react-redux";
 import CreateTemplate from "../../myComponents/CreateTemplate";
-import { findTournaments } from "../../../store/adminSlice";
+import { findTournaments } from "../../../store/slices/adminSlice";
 
 const getToday = () => new Date().toISOString().split("T")[0];
 

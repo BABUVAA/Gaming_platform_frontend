@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useSocket } from "../context/socketContext";
+import PropTypes from "prop-types";
+import useSocket from "../context/useSocket";
 import {
   RewardManagement,
   TournamentManagement,
@@ -116,5 +117,10 @@ const StatusCard = ({ label, value }) => (
     <p className="mt-3 text-lg font-black text-white">{value}</p>
   </div>
 );
+
+StatusCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+};
 
 export default AdminDashboard;

@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { showToast, types } from "./toastSlice";
-import api from "../api/axios-api";
+import api from "../../api/axios-api";
+import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
 
 const initialState = {
   items: [],
@@ -40,13 +41,19 @@ export const fetchNotifications = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message:
-            error?.response?.data?.message || "Failed to fetch notifications",
+          message: getApiErrorMessage(
+            error,
+            "Failed to fetch notifications",
+          ),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(
+        thunkAPI,
+        error,
+        "Failed to fetch notifications",
+      );
     }
   }
 );
@@ -67,13 +74,19 @@ export const markNotificationAsRead = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message:
-            error?.response?.data?.message || "Failed to update notification",
+          message: getApiErrorMessage(
+            error,
+            "Failed to update notification",
+          ),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(
+        thunkAPI,
+        error,
+        "Failed to update notification",
+      );
     }
   }
 );

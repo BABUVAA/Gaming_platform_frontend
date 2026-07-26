@@ -1,11 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import api from "../api/axios-api";
+import api from "../../api/axios-api";
+import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
 import { showToast, types } from "./toastSlice";
-
-const getPaymentErrorMessage = (error, fallback) =>
-  error.response?.data?.message ||
-  error.response?.data?.error ||
-  fallback;
 
 export const initiatePhonePeOrder = createAsyncThunk(
   "payment/initiatePhonePeOrder",
@@ -16,7 +12,7 @@ export const initiatePhonePeOrder = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      const message = getPaymentErrorMessage(
+      const message = getApiErrorMessage(
         error,
         "Unable to start wallet top-up."
       );
@@ -27,7 +23,7 @@ export const initiatePhonePeOrder = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -41,11 +37,11 @@ export const fetchWalletBalance = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      const message = getPaymentErrorMessage(
+      return rejectApiError(
+        thunkAPI,
         error,
-        "Unable to fetch wallet balance."
+        "Unable to fetch wallet balance.",
       );
-      return thunkAPI.rejectWithValue(message);
     }
   }
 );
@@ -66,7 +62,7 @@ export const withdrawRequest = createAsyncThunk(
       );
       return response.data?.data || response.data;
     } catch (error) {
-      const message = getPaymentErrorMessage(
+      const message = getApiErrorMessage(
         error,
         "Unable to request withdrawal."
       );
@@ -77,7 +73,7 @@ export const withdrawRequest = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -91,8 +87,10 @@ export const fetchUserTransactions = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
-        getPaymentErrorMessage(error, "Failed to fetch transactions.")
+      return rejectApiError(
+        thunkAPI,
+        error,
+        "Failed to fetch transactions.",
       );
     }
   }
@@ -111,8 +109,10 @@ export const checkTransactionStatus = createAsyncThunk(
       );
       return response.data?.data || response.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue(
-        getPaymentErrorMessage(error, "Failed to check transaction status.")
+      return rejectApiError(
+        thunkAPI,
+        error,
+        "Failed to check transaction status.",
       );
     }
   }

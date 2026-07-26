@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useSocket } from "../../context/socketContext";
-import validator from "validator";
+import PropTypes from "prop-types";
+import useSocket from "../../context/useSocket";
 
 const GameConnectForm = ({ game, onClose, onSubmit }) => {
   const { socket } = useSocket();
@@ -160,6 +160,16 @@ const GameConnectForm = ({ game, onClose, onSubmit }) => {
       </div>
     </div>
   );
+};
+
+GameConnectForm.propTypes = {
+  game: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    link: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+  }).isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 };
 
 export default GameConnectForm;

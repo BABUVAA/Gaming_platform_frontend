@@ -1,12 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../api/axios-api"; // Ensure you have the correct axios instance
+import api from "../../api/axios-api";
+import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
 import { logout } from "./authSlice";
 import { showToast, types } from "./toastSlice";
-
-const getClanErrorMessage = (error, fallback) =>
-  error.response?.data?.message ||
-  error.response?.data?.error ||
-  fallback;
 
 // Async thunk to fetch all games from the server
 export const createClan = createAsyncThunk(
@@ -23,7 +19,7 @@ export const createClan = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      const message = getClanErrorMessage(error, "Unable to create clan.");
+      const message = getApiErrorMessage(error, "Unable to create clan.");
       thunkAPI.dispatch(
         showToast({
           message,
@@ -31,7 +27,7 @@ export const createClan = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -47,7 +43,7 @@ export const fetchUserClan = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
+      return rejectApiError(thunkAPI, error, "Unable to load your clan.");
     }
   }
 );
@@ -63,15 +59,18 @@ export const searchClan = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
+      const message = getApiErrorMessage(
+        error,
+        "Unable to find that clan tag.",
+      );
       thunkAPI.dispatch(
         showToast({
-          message:
-            error.response?.data?.message || "Unable to find that clan tag.",
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -92,7 +91,7 @@ export const joinClan = createAsyncThunk(
       );
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      const message = getClanErrorMessage(error, "Unable to join clan.");
+      const message = getApiErrorMessage(error, "Unable to join clan.");
       thunkAPI.dispatch(
         showToast({
           message,
@@ -100,7 +99,7 @@ export const joinClan = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -116,7 +115,7 @@ export const leaveClan = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.message); // return error message in case of failure
+      return rejectApiError(thunkAPI, error, "Unable to leave clan.");
     }
   }
 );
@@ -141,16 +140,17 @@ export const clan_data_update = createAsyncThunk(
       return response.data;
     } catch (error) {
       // Show error toast notification
+      const message = getApiErrorMessage(error, "Failed to update clan data");
       thunkAPI.dispatch(
         showToast({
-          message: error.response?.data?.error || "Failed to update Clan Data",
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      // Reject action with error message
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      // Reducers and callers receive the same normalized error shown above.
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );

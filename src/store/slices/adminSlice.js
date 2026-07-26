@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../api/axios-api";
+import api from "../../api/axios-api";
+import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
 import { showToast, types } from "./toastSlice";
 
 // 🔄 Async thunk to fetch users
@@ -21,13 +22,13 @@ export const findUsers = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message: error.response?.data?.message || "Failed to fetch users",
+          message: getApiErrorMessage(error, "Failed to fetch users"),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, "Failed to fetch users");
     }
   }
 );
@@ -50,14 +51,13 @@ export const findTransactions = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message:
-            error.response?.data?.message || "Failed to fetch transactions",
+          message: getApiErrorMessage(error, "Failed to fetch transactions"),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, "Failed to fetch transactions");
     }
   }
 );
@@ -80,14 +80,13 @@ export const findTournaments = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message:
-            error.response?.data?.message || "Failed to fetch Tournament",
+          message: getApiErrorMessage(error, "Failed to fetch tournament"),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, "Failed to fetch tournament");
     }
   }
 );
@@ -104,15 +103,20 @@ export const findVerificationRequests = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message:
-            error.response?.data?.message ||
+          message: getApiErrorMessage(
+            error,
             "Failed to fetch verification requests",
+          ),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(
+        thunkAPI,
+        error,
+        "Failed to fetch verification requests",
+      );
     }
   }
 );
@@ -141,15 +145,20 @@ export const reviewVerificationRequest = createAsyncThunk(
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
-          message:
-            error.response?.data?.message ||
+          message: getApiErrorMessage(
+            error,
             "Failed to update verification request",
+          ),
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(
+        thunkAPI,
+        error,
+        "Failed to update verification request",
+      );
     }
   }
 );

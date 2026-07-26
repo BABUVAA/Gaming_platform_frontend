@@ -25,12 +25,12 @@ import {
   joinClan,
   leaveClan,
   searchClan,
-} from "../store/clanSlice";
+} from "../store/slices/clanSlice";
 import {
   profile_data_update,
   searchPlayer,
   user_profile,
-} from "../store/authSlice";
+} from "../store/slices/authSlice";
 
 const Clan = () => {
   const dispatch = useDispatch();

@@ -1,6 +1,7 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
-import { useSocket } from "../../context/socketContext";
+import useSocket from "../../context/useSocket";
 
 const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
   const [activeTab, setActiveTab] = useState("clan");
@@ -194,6 +195,14 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
       </div>
     </div>
   );
+};
+
+InviteModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  tournamentId: PropTypes.string.isRequired,
+  teamSize: PropTypes.number.isRequired,
+  clanData: PropTypes.object,
 };
 
 export default InviteModal;

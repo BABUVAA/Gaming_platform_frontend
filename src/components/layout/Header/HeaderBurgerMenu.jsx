@@ -8,8 +8,9 @@ import { CiWallet } from "react-icons/ci";
 import { RiCloseFill } from "react-icons/ri";
 import Button from "../../ui/Button/Button";
 import useNavigateHook from "../../../hooks/useNavigateHook";
-import { logout } from "../../../store/authSlice";
+import { logout } from "../../../store/slices/authSlice";
 import { getDashboardNavigation } from "../../../utils/navigation";
+import { USER_ROLES } from "../../../utils/accessControl";
 
 const HeaderBurgerMenu = () => {
   const dispatch = useDispatch();
@@ -20,7 +21,7 @@ const HeaderBurgerMenu = () => {
   const { goToLogin, goToSignUp } = useNavigateHook();
   const unreadCount = (notifications || []).filter((item) => !item.isRead).length;
   const dashboardNavigation = getDashboardNavigation(profile?.role);
-  const showPlayerWallet = ["player", "host"].includes(profile?.role);
+  const showPlayerWallet = profile?.role === USER_ROLES.PLAYER;
 
   const closeMenu = () => setMenuOpen(false);
 

@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import PropTypes from "prop-types";
 import { FaBolt, FaClock, FaLink, FaShieldAlt } from "react-icons/fa";
 import api from "../api/axios-api";
-import { user_profile } from "../store/authSlice";
-import { showToast, types } from "../store/toastSlice";
+import { getApiErrorMessage } from "../api/apiError";
+import { user_profile } from "../store/slices/authSlice";
+import { showToast, types } from "../store/slices/toastSlice";
 
 const statusClasses = {
   verified: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
@@ -37,7 +39,9 @@ const Account = () => {
   const [form, setForm] = useState(emptyForm);
   const availableGames = games || [];
 
-  const loadAccountCenter = async () => {
+  const loadAccountCenter = useCallback(async () => {
+    // Keep this loader stable so the bootstrap effect runs only when its Redux
+    // dispatch dependency changes, not after every component render.
     setIsLoading(true);
     try {
       const [accountsResponse, requestsResponse] = await Promise.all([
@@ -50,9 +54,10 @@ const Account = () => {
     } catch (error) {
       dispatch(
         showToast({
-          message:
-            error.response?.data?.message ||
+          message: getApiErrorMessage(
+            error,
             "Unable to load your connected accounts.",
+          ),
           type: types.DANGER,
           position: "bottom-right",
         })
@@ -60,11 +65,11 @@ const Account = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     loadAccountCenter();
-  }, []);
+  }, [loadAccountCenter]);
 
   const accountByGameKey = useMemo(() => {
     return linkedAccounts.reduce((acc, item) => {
@@ -123,9 +128,10 @@ const Account = () => {
     } catch (error) {
       dispatch(
         showToast({
-          message:
-            error.response?.data?.message ||
+          message: getApiErrorMessage(
+            error,
             "We could not complete that account action.",
+          ),
           type: types.DANGER,
           position: "bottom-right",
         })
@@ -499,6 +505,17 @@ const Field = ({ label, placeholder, value, onChange }) => {
       />
     </div>
   );
+};
+
+Field.propTypes = {
+  label: PropTypes.string.isRequired,
+  placeholder: PropTypes.string,
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+};
+
+Field.defaultProps = {
+  placeholder: "",
 };
 
 export default Account;

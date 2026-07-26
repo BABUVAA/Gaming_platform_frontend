@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import {
@@ -9,7 +10,12 @@ import {
   FaTwitter,
 } from "react-icons/fa6";
 import { FiClock, FiPlayCircle, FiUsers } from "react-icons/fi";
-import { fetchTournamentById } from "../store/tournamentSlice";
+import { fetchTournamentById } from "../store/slices/tournamentSlice";
+import {
+  selectTournamentDetailError,
+  selectTournamentDetails,
+  selectTournamentDetailStatus,
+} from "../store/selectors/tournamentSelectors";
 
 const pad = (value) => String(value).padStart(2, "0");
 
@@ -26,21 +32,39 @@ const TournamentDetails = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const { id } = useParams();
   const dispatch = useDispatch();
-  const { tournamentId } = useSelector((store) => store.tournament);
+  const tournament = useSelector(selectTournamentDetails);
+  const detailStatus = useSelector(selectTournamentDetailStatus);
+  const detailError = useSelector(selectTournamentDetailError);
 
   useEffect(() => {
     dispatch(fetchTournamentById(id));
   }, [dispatch, id]);
 
+  if (detailStatus === "loading" && tournament?._id !== id) {
+    return (
+      <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-8 text-center text-slate-300">
+        Loading tournament details...
+      </div>
+    );
+  }
+
+  if (detailStatus === "failed") {
+    return (
+      <div className="rounded-[28px] border border-rose-400/20 bg-rose-500/10 p-8 text-center text-rose-200">
+        {detailError || "Unable to load tournament details."}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <TournamentHero tournament={tournamentId} />
-      <TournamentSummary tournament={tournamentId} />
+      <TournamentHero tournament={tournament} />
+      <TournamentSummary tournament={tournament} />
       <TournamentTabs
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         rules={rulesData}
-        leaderboard={tournamentId?.registeredPlayers || []}
+        leaderboard={tournament?.registeredPlayers || []}
       />
     </div>
   );
@@ -297,5 +321,52 @@ const rulesData = [
     ],
   },
 ];
+
+const tournamentPropType = PropTypes.shape({
+  _id: PropTypes.string,
+  tournamentName: PropTypes.string,
+  matchStartDate: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.number,
+    PropTypes.instanceOf(Date),
+  ]),
+  preparationTime: PropTypes.number,
+  battleDuration: PropTypes.number,
+  imageUrl: PropTypes.string,
+  status: PropTypes.string,
+  game: PropTypes.string,
+  mode: PropTypes.string,
+  prizePool: PropTypes.number,
+  entryFee: PropTypes.number,
+  maxParticipants: PropTypes.number,
+  registeredTeams: PropTypes.arrayOf(PropTypes.object),
+  registeredPlayers: PropTypes.arrayOf(PropTypes.object),
+});
+
+TournamentHero.propTypes = {
+  tournament: tournamentPropType,
+};
+
+TournamentSummary.propTypes = {
+  tournament: tournamentPropType,
+};
+
+SummaryCard.propTypes = {
+  icon: PropTypes.node.isRequired,
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+TournamentTabs.propTypes = {
+  activeTab: PropTypes.string.isRequired,
+  setActiveTab: PropTypes.func.isRequired,
+  rules: PropTypes.arrayOf(
+    PropTypes.shape({
+      title: PropTypes.string.isRequired,
+      points: PropTypes.arrayOf(PropTypes.string).isRequired,
+    }),
+  ).isRequired,
+  leaderboard: PropTypes.arrayOf(PropTypes.object).isRequired,
+};
 
 export default TournamentDetails;

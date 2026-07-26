@@ -10,6 +10,7 @@ import {
   HeaderWalletMenu,
 } from "../..";
 import useNavigateHook from "../../../hooks/useNavigateHook";
+import { USER_ROLES } from "../../../utils/accessControl";
 import {
   getDashboardNavigation,
   getNavigationTitle,
@@ -21,7 +22,7 @@ const Header = () => {
   const location = useLocation();
   const currentArea = getNavigationTitle(location.pathname);
   const dashboardNavigation = getDashboardNavigation(profile?.role);
-  const showPlayerWallet = ["player", "host"].includes(profile?.role);
+  const showPlayerWallet = profile?.role === USER_ROLES.PLAYER;
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#04070d]/90 backdrop-blur-xl">

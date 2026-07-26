@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { FaArrowRight, FaClock, FaHeadset, FaShieldAlt } from "react-icons/fa";
 import api from "../api/axios-api";
-import { showToast, types } from "../store/toastSlice";
+import { getApiErrorMessage } from "../api/apiError";
+import { showToast, types } from "../store/slices/toastSlice";
 
 const STATUS_STYLE = {
   scheduled: "bg-slate-800 text-slate-200",
@@ -30,8 +31,10 @@ const Matches = () => {
       } catch (error) {
         dispatch(
           showToast({
-            message:
-              error.response?.data?.message || "Unable to load match feed.",
+            message: getApiErrorMessage(
+              error,
+              "Unable to load match feed.",
+            ),
             type: types.DANGER,
             position: "bottom-right",
           })

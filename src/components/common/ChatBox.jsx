@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import { FiAlertCircle, FiMessageCircle, FiSend } from "react-icons/fi";
-import { useSocket } from "../../context/socketContext";
+import useSocket from "../../context/useSocket";
 
 const getMessageSignature = (message = {}, fallbackIndex = 0) =>
   message?._id ||
@@ -253,6 +254,13 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
       </div>
     </div>
   );
+};
+
+ChatBox.propTypes = {
+  chatType: PropTypes.oneOf(["clan", "personal"]).isRequired,
+  selectedChat: PropTypes.string,
+  chatName: PropTypes.string.isRequired,
+  onBack: PropTypes.func.isRequired,
 };
 
 export default ChatBox;

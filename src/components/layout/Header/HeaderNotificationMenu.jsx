@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { FiBell, FiChevronRight } from "react-icons/fi";
-import { markNotificationAsRead } from "../../../store/notificationSlice";
+import { markNotificationAsRead } from "../../../store/slices/notificationSlice";
 
 const HeaderNotificationMenu = () => {
   const [isOpen, setIsOpen] = useState(false);

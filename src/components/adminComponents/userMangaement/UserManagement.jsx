@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Fuse from "fuse.js";
 import { useDispatch, useSelector } from "react-redux";
-import { findUsers } from "../../../store/adminSlice";
+import { findUsers } from "../../../store/slices/adminSlice";
 
 const statusStyles = {
   banned: "bg-rose-500/15 text-rose-200",

@@ -9,21 +9,27 @@ import {
   FiUser,
   FiUsers,
 } from "react-icons/fi";
-import { logout } from "../../../store/authSlice";
+import { logout } from "../../../store/slices/authSlice";
+import {
+  hasApprovedHostAccess,
+  USER_ROLES,
+} from "../../../utils/accessControl";
 
 const HeaderProfileMenu = () => {
   const dispatch = useDispatch();
   const { profile } = useSelector((store) => store.auth);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
-  const roleLabel = profile?.role
-    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
-    : "Player";
+  const roleLabel = hasApprovedHostAccess(profile)
+    ? "Player / Approved Host"
+    : profile?.role
+      ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
+      : "Player";
 
   const menuItems =
-    profile?.role === "admin"
+    profile?.role === USER_ROLES.ADMIN
       ? [{ to: "/panelAdmin", label: "Admin Panel", icon: FiShield }]
-      : profile?.role === "operator"
+      : profile?.role === USER_ROLES.OPERATOR
         ? [
             {
               to: "/dashboard/operations",

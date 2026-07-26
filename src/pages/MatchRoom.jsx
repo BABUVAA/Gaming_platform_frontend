@@ -4,7 +4,8 @@ import { FaArrowLeft, FaCheckCircle, FaFlag, FaHeadset } from "react-icons/fa";
 import { FiClock, FiUploadCloud, FiUsers } from "react-icons/fi";
 import { useDispatch } from "react-redux";
 import api from "../api/axios-api";
-import { showToast, types } from "../store/toastSlice";
+import { getApiErrorMessage } from "../api/apiError";
+import { showToast, types } from "../store/slices/toastSlice";
 
 const FLOW = [
   "scheduled",
@@ -76,8 +77,10 @@ const MatchRoom = () => {
       } catch {
         dispatch(
           showToast({
-            message:
-              error.response?.data?.message || "Unable to load match room.",
+            message: getApiErrorMessage(
+              error,
+              "Unable to load match room.",
+            ),
             type: types.DANGER,
             position: "bottom-right",
           })
@@ -157,10 +160,7 @@ const MatchRoom = () => {
     } catch (error) {
       dispatch(
         showToast({
-          message:
-            error.response?.data?.message ||
-            error.message ||
-            "Match action failed.",
+          message: getApiErrorMessage(error, "Match action failed."),
           type: types.DANGER,
           position: "bottom-right",
         })

@@ -1,12 +1,14 @@
 import PropTypes from "prop-types";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
-import { tournamentAction } from "../store/tournamentSlice";
-import { showToast, types } from "../store/toastSlice";
-import { authAction } from "../store/authSlice";
-import { notificationActions } from "../store/notificationSlice";
+import { tournamentAction } from "../store/slices/tournamentSlice";
+import { showToast, types } from "../store/slices/toastSlice";
+import { authAction } from "../store/slices/authSlice";
+import { notificationActions } from "../store/slices/notificationSlice";
 import platformStore from "../store";
+import { useAuthStore } from "../store/useStore";
+import SocketContext from "./socketContextValue";
 
 const getMessageSignature = (message = {}, fallbackIndex = 0) =>
   message?._id ||
@@ -33,38 +35,34 @@ const appendUniqueMessage = (messageList = [], newMessage) => {
 
 const getCurrentUserId = () => platformStore.getState().auth?.profile?._id;
 
-const getCurrentTournamentId = () =>
-  platformStore.getState().tournament.tournamentId?._id;
-
-const getTournamentCategory = (tournament) => {
-  if (tournament.isFeatured) return "featuredTournaments";
-
-  switch (tournament.status) {
-    case "registration_open":
-      return "activeTournaments";
-    case "upcoming":
-      return "upcomingTournaments";
-    case "completed":
-      return "pastTournaments";
-    default:
-      return "tournament";
-  }
-};
-
-const SocketContext = createContext();
-
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const dispatch = useDispatch();
+  const { isAuthenticated } = useAuthStore();
   const [connected, setConnected] = useState(false);
   const [lastError, setLastError] = useState("");
   const [messages, setMessages] = useState({});
 
   useEffect(() => {
-    // The app shell owns one socket connection. Event handlers read current
-    // Redux state on demand instead of reconnecting whenever auth changes.
+    // Public visitors do not need private chat, notification, or tournament
+    // events. Waiting for verified authentication removes unnecessary socket
+    // handshakes and prevents anonymous connections from consuming capacity.
+    if (!isAuthenticated) {
+      socketRef.current = null;
+      setConnected(false);
+      setLastError("");
+      setMessages({});
+      return undefined;
+    }
+
+    // The app shell owns one authenticated socket connection. WebSocket is
+    // preferred, with polling retained only as a compatibility fallback.
     const socket = io(import.meta.env.VITE_SERVER_URL, {
       withCredentials: true,
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
     });
 
     socketRef.current = socket;
@@ -110,18 +108,7 @@ export const SocketProvider = ({ children }) => {
     const handleTournamentUpdate = (updatedTournament) => {
       // Every live tournament event is normalized through one reducer path so
       // list screens and detail screens stay consistent.
-      const foundCategory = getTournamentCategory(updatedTournament);
-      if (!foundCategory) {
-        console.warn("Tournament doesn't match any updateable category.");
-        return;
-      }
-
-      dispatch(
-        tournamentAction.addTournament({
-          category: foundCategory,
-          tournament: updatedTournament,
-        })
-      );
+      dispatch(tournamentAction.upsertTournament(updatedTournament));
     };
 
     const onConnect = () => {
@@ -143,11 +130,9 @@ export const SocketProvider = ({ children }) => {
 
       dispatch(authAction.addJoinedTournament(data.tournament));
 
-      // If the user is already inspecting this tournament, patch the detail
-      // view immediately instead of waiting for another fetch cycle.
-      if (getCurrentTournamentId() === data.tournament._id) {
-        dispatch(tournamentAction.updateTournamentById(data.tournament));
-      }
+      // The shared upsert reducer patches both the list map and an open matching
+      // detail record without socket code reaching into raw Redux state.
+      dispatch(tournamentAction.upsertTournament(data.tournament));
     };
 
     const onNotification = (notification) => {
@@ -199,7 +184,7 @@ export const SocketProvider = ({ children }) => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [dispatch]);
+  }, [dispatch, isAuthenticated]);
 
   return (
     <SocketContext.Provider
@@ -218,5 +203,3 @@ export const SocketProvider = ({ children }) => {
 SocketProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };
-
-export const useSocket = () => useContext(SocketContext);

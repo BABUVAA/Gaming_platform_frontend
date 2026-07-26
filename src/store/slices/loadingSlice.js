@@ -1,17 +1,14 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
-  verifySession,
   login,
   logout,
   register,
-  user_profile,
   profile_data_update,
   profile_file_update,
 } from "./authSlice";
-import { fetchGames } from "./gameSlice";
-import { createClan, fetchUserClan } from "./clanSlice";
+import { createClan } from "./clanSlice";
 
-// Loading slice
+// Global loading slice
 const loadingSlice = createSlice({
   name: "loading",
   initialState: {
@@ -42,9 +39,6 @@ const loadingSlice = createSlice({
     };
 
     builder
-      .addCase(verifySession.pending, beginRequest)
-      .addCase(verifySession.fulfilled, finishRequest)
-      .addCase(verifySession.rejected, finishRequest)
       .addCase(login.pending, beginRequest)
       .addCase(login.fulfilled, finishRequest)
       .addCase(login.rejected, finishRequest)
@@ -54,24 +48,15 @@ const loadingSlice = createSlice({
       .addCase(register.pending, beginRequest)
       .addCase(register.fulfilled, finishRequest)
       .addCase(register.rejected, finishRequest)
-      .addCase(user_profile.pending, beginRequest)
-      .addCase(user_profile.fulfilled, finishRequest)
-      .addCase(user_profile.rejected, finishRequest)
       .addCase(profile_data_update.pending, beginRequest)
       .addCase(profile_data_update.fulfilled, finishRequest)
       .addCase(profile_data_update.rejected, finishRequest)
       .addCase(profile_file_update.pending, beginRequest)
       .addCase(profile_file_update.fulfilled, finishRequest)
       .addCase(profile_file_update.rejected, finishRequest)
-      .addCase(fetchGames.pending, beginRequest)
-      .addCase(fetchGames.fulfilled, finishRequest)
-      .addCase(fetchGames.rejected, finishRequest)
       .addCase(createClan.pending, beginRequest)
       .addCase(createClan.fulfilled, finishRequest)
-      .addCase(createClan.rejected, finishRequest)
-      .addCase(fetchUserClan.pending, beginRequest)
-      .addCase(fetchUserClan.fulfilled, finishRequest)
-      .addCase(fetchUserClan.rejected, finishRequest);
+      .addCase(createClan.rejected, finishRequest);
   },
 });
 

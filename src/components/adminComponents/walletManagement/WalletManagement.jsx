@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Fuse from "fuse.js";
-import { findTransactions } from "../../../store/adminSlice";
+import { findTransactions } from "../../../store/slices/adminSlice";
 
 const STATUS_COLORS = {
   completed: "bg-emerald-500/15 text-emerald-300",

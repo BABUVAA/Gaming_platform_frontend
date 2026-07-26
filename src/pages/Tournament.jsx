@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
+import { selectTournamentList } from "../store/selectors/tournamentSelectors";
 
 const TournamentPage = () => {
-  const { tournaments = {} } = useSelector((state) => state.tournament);
+  const tournaments = useSelector(selectTournamentList);
   const { profile } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -13,13 +15,12 @@ const TournamentPage = () => {
   const filters = ["coc", "bgmi", "solo", "5v5", "squad", "Featured"];
 
   const filteredTournaments = useMemo(() => {
-    const tournamentList = Object.values(tournaments);
-    if (!activeFilter || activeFilter === "All") return tournamentList;
+    if (!activeFilter || activeFilter === "All") return tournaments;
     if (activeFilter === "Featured") {
-      return tournamentList.filter((tournament) => tournament.isFeatured);
+      return tournaments.filter((tournament) => tournament.isFeatured);
     }
 
-    return tournamentList.filter(
+    return tournaments.filter(
       (tournament) =>
         tournament.mode === activeFilter ||
         tournament.map === activeFilter ||
@@ -157,6 +158,17 @@ const Pagination = ({ totalPages, currentPage, setCurrentPage }) => {
       ))}
     </div>
   );
+};
+
+TournamentGrid.propTypes = {
+  tournaments: PropTypes.arrayOf(PropTypes.object).isRequired,
+  activeTab: PropTypes.string.isRequired,
+};
+
+Pagination.propTypes = {
+  totalPages: PropTypes.number.isRequired,
+  currentPage: PropTypes.number.isRequired,
+  setCurrentPage: PropTypes.func.isRequired,
 };
 
 export default TournamentPage;

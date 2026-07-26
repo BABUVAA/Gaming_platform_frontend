@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Form } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { register } from "../store/authSlice";
+import { register } from "../store/slices/authSlice";
 import { AuthShell, Button, Input } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
 import validator from "validator";
@@ -125,14 +125,15 @@ const SignUp = () => {
         if (response.success) goToDashboard();
       })
       .catch((err) => {
+        const fieldErrors = err?.fieldErrors || {};
         setErrors({
-          username: err?.errors?.username || "",
-          email: err?.errors?.email || "",
-          password: err?.errors?.password || "",
-          dob: err?.errors?.dob || "",
+          username: fieldErrors.username || "",
+          email: fieldErrors.email || "",
+          password: fieldErrors.password || "",
+          dob: fieldErrors.dob || "",
           form:
             err?.message ||
-            Object.values(err?.errors || {}).find(Boolean) ||
+            Object.values(fieldErrors).find(Boolean) ||
             "Unable to create account. Please review your details.",
         });
       })

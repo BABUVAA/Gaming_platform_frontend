@@ -1,12 +1,26 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../api/axios-api";
+import api from "../../api/axios-api";
+import {
+  getApiErrorMessage,
+  normalizeApiError,
+  rejectApiError,
+} from "../../api/apiError";
 import { showToast, types } from "./toastSlice";
+import {
+  forgetUnauthenticatedSession,
+  hasUnauthenticatedSessionHint,
+  rememberUnauthenticatedSession,
+} from "../authSessionHint";
 
-const getApiErrorMessage = (error, fallback) =>
-  error.response?.data?.message ||
-  error.response?.data?.error ||
-  Object.values(error.response?.data?.errors || {}).find(Boolean) ||
-  fallback;
+// Session status represents what the frontend knows about the server session.
+// `unknown` is intentionally different from unauthenticated because the
+// browser cookie has not been checked yet when the application first starts.
+export const SESSION_STATUS = Object.freeze({
+  UNKNOWN: "unknown",
+  CHECKING: "checking",
+  AUTHENTICATED: "authenticated",
+  UNAUTHENTICATED: "unauthenticated",
+});
 
 // Async thunk for session verification
 export const verifySession = createAsyncThunk(
@@ -19,13 +33,15 @@ export const verifySession = createAsyncThunk(
         {},
         { withCredentials: true }
       );
+      forgetUnauthenticatedSession();
       return response.data;
     } catch (error) {
-      const statusCode = error.response?.status;
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Unable to verify the current session.";
+      const appError = normalizeApiError(
+        error,
+        "Unable to verify the current session.",
+      );
+      const statusCode = appError.status;
+      const message = appError.message;
 
       if (statusCode && statusCode !== 401) {
         thunkAPI.dispatch(
@@ -37,13 +53,38 @@ export const verifySession = createAsyncThunk(
         );
       }
 
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      // A 401 is the server's authoritative confirmation that this tab has no
+      // valid session, so remember it and avoid the same request after refresh.
+      if (statusCode === 401) {
+        rememberUnauthenticatedSession();
+      }
+
+      return rejectApiError(thunkAPI, error, message);
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { sessionStatus } = getState().auth;
+
+      // An unknown session must be checked because an HttpOnly cookie may
+      // contain a valid server session that JavaScript cannot inspect.
+      if (sessionStatus === SESSION_STATUS.UNKNOWN) {
+        return true;
+      }
+
+      // An authenticated session may be revalidated before a sensitive action
+      // or after enough time has passed to confirm it is still valid.
+      return sessionStatus === SESSION_STATUS.AUTHENTICATED;
+    },
   }
 );
 
 // Async thunk for logout
 export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
+  // Close local access immediately and preserve that decision across refreshes,
+  // even if the request that destroys the server session later fails.
+  rememberUnauthenticatedSession();
+
   try {
     const response = await api.post(
       "/api/auth/logout",
@@ -67,7 +108,7 @@ export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
         position: "bottom-right",
       })
     );
-    return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    return rejectApiError(thunkAPI, error, message);
   }
 });
 
@@ -79,6 +120,7 @@ export const login = createAsyncThunk(
       const response = await api.post("/api/auth/login", credentials, {
         withCredentials: true,
       });
+      forgetUnauthenticatedSession();
       thunkAPI.dispatch(
         showToast({
           message: response.data.message,
@@ -96,7 +138,7 @@ export const login = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -107,6 +149,7 @@ export const register = createAsyncThunk(
   async (userData, thunkAPI) => {
     try {
       const response = await api.post("/api/auth/signup", userData);
+      forgetUnauthenticatedSession();
       thunkAPI.dispatch(
         showToast({
           message:
@@ -129,7 +172,7 @@ export const register = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -142,16 +185,26 @@ export const user_profile = createAsyncThunk(
       const response = await api.get("/api/users/profile");
       return response.data;
     } catch (error) {
+      const message = getApiErrorMessage(
+        error,
+        "Unable to load player profile.",
+      );
       thunkAPI.dispatch(
         showToast({
-          message:
-            error.response?.data?.error || "Unable to load player profile.",
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
       );
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, message);
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      // App bootstrap and route guards can mount together. Refuse only an
+      // overlapping request while still allowing deliberate later refreshes.
+      return getState().auth.profileStatus !== "loading";
+    },
   }
 );
 
@@ -166,7 +219,7 @@ export const searchPlayer = createAsyncThunk(
       }
       return response.data; // return data to be used in the reducer
     } catch (error) {
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      return rejectApiError(thunkAPI, error, "Unable to find that player.");
     }
   }
 );
@@ -193,16 +246,17 @@ export const profile_file_update = createAsyncThunk(
       return response.data;
     } catch (error) {
       // Show error toast notification
+      const message = getApiErrorMessage(error, "Failed to update profile");
       thunkAPI.dispatch(
         showToast({
-          message: error.response?.data?.error || "Failed to update profile",
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      // Reject action with error message
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      // Reducers and callers receive the same normalized error shown above.
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -227,16 +281,17 @@ export const profile_data_update = createAsyncThunk(
       return response.data;
     } catch (error) {
       // Show error toast notification
+      const message = getApiErrorMessage(error, "Failed to update profile");
       thunkAPI.dispatch(
         showToast({
-          message: error.response?.data?.error || "Failed to update profile",
+          message,
           type: types.DANGER,
           position: "bottom-right",
         })
       );
 
-      // Reject action with error message
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      // Reducers and callers receive the same normalized error shown above.
+      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -247,6 +302,11 @@ const authSlice = createSlice({
   initialState: {
     user: null,
     isAuthenticated: false,
+    // A server-confirmed logged-out hint prevents another verification request
+    // when this same browser tab refreshes.
+    sessionStatus: hasUnauthenticatedSessionHint()
+      ? SESSION_STATUS.UNAUTHENTICATED
+      : SESSION_STATUS.UNKNOWN,
     profile: null,
     profileStatus: "idle",
     error: null,
@@ -254,6 +314,11 @@ const authSlice = createSlice({
   reducers: {
     setAuthenticated: (state, action) => {
       state.isAuthenticated = action.payload;
+      // Keep the legacy action internally consistent while older components
+      // are migrated away from setting authentication manually.
+      state.sessionStatus = action.payload
+        ? SESSION_STATUS.AUTHENTICATED
+        : SESSION_STATUS.UNAUTHENTICATED;
     },
     resetError: (state) => {
       state.error = null;
@@ -318,46 +383,80 @@ const authSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
+      .addCase(verifySession.pending, (state) => {
+        // Route guards wait during this state instead of redirecting a returning
+        // user before the backend has checked the secure session cookie.
+        state.sessionStatus = SESSION_STATUS.CHECKING;
+        state.error = null;
+      })
       .addCase(verifySession.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
         state.error = null;
       })
       .addCase(verifySession.rejected, (state, action) => {
         state.user = null;
         state.isAuthenticated = false;
-        state.user = null;
+        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
         state.profile = null;
         state.profileStatus = "idle";
         state.error = action.payload;
+      })
+      .addCase(logout.pending, (state) => {
+        // Private frontend state is cleared immediately so sockets and guarded
+        // screens close even while the backend invalidates the Redis session.
+        state.user = null;
+        state.isAuthenticated = false;
+        state.sessionStatus = SESSION_STATUS.CHECKING;
+        state.profile = null;
+        state.profileStatus = "idle";
       })
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
         state.profile = null;
         state.profileStatus = "idle";
       })
       .addCase(logout.rejected, (state, action) => {
+        // Local access stays closed when server logout fails. A later page load
+        // will verify whether the HttpOnly cookie still represents a session.
+        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
         state.error = action.payload;
+      })
+      .addCase(login.pending, (state) => {
+        state.sessionStatus = SESSION_STATUS.CHECKING;
+        state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
         state.profile = null;
         state.profileStatus = "idle";
         state.error = "";
       })
       .addCase(login.rejected, (state, action) => {
+        state.isAuthenticated = false;
+        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
         state.error = action.payload;
       })
 
+      .addCase(register.pending, (state) => {
+        state.sessionStatus = SESSION_STATUS.CHECKING;
+        state.error = null;
+      })
       .addCase(register.fulfilled, (state, action) => {
         state.user = action.payload;
         state.isAuthenticated = true;
+        state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
         state.profile = null;
         state.profileStatus = "idle";
       })
       .addCase(register.rejected, (state, action) => {
+        state.isAuthenticated = false;
+        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
         state.error = action.payload;
       })
       .addCase(user_profile.pending, (state) => {

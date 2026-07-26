@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import InviteModal from "../../feature/InviteModal";
-import { useSocket } from "../../../context/socketContext";
+import useSocket from "../../../context/useSocket";
 import { useSelector } from "react-redux";
 import ClanVerify from "../../feature/ClanVerify";
 
@@ -160,5 +161,27 @@ const InfoChip = ({ label, value }) => (
     <p className="mt-1 text-sm font-bold text-white">{value}</p>
   </div>
 );
+
+TournamentCard.propTypes = {
+  tournament: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    tournamentName: PropTypes.string.isRequired,
+    game: PropTypes.string.isRequired,
+    mode: PropTypes.string.isRequired,
+    registeredPlayers: PropTypes.arrayOf(PropTypes.object),
+    registeredTeams: PropTypes.arrayOf(PropTypes.object),
+    maxParticipants: PropTypes.number.isRequired,
+    teamSize: PropTypes.number,
+    entryFee: PropTypes.number,
+    prizePool: PropTypes.number,
+    status: PropTypes.string.isRequired,
+  }).isRequired,
+  disableFetch: PropTypes.bool,
+};
+
+InfoChip.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
 
 export default TournamentCard;

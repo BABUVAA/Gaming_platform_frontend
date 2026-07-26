@@ -1,0 +1,237 @@
+import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import { Navigate } from "react-router-dom";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useAuthStore } from "../store/useStore";
+import {
+  hasApprovedHostAccess,
+  USER_ROLES,
+} from "../utils/accessControl";
+import { getDefaultRouteForRole } from "../utils/navigation";
+import { ROUTES } from "./routeConstants";
+
+// Route-level loading stays separate from pages so the router can reuse one
+// fallback while auth/profile state is still resolving.
+export const Loading = () => <LoadingSpinner />;
+
+const ProfileRecoveryState = ({ onRetry, onResetSession }) => (
+  <div className="mx-auto max-w-lg rounded-[28px] border border-rose-400/20 bg-slate-950/90 p-6 text-center text-slate-200 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+    <h2 className="text-xl font-bold text-white">Unable to load your profile</h2>
+    <p className="mt-3 text-sm leading-7 text-slate-400">
+      We stopped showing the spinner here so you can recover instead of getting
+      stuck on a loading screen.
+    </p>
+    <div className="mt-5 flex flex-wrap justify-center gap-3">
+      <button
+        type="button"
+        onClick={onRetry}
+        className="rounded-full bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+      >
+        Retry Profile Load
+      </button>
+      <button
+        type="button"
+        onClick={onResetSession}
+        className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold text-slate-200 transition hover:bg-white/10 hover:text-white"
+      >
+        Return To Login
+      </button>
+    </div>
+  </div>
+);
+
+const useProfileGate = () => {
+  const [hasRequestedProfile, setHasRequestedProfile] = useState(false);
+  const {
+    isAuthenticated,
+    isSessionResolving,
+    profile,
+    profileStatus,
+    loadProfile,
+    signOut,
+  } = useAuthStore();
+
+  useEffect(() => {
+    // Dashboard landing and role-aware routes both need the same profile boot
+    // flow, so this hook centralizes the fetch-once behavior.
+    if (!isAuthenticated || profile || hasRequestedProfile) return;
+
+    setHasRequestedProfile(true);
+    loadProfile();
+  }, [hasRequestedProfile, isAuthenticated, loadProfile, profile]);
+
+  const retryProfileLoad = () => {
+    // Resetting the local request latch allows the effect above to retry.
+    setHasRequestedProfile(false);
+  };
+
+  const resetSession = () => {
+    // Route recovery uses the shared auth operation so this file does not need
+    // to know which Redux thunk performs server-side logout.
+    signOut();
+  };
+
+  return {
+    isAuthenticated,
+    isSessionResolving,
+    profile,
+    profileStatus,
+    retryProfileLoad,
+    resetSession,
+  };
+};
+
+export const ProfileGate = ({
+  allowedRoles,
+  hasProfileAccess,
+  children,
+  fallback,
+}) => {
+  const {
+    isAuthenticated,
+    isSessionResolving,
+    profile,
+    profileStatus,
+    retryProfileLoad,
+    resetSession,
+  } = useProfileGate();
+
+  if (isSessionResolving) {
+    // Returning users remain on a neutral loading state until the backend has
+    // accepted or rejected the browser's secure session cookie.
+    return <Loading />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  if (!profile) {
+    if (profileStatus === "failed") {
+      return (
+        <ProfileRecoveryState
+          onRetry={retryProfileLoad}
+          onResetSession={resetSession}
+        />
+      );
+    }
+
+    return <Loading />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(profile.role)) {
+    return <Navigate to={getDefaultRouteForRole(profile.role)} replace />;
+  }
+
+  if (hasProfileAccess && !hasProfileAccess(profile)) {
+    // Capability checks run after the role check because capabilities belong
+    // to a valid base role. Denied users return to their safe landing route.
+    return <Navigate to={getDefaultRouteForRole(profile.role)} replace />;
+  }
+
+  // A render-function fallback keeps the gate reusable for landing redirects
+  // without forcing this file to import page components directly.
+  return children || (fallback ? fallback(profile) : null);
+};
+
+export const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isSessionResolving } = useAuthStore();
+
+  if (isSessionResolving) {
+    return <Loading />;
+  }
+
+  return isAuthenticated ? children : <Navigate to={ROUTES.LOGIN} replace />;
+};
+
+export const RoleAwareRoute = ({ allowedRoles, children }) => (
+  <ProfileGate allowedRoles={allowedRoles}>{children}</ProfileGate>
+);
+
+export const AdminRoute = ({ children }) => (
+  <RoleAwareRoute allowedRoles={[USER_ROLES.ADMIN]}>{children}</RoleAwareRoute>
+);
+
+export const OperatorRoute = ({ children }) => (
+  <RoleAwareRoute allowedRoles={[USER_ROLES.OPERATOR]}>
+    {children}
+  </RoleAwareRoute>
+);
+
+export const PlayerRoute = ({ children }) => (
+  <RoleAwareRoute allowedRoles={[USER_ROLES.PLAYER]}>
+    {children}
+  </RoleAwareRoute>
+);
+
+export const ApprovedHostRoute = ({ children }) => (
+  <ProfileGate
+    allowedRoles={[USER_ROLES.PLAYER]}
+    hasProfileAccess={hasApprovedHostAccess}
+  >
+    {children}
+  </ProfileGate>
+);
+
+export const DashboardLanding = () => (
+  <ProfileGate
+    fallback={(profile) =>
+      profile.role === USER_ROLES.PLAYER ? (
+        <Navigate to={ROUTES.GAME} replace />
+      ) : (
+        <Navigate to={getDefaultRouteForRole(profile.role)} replace />
+      )
+    }
+  />
+);
+
+export const LandingPage = () => {
+  const { isAuthenticated, isSessionResolving } = useAuthStore();
+
+  if (isSessionResolving) {
+    return <Loading />;
+  }
+
+  return isAuthenticated ? (
+    <Navigate to={ROUTES.DASHBOARD} replace />
+  ) : (
+    <Navigate to={ROUTES.HOME} replace />
+  );
+};
+
+ProfileRecoveryState.propTypes = {
+  onRetry: PropTypes.func.isRequired,
+  onResetSession: PropTypes.func.isRequired,
+};
+
+ProfileGate.propTypes = {
+  allowedRoles: PropTypes.arrayOf(PropTypes.string),
+  hasProfileAccess: PropTypes.func,
+  children: PropTypes.node,
+  fallback: PropTypes.func,
+};
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+RoleAwareRoute.propTypes = {
+  allowedRoles: PropTypes.arrayOf(PropTypes.string).isRequired,
+  children: PropTypes.node.isRequired,
+};
+
+AdminRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+OperatorRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+PlayerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+ApprovedHostRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};

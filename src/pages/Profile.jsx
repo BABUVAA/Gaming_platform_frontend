@@ -24,7 +24,7 @@ import {
   profile_data_update,
   profile_file_update,
   user_profile,
-} from "../store/authSlice";
+} from "../store/slices/authSlice";
 
 const SOCIAL_PLATFORMS = [
   { key: "discord", label: "Discord", icon: FaDiscord, color: "text-indigo-300" },

@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { FiDownload, FiGrid, FiLayers, FiUsers } from "react-icons/fi";
 import { TournamentCard } from "../components";
+import { selectTournamentList } from "../store/selectors/tournamentSelectors";
 
 const gameData = {
   coc: {
@@ -33,7 +34,7 @@ const gameData = {
 const TournamentGame = () => {
   const { game } = useParams();
   const { profile } = useSelector((state) => state.auth);
-  const { tournaments } = useSelector((store) => store.tournament);
+  const tournaments = useSelector(selectTournamentList);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,14 +52,13 @@ const TournamentGame = () => {
     promoImages: [],
     filters: [],
   };
-  const gameTournaments = Object.values(tournaments).filter(
-    (tournament) => tournament.game === game
-  );
-
   const filteredTournaments = useMemo(() => {
     // Hooks stay above the "game not found" return so route-param changes do
     // not reorder hooks between renders.
     if (!selectedGame) return [];
+    const gameTournaments = tournaments.filter(
+      (tournament) => tournament.game === game,
+    );
     if (!activeFilter || activeFilter === "All") return gameTournaments;
     if (activeFilter === "Featured") {
       return gameTournaments.filter((tournament) => tournament.isFeatured);
@@ -70,7 +70,7 @@ const TournamentGame = () => {
         tournament.map === activeFilter ||
         tournament.category === activeFilter
     );
-  }, [activeFilter, gameTournaments, selectedGame]);
+  }, [activeFilter, game, selectedGame, tournaments]);
 
   const totalPages = Math.ceil(filteredTournaments.length / itemsPerPage);
   const paginatedTournaments = useMemo(() => {
