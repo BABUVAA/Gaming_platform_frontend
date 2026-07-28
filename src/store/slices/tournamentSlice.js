@@ -1,18 +1,17 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import api from "../../api/axios-api";
-import { normalizeApiError, rejectApiError } from "../../api/apiError";
+import { createSlice } from "@reduxjs/toolkit";
 import { isCacheFresh, PUBLIC_CACHE_TTL } from "../cachePolicy";
+import createApiThunk from "../thunks/createApiThunk";
 
 const normalizeDetailRequest = (request) =>
   typeof request === "string"
     ? { tournamentId: request, force: false }
     : { tournamentId: request?.tournamentId, force: request?.force || false };
 
-export const fetchTournaments = createAsyncThunk(
+export const fetchTournaments = createApiThunk(
   "tournament/fetchTournaments",
-  async (_, thunkAPI) => {
-    try {
-      const response = await api.get("/api/tournaments/fetchAllTournament");
+  {
+    path: "/api/tournaments/fetchAllTournament",
+    selectData: (response) => {
       const tournaments = response.data?.tournaments;
 
       if (
@@ -24,9 +23,8 @@ export const fetchTournaments = createAsyncThunk(
       }
 
       return { tournaments, fetchedAt: Date.now() };
-    } catch (error) {
-      return rejectApiError(thunkAPI, error, "Failed to fetch tournaments.");
-    }
+    },
+    errorMessage: "Failed to fetch tournaments.",
   },
   {
     condition: ({ force = false } = {}, { getState }) => {
@@ -43,35 +41,30 @@ export const fetchTournaments = createAsyncThunk(
   },
 );
 
-export const fetchTournamentById = createAsyncThunk(
+export const fetchTournamentById = createApiThunk(
   "tournament/fetchTournamentById",
-  async (request, thunkAPI) => {
-    const { tournamentId } = normalizeDetailRequest(request);
+  {
+    request: ({ api, arg, signal }) => {
+      const { tournamentId } = normalizeDetailRequest(arg);
 
-    if (!tournamentId) {
-      return thunkAPI.rejectWithValue(
-        normalizeApiError(
-          {
-            response: {
-              status: 400,
-              data: { message: "Tournament ID is required." },
-            },
-          },
-          "Tournament ID is required.",
-        ),
-      );
-    }
+      if (!tournamentId) {
+        // Use an Axios-shaped error so the common normalizer retains the
+        // client-validation status and message in the rejected payload.
+        const missingIdError = new Error("Tournament ID is required.");
+        missingIdError.response = {
+          status: 400,
+          data: { message: "Tournament ID is required." },
+        };
+        throw missingIdError;
+      }
 
-    try {
-      const response = await api.get(`/api/tournaments/${tournamentId}`);
-      return { tournament: response.data, fetchedAt: Date.now() };
-    } catch (error) {
-      return rejectApiError(
-        thunkAPI,
-        error,
-        "Failed to fetch tournament details.",
-      );
-    }
+      return api.get(`/api/tournaments/${tournamentId}`, { signal });
+    },
+    selectData: (response) => ({
+      tournament: response.data,
+      fetchedAt: Date.now(),
+    }),
+    errorMessage: "Failed to fetch tournament details.",
   },
   {
     condition: (request, { getState }) => {
@@ -170,6 +163,11 @@ const tournamentSlice = createSlice({
         state.lastFetchedAt = action.payload.fetchedAt;
       })
       .addCase(fetchTournaments.rejected, (state, action) => {
+        if (action.meta.aborted || action.meta.condition) {
+          state.listStatus = "idle";
+          return;
+        }
+
         state.listStatus = "failed";
         state.listError = action.payload || "Failed to fetch tournaments.";
       })
@@ -202,6 +200,13 @@ const tournamentSlice = createSlice({
       })
       .addCase(fetchTournamentById.rejected, (state, action) => {
         if (state.detailRequestId !== action.meta.requestId) return;
+
+        if (action.meta.aborted || action.meta.condition) {
+          state.detailStatus = "idle";
+          state.detailRequestId = null;
+          state.requestedTournamentId = null;
+          return;
+        }
 
         state.detailStatus = "failed";
         state.detailError =

@@ -19,8 +19,8 @@ const AppProvider = () => (
     {/* Redux Provider makes the central store available to the whole app. */}
     <Provider store={platformStore}>
       <PersistGate
-        // The app shell should wait for persisted auth state before mounting
-        // routes so redirects and protected screens start from a stable base.
+        // The app shell waits for persisted public catalogs before mounting.
+        // Authentication is intentionally rebuilt from the server session.
         //
         // If we later replace the generic spinner with a branded bootstrap
         // screen, this `loading` prop is the right place to do it.

@@ -5,6 +5,7 @@ import { SideBar } from "../components";
 import { fetchUserClan } from "../store/slices/clanSlice";
 import { fetchNotifications } from "../store/slices/notificationSlice";
 import { fetchWalletBalance } from "../store/slices/paymentSlice";
+import unwrapThunkRequest from "../store/thunks/unwrapThunkRequest";
 import { useAuthStore, useCatalogStore } from "../store/useStore";
 
 const Dashboard = () => {
@@ -17,7 +18,9 @@ const Dashboard = () => {
   useEffect(() => {
     // Dashboard pages consume games and tournaments, so this layout owns their
     // bootstrap instead of making every public route pay for those requests.
-    loadCatalog();
+    loadCatalog().catch((error) => {
+      console.error("Catalog bootstrap failed:", error);
+    });
   }, [loadCatalog]);
 
   useEffect(() => {
@@ -28,12 +31,12 @@ const Dashboard = () => {
     // Independent dashboard summaries load concurrently after the profile has
     // established the user's role and optional clan relationship.
     const requests = [
-      dispatch(fetchWalletBalance()),
-      dispatch(fetchNotifications()),
+      unwrapThunkRequest(dispatch(fetchWalletBalance())),
+      unwrapThunkRequest(dispatch(fetchNotifications())),
     ];
 
     if (!userClanData && profile.clan?._id) {
-      requests.push(dispatch(fetchUserClan()));
+      requests.push(unwrapThunkRequest(dispatch(fetchUserClan())));
     }
 
     Promise.all(requests).catch((error) => {

@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../../api/axios-api";
 import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 import { showToast, types } from "./toastSlice";
 
 export const initiatePhonePeOrder = createAsyncThunk(
@@ -118,6 +119,25 @@ export const checkTransactionStatus = createAsyncThunk(
   }
 );
 
+// Explicit membership is safer than matching every action whose type happens
+// to begin with "payment/". Future synchronous actions cannot affect loading.
+const paymentThunks = [
+  initiatePhonePeOrder,
+  fetchWalletBalance,
+  withdrawRequest,
+  fetchUserTransactions,
+  checkTransactionStatus,
+];
+
+const finishPaymentRequest = (state) => {
+  const currentCount = Number.isFinite(state.pendingRequests)
+    ? state.pendingRequests
+    : 1;
+
+  state.pendingRequests = Math.max(0, currentCount - 1);
+  state.isLoading = state.pendingRequests > 0;
+};
+
 const initialState = {
   wallet: {
     realMoney: 0,
@@ -139,18 +159,6 @@ const paymentSlice = createSlice({
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    const beginRequest = (state) => {
-      // Payment requests can overlap, so a counter is safer than a boolean.
-      state.pendingRequests += 1;
-      state.isLoading = true;
-      state.error = null;
-    };
-
-    const finishRequest = (state) => {
-      state.pendingRequests = Math.max(0, state.pendingRequests - 1);
-      state.isLoading = state.pendingRequests > 0;
-    };
-
     builder
       .addCase(initiatePhonePeOrder.fulfilled, (state, action) => {
         state.latestOrder = action.payload;
@@ -172,25 +180,29 @@ const paymentSlice = createSlice({
       })
       .addCase(checkTransactionStatus.fulfilled, (state, action) => {
         state.statusCheck = action.payload;
-      })
-      .addMatcher(
-        (action) =>
-          action.type.startsWith("payment/") && action.type.endsWith("/pending"),
-        beginRequest
-      )
-      .addMatcher(
-        (action) =>
-          action.type.startsWith("payment/") && action.type.endsWith("/fulfilled"),
-        finishRequest
-      )
-      .addMatcher(
-        (action) =>
-          action.type.startsWith("payment/") && action.type.endsWith("/rejected"),
-        (state, action) => {
-          finishRequest(state);
+      });
+
+    addThunkLifecycleMatchers(builder, paymentThunks, {
+      pending: (state) => {
+        const currentCount = Number.isFinite(state.pendingRequests)
+          ? state.pendingRequests
+          : 0;
+
+        state.pendingRequests = currentCount + 1;
+        state.isLoading = true;
+        state.error = null;
+      },
+      fulfilled: finishPaymentRequest,
+      rejected: (state, action) => {
+        finishPaymentRequest(state);
+
+        // An aborted request is an intentional control-flow event, not a
+        // payment failure that should replace the current screen error.
+        if (!action.meta.aborted && !action.meta.condition) {
           state.error = action.payload;
         }
-      );
+      },
+    });
   },
 });
 

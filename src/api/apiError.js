@@ -54,7 +54,14 @@ const inferErrorCode = (error, status, responseData) => {
   if (error?.code === "ECONNABORTED" || error?.code === "ETIMEDOUT") {
     return API_ERROR_CODE.TIMEOUT;
   }
-  if (!error?.response) return API_ERROR_CODE.NETWORK;
+  // Only Axios transport failures are network errors. Local response
+  // validation and programming errors have no response too, but are unknown
+  // application errors rather than connectivity failures.
+  if (!error?.response) {
+    return error?.isAxiosError
+      ? API_ERROR_CODE.NETWORK
+      : API_ERROR_CODE.UNKNOWN;
+  }
   if (status >= 500) return API_ERROR_CODE.SERVER;
 
   return STATUS_CODE_MAP[status] || API_ERROR_CODE.UNKNOWN;
@@ -111,15 +118,25 @@ export const normalizeApiError = (
     error?.response?.headers?.["x-request-id"] ||
     null;
 
+  const code = inferErrorCode(error, status, responseData);
+  const retryableCodes = new Set([
+    API_ERROR_CODE.NETWORK,
+    API_ERROR_CODE.TIMEOUT,
+    API_ERROR_CODE.RATE_LIMITED,
+    API_ERROR_CODE.SERVER,
+  ]);
+
   return {
     status,
-    code: inferErrorCode(error, status, responseData),
+    code,
     message,
     fieldErrors,
     requestId,
     // Network, timeout, rate-limit, and server failures may succeed later.
     retryable:
-      !status || status === 408 || status === 425 || status === 429 || status >= 500,
+      retryableCodes.has(code) ||
+      status === 408 ||
+      status === 425,
   };
 };
 

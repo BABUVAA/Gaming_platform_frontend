@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { showToast, types } from "./toastSlice";
 import api from "../../api/axios-api";
 import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 
 const initialState = {
   items: [],
@@ -9,20 +10,19 @@ const initialState = {
   error: null,
 };
 
-const getNotificationSignature = (notification = {}, fallbackIndex = 0) =>
+const getNotificationSignature = (notification = {}) =>
   notification?._id ||
   [
     notification?.title || "",
     notification?.message || "",
     String(notification?.createdAt || ""),
-    fallbackIndex,
   ].join("::");
 
 const dedupeNotifications = (notifications = []) => {
   const seenSignatures = new Set();
 
-  return notifications.filter((notification, index) => {
-    const signature = getNotificationSignature(notification, index);
+  return notifications.filter((notification) => {
+    const signature = getNotificationSignature(notification);
     if (seenSignatures.has(signature)) return false;
     seenSignatures.add(signature);
     return true;
@@ -55,7 +55,14 @@ export const fetchNotifications = createAsyncThunk(
         "Failed to fetch notifications",
       );
     }
-  }
+  },
+  {
+    condition: (_, { getState }) => {
+      // Dashboard effects may mount twice in development Strict Mode. Refuse
+      // only an overlapping fetch while allowing later manual refreshes.
+      return getState().notifications.loading !== true;
+    },
+  },
 );
 
 // ✅ Mark a notification as read
@@ -92,16 +99,25 @@ export const markNotificationAsRead = createAsyncThunk(
 );
 
 // ✅ Slice
+// Both requests report errors through the same slice field. Only the feed
+// request controls `loading`, so marking one item never hides the open list.
+const notificationThunks = [
+  fetchNotifications,
+  markNotificationAsRead,
+];
+
 const notificationSlice = createSlice({
   name: "notifications",
   initialState,
   reducers: {
     addNotification: (state, action) => {
       const notification = action.payload;
+      if (!notification || typeof notification !== "object") return;
+
       const existingIndex = state.items.findIndex(
-        (item, index) =>
-          getNotificationSignature(item, index) ===
-          getNotificationSignature(notification, state.items.length)
+        (item) =>
+          getNotificationSignature(item) ===
+          getNotificationSignature(notification)
       );
 
       if (existingIndex === -1) {
@@ -120,19 +136,19 @@ const notificationSlice = createSlice({
       // Fetch notifications
       .addCase(fetchNotifications.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.loading = false;
         state.items = dedupeNotifications(action.payload);
       })
-      .addCase(fetchNotifications.rejected, (state, action) => {
+      .addCase(fetchNotifications.rejected, (state) => {
         state.loading = false;
-        state.error = action.payload;
       })
 
       // Mark as read
       .addCase(markNotificationAsRead.fulfilled, (state, action) => {
+        if (!action.payload?._id) return;
+
         const index = state.items.findIndex(
           (n) => n._id === action.payload._id
         );
@@ -140,6 +156,18 @@ const notificationSlice = createSlice({
           state.items[index] = action.payload;
         }
       });
+
+    addThunkLifecycleMatchers(builder, notificationThunks, {
+      pending: (state) => {
+        state.error = null;
+      },
+      rejected: (state, action) => {
+        // Closing or replacing the header can abort work intentionally.
+        if (!action.meta.aborted && !action.meta.condition) {
+          state.error = action.payload;
+        }
+      },
+    });
   },
 });
 

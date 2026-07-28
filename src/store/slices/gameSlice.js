@@ -1,14 +1,12 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../api/axios-api";
-import { rejectApiError } from "../../api/apiError";
+import { createSlice } from "@reduxjs/toolkit";
 import { isCacheFresh, PUBLIC_CACHE_TTL } from "../cachePolicy";
+import createApiThunk from "../thunks/createApiThunk";
 
-export const fetchGames = createAsyncThunk(
+export const fetchGames = createApiThunk(
   "games/fetchGames",
-  async (_, thunkAPI) => {
-    try {
-      const response = await api.get("/api/games");
-
+  {
+    path: "/api/games",
+    selectData: (response) => {
       if (!Array.isArray(response.data)) {
         throw new Error("Games response must be an array.");
       }
@@ -19,9 +17,8 @@ export const fetchGames = createAsyncThunk(
         data: response.data,
         fetchedAt: Date.now(),
       };
-    } catch (error) {
-      return rejectApiError(thunkAPI, error, "Failed to fetch games.");
-    }
+    },
+    errorMessage: "Failed to fetch games.",
   },
   {
     condition: ({ force = false } = {}, { getState }) => {
@@ -34,10 +31,10 @@ export const fetchGames = createAsyncThunk(
 
       return !isCacheFresh(
         gamesState.lastFetchedAt,
-        PUBLIC_CACHE_TTL.GAMES
+        PUBLIC_CACHE_TTL.GAMES,
       );
     },
-  }
+  },
 );
 
 // Slice for game data
@@ -68,6 +65,12 @@ const gameSlice = createSlice({
         state.lastFetchedAt = action.payload.fetchedAt;
       })
       .addCase(fetchGames.rejected, (state, action) => {
+        // Cancelling navigation is not a failed cache refresh.
+        if (action.meta.aborted || action.meta.condition) {
+          state.status = "idle";
+          return;
+        }
+
         state.status = "failed";
         state.error = action.payload;
       });

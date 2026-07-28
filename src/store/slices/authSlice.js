@@ -11,6 +11,8 @@ import {
   hasUnauthenticatedSessionHint,
   rememberUnauthenticatedSession,
 } from "../authSessionHint";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
+import { sessionInvalidated } from "../actions/sessionActions";
 
 // Session status represents what the frontend knows about the server session.
 // `unknown` is intentionally different from unauthenticated because the
@@ -20,7 +22,19 @@ export const SESSION_STATUS = Object.freeze({
   CHECKING: "checking",
   AUTHENTICATED: "authenticated",
   UNAUTHENTICATED: "unauthenticated",
+  ERROR: "error",
 });
+
+const selectAuthIdentity = (responseData = {}) => {
+  // Login currently nests identity under `data`, while signup and verification
+  // return it at the response root. Redux exposes one stable shape.
+  const userId = responseData.data?.userId || responseData.userId;
+  if (!userId) {
+    throw new Error("Authentication response did not include a user ID.");
+  }
+
+  return { userId };
+};
 
 // Async thunk for session verification
 export const verifySession = createAsyncThunk(
@@ -34,7 +48,7 @@ export const verifySession = createAsyncThunk(
         { withCredentials: true }
       );
       forgetUnauthenticatedSession();
-      return response.data;
+      return selectAuthIdentity(response.data);
     } catch (error) {
       const appError = normalizeApiError(
         error,
@@ -43,7 +57,7 @@ export const verifySession = createAsyncThunk(
       const statusCode = appError.status;
       const message = appError.message;
 
-      if (statusCode && statusCode !== 401) {
+      if (statusCode !== 401) {
         thunkAPI.dispatch(
           showToast({
             message,
@@ -68,7 +82,10 @@ export const verifySession = createAsyncThunk(
 
       // An unknown session must be checked because an HttpOnly cookie may
       // contain a valid server session that JavaScript cannot inspect.
-      if (sessionStatus === SESSION_STATUS.UNKNOWN) {
+      if (
+        sessionStatus === SESSION_STATUS.UNKNOWN ||
+        sessionStatus === SESSION_STATUS.ERROR
+      ) {
         return true;
       }
 
@@ -98,7 +115,7 @@ export const logout = createAsyncThunk("auth/logout", async (_, thunkAPI) => {
           position: "bottom-right",
         })
       );
-    return response.data;
+    return selectAuthIdentity(response.data);
   } catch (error) {
     const message = getApiErrorMessage(error, "Unable to logout.");
     thunkAPI.dispatch(
@@ -120,6 +137,7 @@ export const login = createAsyncThunk(
       const response = await api.post("/api/auth/login", credentials, {
         withCredentials: true,
       });
+      const identity = selectAuthIdentity(response.data);
       forgetUnauthenticatedSession();
       thunkAPI.dispatch(
         showToast({
@@ -128,7 +146,7 @@ export const login = createAsyncThunk(
           position: "bottom-right",
         })
       );
-      return response.data;
+      return identity;
     } catch (error) {
       const message = getApiErrorMessage(error, "Login failed.");
       thunkAPI.dispatch(
@@ -149,20 +167,22 @@ export const register = createAsyncThunk(
   async (userData, thunkAPI) => {
     try {
       const response = await api.post("/api/auth/signup", userData);
+      const identity = selectAuthIdentity(response.data);
       forgetUnauthenticatedSession();
       thunkAPI.dispatch(
         showToast({
           message:
             response.data.message ||
-            response.data.errors.username ||
-            response.data.errors.email ||
-            response.data.errors.password ||
-            response.data.errors.dob,
+            response.data.errors?.username ||
+            response.data.errors?.email ||
+            response.data.errors?.password ||
+            response.data.errors?.dob ||
+            "Signup completed successfully.",
           type: types.SUCCESS,
           position: "bottom-right",
         })
       );
-      return response.data;
+      return identity;
     } catch (error) {
       const message = getApiErrorMessage(error, "Signup failed.");
       thunkAPI.dispatch(
@@ -183,7 +203,7 @@ export const user_profile = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const response = await api.get("/api/users/profile");
-      return response.data;
+      return selectAuthIdentity(response.data);
     } catch (error) {
       const message = getApiErrorMessage(
         error,
@@ -203,7 +223,11 @@ export const user_profile = createAsyncThunk(
     condition: (_, { getState }) => {
       // App bootstrap and route guards can mount together. Refuse only an
       // overlapping request while still allowing deliberate later refreshes.
-      return getState().auth.profileStatus !== "loading";
+      const authState = getState().auth;
+      return (
+        authState.isAuthenticated &&
+        authState.profileStatus !== "loading"
+      );
     },
   }
 );
@@ -296,6 +320,20 @@ export const profile_data_update = createAsyncThunk(
   }
 );
 
+// Login and registration both establish a new authenticated browser session.
+// Session verification and logout remain explicit because their transitions
+// intentionally differ from credential-based authentication.
+const credentialThunks = [login, register];
+
+const clearAuthenticatedState = (state) => {
+  state.user = null;
+  state.isAuthenticated = false;
+  state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
+  state.profile = null;
+  state.profileStatus = "idle";
+  state.profileRequestId = null;
+};
+
 // Auth slice
 const authSlice = createSlice({
   name: "auth",
@@ -309,17 +347,12 @@ const authSlice = createSlice({
       : SESSION_STATUS.UNKNOWN,
     profile: null,
     profileStatus: "idle",
+    // The request ID prevents a profile response from an old session writing
+    // private data after logout or after another account signs in.
+    profileRequestId: null,
     error: null,
   },
   reducers: {
-    setAuthenticated: (state, action) => {
-      state.isAuthenticated = action.payload;
-      // Keep the legacy action internally consistent while older components
-      // are migrated away from setting authentication manually.
-      state.sessionStatus = action.payload
-        ? SESSION_STATUS.AUTHENTICATED
-        : SESSION_STATUS.UNAUTHENTICATED;
-    },
     resetError: (state) => {
       state.error = null;
     },
@@ -396,28 +429,32 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(verifySession.rejected, (state, action) => {
-        state.user = null;
-        state.isAuthenticated = false;
-        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
-        state.profile = null;
-        state.profileStatus = "idle";
+        if (action.meta.aborted || action.meta.condition) {
+          state.sessionStatus = state.isAuthenticated
+            ? SESSION_STATUS.AUTHENTICATED
+            : SESSION_STATUS.ERROR;
+          return;
+        }
+
+        if (action.payload?.status === 401) {
+          clearAuthenticatedState(state);
+        } else {
+          // Temporary network and server failures must not destroy a valid
+          // local session or permanently suppress future verification.
+          state.sessionStatus = state.isAuthenticated
+            ? SESSION_STATUS.AUTHENTICATED
+            : SESSION_STATUS.ERROR;
+        }
         state.error = action.payload;
       })
       .addCase(logout.pending, (state) => {
         // Private frontend state is cleared immediately so sockets and guarded
         // screens close even while the backend invalidates the Redis session.
-        state.user = null;
-        state.isAuthenticated = false;
+        clearAuthenticatedState(state);
         state.sessionStatus = SESSION_STATUS.CHECKING;
-        state.profile = null;
-        state.profileStatus = "idle";
       })
       .addCase(logout.fulfilled, (state) => {
-        state.user = null;
-        state.isAuthenticated = false;
-        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
-        state.profile = null;
-        state.profileStatus = "idle";
+        clearAuthenticatedState(state);
       })
       .addCase(logout.rejected, (state, action) => {
         // Local access stays closed when server logout fails. A later page load
@@ -425,54 +462,63 @@ const authSlice = createSlice({
         state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
         state.error = action.payload;
       })
-      .addCase(login.pending, (state) => {
-        state.sessionStatus = SESSION_STATUS.CHECKING;
-        state.error = null;
-      })
-      .addCase(login.fulfilled, (state, action) => {
-        state.user = action.payload;
-        state.isAuthenticated = true;
-        state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
-        state.profile = null;
-        state.profileStatus = "idle";
-        state.error = "";
-      })
-      .addCase(login.rejected, (state, action) => {
-        state.isAuthenticated = false;
-        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
-        state.error = action.payload;
-      })
-
-      .addCase(register.pending, (state) => {
-        state.sessionStatus = SESSION_STATUS.CHECKING;
-        state.error = null;
-      })
-      .addCase(register.fulfilled, (state, action) => {
-        state.user = action.payload;
-        state.isAuthenticated = true;
-        state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
-        state.profile = null;
-        state.profileStatus = "idle";
-      })
-      .addCase(register.rejected, (state, action) => {
-        state.isAuthenticated = false;
-        state.sessionStatus = SESSION_STATUS.UNAUTHENTICATED;
-        state.error = action.payload;
-      })
-      .addCase(user_profile.pending, (state) => {
+      .addCase(user_profile.pending, (state, action) => {
         // We track profile bootstrap separately so route guards can tell the
         // difference between "still loading" and "failed, show recovery UI".
         state.profileStatus = "loading";
+        state.profileRequestId = action.meta.requestId;
         state.error = null;
       })
       .addCase(user_profile.fulfilled, (state, action) => {
+        if (
+          !state.isAuthenticated ||
+          state.profileRequestId !== action.meta.requestId
+        ) {
+          return;
+        }
+
         state.profile = action.payload;
         state.profileStatus = "succeeded";
+        state.profileRequestId = null;
       })
       .addCase(user_profile.rejected, (state, action) => {
+        if (state.profileRequestId !== action.meta.requestId) return;
+
         state.profileStatus = "failed";
+        state.profileRequestId = null;
         state.error = action.payload;
+      })
+      .addCase(sessionInvalidated, (state, action) => {
+        clearAuthenticatedState(state);
+        state.error = action.payload || null;
       });
+
+    addThunkLifecycleMatchers(builder, credentialThunks, {
+      pending: (state) => {
+        state.sessionStatus = SESSION_STATUS.CHECKING;
+        // Any profile request belongs to the previous credential generation.
+        state.profileRequestId = null;
+        state.error = null;
+      },
+      fulfilled: (state, action) => {
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
+        state.profile = null;
+        state.profileStatus = "idle";
+        state.profileRequestId = null;
+        state.error = null;
+      },
+      rejected: (state, action) => {
+        clearAuthenticatedState(state);
+
+        // Cancellation should close the checking state without presenting an
+        // intentional abort as invalid credentials.
+        if (!action.meta.aborted && !action.meta.condition) {
+          state.error = action.payload;
+        }
+      },
+    });
   },
 });
 

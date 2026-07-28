@@ -7,6 +7,39 @@ import {
   profile_file_update,
 } from "./authSlice";
 import { createClan } from "./clanSlice";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
+
+// Only operations that block the whole interface belong in this group.
+// Background catalog, notification, and session checks keep local indicators.
+const globallyBlockingThunks = [
+  login,
+  logout,
+  register,
+  profile_data_update,
+  profile_file_update,
+  createClan,
+];
+
+const beginGlobalRequest = (state) => {
+  // A counter is safer than a boolean when multiple blocking requests overlap.
+  const currentCount = Number.isFinite(state.pendingRequests)
+    ? state.pendingRequests
+    : 0;
+
+  state.pendingRequests = currentCount + 1;
+  state.globalLoading = true;
+};
+
+const finishGlobalRequest = (state) => {
+  // Defaulting to one lets a completion recover safely after hot replacement
+  // or a future state migration that did not include the counter.
+  const currentCount = Number.isFinite(state.pendingRequests)
+    ? state.pendingRequests
+    : 1;
+
+  state.pendingRequests = Math.max(0, currentCount - 1);
+  state.globalLoading = state.pendingRequests > 0;
+};
 
 // Global loading slice
 const loadingSlice = createSlice({
@@ -25,38 +58,11 @@ const loadingSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    const beginRequest = (state) => {
-      // A counter is safer than a boolean when multiple thunks overlap.
-      state.pendingRequests += 1;
-      state.globalLoading = true;
-    };
-
-    const finishRequest = (state) => {
-      // Clamp at zero so rejected/duplicate completions cannot make the
-      // counter negative and break the spinner state.
-      state.pendingRequests = Math.max(0, state.pendingRequests - 1);
-      state.globalLoading = state.pendingRequests > 0;
-    };
-
-    builder
-      .addCase(login.pending, beginRequest)
-      .addCase(login.fulfilled, finishRequest)
-      .addCase(login.rejected, finishRequest)
-      .addCase(logout.pending, beginRequest)
-      .addCase(logout.fulfilled, finishRequest)
-      .addCase(logout.rejected, finishRequest)
-      .addCase(register.pending, beginRequest)
-      .addCase(register.fulfilled, finishRequest)
-      .addCase(register.rejected, finishRequest)
-      .addCase(profile_data_update.pending, beginRequest)
-      .addCase(profile_data_update.fulfilled, finishRequest)
-      .addCase(profile_data_update.rejected, finishRequest)
-      .addCase(profile_file_update.pending, beginRequest)
-      .addCase(profile_file_update.fulfilled, finishRequest)
-      .addCase(profile_file_update.rejected, finishRequest)
-      .addCase(createClan.pending, beginRequest)
-      .addCase(createClan.fulfilled, finishRequest)
-      .addCase(createClan.rejected, finishRequest);
+    addThunkLifecycleMatchers(builder, globallyBlockingThunks, {
+      pending: beginGlobalRequest,
+      fulfilled: finishGlobalRequest,
+      rejected: finishGlobalRequest,
+    });
   },
 });
 

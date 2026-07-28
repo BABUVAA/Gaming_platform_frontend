@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios-api";
 import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 import { logout } from "./authSlice";
 import { showToast, types } from "./toastSlice";
 
@@ -154,6 +155,18 @@ export const clan_data_update = createAsyncThunk(
     }
   }
 );
+
+// Every clan request writes failures to the same slice-level error field.
+// Individual reducers below still own operation-specific data cleanup.
+const clanThunks = [
+  createClan,
+  fetchUserClan,
+  searchClan,
+  joinClan,
+  leaveClan,
+  clan_data_update,
+];
+
 // Slice for game data
 const clanSlice = createSlice({
   name: "clan",
@@ -177,22 +190,15 @@ const clanSlice = createSlice({
       .addCase(createClan.pending, (state) => {
         state.createClanData = "Creating Clan....";
       })
-      .addCase(createClan.rejected, (state, action) => {
-        state.error = action.payload;
+      .addCase(createClan.rejected, (state) => {
         state.createClanData = null;
       })
 
       .addCase(joinClan.fulfilled, (state, action) => {
         state.userClanData = action.payload.clan;
       })
-      .addCase(joinClan.rejected, (state, action) => {
-        state.error = action.payload;
-      })
       .addCase(leaveClan.fulfilled, (state) => {
         state.userClanData = null;
-      })
-      .addCase(leaveClan.rejected, (state, action) => {
-        state.error = action.payload;
       })
       .addCase(fetchUserClan.fulfilled, (state, action) => {
         state.userClanData = action.payload;
@@ -201,16 +207,14 @@ const clanSlice = createSlice({
       .addCase(fetchUserClan.pending, (state) => {
         state.loading = true;
       })
-      .addCase(fetchUserClan.rejected, (state, action) => {
+      .addCase(fetchUserClan.rejected, (state) => {
         state.loading = false;
-        state.error = action.payload;
         state.userClanData = null;
       })
       .addCase(searchClan.fulfilled, (state, action) => {
         state.searchClanData = action.payload;
       })
-      .addCase(searchClan.rejected, (state, action) => {
-        state.error = action.payload;
+      .addCase(searchClan.rejected, (state) => {
         state.searchClanData = null;
       })
       .addCase(logout.fulfilled, (state) => {
@@ -219,6 +223,18 @@ const clanSlice = createSlice({
         state.createClanData = null;
         state.error = "";
       });
+
+    addThunkLifecycleMatchers(builder, clanThunks, {
+      pending: (state) => {
+        state.error = null;
+      },
+      rejected: (state, action) => {
+        // Navigation can abort a request after its local UI has closed.
+        if (!action.meta.aborted && !action.meta.condition) {
+          state.error = action.payload;
+        }
+      },
+    });
   },
 });
 

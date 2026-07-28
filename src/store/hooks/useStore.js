@@ -33,6 +33,7 @@ import {
   selectTournamentListError,
   selectTournamentListStatus,
 } from "../selectors/tournamentSelectors";
+import unwrapThunkRequest from "../thunks/unwrapThunkRequest";
 
 export const useStore = () => {
   // This hook is the store-facing convenience boundary for React code.
@@ -49,9 +50,6 @@ export const useStore = () => {
     // The raw store is available for advanced cases that need direct access.
     // Most feature code should still prefer selectors and thunks over raw store reads.
     store,
-    // We return useSelector here so future consumers can read state through
-    // one shared store helper surface instead of importing react-redux everywhere.
-    useSelector,
   };
 };
 
@@ -157,7 +155,12 @@ export const useCatalogStore = () => {
       // the pair without reproducing cache checks in page components.
       const gamesRequest = dispatch(fetchGames(options));
       const tournamentsRequest = dispatch(fetchTournaments(options));
-      return Promise.all([gamesRequest, tournamentsRequest]);
+      // Dispatch promises resolve to action objects even when thunks reject.
+      // The helper throws real failures while treating cache skips as normal.
+      return Promise.all([
+        unwrapThunkRequest(gamesRequest),
+        unwrapThunkRequest(tournamentsRequest),
+      ]);
     },
     [dispatch],
   );

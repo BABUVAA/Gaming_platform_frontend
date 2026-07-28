@@ -8,9 +8,17 @@ export const PUBLIC_CACHE_TTL = Object.freeze({
 
 export const isCacheFresh = (lastFetchedAt, ttlMs) => {
   // A missing or invalid timestamp always represents a cold cache.
-  if (!Number.isFinite(lastFetchedAt)) {
+  if (
+    !Number.isFinite(lastFetchedAt) ||
+    !Number.isFinite(ttlMs) ||
+    ttlMs <= 0
+  ) {
     return false;
   }
 
-  return Date.now() - lastFetchedAt < ttlMs;
+  const cacheAge = Date.now() - lastFetchedAt;
+
+  // Future timestamps can come from clock changes or corrupted persisted data.
+  // They must not suppress refreshes until the local clock catches up.
+  return cacheAge >= 0 && cacheAge < ttlMs;
 };

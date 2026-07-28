@@ -18,6 +18,9 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 const platformStore = configureStore({
   reducer: persistedReducer,
   middleware: createStoreMiddleware,
+  // Production users should not expose private runtime state through the
+  // Redux DevTools extension. Development retains full debugging support.
+  devTools: import.meta.env.DEV,
 });
 
 // The persistor is exported alongside the store so app bootstrap can treat

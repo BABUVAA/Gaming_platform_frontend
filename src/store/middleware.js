@@ -10,8 +10,17 @@ const createStoreMiddleware = (getDefaultMiddleware) =>
       // redux-persist dispatches internal non-serializable actions during
       // rehydration, so we explicitly ignore them here.
       // Add more ignored actions here only when a library genuinely requires it.
-      ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
+      ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
     },
-  });
+  }).prepend(sessionLifecycleMiddleware.middleware);
 
 export default createStoreMiddleware;
+import {
+  FLUSH,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+  REHYDRATE,
+} from "redux-persist";
+import sessionLifecycleMiddleware from "./middleware/sessionLifecycleMiddleware";
