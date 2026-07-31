@@ -4,7 +4,7 @@ import PropTypes from "prop-types";
 import { FaBolt, FaClock, FaLink, FaShieldAlt } from "react-icons/fa";
 import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
-import { user_profile } from "../store/slices/authSlice";
+import { fetchPlayerProfile } from "../store/slices/playerSlice";
 import { showToast, types } from "../store/slices/toastSlice";
 
 const statusClasses = {
@@ -26,10 +26,10 @@ const emptyForm = {
   evidenceNote: "",
 };
 
-const Account = () => {
+const GameAccounts = () => {
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data);
-  const profile = useSelector((store) => store.auth?.profile);
+  const profile = useSelector((store) => store.player?.profile);
 
   const [linkedAccounts, setLinkedAccounts] = useState([]);
   const [verificationRequests, setVerificationRequests] = useState([]);
@@ -39,7 +39,7 @@ const Account = () => {
   const [form, setForm] = useState(emptyForm);
   const availableGames = games || [];
 
-  const loadAccountCenter = useCallback(async () => {
+  const loadGameAccounts = useCallback(async () => {
     // Keep this loader stable so the bootstrap effect runs only when its Redux
     // dispatch dependency changes, not after every component render.
     setIsLoading(true);
@@ -68,8 +68,8 @@ const Account = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    loadAccountCenter();
-  }, [loadAccountCenter]);
+    loadGameAccounts();
+  }, [loadGameAccounts]);
 
   const accountByGameKey = useMemo(() => {
     return linkedAccounts.reduce((acc, item) => {
@@ -123,7 +123,10 @@ const Account = () => {
         })
       );
 
-      await Promise.all([loadAccountCenter(), dispatch(user_profile())]);
+      await Promise.all([
+        loadGameAccounts(),
+        dispatch(fetchPlayerProfile()),
+      ]);
       closeModal();
     } catch (error) {
       dispatch(
@@ -170,7 +173,7 @@ const Account = () => {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">
-                Account Command
+                Game Accounts
               </p>
               <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-5xl">
                 Connect your game identities before match time.
@@ -379,7 +382,7 @@ const Account = () => {
 
         {isLoading && (
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/90 p-5 text-sm text-slate-400">
-            Loading your account command center...
+            Loading your game accounts...
           </div>
         )}
       </div>
@@ -518,4 +521,4 @@ Field.defaultProps = {
   placeholder: "",
 };
 
-export default Account;
+export default GameAccounts;

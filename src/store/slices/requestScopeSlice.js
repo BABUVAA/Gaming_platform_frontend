@@ -6,6 +6,8 @@ const privateActionPrefixes = [
   "clan/",
   "notifications/",
   "payment/",
+  "player/",
+  "social/",
   "users/",
   "/auth/clan/",
 ];

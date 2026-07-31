@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Navigate } from "react-router-dom";
 import LoadingSpinner from "../components/common/LoadingSpinner";
-import { useAuthStore } from "../store/useStore";
+import EmailVerificationDialog from "../components/common/EmailVerificationDialog";
+import { useAuthStore, usePlayerStore } from "../store/useStore";
 import {
   hasApprovedHostAccess,
   USER_ROLES,
@@ -40,29 +41,27 @@ const ProfileRecoveryState = ({ onRetry, onResetSession }) => (
   </div>
 );
 
-const useProfileGate = () => {
-  const [hasRequestedProfile, setHasRequestedProfile] = useState(false);
+const useAccessSummaryGate = () => {
+  const [hasRequestedSummary, setHasRequestedSummary] = useState(false);
   const {
     isAuthenticated,
     isSessionResolving,
-    profile,
-    profileStatus,
-    loadProfile,
     signOut,
   } = useAuthStore();
+  const { summary, summaryStatus, loadSummary } = usePlayerStore();
 
   useEffect(() => {
-    // Dashboard landing and role-aware routes both need the same profile boot
-    // flow, so this hook centralizes the fetch-once behavior.
-    if (!isAuthenticated || profile || hasRequestedProfile) return;
+    // Dashboard routing needs only the small identity/access response, not the
+    // complete gaming profile with populated relationships.
+    if (!isAuthenticated || summary || hasRequestedSummary) return;
 
-    setHasRequestedProfile(true);
-    loadProfile();
-  }, [hasRequestedProfile, isAuthenticated, loadProfile, profile]);
+    setHasRequestedSummary(true);
+    loadSummary();
+  }, [hasRequestedSummary, isAuthenticated, loadSummary, summary]);
 
-  const retryProfileLoad = () => {
+  const retrySummaryLoad = () => {
     // Resetting the local request latch allows the effect above to retry.
-    setHasRequestedProfile(false);
+    setHasRequestedSummary(false);
   };
 
   const resetSession = () => {
@@ -74,14 +73,14 @@ const useProfileGate = () => {
   return {
     isAuthenticated,
     isSessionResolving,
-    profile,
-    profileStatus,
-    retryProfileLoad,
+    summary,
+    summaryStatus,
+    retrySummaryLoad,
     resetSession,
   };
 };
 
-export const ProfileGate = ({
+export const AccessSummaryGate = ({
   allowedRoles,
   hasProfileAccess,
   children,
@@ -90,11 +89,11 @@ export const ProfileGate = ({
   const {
     isAuthenticated,
     isSessionResolving,
-    profile,
-    profileStatus,
-    retryProfileLoad,
+    summary,
+    summaryStatus,
+    retrySummaryLoad,
     resetSession,
-  } = useProfileGate();
+  } = useAccessSummaryGate();
 
   if (isSessionResolving) {
     // Returning users remain on a neutral loading state until the backend has
@@ -106,11 +105,11 @@ export const ProfileGate = ({
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  if (!profile) {
-    if (profileStatus === "failed") {
+  if (!summary) {
+    if (summaryStatus === "failed") {
       return (
         <ProfileRecoveryState
-          onRetry={retryProfileLoad}
+          onRetry={retrySummaryLoad}
           onResetSession={resetSession}
         />
       );
@@ -119,19 +118,19 @@ export const ProfileGate = ({
     return <Loading />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    return <Navigate to={getDefaultRouteForRole(profile.role)} replace />;
+  if (allowedRoles && !allowedRoles.includes(summary.role)) {
+    return <Navigate to={getDefaultRouteForRole(summary.role)} replace />;
   }
 
-  if (hasProfileAccess && !hasProfileAccess(profile)) {
+  if (hasProfileAccess && !hasProfileAccess(summary)) {
     // Capability checks run after the role check because capabilities belong
     // to a valid base role. Denied users return to their safe landing route.
-    return <Navigate to={getDefaultRouteForRole(profile.role)} replace />;
+    return <Navigate to={getDefaultRouteForRole(summary.role)} replace />;
   }
 
   // A render-function fallback keeps the gate reusable for landing redirects
   // without forcing this file to import page components directly.
-  return children || (fallback ? fallback(profile) : null);
+  return children || (fallback ? fallback(summary) : null);
 };
 
 export const ProtectedRoute = ({ children }) => {
@@ -145,7 +144,7 @@ export const ProtectedRoute = ({ children }) => {
 };
 
 export const RoleAwareRoute = ({ allowedRoles, children }) => (
-  <ProfileGate allowedRoles={allowedRoles}>{children}</ProfileGate>
+  <AccessSummaryGate allowedRoles={allowedRoles}>{children}</AccessSummaryGate>
 );
 
 export const AdminRoute = ({ children }) => (
@@ -164,22 +163,78 @@ export const PlayerRoute = ({ children }) => (
   </RoleAwareRoute>
 );
 
+const VerifiedAccountGate = ({ children }) => {
+  const { isVerified } = useAuthStore();
+
+  if (!isVerified) {
+    // The dialog replaces the restricted route content, so the page cannot
+    // mount or start wallet, clan, match, or game-account requests.
+    return <EmailVerificationDialog />;
+  }
+
+  return children;
+};
+
+export const VerifiedPlayerRoute = ({ children }) => (
+  <PlayerRoute>
+    <VerifiedAccountGate>{children}</VerifiedAccountGate>
+  </PlayerRoute>
+);
+
+const DetailedProfileGate = ({ children }) => {
+  const [hasRequestedProfile, setHasRequestedProfile] = useState(false);
+  const { signOut } = useAuthStore();
+  const { loadProfile, profile, profileStatus } = usePlayerStore();
+
+  useEffect(() => {
+    if (profile || hasRequestedProfile) return;
+
+    setHasRequestedProfile(true);
+    loadProfile();
+  }, [hasRequestedProfile, loadProfile, profile]);
+
+  if (profile) return children;
+
+  if (profileStatus === "failed") {
+    return (
+      <ProfileRecoveryState
+        onRetry={() => setHasRequestedProfile(false)}
+        onResetSession={signOut}
+      />
+    );
+  }
+
+  return <Loading />;
+};
+
+export const DetailedPlayerRoute = ({ children }) => (
+  <PlayerRoute>
+    <DetailedProfileGate>{children}</DetailedProfileGate>
+  </PlayerRoute>
+);
+
+export const VerifiedDetailedPlayerRoute = ({ children }) => (
+  <VerifiedPlayerRoute>
+    <DetailedProfileGate>{children}</DetailedProfileGate>
+  </VerifiedPlayerRoute>
+);
+
 export const ApprovedHostRoute = ({ children }) => (
-  <ProfileGate
+  <AccessSummaryGate
     allowedRoles={[USER_ROLES.PLAYER]}
     hasProfileAccess={hasApprovedHostAccess}
   >
     {children}
-  </ProfileGate>
+  </AccessSummaryGate>
 );
 
 export const DashboardLanding = () => (
-  <ProfileGate
-    fallback={(profile) =>
-      profile.role === USER_ROLES.PLAYER ? (
+  <AccessSummaryGate
+    fallback={(summary) =>
+      summary.role === USER_ROLES.PLAYER ? (
         <Navigate to={ROUTES.GAME} replace />
       ) : (
-        <Navigate to={getDefaultRouteForRole(profile.role)} replace />
+        <Navigate to={getDefaultRouteForRole(summary.role)} replace />
       )
     }
   />
@@ -204,7 +259,7 @@ ProfileRecoveryState.propTypes = {
   onResetSession: PropTypes.func.isRequired,
 };
 
-ProfileGate.propTypes = {
+AccessSummaryGate.propTypes = {
   allowedRoles: PropTypes.arrayOf(PropTypes.string),
   hasProfileAccess: PropTypes.func,
   children: PropTypes.node,
@@ -229,6 +284,26 @@ OperatorRoute.propTypes = {
 };
 
 PlayerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+VerifiedAccountGate.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+VerifiedPlayerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+DetailedProfileGate.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+DetailedPlayerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+VerifiedDetailedPlayerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 

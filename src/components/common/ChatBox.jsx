@@ -26,7 +26,7 @@ const dedupeMessages = (messageList = []) => {
 };
 
 const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
-  const { profile } = useSelector((store) => store.auth);
+  const { profile } = useSelector((store) => store.player);
   const { userClanData } = useSelector((store) => store.clan);
   const socket = useSocket();
   const chatDisplayRef = useRef(null);

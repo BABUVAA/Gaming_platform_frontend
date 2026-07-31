@@ -4,32 +4,35 @@ import { Link } from "react-router-dom";
 import {
   FiActivity,
   FiLogOut,
+  FiLink,
   FiSettings,
   FiShield,
   FiUser,
   FiUsers,
 } from "react-icons/fi";
 import { logout } from "../../../store/slices/authSlice";
+import { ROUTES } from "../../../routes/routeConstants";
 import {
   hasApprovedHostAccess,
   USER_ROLES,
 } from "../../../utils/accessControl";
+import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
 
 const HeaderProfileMenu = () => {
   const dispatch = useDispatch();
-  const { profile } = useSelector((store) => store.auth);
+  const playerSummary = useSelector(selectPlayerSummary);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
-  const roleLabel = hasApprovedHostAccess(profile)
+  const roleLabel = hasApprovedHostAccess(playerSummary)
     ? "Player / Approved Host"
-    : profile?.role
-      ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1)
+    : playerSummary?.role
+      ? playerSummary.role.charAt(0).toUpperCase() + playerSummary.role.slice(1)
       : "Player";
 
   const menuItems =
-    profile?.role === USER_ROLES.ADMIN
+    playerSummary?.role === USER_ROLES.ADMIN
       ? [{ to: "/panelAdmin", label: "Admin Panel", icon: FiShield }]
-      : profile?.role === USER_ROLES.OPERATOR
+      : playerSummary?.role === USER_ROLES.OPERATOR
         ? [
             {
               to: "/dashboard/operations",
@@ -38,9 +41,14 @@ const HeaderProfileMenu = () => {
             },
           ]
         : [
-            { to: "/dashboard/profile", label: "My Profile", icon: FiUser },
+            { to: ROUTES.PROFILE, label: "My Profile", icon: FiUser },
             {
-              to: "/dashboard/account",
+              to: ROUTES.GAME_ACCOUNTS,
+              label: "Game Accounts",
+              icon: FiLink,
+            },
+            {
+              to: ROUTES.ACCOUNT_SETTINGS,
               label: "Account Settings",
               icon: FiSettings,
             },
@@ -63,36 +71,36 @@ const HeaderProfileMenu = () => {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-left text-slate-100 transition hover:border-cyan-300/30 hover:bg-white/10"
+        className="inline-flex items-center gap-3 rounded-2xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-left text-slate-100 transition hover:border-cyan-400/50 hover:bg-slate-700"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-300 text-sm font-black text-slate-950">
-          {(profile?.profile?.username || "P").slice(0, 1).toUpperCase()}
+          {(playerSummary?.username || "P").slice(0, 1).toUpperCase()}
         </div>
         <div className="hidden xl:block">
           <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
             {roleLabel}
           </p>
           <p className="max-w-32 truncate text-sm font-semibold text-white">
-            {profile?.profile?.username || "Account"}
+            {playerSummary?.username || "Account"}
           </p>
         </div>
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 z-50 mt-3 w-64 rounded-[28px] border border-white/10 bg-slate-950/95 shadow-[0_24px_80px_rgba(2,8,23,0.55)] backdrop-blur">
-          <div className="border-b border-white/10 p-4">
-            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/75">
+        <div className="absolute right-0 z-50 mt-3 w-64 rounded-[28px] border border-slate-600 bg-slate-800/95 shadow-[0_24px_80px_rgba(2,8,23,0.28)] backdrop-blur">
+          <div className="border-b border-slate-700 p-4">
+            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300">
               Signed in as
             </p>
             <p className="mt-2 truncate font-semibold text-white">
-              {profile?.profile?.username || "Player"}
+              {playerSummary?.username || "Player"}
             </p>
             <p className="mt-1 truncate text-sm text-slate-400">
-              {profile?.email || "No email available"}
+              {playerSummary?.email || "No email available"}
             </p>
           </div>
 
-          <ul className="divide-y divide-white/10 text-sm text-slate-200">
+          <ul className="divide-y divide-slate-700 text-sm text-slate-200">
             {menuItems.map((item) => {
               const Icon = item.icon;
 
@@ -101,7 +109,7 @@ const HeaderProfileMenu = () => {
                   <Link
                     to={item.to}
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/5"
+                    className="flex items-center gap-3 px-4 py-3 transition hover:bg-slate-700"
                   >
                     <Icon />
                     {item.label}

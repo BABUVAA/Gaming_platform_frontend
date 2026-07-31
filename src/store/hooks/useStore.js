@@ -10,17 +10,37 @@ import {
   logout,
   register,
   SESSION_STATUS,
-  user_profile,
   verifySession,
 } from "../slices/authSlice";
 import {
+  accountActions,
+  changePassword,
+  fetchAccount,
+} from "../slices/accountSlice";
+import {
+  selectAccount,
+  selectAccountError,
+  selectAccountStatus,
+} from "../selectors/accountSelectors";
+import {
   selectAuthError,
-  selectAuthProfile,
-  selectAuthProfileStatus,
   selectAuthUser,
   selectIsAuthenticated,
+  selectIsVerified,
   selectSessionStatus,
 } from "../selectors/authSelectors";
+import {
+  fetchPlayerProfile,
+  fetchPlayerSummary,
+  playerActions,
+} from "../slices/playerSlice";
+import {
+  selectPlayerError,
+  selectPlayerProfile,
+  selectPlayerProfileStatus,
+  selectPlayerSummary,
+  selectPlayerSummaryStatus,
+} from "../selectors/playerSelectors";
 import { fetchGames } from "../slices/gameSlice";
 import { fetchTournaments } from "../slices/tournamentSlice";
 import {
@@ -53,19 +73,56 @@ export const useStore = () => {
   };
 };
 
+export const useAccountStore = () => {
+  const account = useSelector(selectAccount);
+  const accountStatus = useSelector(selectAccountStatus);
+  const error = useSelector(selectAccountError);
+  const dispatch = useDispatch();
+
+  const loadAccount = useCallback(
+    () => {
+      // The returned thunk promise lets the page abort or unwrap the request
+      // later without bypassing the shared store boundary.
+      return dispatch(fetchAccount());
+    },
+    [dispatch],
+  );
+
+  const clearAccountError = useCallback(() => {
+    return dispatch(accountActions.resetError());
+  }, [dispatch]);
+
+  const updatePassword = useCallback(
+    (passwords) => {
+      // Password values go directly to the authenticated auth endpoint; this
+      // hook never stores plaintext credentials in Redux state.
+      return dispatch(changePassword(passwords));
+    },
+    [dispatch],
+  );
+
+  return {
+    account,
+    accountStatus,
+    error,
+    loadAccount,
+    updatePassword,
+    clearAccountError,
+  };
+};
+
 export const useAuthStore = () => {
   // Select each auth value through its named selector instead of reaching into
   // `state.auth` from route and component files. If the slice shape changes,
   // these selectors remain the single place that needs updating.
   const user = useSelector(selectAuthUser);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isVerified = useSelector(selectIsVerified);
   const sessionStatus = useSelector(selectSessionStatus);
   const isSessionResolving = [
     SESSION_STATUS.UNKNOWN,
     SESSION_STATUS.CHECKING,
   ].includes(sessionStatus);
-  const profile = useSelector(selectAuthProfile);
-  const profileStatus = useSelector(selectAuthProfileStatus);
   const error = useSelector(selectAuthError);
   const dispatch = useDispatch();
 
@@ -99,12 +156,6 @@ export const useAuthStore = () => {
     return dispatch(logout());
   }, [dispatch]);
 
-  const loadProfile = useCallback(() => {
-    // Role and capability guards depend on the server-provided profile, so
-    // this operation is shared by every route that needs authorization data.
-    return dispatch(user_profile());
-  }, [dispatch]);
-
   const clearAuthError = useCallback(() => {
     // Components can clear a displayed authentication error without importing
     // the slice action directly.
@@ -114,17 +165,55 @@ export const useAuthStore = () => {
   return {
     user,
     isAuthenticated,
+    // Verification is exposed beside authentication because route guards and
+    // verified-only requests must make the same account-status decision.
+    isVerified,
     sessionStatus,
     isSessionResolving,
-    profile,
-    profileStatus,
     error,
     verifyCurrentSession,
     signIn,
     signUp,
     signOut,
-    loadProfile,
     clearAuthError,
+  };
+};
+
+export const usePlayerStore = () => {
+  // Player data has a separate React boundary because profile operations do
+  // not establish authentication and must reset independently with a session.
+  const summary = useSelector(selectPlayerSummary);
+  const summaryStatus = useSelector(selectPlayerSummaryStatus);
+  const profile = useSelector(selectPlayerProfile);
+  const profileStatus = useSelector(selectPlayerProfileStatus);
+  const error = useSelector(selectPlayerError);
+  const dispatch = useDispatch();
+
+  const loadSummary = useCallback(() => {
+    // Dashboard routing and shell identity use this small request rather than
+    // loading every social and competitive profile relationship.
+    return dispatch(fetchPlayerSummary());
+  }, [dispatch]);
+
+  const loadProfile = useCallback(() => {
+    // Detailed feature routes call this only when their page consumes the
+    // complete gaming profile.
+    return dispatch(fetchPlayerProfile());
+  }, [dispatch]);
+
+  const clearPlayerError = useCallback(() => {
+    return dispatch(playerActions.resetError());
+  }, [dispatch]);
+
+  return {
+    summary,
+    summaryStatus,
+    profile,
+    profileStatus,
+    error,
+    loadSummary,
+    loadProfile,
+    clearPlayerError,
   };
 };
 

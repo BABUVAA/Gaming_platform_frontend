@@ -6,7 +6,9 @@ import {
   FaSatelliteDish,
   FaShieldAlt,
   FaTrophy,
+  FaUser,
   FaWallet,
+  FaLink,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
 import { ROUTES } from "../routes/routeConstants";
@@ -38,52 +40,70 @@ const operatorNavigation = [
 const playerNavigation = [
   {
     label: "Compete",
-    description: "Overview and readiness",
+    description: "Find your next challenge",
     to: ROUTES.DASHBOARD,
     icon: FaGamepad,
     match: [ROUTES.DASHBOARD],
   },
   {
     label: "Tournaments",
-    description: "Join active formats",
+    description: "Browse and join events",
     to: ROUTES.TOURNAMENT,
     icon: FaTrophy,
-    match: [ROUTES.TOURNAMENT, "/tournamentDetails"],
+    match: [
+      ROUTES.TOURNAMENT,
+      "/dashboard/tournaments",
+      "/tournamentDetails",
+    ],
   },
   {
     label: "Clans",
-    description: "Manage your roster",
+    description: "Build and play together",
     to: ROUTES.CLAN,
     icon: MdOutlineCastle,
     match: [ROUTES.CLAN],
   },
   {
     label: "Matches",
-    description: "Rooms, check-in, and results",
+    description: "Check in and play",
     to: ROUTES.MATCHES,
     icon: FaMapMarkedAlt,
     match: [ROUTES.MATCHES],
   },
   {
     label: "Chats",
-    description: "Messages and social coordination",
+    description: "Talk with friends and teams",
     to: ROUTES.CHATS,
     icon: FaLayerGroup,
     match: [ROUTES.CHATS],
   },
   {
     label: "Wallet",
-    description: "Balance and settlements",
+    description: "Balance, prizes and history",
     to: ROUTES.WALLET,
     icon: FaWallet,
     match: [ROUTES.WALLET],
   },
   {
-    label: "Account",
-    description: "Verification and links",
-    to: ROUTES.ACCOUNT,
+    label: "Profile",
+    description: "Gaming record and identity",
+    to: ROUTES.PROFILE,
+    icon: FaUser,
+    match: [ROUTES.PROFILE],
+  },
+  {
+    label: "Game Accounts",
+    description: "Connect your game identities",
+    to: ROUTES.GAME_ACCOUNTS,
+    icon: FaLink,
+    match: [ROUTES.GAME_ACCOUNTS, ROUTES.ACCOUNT_LEGACY],
+  },
+  {
+    label: "Account Settings",
+    description: "Email, security and sign-in",
+    to: ROUTES.ACCOUNT_SETTINGS,
     icon: FaShieldAlt,
-    match: [ROUTES.ACCOUNT, ROUTES.PROFILE],
+    match: [ROUTES.ACCOUNT_SETTINGS],
   },
 ];
 
@@ -116,7 +136,7 @@ export const getNavigationTitle = (pathname) => {
   if (!found) {
     return {
       label: "Platform",
-      description: "Competition control room",
+      description: "Your gaming home",
     };
   }
 

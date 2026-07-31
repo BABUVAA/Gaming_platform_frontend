@@ -4,15 +4,21 @@ import createApiThunk from "../thunks/createApiThunk";
 
 const normalizeDetailRequest = (request) =>
   typeof request === "string"
-    ? { tournamentId: request, force: false }
-    : { tournamentId: request?.tournamentId, force: request?.force || false };
+    ? { resourceId: request, resourceKind: "offering", force: false }
+    : {
+        resourceId: request?.resourceId || request?.tournamentId,
+        resourceKind:
+          request?.resourceKind === "event" ? "event" : "offering",
+        force: request?.force || false,
+      };
 
 export const fetchTournaments = createApiThunk(
   "tournament/fetchTournaments",
   {
-    path: "/api/tournaments/fetchAllTournament",
+    path: "/api/tournaments/offerings",
     selectData: (response) => {
-      const tournaments = response.data?.tournaments;
+      const tournaments =
+        response.data?.data?.offerings || response.data?.tournaments;
 
       if (
         !tournaments ||
@@ -45,9 +51,9 @@ export const fetchTournamentById = createApiThunk(
   "tournament/fetchTournamentById",
   {
     request: ({ api, arg, signal }) => {
-      const { tournamentId } = normalizeDetailRequest(arg);
+      const { resourceId, resourceKind } = normalizeDetailRequest(arg);
 
-      if (!tournamentId) {
+      if (!resourceId) {
         // Use an Axios-shaped error so the common normalizer retains the
         // client-validation status and message in the rejected payload.
         const missingIdError = new Error("Tournament ID is required.");
@@ -58,30 +64,38 @@ export const fetchTournamentById = createApiThunk(
         throw missingIdError;
       }
 
-      return api.get(`/api/tournaments/${tournamentId}`, { signal });
+      const resourcePath =
+        resourceKind === "event" ? "events" : "types";
+      return api.get(
+        `/api/tournaments/${resourcePath}/${resourceId}`,
+        { signal },
+      );
     },
     selectData: (response) => ({
-      tournament: response.data,
+      tournament: response.data?.data || response.data,
       fetchedAt: Date.now(),
     }),
     errorMessage: "Failed to fetch tournament details.",
   },
   {
     condition: (request, { getState }) => {
-      const { tournamentId, force } = normalizeDetailRequest(request);
+      const { resourceId, resourceKind, force } =
+        normalizeDetailRequest(request);
       const tournamentState = getState().tournament;
 
-      if (!tournamentId) return true;
+      if (!resourceId) return true;
       if (
         tournamentState.detailStatus === "loading" &&
-        tournamentState.requestedTournamentId === tournamentId
+        tournamentState.requestedTournamentId === resourceId &&
+        tournamentState.requestedDetailKind === resourceKind
       ) {
         return false;
       }
       if (force) return true;
 
       return !(
-        tournamentState.selectedTournament?._id === tournamentId &&
+        tournamentState.selectedTournament?._id === resourceId &&
+        tournamentState.selectedDetailKind === resourceKind &&
         isCacheFresh(
           tournamentState.selectedTournamentFetchedAt,
           PUBLIC_CACHE_TTL.TOURNAMENT_DETAILS,
@@ -102,6 +116,8 @@ const initialState = {
   detailError: null,
   detailRequestId: null,
   requestedTournamentId: null,
+  requestedDetailKind: null,
+  selectedDetailKind: null,
 };
 
 const tournamentSlice = createSlice({
@@ -137,6 +153,8 @@ const tournamentSlice = createSlice({
         state.detailError = null;
         state.detailRequestId = null;
         state.requestedTournamentId = null;
+        state.requestedDetailKind = null;
+        state.selectedDetailKind = null;
       }
     },
     clearSelectedTournament(state) {
@@ -146,6 +164,8 @@ const tournamentSlice = createSlice({
       state.detailError = null;
       state.detailRequestId = null;
       state.requestedTournamentId = null;
+      state.requestedDetailKind = null;
+      state.selectedDetailKind = null;
     },
     invalidateTournamentList(state) {
       state.lastFetchedAt = null;
@@ -163,7 +183,10 @@ const tournamentSlice = createSlice({
         state.lastFetchedAt = action.payload.fetchedAt;
       })
       .addCase(fetchTournaments.rejected, (state, action) => {
-        if (action.meta.aborted || action.meta.condition) {
+        // A condition rejection represents a deduplicated caller, not the
+        // completion of the request that is already loading.
+        if (action.meta.condition) return;
+        if (action.meta.aborted) {
           state.listStatus = "idle";
           return;
         }
@@ -177,7 +200,10 @@ const tournamentSlice = createSlice({
         state.detailRequestId = action.meta.requestId;
         state.requestedTournamentId = normalizeDetailRequest(
           action.meta.arg,
-        ).tournamentId;
+        ).resourceId;
+        state.requestedDetailKind = normalizeDetailRequest(
+          action.meta.arg,
+        ).resourceKind;
       })
       .addCase(fetchTournamentById.fulfilled, (state, action) => {
         // A slower request for a previous route must not replace details for the
@@ -187,11 +213,15 @@ const tournamentSlice = createSlice({
         const { tournament, fetchedAt } = action.payload;
         state.selectedTournament = tournament;
         state.selectedTournamentFetchedAt = fetchedAt;
+        state.selectedDetailKind = normalizeDetailRequest(
+          action.meta.arg,
+        ).resourceKind;
         state.detailStatus = "succeeded";
         state.detailRequestId = null;
         state.requestedTournamentId = null;
+        state.requestedDetailKind = null;
 
-        if (tournament?._id) {
+        if (tournament?.kind !== "event" && tournament?._id) {
           state.tournaments[tournament._id] = {
             ...state.tournaments[tournament._id],
             ...tournament,
@@ -205,6 +235,7 @@ const tournamentSlice = createSlice({
           state.detailStatus = "idle";
           state.detailRequestId = null;
           state.requestedTournamentId = null;
+          state.requestedDetailKind = null;
           return;
         }
 
@@ -213,6 +244,7 @@ const tournamentSlice = createSlice({
           action.payload || "Failed to fetch tournament details.";
         state.detailRequestId = null;
         state.requestedTournamentId = null;
+        state.requestedDetailKind = null;
       });
   },
 });

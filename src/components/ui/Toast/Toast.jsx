@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { hideToast } from "../../../store/slices/toastSlice";
 import { FiAlertCircle, FiBell, FiCheckCircle, FiInfo, FiX } from "react-icons/fi";
@@ -6,18 +6,36 @@ import { FiAlertCircle, FiBell, FiCheckCircle, FiInfo, FiX } from "react-icons/f
 const Toast = () => {
   const dispatch = useDispatch();
   const toasts = useSelector((store) => store.toast.toasts);
+  const timersRef = useRef(new Map());
 
   useEffect(() => {
-    const timers = toasts.map((toast) =>
-      setTimeout(() => {
-        dispatch(hideToast(toast.id));
-      }, toast.duration || 5000)
-    );
+    const visibleToastIds = new Set(toasts.map((toast) => toast.id));
 
+    toasts.forEach((toast) => {
+      if (timersRef.current.has(toast.id)) return;
+
+      const timer = setTimeout(() => {
+        timersRef.current.delete(toast.id);
+        dispatch(hideToast(toast.id));
+      }, toast.duration || 5000);
+      timersRef.current.set(toast.id, timer);
+    });
+
+    // Closing a toast manually must also remove its pending timer.
+    timersRef.current.forEach((timer, toastId) => {
+      if (visibleToastIds.has(toastId)) return;
+      clearTimeout(timer);
+      timersRef.current.delete(toastId);
+    });
+  }, [toasts, dispatch]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
-  }, [toasts, dispatch]);
+  }, []);
 
   if (toasts.length === 0) return null;
 

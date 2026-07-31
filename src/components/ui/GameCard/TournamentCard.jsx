@@ -1,10 +1,10 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
+import { buildTournamentOfferingPath } from "../../../routes/routeConstants";
 import InviteModal from "../../feature/InviteModal";
 import useSocket from "../../../context/useSocket";
 import { useSelector } from "react-redux";
-import ClanVerify from "../../feature/ClanVerify";
 
 const TournamentCard = ({ tournament, disableFetch }) => {
   const {
@@ -12,8 +12,6 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     tournamentName,
     game,
     mode,
-    registeredPlayers,
-    registeredTeams,
     maxParticipants,
     teamSize,
     entryFee,
@@ -22,51 +20,45 @@ const TournamentCard = ({ tournament, disableFetch }) => {
   } = tournament;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isClanVerifyOpen, setIsClanVerifyOpen] = useState(false);
-  const [clanStatus, setClanStatus] = useState(null);
+  const [isJoining, setIsJoining] = useState(false);
 
-  const { profile } = useSelector((store) => store.auth);
-  const { wallet } = useSelector((store) => store.payment);
-  const { socket } = useSocket();
+  const { profile } = useSelector((store) => store.player);
+  const { connected, socket } = useSocket();
 
   const hasGame = profile?.profile?.games?.some(
-    (gameObj) => gameObj.game.link === game
+    (gameObj) =>
+      gameObj.game?.link === game &&
+      gameObj.verificationStatus === "verified"
   );
-
-  const filledPercentage =
-    mode === "solo"
-      ? registeredPlayers
-        ? (registeredPlayers.length / maxParticipants) * 100
-        : 0
-      : registeredTeams
-        ? (registeredPlayers.length / (maxParticipants * teamSize)) * 100
-        : 0;
 
   const handleJoinClick = (event) => {
     event.preventDefault();
 
-    if (wallet.realMoney < entryFee) {
-      alert("Charge your wallet first");
+    if (!socket || !connected) {
+      alert("Live matchmaking is reconnecting. Please try again.");
       return;
     }
 
-    if (!hasGame && mode === "solo") {
-      alert("Please connect your game.");
+    // This check gives immediate guidance, while the backend repeats the same
+    // eligibility validation for every player in the submitted roster.
+    if (!hasGame) {
+      alert("Please verify your game account first.");
       return;
     }
 
-    if (game.toLowerCase() === "coc") {
-      setIsClanVerifyOpen(true);
-    } else {
-      const payload = { tournamentId: _id };
-      socket.emit("join_tournament", payload);
+    if (mode !== "solo") {
+      setIsModalOpen(true);
+      return;
     }
-  };
 
-  const handleClanValidationSuccess = (clanData) => {
-    setClanStatus(clanData);
-    setIsClanVerifyOpen(false);
-    setIsModalOpen(true);
+    // The acknowledgement keeps the button locked until the server has either
+    // assigned a durable room or returned a useful matchmaking error.
+    setIsJoining(true);
+    socket.timeout(10000).emit(
+      "join_tournament",
+      { tournamentId: _id },
+      () => setIsJoining(false)
+    );
   };
 
   return (
@@ -98,55 +90,40 @@ const TournamentCard = ({ tournament, disableFetch }) => {
           <InfoChip label="Slots" value={maxParticipants} />
         </div>
 
-        <div className="mt-4 rounded-full bg-slate-900 p-1">
-          <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-            <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,_#22d3ee,_#fbbf24)] transition-all duration-700"
-              style={{ width: `${filledPercentage}%` }}
-            />
-          </div>
-        </div>
-
         <div className="mt-4 flex items-center justify-between text-sm text-slate-400">
           <span>{mode.toUpperCase()}</span>
-          <span>{registeredPlayers?.length || 0} joined</span>
+          <span>Up to {maxParticipants} players</span>
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-3">
           {status === "registration_open" && (
             <button
               onClick={handleJoinClick}
-              className="rounded-2xl bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-cyan-200"
+              disabled={isJoining}
+              className="rounded-2xl bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60"
             >
-              Join Now
+              {isJoining ? "Joining..." : "Join Now"}
             </button>
           )}
           {!disableFetch && (
             <Link
-              to={`/tournamentDetails/${_id}`}
+              to={buildTournamentOfferingPath(_id)}
               className="text-sm font-semibold text-cyan-200"
             >
-              Match Intel
+              View details
             </Link>
           )}
         </div>
       </div>
 
-      {isClanVerifyOpen && (
-        <ClanVerify
-          isOpen={isClanVerifyOpen}
-          onClose={() => setIsClanVerifyOpen(false)}
-          onValidationSuccess={handleClanValidationSuccess}
-        />
-      )}
-
       {isModalOpen && (
         <InviteModal
           tournamentId={_id}
           teamSize={teamSize}
+          game={game}
+          mode={mode}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          clanData={clanStatus}
         />
       )}
     </>
@@ -168,8 +145,6 @@ TournamentCard.propTypes = {
     tournamentName: PropTypes.string.isRequired,
     game: PropTypes.string.isRequired,
     mode: PropTypes.string.isRequired,
-    registeredPlayers: PropTypes.arrayOf(PropTypes.object),
-    registeredTeams: PropTypes.arrayOf(PropTypes.object),
     maxParticipants: PropTypes.number.isRequired,
     teamSize: PropTypes.number,
     entryFee: PropTypes.number,

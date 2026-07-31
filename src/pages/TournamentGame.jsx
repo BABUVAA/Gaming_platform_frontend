@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { FiDownload, FiGrid, FiLayers, FiUsers } from "react-icons/fi";
+import { FiDownload, FiGrid, FiLayers } from "react-icons/fi";
 import { TournamentCard } from "../components";
 import { selectTournamentList } from "../store/selectors/tournamentSelectors";
 
@@ -33,17 +33,12 @@ const gameData = {
 
 const TournamentGame = () => {
   const { game } = useParams();
-  const { profile } = useSelector((state) => state.auth);
   const tournaments = useSelector(selectTournamentList);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const selectedGame = gameData[game] || null;
-
-  const joinedTournamentsCount = (profile?.profile?.tournaments || []).filter(
-    (tournament) => tournament.game === game
-  ).length;
 
   const { name, icon, downloadLink, promoImages, filters } = selectedGame || {
     name: "",
@@ -77,10 +72,6 @@ const TournamentGame = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredTournaments.slice(startIndex, startIndex + itemsPerPage);
   }, [currentPage, filteredTournaments]);
-
-  const myTournaments = (profile?.profile?.tournaments || []).filter(
-    (tournament) => tournament.game === game
-  );
 
   if (!selectedGame) {
     return (
@@ -119,7 +110,7 @@ const TournamentGame = () => {
                 Download Game
               </a>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200">
-                {joinedTournamentsCount} joined from this game
+                Choose a format and enter matchmaking
               </div>
             </div>
           </div>
@@ -147,13 +138,6 @@ const TournamentGame = () => {
             Tournaments
           </TabButton>
           <TabButton
-            active={activeTab === "my_tournaments"}
-            onClick={() => setActiveTab("my_tournaments")}
-            icon={<FiUsers />}
-          >
-            My Tournaments ({joinedTournamentsCount})
-          </TabButton>
-          <TabButton
             active={activeTab === "teams"}
             onClick={() => setActiveTab("teams")}
             icon={<FiLayers />}
@@ -162,7 +146,7 @@ const TournamentGame = () => {
           </TabButton>
         </div>
 
-        {(activeTab === "tournaments" || activeTab === "my_tournaments") && (
+        {activeTab === "tournaments" && (
           <div className="mt-4 flex flex-wrap gap-2">
             {["All", "Featured", ...filters].map((filter) => (
               <button
@@ -192,7 +176,7 @@ const TournamentGame = () => {
       ) : (
         <>
           <TournamentGrid
-            tournaments={activeTab === "my_tournaments" ? myTournaments : paginatedTournaments}
+            tournaments={paginatedTournaments}
             game={game}
           />
           {activeTab === "tournaments" ? (
@@ -233,7 +217,7 @@ const TournamentGrid = ({ tournaments, game }) => (
             <TournamentCard
               key={tournament._id}
               tournament={tournament}
-              disableFetch
+              disableFetch={false}
             />
           ))}
       </div>

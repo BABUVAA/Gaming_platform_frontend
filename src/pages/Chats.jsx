@@ -4,7 +4,7 @@ import ChatBox from "../components/common/ChatBox";
 import { FiMessageSquare, FiUsers } from "react-icons/fi";
 
 const Chats = () => {
-  const { profile } = useSelector((store) => store.auth);
+  const { profile } = useSelector((store) => store.player);
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatType, setChatType] = useState(null);
   const [chatName, setChatName] = useState(null);
@@ -200,7 +200,7 @@ const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
 };
 
 const NewChatModal = ({ onClose, personalChats, setPersonalChats, onOpenChat }) => {
-  const { profile } = useSelector((store) => store.auth);
+  const { profile } = useSelector((store) => store.player);
   const friends = profile?.profile?.friends || [];
   const [selectedUser, setSelectedUser] = useState(null);
 

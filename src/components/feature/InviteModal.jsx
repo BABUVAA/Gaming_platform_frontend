@@ -3,194 +3,149 @@ import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import useSocket from "../../context/useSocket";
 
-const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
-  const [activeTab, setActiveTab] = useState("clan");
+const normalizeGameKey = (game) =>
+  String(game || "").toLowerCase() === "pubg"
+    ? "bgmi"
+    : String(game || "").toLowerCase();
 
+const InviteModal = ({
+  game,
+  isOpen,
+  mode,
+  onClose,
+  teamSize,
+  tournamentId,
+}) => {
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
   const [teamId, setTeamId] = useState("");
-  const { socket } = useSocket();
+  const { connected, socket } = useSocket();
+  const teams = useSelector(
+    (store) => store.player.profile?.profile?.teams || []
+  );
 
-  const { user } = useSelector((store) => store.auth);
-  const [selectedUsers, setSelectedUsers] = useState([user.userId]);
-
-  const clanMembers = useSelector((store) => store.clan.userClanData?.data?.members);
-  const friends = useSelector((store) => store.auth.profile?.profile?.friends);
-  const teams = useSelector((store) => store.auth.profile?.profile?.teams);
-  const availableClanMembers = clanMembers || [];
-  const availableFriends = friends || [];
-  const availableTeams = teams || [];
+  // Display only teams that can plausibly satisfy this offering. The server
+  // repeats these checks because browser state is never a security boundary.
+  const availableTeams = teams.filter(
+    (team) =>
+      team.players?.length === teamSize &&
+      (!team.game || normalizeGameKey(team.game) === normalizeGameKey(game)) &&
+      (!team.mode ||
+        String(team.mode).toLowerCase() === String(mode).toLowerCase())
+  );
 
   if (!isOpen) return null;
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-  };
-
-  const handleSelect = (userId) => {
-    // If selecting from "teams" tab, ignore this
-    if (activeTab === "teams") return;
-
-    // Clear team selection if switching to clan/friends
-    const isTeamSelected = availableTeams.some((team) => team._id === teamId);
-    if (isTeamSelected) {
-      setSelectedUsers([]);
-      setTeamId("");
-    }
-
-    const isAlreadySelected = selectedUsers.includes(userId);
-
-    if (!isAlreadySelected && selectedUsers.length >= teamSize) {
-      alert(`You can only select up to ${teamSize} players.`);
+  const handleJoin = () => {
+    if (!teamId) {
+      setErrorMessage("Choose a saved team first.");
       return;
     }
 
-    setSelectedUsers((prev) =>
-      isAlreadySelected ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
+    if (!socket || !connected) {
+      setErrorMessage("Live matchmaking is reconnecting. Please try again.");
+      return;
+    }
+
+    setErrorMessage("");
+    setIsJoining(true);
+
+    // Socket.IO acknowledgements make the modal reflect the durable server
+    // result rather than assuming that emitting an event means it succeeded.
+    socket
+      .timeout(10000)
+      .emit(
+        "join_tournament",
+        { teamId, tournamentId },
+        (timeoutError, response) => {
+          setIsJoining(false);
+
+          if (timeoutError) {
+            setErrorMessage("Matchmaking took too long. Please try again.");
+            return;
+          }
+
+          if (!response?.success) {
+            setErrorMessage(
+              response?.error?.message || "Unable to join this match."
+            );
+            return;
+          }
+
+          onClose();
+        }
+      );
   };
-
-  const handleJoin = () => {
-    if (selectedUsers.length === 0) return alert("Select at least one user!");
-    if (selectedUsers.length !== teamSize)
-      return alert(`Select exactly ${teamSize} players`);
-
-    const payload = {
-      tournamentId,
-      members: selectedUsers,
-      teamId,
-      clanData,
-    };
-
-    socket.emit("join_tournament", payload);
-    onClose();
-  };
-
-  const renderList = (list, type) => (
-    <ul className="space-y-2">
-      {list.length === 0 ? (
-        <p className="text-sm text-gray-500">No {type} found.</p>
-      ) : (
-        list.map((item) => {
-          const id = item.user || item._id || item.id;
-          const name =
-            item.clanMemberName ||
-            item.profile?.username ||
-            item.fullName ||
-            "Unknown";
-          const isSelected = selectedUsers.includes(id);
-
-          return (
-            <li
-              key={id}
-              onClick={() => handleSelect(id)}
-              className={`cursor-pointer p-2 rounded-md border text-gray-800 font-medium ${
-                isSelected
-                  ? "bg-indigo-100 border-indigo-500"
-                  : "bg-gray-50 hover:bg-gray-100"
-              }`}
-            >
-              {name}
-            </li>
-          );
-        })
-      )}
-    </ul>
-  );
-
-  const renderTeam = () => (
-    <ul className="space-y-2">
-      {availableTeams.length === 0 ? (
-        <p className="text-sm text-gray-500">No teams found.</p>
-      ) : (
-        availableTeams.map((team) => {
-          const id = team._id;
-          const name = team.teamName;
-          const playerIds = team.players.map((p) => p._id);
-          const isSelected =
-            teamId === id &&
-            selectedUsers.length === playerIds.length &&
-            playerIds.every((pid) => selectedUsers.includes(pid));
-
-          return (
-            <li
-              key={id}
-              onClick={() => {
-                if (team.players.length !== teamSize) {
-                  alert(`Team must have exactly ${teamSize} players`);
-                  return;
-                }
-                setTeamId(id);
-                setSelectedUsers(playerIds);
-              }}
-              className={`cursor-pointer p-2 rounded-md border text-gray-800 font-medium ${
-                isSelected
-                  ? "bg-green-100 border-green-500"
-                  : "bg-gray-50 hover:bg-gray-100"
-              }`}
-            >
-              <div className="font-semibold">{name}</div>
-              <div className="text-xs text-gray-500">
-                Players:{" "}
-                {team.players
-                  .map((p) => p.profile?.username || p.fullName || "Unknown")
-                  .join(", ")}
-              </div>
-            </li>
-          );
-        })
-      )}
-    </ul>
-  );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[500]">
-      <div className="bg-white w-full max-w-md p-6 rounded-lg shadow-lg relative">
-        {/* Close */}
+    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
         <button
+          aria-label="Close team selection"
+          className="absolute right-4 top-4 text-xl text-slate-400 hover:text-white"
+          disabled={isJoining}
           onClick={onClose}
-          className="absolute top-2 right-3 text-gray-600 hover:text-gray-800 text-xl"
+          type="button"
         >
-          ✖
+          x
         </button>
-        {/* Title */}
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 text-center">
-          Join Tournament
-        </h2>
-        {/* Tabs */}
-        <div className="flex justify-between mb-4 border-b">
-          {["clan", "friends", "teams"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`flex-1 text-center py-2 capitalize ${
-                activeTab === tab
-                  ? "border-b-2 border-indigo-500 text-indigo-600 font-semibold"
-                  : "text-gray-500"
-              }`}
-            >
-              {tab === "clan"
-                ? "Clan Members"
-                : tab === "friends"
-                ? "Friend List"
-                : "My Teams"}
-            </button>
-          ))}
+
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+          {game} {mode}
+        </p>
+        <h2 className="mt-2 text-xl font-black text-white">Choose your team</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Select a saved team with exactly {teamSize} players.
+        </p>
+
+        <div className="mt-5 max-h-64 space-y-2 overflow-y-auto">
+          {availableTeams.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-400">
+              No matching saved team is available yet.
+            </div>
+          ) : (
+            availableTeams.map((team) => {
+              const selected = teamId === team._id;
+
+              return (
+                <button
+                  className={`w-full rounded-2xl border p-4 text-left transition ${
+                    selected
+                      ? "border-cyan-300 bg-cyan-300/10"
+                      : "border-slate-700 bg-slate-800/70 hover:border-slate-500"
+                  }`}
+                  key={team._id}
+                  onClick={() => {
+                    setTeamId(team._id);
+                    setErrorMessage("");
+                  }}
+                  type="button"
+                >
+                  <span className="block font-bold text-white">
+                    {team.teamName}
+                  </span>
+                  <span className="mt-1 block text-xs text-slate-400">
+                    {team.players.length} players
+                  </span>
+                </button>
+              );
+            })
+          )}
         </div>
-        {/* Content */}
-        <div className="h-48 overflow-y-auto">
-          {activeTab === "clan" && renderList(availableClanMembers, "clan members")}
-          {activeTab === "friends" && renderList(availableFriends, "friends")}
-          {activeTab === "teams" && renderTeam()}
-        </div>
-        {/* Selected Count */}
-        <div className="text-sm text-gray-500 mt-3">
-          Selected: {selectedUsers.length}
-        </div>
-        {/* Join Button */}
+
+        {errorMessage && (
+          <p className="mt-4 text-sm font-medium text-rose-300">
+            {errorMessage}
+          </p>
+        )}
+
         <button
+          className="mt-5 w-full rounded-2xl bg-cyan-300 py-3 font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={!teamId || isJoining}
           onClick={handleJoin}
-          className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 mt-4 rounded-lg"
+          type="button"
         >
-          Confirm & Join
+          {isJoining ? "Finding a room..." : "Join match queue"}
         </button>
       </div>
     </div>
@@ -198,11 +153,12 @@ const InviteModal = ({ isOpen, onClose, tournamentId, teamSize, clanData }) => {
 };
 
 InviteModal.propTypes = {
+  game: PropTypes.string.isRequired,
   isOpen: PropTypes.bool.isRequired,
+  mode: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
-  tournamentId: PropTypes.string.isRequired,
   teamSize: PropTypes.number.isRequired,
-  clanData: PropTypes.object,
+  tournamentId: PropTypes.string.isRequired,
 };
 
 export default InviteModal;

@@ -1,205 +1,389 @@
 import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { FaArrowRight, FaClock, FaHeadset, FaShieldAlt } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaClock,
+  FaHeadset,
+  FaShieldAlt,
+  FaUsers,
+} from "react-icons/fa";
 import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
+import {
+  buildTournamentOfferingPath,
+  ROUTES,
+} from "../routes/routeConstants";
 import { showToast, types } from "../store/slices/toastSlice";
+import useSocket from "../context/useSocket";
 
-const STATUS_STYLE = {
-  scheduled: "bg-slate-800 text-slate-200",
-  check_in: "bg-amber-100 text-amber-800",
-  lobby_ready: "bg-sky-100 text-sky-800",
-  live: "bg-emerald-100 text-emerald-800",
-  result_pending: "bg-orange-100 text-orange-800",
-  verified: "bg-cyan-100 text-cyan-800",
-  settled: "bg-violet-100 text-violet-800",
-  disputed: "bg-rose-100 text-rose-800",
-};
+const STATUS_PRESENTATION = Object.freeze({
+  awaiting_operator: {
+    label: "Assigning operator",
+    style: "bg-amber-100 text-amber-800",
+  },
+  cancelled: {
+    label: "Cancelled",
+    style: "bg-rose-100 text-rose-800",
+  },
+  check_in: {
+    label: "Check-in open",
+    style: "bg-amber-100 text-amber-800",
+  },
+  disputed: {
+    label: "Under review",
+    style: "bg-rose-100 text-rose-800",
+  },
+  live: {
+    label: "Live",
+    style: "bg-emerald-100 text-emerald-800",
+  },
+  lobby_ready: {
+    label: "Room ready",
+    style: "bg-sky-100 text-sky-800",
+  },
+  operator_assigned: {
+    label: "Operator assigned",
+    style: "bg-cyan-100 text-cyan-800",
+  },
+  result_pending: {
+    label: "Result review",
+    style: "bg-orange-100 text-orange-800",
+  },
+  scheduled: {
+    label: "Scheduled",
+    style: "bg-slate-700 text-slate-200",
+  },
+  settled: {
+    label: "Completed",
+    style: "bg-violet-100 text-violet-800",
+  },
+  verified: {
+    label: "Result verified",
+    style: "bg-cyan-100 text-cyan-800",
+  },
+  waiting_for_players: {
+    label: "Waiting for players",
+    style: "bg-slate-700 text-slate-200",
+  },
+});
+
+const getActivityTime = (activity) =>
+  new Date(activity.createdAt || activity.scheduledFor || 0).getTime();
 
 const Matches = () => {
   const dispatch = useDispatch();
-  const [matches, setMatches] = useState([]);
+  const { competitionRevision } = useSocket();
+  const [activity, setActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [leavingQueueId, setLeavingQueueId] = useState("");
 
   useEffect(() => {
-    const loadMatches = async () => {
+    let isActive = true;
+
+    const loadActivity = async () => {
       setIsLoading(true);
-      try {
-        const response = await api.get("/api/matches");
-        setMatches(response.data?.data || []);
-      } catch (error) {
+      const [queuesRequest, matchesRequest] = await Promise.allSettled([
+        api.get("/api/matches/queues"),
+        api.get("/api/matches"),
+      ]);
+      if (!isActive) return;
+
+      const queues =
+        queuesRequest.status === "fulfilled"
+          ? queuesRequest.value.data?.data || []
+          : [];
+      const matches =
+        matchesRequest.status === "fulfilled"
+          ? matchesRequest.value.data?.data || []
+          : [];
+
+      // Queue and match responses share one presentation contract here. The
+      // backend collections remain separate and can evolve independently.
+      setActivity(
+        [...queues, ...matches].sort(
+          (first, second) =>
+            getActivityTime(second) - getActivityTime(first),
+        ),
+      );
+
+      const failedRequest =
+        queuesRequest.status === "rejected"
+          ? queuesRequest.reason
+          : matchesRequest.status === "rejected"
+            ? matchesRequest.reason
+            : null;
+      if (failedRequest) {
         dispatch(
           showToast({
             message: getApiErrorMessage(
-              error,
-              "Unable to load match feed.",
+              failedRequest,
+              "Some match activity could not be loaded.",
             ),
             type: types.DANGER,
             position: "bottom-right",
-          })
+          }),
         );
-      } finally {
-        setIsLoading(false);
       }
+
+      setIsLoading(false);
     };
 
-    loadMatches();
-  }, [dispatch]);
+    loadActivity();
+    return () => {
+      isActive = false;
+    };
+  }, [competitionRevision, dispatch]);
+
+  const leaveQueue = async (queue) => {
+    try {
+      setLeavingQueueId(queue._id);
+      await api.delete(`/api/matches/queues/${queue.offeringId}`);
+      setActivity((current) =>
+        current.filter(
+          (item) => !(item.kind === "queue" && item._id === queue._id),
+        ),
+      );
+      dispatch(
+        showToast({
+          message: "You left the match queue.",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        }),
+      );
+    } catch (error) {
+      dispatch(
+        showToast({
+          message: getApiErrorMessage(
+            error,
+            "Unable to leave this queue right now.",
+          ),
+          type: types.DANGER,
+          position: "bottom-right",
+        }),
+      );
+    } finally {
+      setLeavingQueueId("");
+    }
+  };
 
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-sky-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
-        <p className="text-xs uppercase tracking-[0.3em] text-sky-300/80">
-          Match Operations
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
+          My matches
         </p>
         <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
-          Follow room state, operator support, and result flow.
+          Everything you joined, in one place.
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-          This is the first pass of the match area. It is wired to the new
-          backend match scaffold, and it sets up the UI surface where check-in,
-          lobby credentials, dispute handling, and result verification will
-          live.
+          Follow player availability and operator assignment without switching
+          between tournament, event, and room pages.
         </p>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                Match Feed
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                Current activity
               </p>
               <h2 className="mt-2 text-2xl font-black text-white">
-                Your Active Timeline
+                Match timeline
               </h2>
             </div>
             <Link
-              to="/dashboard/tournament"
-              className="text-sm font-semibold text-sky-200"
+              className="text-sm font-bold text-sky-200"
+              to={ROUTES.TOURNAMENT}
             >
-              Join more events
+              Find tournaments
             </Link>
           </div>
 
           <div className="mt-5 space-y-3">
-            {matches.length === 0 && !isLoading ? (
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
-                No matches are assigned yet. Once tournaments begin creating
-                real match instances, this feed becomes the player&apos;s live
-                operation rail.
+            {activity.map((item) => (
+              <MatchActivityCard
+                isLeaving={leavingQueueId === item._id}
+                item={item}
+                key={`${item.kind || "match"}-${item._id}`}
+                onLeave={leaveQueue}
+              />
+            ))}
+
+            {!isLoading && activity.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center">
+                <p className="font-bold text-white">No matches yet</p>
+                <p className="mt-2 text-sm text-slate-400">
+                  Join a tournament and your player queue will appear here.
+                </p>
               </div>
-            ) : (
-              matches.map((match) => (
-                <article
-                  key={match._id}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                        {match.game} - {match.mode}
-                      </p>
-                      <h3 className="mt-1 text-lg font-bold text-white">
-                        {match.title}
-                      </h3>
-                    </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
-                        STATUS_STYLE[match.status] ||
-                        "bg-slate-800 text-slate-200"
-                      }`}
-                    >
-                      {match.status}
-                    </span>
-                  </div>
+            ) : null}
 
-                  <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-400">
-                    <span className="inline-flex items-center gap-2">
-                      <FaClock className="text-sky-300" />
-                      {match.scheduledFor
-                        ? new Date(match.scheduledFor).toLocaleString()
-                        : "Schedule pending"}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <FaHeadset className="text-sky-300" />
-                      {match.assignedOperator?.profile?.username ||
-                        "Operator not assigned"}
-                    </span>
-                  </div>
-                  <Link
-                    to={`/dashboard/matches/${match._id}`}
-                    className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-200"
-                  >
-                    Open match room
-                    <FaArrowRight />
-                  </Link>
-                </article>
-              ))
-            )}
-
-            {isLoading && (
+            {isLoading ? (
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
-                Loading match feed...
+                Loading your matches...
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Next Upgrade
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
-              Match Room UI
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              The next layer here is per-match detail: lobby credentials,
-              participant status, result submission, proof upload, and dispute
-              entry.
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Integrity
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
-              Verification Matters
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              Match trust starts with linked identities. That is why account
-              verification, operator review, and room state all have to live in
-              the same product system.
-            </p>
-            <Link
-              to="/dashboard/account"
-              className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-sky-200"
-            >
-              Review account status
-              <FaArrowRight />
-            </Link>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-            <div className="flex items-center gap-3 text-sky-200">
-              <FaShieldAlt />
-              <p className="text-sm font-semibold uppercase tracking-[0.18em]">
-                Lifecycle States
-              </p>
-            </div>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              `scheduled`, `check_in`, `lobby_ready`, `live`, `result_pending`,
-              `verified`, `settled`, `disputed`
-            </p>
-          </div>
+        <div className="space-y-5">
+          <InfoPanel
+            icon={<FaUsers />}
+            title="Waiting for players"
+            text="Your place is confirmed while matchmaking fills the remaining player slots."
+          />
+          <InfoPanel
+            icon={<FaHeadset />}
+            title="Assigning operator"
+            text="When the room is full, an operator is assigned before any match action begins."
+          />
+          <InfoPanel
+            icon={<FaShieldAlt />}
+            title="Nothing starts early"
+            text="Check-in and room access remain unavailable until the operator assignment stage is complete."
+          />
         </div>
       </section>
     </div>
   );
 };
 
-export default Matches;
+const MatchActivityCard = ({ isLeaving, item, onLeave }) => {
+  const isQueue = item.kind === "queue";
+  const status =
+    STATUS_PRESENTATION[item.status] ||
+    {
+      label: item.status?.replaceAll("_", " ") || "Match",
+      style: "bg-slate-700 text-slate-200",
+    };
+  const fillPercentage =
+    isQueue && item.maxPlayers > 0
+      ? Math.min(100, (item.joinedPlayers / item.maxPlayers) * 100)
+      : 0;
 
+  return (
+    <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">
+            {item.game || "Game"} - {item.mode || "Format"}
+          </p>
+          <h3 className="mt-1 text-lg font-bold text-white">
+            {item.title || "Tournament match"}
+          </h3>
+        </div>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-bold ${status.style}`}
+        >
+          {status.label}
+        </span>
+      </div>
+
+      {isQueue ? (
+        <div className="mt-5">
+          <div className="flex justify-between text-xs font-bold text-slate-400">
+            <span>{item.joinedPlayers} players joined</span>
+            <span>{item.maxPlayers} needed</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#22d3ee,#fbbf24)]"
+              style={{ width: `${fillPercentage}%` }}
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <Link
+              className="inline-flex items-center gap-2 text-sm font-bold text-sky-200"
+              to={buildTournamentOfferingPath(item.offeringId)}
+            >
+              View tournament
+              <FaArrowRight />
+            </Link>
+            {item.canLeave ? (
+              <button
+                className="text-sm font-bold text-rose-300 transition hover:text-rose-200 disabled:cursor-wait disabled:opacity-60"
+                disabled={isLeaving}
+                onClick={() => onLeave(item)}
+                type="button"
+              >
+                {isLeaving ? "Leaving..." : "Leave queue"}
+              </button>
+            ) : null}
+            {!item.canLeave && item.entryType === "team" ? (
+              <span className="text-xs text-slate-500">
+                Team creator controls this entry
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-400">
+            <span className="inline-flex items-center gap-2">
+              <FaClock className="text-sky-300" />
+              {item.scheduledFor
+                ? new Date(item.scheduledFor).toLocaleString()
+                : "Schedule pending"}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <FaHeadset className="text-sky-300" />
+              {item.assignedOperator?.profile?.username ||
+                "Assigning operator"}
+            </span>
+          </div>
+          <Link
+            className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-sky-200"
+            to={`/dashboard/matches/${item._id}`}
+          >
+            Open match
+            <FaArrowRight />
+          </Link>
+        </>
+      )}
+    </article>
+  );
+};
+
+const InfoPanel = ({ icon, text, title }) => (
+  <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.35)]">
+    <div className="text-xl text-sky-300">{icon}</div>
+    <h2 className="mt-3 text-xl font-black text-white">{title}</h2>
+    <p className="mt-3 text-sm leading-7 text-slate-300">{text}</p>
+  </div>
+);
+
+MatchActivityCard.propTypes = {
+  isLeaving: PropTypes.bool.isRequired,
+  item: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    assignedOperator: PropTypes.shape({
+      profile: PropTypes.shape({
+        username: PropTypes.string,
+      }),
+    }),
+    createdAt: PropTypes.string,
+    canLeave: PropTypes.bool,
+    entryType: PropTypes.string,
+    game: PropTypes.string,
+    joinedPlayers: PropTypes.number,
+    kind: PropTypes.string,
+    maxPlayers: PropTypes.number,
+    mode: PropTypes.string,
+    offeringId: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    scheduledFor: PropTypes.string,
+    status: PropTypes.string,
+    title: PropTypes.string,
+  }).isRequired,
+  onLeave: PropTypes.func.isRequired,
+};
+
+InfoPanel.propTypes = {
+  icon: PropTypes.node.isRequired,
+  text: PropTypes.string.isRequired,
+  title: PropTypes.string.isRequired,
+};
+
+export default Matches;

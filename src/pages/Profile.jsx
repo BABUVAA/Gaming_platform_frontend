@@ -21,10 +21,10 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import {
-  profile_data_update,
-  profile_file_update,
-  user_profile,
-} from "../store/slices/authSlice";
+  fetchPlayerProfile,
+  updatePlayerProfileData,
+  updatePlayerProfileFile,
+} from "../store/slices/playerSlice";
 
 const SOCIAL_PLATFORMS = [
   { key: "discord", label: "Discord", icon: FaDiscord, color: "text-indigo-300" },
@@ -39,7 +39,7 @@ const SOCIAL_PLATFORMS = [
 const Profile = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const { profile } = useSelector((store) => store.auth);
+  const { profile } = useSelector((store) => store.player);
   const externalPlayerTag = searchParams.get("playerTag");
   const playerProfile = profile?.profile || {};
   const internalPlayerTag = profile?.profileTag || playerProfile?.profileTag || "";
@@ -162,9 +162,9 @@ const Profile = () => {
       );
       formPayload.append("data", file);
       await dispatch(
-        profile_file_update(formPayload)
+        updatePlayerProfileFile(formPayload)
       ).unwrap();
-      await dispatch(user_profile());
+      await dispatch(fetchPlayerProfile());
       setIsImageModalOpen(false);
     } catch (error) {
       console.error("Profile media update failed:", error);
@@ -180,12 +180,12 @@ const Profile = () => {
         Object.entries(draftSocials || {}).map(([key, value]) => [key, value || null])
       );
       await dispatch(
-        profile_data_update({
+        updatePlayerProfileData({
           field: "profile.linkedAccounts",
           data: payload,
         })
       ).unwrap();
-      await dispatch(user_profile());
+      await dispatch(fetchPlayerProfile());
       setIsSocialModalOpen(false);
     } catch (error) {
       console.error("Social link update failed:", error);
@@ -353,7 +353,7 @@ const Profile = () => {
             ) : (
               <EmptyPanel
                 title="No game accounts linked yet"
-                copy="Connect your game identities from the account page to unlock tournament entry and match verification."
+                copy="Connect your game identities from Game Accounts to unlock tournament entry and match verification."
               />
             )}
           </div>

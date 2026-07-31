@@ -1,7 +1,10 @@
 import axios from "axios";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios-api";
-import { normalizeApiError } from "../../api/apiError";
+import {
+  getApiErrorToast,
+  normalizeApiError,
+} from "../../api/apiError";
 import { showToast, types } from "../slices/toastSlice";
 
 const SUPPORTED_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
@@ -102,8 +105,7 @@ const validateConfiguration = (typePrefix, configuration, thunkOptions) => {
 
 const dispatchConfiguredToast = async ({
   setting,
-  defaultMessage,
-  defaultType,
+  defaultToast,
   context,
   thunkAPI,
   position,
@@ -111,15 +113,24 @@ const dispatchConfiguredToast = async ({
   // `false` or an omitted setting keeps background requests quiet.
   if (!setting) return;
 
-  const configuredMessage =
-    setting === true ? defaultMessage : await resolveOption(setting, context);
-  if (!configuredMessage) return;
+  const configuredToast =
+    setting === true ? defaultToast : await resolveOption(setting, context);
+  if (!configuredToast) return;
+
+  // A resolver may return a message string or a complete toast payload.
+  // Normalizing here prevents React from receiving an object as text.
+  const toast =
+    typeof configuredToast === "string"
+      ? { ...defaultToast, message: configuredToast }
+      : configuredToast && typeof configuredToast === "object"
+        ? { ...defaultToast, ...configuredToast }
+        : null;
+  if (!toast?.message) return;
 
   thunkAPI.dispatch(
     showToast({
-      message: configuredMessage,
-      type: defaultType,
-      position,
+      ...toast,
+      position: toast.position || position,
     }),
   );
 };
@@ -280,8 +291,12 @@ export const createApiThunk = (
           () =>
             dispatchConfiguredToast({
               setting: toastConfiguration.error,
-              defaultMessage: normalizedError.message,
-              defaultType: toastConfiguration.errorType || types.DANGER,
+              defaultToast: {
+                ...getApiErrorToast(normalizedError),
+                ...(toastConfiguration.errorType
+                  ? { type: toastConfiguration.errorType }
+                  : {}),
+              },
               context: errorContext,
               thunkAPI,
               position: toastPosition,
@@ -304,12 +319,15 @@ export const createApiThunk = (
 
       await runSideEffectSafely(
         () =>
-          dispatchConfiguredToast({
-            setting: toastConfiguration.success,
-            defaultMessage:
-              response.data?.message || "Request completed successfully.",
-            defaultType: toastConfiguration.successType || types.SUCCESS,
-            context: successContext,
+            dispatchConfiguredToast({
+              setting: toastConfiguration.success,
+              defaultToast: {
+                message:
+                  response.data?.message || "Request completed successfully.",
+                title: "Success",
+                type: toastConfiguration.successType || types.SUCCESS,
+              },
+              context: successContext,
             thunkAPI,
             position: toastPosition,
           }),

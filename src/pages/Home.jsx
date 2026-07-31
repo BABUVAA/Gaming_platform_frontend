@@ -6,6 +6,7 @@ import {
   FaTrophy,
   FaWallet,
 } from "react-icons/fa6";
+import PropTypes from "prop-types";
 import { Footer } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
 
@@ -14,25 +15,25 @@ const playerHighlights = [
     icon: FaTrophy,
     title: "Play tournaments that matter",
     copy: "Enter Clash of Clans and BGMI events, track your match rooms, and compete for cash prize pools and platform rewards.",
-    accent: "text-amber-200",
+    accent: "text-amber-300",
   },
   {
     icon: FaWallet,
     title: "Rewards in your wallet",
     copy: "Follow entry fees, balances, prize credits, and reward activity from one player wallet.",
-    accent: "text-emerald-200",
+    accent: "text-emerald-300",
   },
   {
     icon: FaPeopleGroup,
     title: "Rise with your clan",
     copy: "Create or join clans, bookmark squads, add friends, and build a roster you can actually compete with.",
-    accent: "text-cyan-200",
+    accent: "text-cyan-300",
   },
   {
     icon: FaShieldHalved,
     title: "Verified player identity",
     copy: "Link your game accounts so your profile, stats, and tournament entries feel trusted from the start.",
-    accent: "text-sky-200",
+    accent: "text-sky-300",
   },
 ];
 
@@ -73,8 +74,8 @@ const Home = () => {
   const { goToSignUp, goToLogin } = useNavigateHook();
 
   return (
-    <div className="min-h-screen bg-[#04070d] text-slate-100">
-      <section className="relative overflow-hidden border-b border-slate-800">
+    <div className="min-h-screen bg-[#111827] text-slate-100">
+      <section className="relative overflow-hidden border-b border-slate-700 bg-[#182235]">
         <video
           className="absolute inset-0 h-full w-full object-cover"
           src="/Battlefield.mp4"
@@ -84,11 +85,11 @@ const Home = () => {
           playsInline
           poster="/pubg-banner.webp"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,_rgba(4,7,13,0.95),_rgba(4,7,13,0.8)_44%,_rgba(4,7,13,0.28)),linear-gradient(180deg,_rgba(4,7,13,0.08),_rgba(4,7,13,0.96))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.94),rgba(17,24,39,0.76)_48%,rgba(17,24,39,0.20)),linear-gradient(180deg,rgba(17,24,39,0.04),rgba(17,24,39,0.92))]" />
 
         <div className="relative mx-auto flex min-h-[calc(100svh-9rem)] max-w-7xl flex-col justify-center px-4 py-12 md:px-6 lg:py-16">
           <div className="max-w-4xl">
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-200">
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-300">
               Real rewards. Real competition.
             </p>
             <h1 className="mt-4 text-4xl font-black leading-tight text-white md:text-6xl lg:text-7xl">
@@ -112,7 +113,7 @@ const Home = () => {
               <button
                 type="button"
                 onClick={goToLogin}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-black/30 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white backdrop-blur transition hover:border-amber-200/60"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-500 bg-slate-800/90 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-white shadow-sm backdrop-blur transition hover:border-amber-300/60 hover:bg-slate-700"
               >
                 Login
               </button>
@@ -122,7 +123,7 @@ const Home = () => {
               {rewardMoments.map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-lg border border-white/10 bg-black/35 px-4 py-3 backdrop-blur"
+                  className="rounded-lg border border-slate-600 bg-slate-800/85 px-4 py-3 shadow-sm backdrop-blur"
                 >
                   <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
                     {item.label}
@@ -137,10 +138,10 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="border-b border-slate-800 bg-[#080c12] px-4 py-10 md:px-6">
+      <section className="border-b border-slate-700 bg-[#182235] px-4 py-10 md:px-6">
         <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-amber-200">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-amber-300">
               Choose your lane
             </p>
             <h2 className="mt-4 text-3xl font-black text-white md:text-4xl">
@@ -152,9 +153,9 @@ const Home = () => {
             {playerLanes.map((lane) => (
               <article
                 key={lane.title}
-                className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950"
+                className="overflow-hidden rounded-xl border border-slate-600 bg-slate-800 shadow-[0_14px_34px_rgba(2,8,23,0.18)]"
               >
-                <div className="h-28 overflow-hidden bg-slate-900">
+                <div className="h-28 overflow-hidden bg-slate-700">
                   <img
                     src={lane.image}
                     alt=""
@@ -165,7 +166,7 @@ const Home = () => {
                   <h3 className="text-base font-black text-white">
                     {lane.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                  <p className="mt-2 text-sm leading-6 text-slate-300">
                     {lane.copy}
                   </p>
                 </div>
@@ -183,13 +184,13 @@ const Home = () => {
             return (
               <article
                 key={item.title}
-                className="rounded-xl border border-slate-800 bg-slate-950/75 p-5"
+                className="rounded-xl border border-slate-600 bg-slate-800 p-5 shadow-[0_14px_34px_rgba(2,8,23,0.16)]"
               >
                 <Icon className={`text-2xl ${item.accent}`} />
                 <h2 className="mt-5 text-xl font-black text-white">
                   {item.title}
                 </h2>
-                <p className="mt-3 text-sm leading-7 text-slate-400">
+                <p className="mt-3 text-sm leading-7 text-slate-300">
                   {item.copy}
                 </p>
               </article>
@@ -198,16 +199,16 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="border-y border-slate-800 bg-[#0c1017]">
+      <section className="border-y border-slate-700 bg-[#1b2a3d]">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-200">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">
               Player hub
             </p>
             <h2 className="mt-4 text-3xl font-black text-white md:text-5xl">
               Your profile becomes your competitive identity.
             </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-400">
+            <p className="mt-4 text-sm leading-7 text-slate-300">
               Every tournament, friend, clan, match room, wallet movement, and
               reward history should make your account feel more valuable over
               time.
@@ -256,10 +257,10 @@ const Home = () => {
         />
       </section>
 
-      <section className="border-t border-slate-800 bg-[#080c12] px-4 py-12 md:px-6">
+      <section className="border-t border-slate-700 bg-[#182235] px-4 py-12 md:px-6">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-3 text-amber-200">
+            <div className="flex items-center gap-3 text-amber-300">
               <FaTrophy />
               <p className="text-xs font-bold uppercase tracking-[0.24em]">
                 Start your run
@@ -272,7 +273,7 @@ const Home = () => {
           <button
             type="button"
             onClick={goToSignUp}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200/40 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-amber-100 transition hover:bg-amber-200 hover:text-slate-950"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/50 bg-amber-300/10 px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-amber-200 transition hover:bg-amber-300 hover:text-slate-950"
           >
             Join now
             <FaArrowRight />
@@ -286,23 +287,35 @@ const Home = () => {
 };
 
 const PlayerBenefit = ({ title, copy }) => (
-  <article className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+  <article className="rounded-xl border border-slate-600 bg-slate-800 p-4 shadow-[0_12px_30px_rgba(2,8,23,0.16)]">
     <h3 className="text-lg font-black text-white">{title}</h3>
-    <p className="mt-3 text-sm leading-7 text-slate-400">{copy}</p>
+    <p className="mt-3 text-sm leading-7 text-slate-300">{copy}</p>
   </article>
 );
 
 const Showcase = ({ image, icon: Icon, title, copy }) => (
-  <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-    <div className="aspect-[16/9] overflow-hidden bg-slate-900">
+  <article className="overflow-hidden rounded-xl border border-slate-600 bg-slate-800 shadow-[0_14px_34px_rgba(2,8,23,0.18)]">
+    <div className="aspect-[16/9] overflow-hidden bg-slate-700">
       <img src={image} alt="" className="h-full w-full object-cover" />
     </div>
     <div className="p-5">
-      <Icon className="text-xl text-cyan-200" />
+      <Icon className="text-xl text-cyan-300" />
       <h3 className="mt-4 text-xl font-black text-white">{title}</h3>
-      <p className="mt-3 text-sm leading-7 text-slate-400">{copy}</p>
+      <p className="mt-3 text-sm leading-7 text-slate-300">{copy}</p>
     </div>
   </article>
 );
+
+PlayerBenefit.propTypes = {
+  title: PropTypes.string.isRequired,
+  copy: PropTypes.string.isRequired,
+};
+
+Showcase.propTypes = {
+  image: PropTypes.string.isRequired,
+  icon: PropTypes.elementType.isRequired,
+  title: PropTypes.string.isRequired,
+  copy: PropTypes.string.isRequired,
+};
 
 export default Home;

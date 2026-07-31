@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { FiCopy, FiGift, FiShare2, FiUsers } from "react-icons/fi";
 
 const Refer = () => {
-  const { profile } = useSelector((store) => store.auth);
+  const { profile } = useSelector((store) => store.player);
   const [copied, setCopied] = useState(false);
 
   const referralCode = profile?.profileTag || profile?._id || "PLAYERCODE";

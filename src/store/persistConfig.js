@@ -52,6 +52,8 @@ const publicCacheTransform = createTransform(
       detailError: null,
       detailRequestId: null,
       requestedTournamentId: null,
+      requestedDetailKind: null,
+      selectedDetailKind: null,
     };
   },
   { whitelist: ["games", "tournament"] }
@@ -72,11 +74,21 @@ const migrations = {
     // transforms rebuild runtime fields, so cached public data can stay intact.
     return state;
   },
+  4: (state) => {
+    if (!state) return state;
+
+    // Version four replaces the ambiguous tournament cache with explicit
+    // offering records. Dropping only this public slice forces one clean fetch
+    // without touching games or any private runtime state.
+    const migratedState = { ...state };
+    delete migratedState.tournament;
+    return migratedState;
+  },
 };
 
 const persistConfig = {
   key: "root",
-  version: 3,
+  version: 4,
   storage,
   whitelist: ["games", "tournament"],
   transforms: [publicCacheTransform],

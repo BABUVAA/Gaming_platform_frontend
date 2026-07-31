@@ -1,4 +1,3 @@
-import React from "react";
 import PropTypes from "prop-types";
 
 const Button = ({
@@ -27,14 +26,14 @@ const Button = ({
     variant === "primary" &&
       "bg-amber-300 text-slate-950 shadow-[0_12px_30px_rgba(251,191,36,0.22)] hover:bg-amber-200",
     variant === "secondary" &&
-      "border border-slate-700 bg-slate-900 text-slate-100 hover:border-amber-200/60 hover:text-amber-100",
+      "border border-slate-600 bg-slate-700 text-slate-100 hover:border-amber-300/60 hover:text-amber-200",
     variant === "success" &&
       "bg-emerald-500 text-slate-950 hover:bg-emerald-400",
     variant === "danger" && "bg-rose-600 text-white hover:bg-rose-500",
     variant === "link" &&
-      "bg-transparent text-amber-200 underline-offset-4 hover:text-amber-100 hover:underline",
+      "bg-transparent text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline",
     variant === "transparent" &&
-      "border border-white/15 bg-white/5 text-slate-100 backdrop-blur hover:border-amber-200/60 hover:bg-white/10 hover:text-amber-100",
+      "border border-slate-600 bg-slate-700/80 text-slate-100 backdrop-blur hover:border-amber-300/60 hover:bg-slate-600",
     size === "xs" && "h-9 px-3 text-xs",
     size === "small" && "h-11 px-4 text-xs",
     size === "medium" && "h-12 px-5 text-sm",
@@ -42,7 +41,7 @@ const Button = ({
     size === "xl" && "h-16 px-8 text-base",
     size === "xxl" && "h-20 px-10 text-lg",
     (disabled || isLoading) &&
-      "cursor-not-allowed border-slate-700 bg-slate-800 text-slate-500 shadow-none hover:bg-slate-800 hover:text-slate-500",
+      "cursor-not-allowed border-slate-700 bg-slate-700 text-slate-500 shadow-none hover:bg-slate-700 hover:text-slate-500",
     className // Custom classes
   );
 

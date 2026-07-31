@@ -2,13 +2,29 @@ import PropTypes from "prop-types";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
+import { refreshAuthentication } from "../api/axios-api";
+import { sessionInvalidated } from "../store/actions/sessionActions";
 import { tournamentAction } from "../store/slices/tournamentSlice";
 import { showToast, types } from "../store/slices/toastSlice";
-import { authAction } from "../store/slices/authSlice";
+import { playerActions } from "../store/slices/playerSlice";
 import { notificationActions } from "../store/slices/notificationSlice";
+import {
+  clanAction,
+  fetchClanJoinRequests,
+  fetchUserClan,
+} from "../store/slices/clanSlice";
+import {
+  fetchClanTeams,
+  fetchSocialConnections,
+} from "../store/slices/socialSlice";
 import platformStore from "../store";
 import { useAuthStore } from "../store/useStore";
 import SocketContext from "./socketContextValue";
+import {
+  REALTIME_CHANNEL,
+  REALTIME_EVENT_TYPES,
+  isSupportedRealtimeEvent,
+} from "../realtime/eventContracts";
 
 const getMessageSignature = (message = {}, fallbackIndex = 0) =>
   message?._id ||
@@ -33,13 +49,27 @@ const appendUniqueMessage = (messageList = [], newMessage) => {
   return [...messageList, newMessage];
 };
 
-const getCurrentUserId = () => platformStore.getState().auth?.profile?._id;
+const getCurrentUserId = () => {
+  const state = platformStore.getState();
+
+  // Summary/auth state is available before the heavier profile request, so
+  // socket identity remains usable on every authenticated page.
+  return (
+    state.player?.profile?._id ||
+    state.player?.summary?.userId ||
+    state.auth?.user?.userId
+  );
+};
 
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
+  const socketRefreshRef = useRef(null);
+  const processedRealtimeEventIdsRef = useRef(new Set());
+  const domainRefreshTimersRef = useRef(new Map());
   const dispatch = useDispatch();
   const { isAuthenticated } = useAuthStore();
   const [connected, setConnected] = useState(false);
+  const [competitionRevision, setCompetitionRevision] = useState(0);
   const [lastError, setLastError] = useState("");
   const [messages, setMessages] = useState({});
 
@@ -49,7 +79,9 @@ export const SocketProvider = ({ children }) => {
     // handshakes and prevents anonymous connections from consuming capacity.
     if (!isAuthenticated) {
       socketRef.current = null;
+      processedRealtimeEventIdsRef.current.clear();
       setConnected(false);
+      setCompetitionRevision(0);
       setLastError("");
       setMessages({});
       return undefined;
@@ -57,7 +89,9 @@ export const SocketProvider = ({ children }) => {
 
     // The app shell owns one authenticated socket connection. WebSocket is
     // preferred, with polling retained only as a compatibility fallback.
-    const socket = io(import.meta.env.VITE_SERVER_URL, {
+    // A relative connection keeps Socket.IO on the frontend origin. Vite
+    // proxies it locally and the production host must proxy `/socket.io`.
+    const socket = io({
       withCredentials: true,
       transports: ["websocket", "polling"],
       reconnectionAttempts: 5,
@@ -66,6 +100,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketRef.current = socket;
+    const domainRefreshTimers = domainRefreshTimersRef.current;
 
     const handleNewMessage = (newMessage) => {
       // We resolve the active user from the store at event time so incoming
@@ -92,7 +127,7 @@ export const SocketProvider = ({ children }) => {
         newMessage.senderId !== currentUserId
       ) {
         dispatch(
-          authAction.upsertActiveChat({
+          playerActions.upsertActiveChat({
             userId: newMessage.senderId,
             username: newMessage.senderName || "Player",
           })
@@ -111,9 +146,122 @@ export const SocketProvider = ({ children }) => {
       dispatch(tournamentAction.upsertTournament(updatedTournament));
     };
 
+    const scheduleDomainRefresh = (domain, thunk) => {
+      if (domainRefreshTimers.has(domain)) return;
+
+      // Coalesce event bursts so several rapid mutations produce one focused
+      // HTTP refresh instead of one request per socket event.
+      const timer = window.setTimeout(() => {
+        domainRefreshTimers.delete(domain);
+        dispatch(thunk());
+      }, 100);
+      domainRefreshTimers.set(domain, timer);
+    };
+
+    const scheduleCompetitionRefresh = () => {
+      const domain = "competition";
+      if (domainRefreshTimers.has(domain)) return;
+
+      // Filling a room emits queue and assignment events together. One short
+      // debounce window turns that burst into a single HTTP reconciliation.
+      const timer = window.setTimeout(() => {
+        domainRefreshTimers.delete(domain);
+        setCompetitionRevision((current) => current + 1);
+      }, 100);
+      domainRefreshTimers.set(domain, timer);
+    };
+
+    const handleRealtimeEvent = (event) => {
+      if (!isSupportedRealtimeEvent(event)) return;
+
+      const processedEventIds = processedRealtimeEventIdsRef.current;
+      if (processedEventIds.has(event.eventId)) return;
+      processedEventIds.add(event.eventId);
+
+      // Bound client-side deduplication memory while preserving insertion
+      // order so the oldest processed event ID is discarded first.
+      if (processedEventIds.size > 500) {
+        processedEventIds.delete(processedEventIds.values().next().value);
+      }
+
+      if (
+        event.type ===
+        REALTIME_EVENT_TYPES.CLAN_JOIN_REQUESTS_UPDATED
+      ) {
+        dispatch(
+          clanAction.setLiveJoinRequests({
+            ...event.data,
+            resourceVersion: event.resourceVersion,
+          }),
+        );
+      } else if (
+        event.type ===
+        REALTIME_EVENT_TYPES.CLAN_JOIN_REQUEST_STATUS_UPDATED
+      ) {
+        dispatch(
+          clanAction.setLiveMyJoinRequestStatus({
+            ...event.data,
+            resourceVersion: event.resourceVersion,
+          }),
+        );
+        if (event.data.status === "ACCEPTED") {
+          scheduleDomainRefresh("clan", fetchUserClan);
+        }
+      } else if (
+        event.type === REALTIME_EVENT_TYPES.CLAN_UPDATED
+      ) {
+        scheduleDomainRefresh("clan", fetchUserClan);
+      } else if (
+        event.type === REALTIME_EVENT_TYPES.CLAN_TEAM_UPDATED
+      ) {
+        scheduleDomainRefresh("clan-teams", fetchClanTeams);
+      } else if (
+        event.type ===
+        REALTIME_EVENT_TYPES.SOCIAL_CONNECTIONS_UPDATED
+      ) {
+        scheduleDomainRefresh("social", fetchSocialConnections);
+      } else if (
+        event.type ===
+        REALTIME_EVENT_TYPES.CHAT_PERSONAL_MESSAGE_CREATED
+      ) {
+        handleNewMessage(event.data.message);
+      } else if (
+        event.type ===
+        REALTIME_EVENT_TYPES.NOTIFICATION_CREATED
+      ) {
+        onNotification(event.data.notification);
+      } else if (
+        event.type ===
+          REALTIME_EVENT_TYPES.MATCHMAKING_QUEUE_UPDATED ||
+        event.type ===
+          REALTIME_EVENT_TYPES.MATCH_ASSIGNMENT_UPDATED
+      ) {
+        // Socket data is only an invalidation signal. Match screens reload
+        // their authorized HTTP projections instead of trusting pushed state.
+        scheduleCompetitionRefresh();
+      }
+    };
+
     const onConnect = () => {
       setConnected(true);
       setLastError("");
+      // Reconnects may have missed events while offline, so every competition
+      // screen performs one authoritative reconciliation.
+      setCompetitionRevision((current) => current + 1);
+
+      const state = platformStore.getState();
+      const clan = state.clan?.userClanData?.data;
+      const currentUserId = getCurrentUserId();
+      const currentMember = clan?.members?.find((member) => {
+        const memberId = member.user?._id || member.user;
+        return String(memberId) === String(currentUserId);
+      });
+
+      // One reconnect read repairs any event missed while the socket was
+      // offline. Regular members skip this private manager endpoint.
+      if (["LEADER", "COLEADER"].includes(currentMember?.role)) {
+        dispatch(fetchClanJoinRequests());
+      }
     };
 
     const onDisconnect = () => {
@@ -123,16 +271,67 @@ export const SocketProvider = ({ children }) => {
     const onConnectError = (error) => {
       setConnected(false);
       setLastError(error?.message || "Unable to connect to live services.");
+
+      const code = error?.data?.code;
+      if (
+        !["ACCESS_TOKEN_EXPIRED", "ACCESS_TOKEN_MISSING"].includes(code)
+      ) {
+        return;
+      }
+
+      // Socket refresh always happens over HTTP so new credentials remain in
+      // HttpOnly cookies and never enter JavaScript or a socket event payload.
+      if (!socketRefreshRef.current) {
+        socketRefreshRef.current = refreshAuthentication()
+          .then(() => {
+            if (socketRef.current === socket) socket.connect();
+          })
+          .catch(() => {
+            dispatch(
+              sessionInvalidated({
+                code: "SESSION_INVALID",
+                message: "Session expired. Please login again.",
+                status: 401,
+              })
+            );
+          })
+          .finally(() => {
+            socketRefreshRef.current = null;
+          });
+      }
+    };
+
+    const onAuthExpired = () => {
+      onConnectError({
+        data: { code: "ACCESS_TOKEN_EXPIRED" },
+        message: "Access token expired.",
+      });
+    };
+
+    const onAuthRevoked = () => {
+      dispatch(
+        sessionInvalidated({
+          code: "SESSION_REVOKED",
+          message: "Your session ended. Please login again.",
+          status: 401,
+        })
+      );
     };
 
     const onTournamentJoin = (data) => {
-      if (!data?.tournament) return;
+      if (!data?.queueId && !data?.offeringId) return;
 
-      dispatch(authAction.addJoinedTournament(data.tournament));
-
-      // The shared upsert reducer patches both the list map and an open matching
-      // detail record without socket code reaching into raw Redux state.
-      dispatch(tournamentAction.upsertTournament(data.tournament));
+      // Participation is loaded from match/event APIs. Never copy generated
+      // events into the player profile or reusable offering catalogue.
+      dispatch(
+        showToast({
+          message: data.alreadyJoined
+            ? "You are already in this matchmaking room."
+            : "Your matchmaking entry is confirmed.",
+          type: types.SUCCESS,
+          position: "bottom-right",
+        }),
+      );
     };
 
     const onNotification = (notification) => {
@@ -160,7 +359,10 @@ export const SocketProvider = ({ children }) => {
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
+    socket.on("auth:expired", onAuthExpired);
+    socket.on("auth:revoked", onAuthRevoked);
     socket.on("clan_message", handleNewMessage);
+    socket.on(REALTIME_CHANNEL, handleRealtimeEvent);
     socket.on("personal_message", handleNewMessage);
     socket.on("newTournament", handleTournamentUpdate);
     socket.on("updateTournament", handleTournamentUpdate);
@@ -170,10 +372,17 @@ export const SocketProvider = ({ children }) => {
     socket.on("ERROR", onError);
 
     return () => {
+      domainRefreshTimers.forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+      domainRefreshTimers.clear();
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
+      socket.off("auth:expired", onAuthExpired);
+      socket.off("auth:revoked", onAuthRevoked);
       socket.off("clan_message", handleNewMessage);
+      socket.off(REALTIME_CHANNEL, handleRealtimeEvent);
       socket.off("personal_message", handleNewMessage);
       socket.off("newTournament", handleTournamentUpdate);
       socket.off("updateTournament", handleTournamentUpdate);
@@ -190,6 +399,7 @@ export const SocketProvider = ({ children }) => {
     <SocketContext.Provider
       value={{
         socket: socketRef.current,
+        competitionRevision,
         connected,
         lastError,
         messages,

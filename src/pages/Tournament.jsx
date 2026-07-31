@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import TournamentCard from "../components/ui/GameCard/TournamentCard";
 import { selectTournamentList } from "../store/selectors/tournamentSelectors";
 
 const TournamentPage = () => {
   const tournaments = useSelector(selectTournamentList);
-  const { profile } = useSelector((state) => state.auth);
-  const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -35,8 +34,6 @@ const TournamentPage = () => {
     return filteredTournaments.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredTournaments, currentPage]);
 
-  const myTournaments = profile?.profile?.tournaments || [];
-
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-amber-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
@@ -54,69 +51,49 @@ const TournamentPage = () => {
       </section>
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 pb-4">
-          {[
-            { key: "tournaments", label: "Tournament Feed" },
-            { key: "my_tournaments", label: `My Queue (${myTournaments.length})` },
-          ].map((tab) => (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <h2 className="text-lg font-black text-white">Tournament feed</h2>
+          <Link
+            className="rounded-full bg-cyan-400/14 px-4 py-2 text-sm font-semibold text-cyan-200"
+            to="/dashboard/matches"
+          >
+            My matches
+          </Link>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {["All", ...filters].map((filter) => (
             <button
-              key={tab.key}
+              key={filter}
               onClick={() => {
-                setActiveTab(tab.key);
+                setActiveFilter(filter);
                 setCurrentPage(1);
               }}
-              className={`rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition ${
-                activeTab === tab.key
-                  ? "bg-cyan-400/14 text-cyan-200"
-                  : "text-slate-500 hover:text-slate-200"
+              className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
+                activeFilter === filter
+                  ? "border-cyan-400/30 bg-cyan-400/12 text-cyan-200"
+                  : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
               }`}
             >
-              {tab.label}
+              {filter}
             </button>
           ))}
         </div>
 
-        {activeTab === "tournaments" && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {["All", ...filters].map((filter) => (
-              <button
-                key={filter}
-                onClick={() => {
-                  setActiveFilter(filter);
-                  setCurrentPage(1);
-                }}
-                className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
-                  activeFilter === filter
-                    ? "border-cyan-400/30 bg-cyan-400/12 text-cyan-200"
-                    : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
-                }`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
-        )}
-
         <div className="mt-6">
-          {activeTab === "tournaments" ? (
-            <>
-              <TournamentGrid tournaments={paginatedTournaments} activeTab={activeTab} />
-              <Pagination
-                totalPages={totalPages}
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-              />
-            </>
-          ) : (
-            <TournamentGrid tournaments={myTournaments} activeTab={activeTab} />
-          )}
+          <TournamentGrid tournaments={paginatedTournaments} />
+          <Pagination
+            totalPages={totalPages}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
         </div>
       </section>
     </div>
   );
 };
 
-const TournamentGrid = ({ tournaments, activeTab }) => {
+const TournamentGrid = ({ tournaments }) => {
   if (!tournaments || tournaments.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
@@ -131,7 +108,7 @@ const TournamentGrid = ({ tournaments, activeTab }) => {
         <TournamentCard
           key={tournament._id}
           tournament={tournament}
-          disableFetch={activeTab === "tournaments"}
+          disableFetch={false}
         />
       ))}
     </div>
@@ -162,7 +139,6 @@ const Pagination = ({ totalPages, currentPage, setCurrentPage }) => {
 
 TournamentGrid.propTypes = {
   tournaments: PropTypes.arrayOf(PropTypes.object).isRequired,
-  activeTab: PropTypes.string.isRequired,
 };
 
 Pagination.propTypes = {

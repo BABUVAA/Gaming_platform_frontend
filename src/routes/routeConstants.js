@@ -15,13 +15,17 @@ export const ROUTES = {
   CHATS: "/dashboard/chats",
   CLAN: "/dashboard/clan",
   PROFILE: "/dashboard/profile",
-  ACCOUNT: "/dashboard/account",
+  GAME_ACCOUNTS: "/dashboard/game-accounts",
+  ACCOUNT_SETTINGS: "/dashboard/account-settings",
+  CHANGE_PASSWORD: "/dashboard/change-password",
+  ACCOUNT_LEGACY: "/dashboard/account",
   WALLET: "/dashboard/wallet",
   REFER: "/dashboard/refer",
   COC: "/coc",
   LOGOUT: "/logout",
   TOURNAMENT_DETAILS: "/tournamentDetails/:id",
   TOURNAMENT_DETAILS_LEGACY: "/tournamentDeatils/:id",
+  TOURNAMENT_OFFERING_DETAILS: "/dashboard/tournaments/offering/:id",
 };
 
 // Child route segments are kept beside public URLs so dashboard children can
@@ -32,13 +36,21 @@ export const DASHBOARD_ROUTE_SEGMENTS = {
   MATCHES: "matches",
   MATCH_ROOM: "matches/:id",
   TOURNAMENT_GAME: "tournament/:game",
+  TOURNAMENT_OFFERING_DETAILS: "tournaments/offering/:id",
   CHATS: "chats",
   CLAN: "clan",
   PROFILE: "profile",
-  ACCOUNT: "account",
+  GAME_ACCOUNTS: "game-accounts",
+  ACCOUNT_SETTINGS: "account-settings",
+  CHANGE_PASSWORD: "change-password",
+  ACCOUNT_LEGACY: "account",
   WALLET: "wallet",
   OPERATIONS: "operations",
   REFER: "refer",
 };
+
+export const buildTournamentOfferingPath = (offeringId) =>
+  `/dashboard/tournaments/offering/${offeringId}`;
+
 
 export default ROUTES;

@@ -3,13 +3,17 @@ import {
   AdminRoute,
   ApprovedHostRoute,
   DashboardLanding,
+  DetailedPlayerRoute,
   LandingPage,
   Loading,
   OperatorRoute,
   PlayerRoute,
   ProtectedRoute,
+  VerifiedPlayerRoute,
+  VerifiedDetailedPlayerRoute,
 } from "./RouteGuards";
 import { LazyComponents } from "./routeRegistry";
+import RouteErrorPage from "../components/common/RouteErrorPage";
 
 const guardElements = {
   DashboardLanding: <DashboardLanding />,
@@ -18,12 +22,17 @@ const guardElements = {
 
 const accessWrappers = {
   admin: AdminRoute,
+  detailedPlayer: DetailedPlayerRoute,
   // Hosting is an approved player capability, so its access key names the
   // capability instead of pretending that host is another user role.
   approvedHost: ApprovedHostRoute,
   operator: OperatorRoute,
   player: PlayerRoute,
   protected: ProtectedRoute,
+  // Verified-player access prevents restricted pages from mounting, which
+  // also prevents their page-level API requests from starting.
+  verifiedPlayer: VerifiedPlayerRoute,
+  verifiedDetailedPlayer: VerifiedDetailedPlayerRoute,
 };
 
 const getRouteComponent = (componentKey) => {
@@ -95,6 +104,13 @@ export const buildRoute = (route) => {
     accessWrappedElement,
     route.withSuspense
   );
+
+  // React Router intercepts route render errors before an outer React error
+  // boundary. Root routes receive a user-safe fallback instead of its default
+  // development stack-trace screen.
+  if (route.withRouteErrorBoundary) {
+    builtRoute.errorElement = <RouteErrorPage />;
+  }
 
   if (route.children) {
     // Children are built recursively so nested route files can stay declarative

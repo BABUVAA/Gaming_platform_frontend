@@ -1,4 +1,3 @@
-import React from "react";
 import PropTypes from "prop-types";
 
 const Input = ({
@@ -23,10 +22,10 @@ const Input = ({
     "w-full rounded-2xl border px-4 py-3 text-sm outline-none transition";
   const inputErrorClasses = error
     ? "border-rose-500 focus:border-rose-400"
-    : "border-slate-800 focus:border-amber-300";
+    : "border-slate-600 focus:border-amber-300";
   const inputDisabledClasses = disabled
-    ? "cursor-not-allowed bg-slate-900/70 text-slate-500"
-    : "bg-slate-950/90 text-slate-100";
+    ? "cursor-not-allowed bg-slate-700 text-slate-500"
+    : "bg-slate-700 text-slate-100";
 
   return (
     <div className="mb-4">

@@ -11,6 +11,7 @@ const routes = createBrowserRouter(
       path: "/",
       componentKey: "App",
       withSuspense: true,
+      withRouteErrorBoundary: true,
       // Every current domain route shares the App shell. Domain files remain
       // separate so they can still be moved into independent services later.
       children: [...publicRoutes, ...adminRoutes],

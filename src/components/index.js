@@ -1,5 +1,6 @@
 // Common Components
 export { default as AuthShell } from "./common/AuthShell.jsx";
+export { default as AccountVerificationStrip } from "./common/AccountVerificationStrip.jsx";
 
 // Layout Components
 

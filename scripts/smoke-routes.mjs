@@ -15,9 +15,13 @@ const routeFiles = [
 const routesText = routeFiles.map(read).join("\n");
 const navigationText = read("src/utils/navigation.js");
 const tournamentCardText = read("src/components/ui/GameCard/TournamentCard.jsx");
+const verificationDialogText = read(
+  "src/components/common/EmailVerificationDialog.jsx"
+);
 const routeGuardsText = read("src/routes/RouteGuards.jsx");
 const routeBuilderText = read("src/routes/buildRoutes.jsx");
 const accessControlText = read("src/utils/accessControl.js");
+const playerSliceText = read("src/store/slices/playerSlice.js");
 
 // These checks accept either literal strings or shared constants.
 // That keeps the smoke test useful even after route cleanup refactors.
@@ -25,7 +29,12 @@ const requiredRoutePatterns = [
   ['path: "matches"', "path: DASHBOARD_ROUTE_SEGMENTS.MATCHES"],
   ['path: "matches/:id"', "path: DASHBOARD_ROUTE_SEGMENTS.MATCH_ROOM"],
   ['path: "tournamentDetails/:id"', "path: ROUTES.TOURNAMENT_DETAILS"],
+  [
+    'path: "tournaments/offering/:id"',
+    "path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_OFFERING_DETAILS",
+  ],
   ['path: "/panelAdmin"', "path: ROUTES.ADMIN_PANEL"],
+  ['path: "change-password"', "path: DASHBOARD_ROUTE_SEGMENTS.CHANGE_PASSWORD"],
 ];
 
 const requiredNavigationPatterns = [
@@ -51,8 +60,8 @@ requiredNavigationPatterns.forEach((tokens) => {
   }
 });
 
-if (!tournamentCardText.includes("to={`/tournamentDetails/${_id}`}")) {
-  failures.push("Tournament card still not linking to /tournamentDetails/:id");
+if (!tournamentCardText.includes("to={buildTournamentOfferingPath(_id)}")) {
+  failures.push("Tournament card is not using the explicit offering-details route.");
 }
 
 if (
@@ -71,6 +80,47 @@ if (routeGuardsText.includes('"host"') || routeGuardsText.includes("'host'")) {
 
 if (!routeBuilderText.includes("approvedHost: ApprovedHostRoute")) {
   failures.push("Approved host capability is missing from route access wrappers.");
+}
+
+if (!routeBuilderText.includes("verifiedPlayer: VerifiedPlayerRoute")) {
+  failures.push("Verified player access is missing from route access wrappers.");
+}
+
+if (
+  !routeBuilderText.includes(
+    "verifiedDetailedPlayer: VerifiedDetailedPlayerRoute"
+  )
+) {
+  failures.push("Verified detailed-player access is missing from route wrappers.");
+}
+
+if (
+  !routeGuardsText.includes("loadSummary()") ||
+  !playerSliceText.includes('path: "/api/users/summary"')
+) {
+  failures.push("Dashboard access no longer uses the lightweight player summary.");
+}
+
+if (
+  !routeGuardsText.includes("const VerifiedAccountGate") ||
+  !routeGuardsText.includes("<EmailVerificationDialog />")
+) {
+  failures.push("Unverified players no longer receive the blocking dialog.");
+}
+
+if (
+  !verificationDialogText.includes("ROUTES.ACCOUNT_SETTINGS") ||
+  !verificationDialogText.includes("ROUTES.GAME")
+) {
+  failures.push("Verification dialog actions no longer use safe routes.");
+}
+
+const verifiedDashboardRouteCount = (
+  routesText.match(/access: "verified(?:Detailed)?Player"/g) || []
+).length;
+
+if (verifiedDashboardRouteCount < 9) {
+  failures.push("One or more verified-only dashboard routes lost their guard.");
 }
 
 if (

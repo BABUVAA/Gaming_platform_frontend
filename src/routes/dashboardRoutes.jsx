@@ -1,4 +1,5 @@
 import { DASHBOARD_ROUTE_SEGMENTS, ROUTES } from "./routeConstants";
+import { Navigate } from "react-router-dom";
 
 // Dashboard routes stay grouped by the dashboard domain so future role splits
 // can move whole sections without searching one giant router file.
@@ -12,47 +13,71 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT,
     componentKey: "Tournament",
-    access: "player",
+    access: "verifiedDetailedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.MATCHES,
     componentKey: "Matches",
-    access: "player",
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.MATCH_ROOM,
     componentKey: "MatchRoom",
-    access: "player",
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_GAME,
     componentKey: "TournamentGame",
-    access: "player",
+    access: "verifiedDetailedPlayer",
+  },
+  {
+    path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_OFFERING_DETAILS,
+    componentKey: "TournamentDetails",
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.CHATS,
     componentKey: "Chats",
-    access: "player",
+    access: "verifiedDetailedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.CLAN,
     componentKey: "Clan",
-    access: "player",
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.PROFILE,
     componentKey: "Profile",
+    access: "detailedPlayer",
+  },
+  {
+    path: DASHBOARD_ROUTE_SEGMENTS.GAME_ACCOUNTS,
+    componentKey: "GameAccounts",
+    access: "verifiedDetailedPlayer",
+  },
+  {
+    path: DASHBOARD_ROUTE_SEGMENTS.ACCOUNT_SETTINGS,
+    componentKey: "AccountSettings",
     access: "player",
   },
   {
-    path: DASHBOARD_ROUTE_SEGMENTS.ACCOUNT,
-    componentKey: "Account",
+    // Password security remains available before email verification so every
+    // authenticated player can protect their account.
+    path: DASHBOARD_ROUTE_SEGMENTS.CHANGE_PASSWORD,
+    componentKey: "ChangePassword",
     access: "player",
+  },
+  {
+    // Existing bookmarks keep working while the former Account page moves to
+    // its accurate Game Accounts route.
+    path: DASHBOARD_ROUTE_SEGMENTS.ACCOUNT_LEGACY,
+    element: <Navigate to={ROUTES.GAME_ACCOUNTS} replace />,
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.WALLET,
     componentKey: "Wallet",
-    access: "player",
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.OPERATIONS,
@@ -62,7 +87,7 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.REFER,
     componentKey: "Refer",
-    access: "player",
+    access: "detailedPlayer",
   },
 ];
 

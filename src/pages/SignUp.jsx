@@ -9,9 +9,10 @@ import { FiCalendar, FiLock, FiMail, FiUser } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
 
 const SignUp = () => {
-  const { goToDashboard, goToLogin } = useNavigateHook();
+  const { goToLogin } = useNavigateHook();
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState(null);
   const [errors, setErrors] = useState({
     email: "",
     password: "",
@@ -54,8 +55,10 @@ const SignUp = () => {
     const sanitized = {
       username: validator.trim(validator.escape(rawData.username || "")),
       email: validator.normalizeEmail(rawData.email || "") || "",
-      password: validator.trim(rawData.password || ""),
-      confirmPassword: validator.trim(rawData.confirmPassword || ""),
+      // Passwords are opaque credentials. Trimming would silently change what
+      // the user chose and make signup behavior differ from login.
+      password: String(rawData.password || ""),
+      confirmPassword: String(rawData.confirmPassword || ""),
       dob: validator.trim(rawData.dob || ""),
     };
 
@@ -121,8 +124,10 @@ const SignUp = () => {
 
     await dispatch(register(payload))
       .unwrap()
-      .then((response) => {
-        if (response.success) goToDashboard();
+      .then((registration) => {
+        // Stay on the pending state because no User or login session exists
+        // until the future OTP verification flow promotes this registration.
+        setPendingRegistration(registration);
       })
       .catch((err) => {
         const fieldErrors = err?.fieldErrors || {};
@@ -164,6 +169,43 @@ const SignUp = () => {
         </p>
       }
     >
+      {pendingRegistration ? (
+        <section className="space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 text-2xl text-amber-200">
+            <FiMail />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white">
+              Verify your email address
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Your registration details are saved securely, but no player
+              account, wallet, or login session has been created yet.
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+              Pending email
+            </p>
+            <p className="mt-1 break-all font-semibold text-white">
+              {pendingRegistration.email}
+            </p>
+          </div>
+          <p className="text-sm leading-6 text-slate-400">
+            Requesting and verifying an email OTP will be enabled in the next
+            step. No email has been sent yet.
+          </p>
+          <Button
+            type="button"
+            size="large"
+            className="w-full"
+            onClick={() => setPendingRegistration(null)}
+          >
+            Use another email
+          </Button>
+        </section>
+      ) : (
+        <>
       <div className="mb-6">
         <h2 className="text-2xl font-black text-white">Create account</h2>
         <p className="mt-2 text-sm text-slate-400">
@@ -234,6 +276,8 @@ const SignUp = () => {
           Create Player Account
         </Button>
       </Form>
+        </>
+      )}
     </AuthShell>
   );
 };

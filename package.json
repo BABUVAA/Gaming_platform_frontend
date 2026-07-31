@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "smoke:api-errors": "node scripts/smoke-api-errors.mjs",
     "smoke:routes": "node scripts/smoke-routes.mjs"
   },
   "dependencies": {

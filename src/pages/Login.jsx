@@ -1,90 +1,103 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Form } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { login } from "../store/slices/authSlice";
 import useNavigateHook from "../hooks/useNavigateHook";
 import { AuthShell, Input, Button } from "../components";
 import validator from "validator";
 import { FiLock, FiMail, FiShield } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
+import { useAuthStore } from "../store/useStore";
+
+// Static presentation data lives outside the component so React does not need
+// to recreate or memoize it during every form-state update.
+const AUTH_STATS = [
+  { label: "Play", value: "Find your next match" },
+  { label: "Compete", value: "Enter live tournaments" },
+  { label: "Connect", value: "Rejoin your squad" },
+];
 
 const Login = () => {
   const { goToDashboard, goToForgetPWD, goToSignUp } = useNavigateHook();
-  const dispatch = useDispatch();
+  const { signIn } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({
     email: "",
     password: "",
     form: "",
   });
-  const authStats = useMemo(
-    () => [
-      { label: "Prize access", value: "Wallet and rewards" },
-      { label: "Match ready", value: "Rooms and check-ins" },
-      { label: "Account trust", value: "Verified game IDs" },
-    ],
-    []
-  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // The button is disabled while loading, and this guard also protects the
+    // handler if submission is triggered programmatically during that period.
+    if (isSubmitting) return;
+
     const formData = new FormData(event.target);
     const rawData = Object.fromEntries(formData);
 
-    // Sanitize input
-    const sanitized = {
-      email: validator.normalizeEmail(rawData.email || "") || "",
-      password: validator.trim(rawData.password || ""),
+    // Email identity is case-insensitive and safe to normalize. Passwords must
+    // remain exactly as entered because surrounding spaces can be significant.
+    const credentials = {
+      email: validator.normalizeEmail(String(rawData.email || "")) || "",
+      password: String(rawData.password || ""),
     };
 
     const newErrors = {};
 
-    if (!validator.isEmail(sanitized.email)) {
+    if (!validator.isEmail(credentials.email)) {
       newErrors.email = "Invalid email address.";
     }
 
-    if (!sanitized.password) {
+    if (!credentials.password) {
       newErrors.password = "Password is required.";
     }
+
+    // Invalid local input never reaches the backend or starts loading state.
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+      setErrors({
+        email: newErrors.email || "",
+        password: newErrors.password || "",
+        form: "",
+      });
       return;
     }
 
     setErrors({ email: "", password: "", form: "" });
     setIsSubmitting(true);
 
-    await dispatch(login(sanitized))
-      .unwrap()
-      .then(() => {
-        goToDashboard();
-      })
-      .catch((err) => {
-        const fieldErrors = err?.fieldErrors || {};
-        setErrors({
-          email: fieldErrors.email || "",
-          password: fieldErrors.password || "",
-          form:
-            err?.message ||
-            fieldErrors.email ||
-            fieldErrors.password ||
-            "Unable to login. Please check your details.",
-        });
-      })
-      .finally(() => {
-        setIsSubmitting(false);
+    try {
+      // Unwrapping converts a rejected Redux thunk into a normal catchable
+      // error while successful authentication continues to the dashboard.
+      await signIn(credentials).unwrap();
+      goToDashboard();
+    } catch (error) {
+      const fieldErrors = error?.fieldErrors || {};
+
+      setErrors({
+        email: fieldErrors.email || "",
+        password: fieldErrors.password || "",
+        form:
+          error?.message ||
+          fieldErrors.email ||
+          fieldErrors.password ||
+          "Unable to login. Please check your details.",
       });
+    } finally {
+      // A failed request re-enables the form; navigation unmounts the page
+      // after a successful request.
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <AuthShell
       eyebrow="Player Access"
-      title="Get back into the arena."
-      description="Sign in to manage your player profile, wallet, clans, tournaments, match rooms, and reward history."
-      badges={["Tournament Ready", "Wallet Access", "Clan Ready"]}
-      asideTitle="Secure player access"
-      asideCopy="Your session protects wallet activity, linked game identities, friend activity, and tournament entries."
-      asideStats={authStats}
+      title="Welcome back."
+      description="Sign in and jump back into the action."
+      badges={["Live Matches", "Tournaments", "Clans"]}
+      asideTitle="Ready for your next match?"
+      asideCopy="Rejoin your squad, enter tournaments, and keep climbing."
+      asideStats={AUTH_STATS}
       footer={
         <p>
           New to the platform?{" "}
@@ -135,13 +148,17 @@ const Login = () => {
         />
 
         {errors.form ? (
-          <div className="rounded-xl border border-rose-400/30 bg-rose-950/30 px-4 py-3 text-sm text-rose-100">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="rounded-xl border border-rose-400/30 bg-rose-950/30 px-4 py-3 text-sm text-rose-100"
+          >
             {errors.form}
           </div>
         ) : null}
 
         <div className="flex items-center justify-between gap-3 py-2 text-sm">
-          <span className="text-slate-500">Protected session for wallet and tournaments</span>
+          <span className="text-slate-500">Your next match is waiting.</span>
           <button
             type="button"
             onClick={goToForgetPWD}

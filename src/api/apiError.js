@@ -26,17 +26,28 @@ const STATUS_CODE_MAP = {
 
 const DEFAULT_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
+const getErrorText = (value) => {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (Array.isArray(value)) {
+    return value.map(getErrorText).find(Boolean);
+  }
+  if (value && typeof value === "object") {
+    return getErrorText(value.message || value.msg || value.error);
+  }
+  return null;
+};
+
 const normalizeFieldErrors = (errors) => {
-  // Field errors are useful only as a key-value map. Ignore legacy strings
-  // and arrays here; their first useful message is still handled below.
+  // Field errors are useful only as a key-value map. Legacy APIs may place a
+  // message inside an array or `{ message }`, so normalize those values too.
   if (!errors || Array.isArray(errors) || typeof errors !== "object") {
     return {};
   }
 
   return Object.fromEntries(
     Object.entries(errors)
-      .filter(([, value]) => typeof value === "string" && value.trim())
-      .map(([field, value]) => [field, value.trim()]),
+      .map(([field, value]) => [field, getErrorText(value)])
+      .filter(([, value]) => Boolean(value)),
   );
 };
 
@@ -71,9 +82,16 @@ export const isApiError = (value) =>
   Boolean(
     value &&
       typeof value === "object" &&
+      // Axios errors also expose message, code, and status. They must continue
+      // through normalization so we can read the backend response envelope.
+      !value.isAxiosError &&
       typeof value.message === "string" &&
       typeof value.code === "string" &&
-      Object.hasOwn(value, "status"),
+      Object.hasOwn(value, "status") &&
+      typeof value.retryable === "boolean" &&
+      value.fieldErrors &&
+      typeof value.fieldErrors === "object" &&
+      !Array.isArray(value.fieldErrors),
   );
 
 export const normalizeApiError = (
@@ -110,6 +128,8 @@ export const normalizeApiError = (
     responseData?.message ||
     (typeof responseData?.error === "string" && responseData.error) ||
     findFirstFieldMessage(fieldErrors) ||
+    getErrorText(responseData?.errors) ||
+    getErrorText(responseData) ||
     (!error?.isAxiosError && error?.message) ||
     fallbackMessage;
   const requestId =
@@ -135,8 +155,62 @@ export const normalizeApiError = (
     // Network, timeout, rate-limit, and server failures may succeed later.
     retryable:
       retryableCodes.has(code) ||
+      status === 429 ||
+      status >= 500 ||
       status === 408 ||
       status === 425,
+  };
+};
+
+export const getApiErrorToast = (error) => {
+  const normalizedError = isApiError(error)
+    ? error
+    : normalizeApiError(error);
+  const status = normalizedError.status;
+
+  if (normalizedError.code === API_ERROR_CODE.RATE_LIMITED || status === 429) {
+    return {
+      duration: 7000,
+      message: normalizedError.message,
+      title: "Try again later",
+      type: "warning",
+    };
+  }
+
+  if (
+    normalizedError.code === API_ERROR_CODE.VALIDATION ||
+    status === 409 ||
+    status === 422
+  ) {
+    return {
+      message: normalizedError.message,
+      title: status === 409 ? "Already exists" : "Check your details",
+      type: "warning",
+    };
+  }
+
+  if (normalizedError.code === "EMAIL_VERIFICATION_REQUIRED") {
+    return {
+      duration: 7000,
+      message: normalizedError.message,
+      title: "Verification required",
+      type: "warning",
+    };
+  }
+
+  if (normalizedError.code === API_ERROR_CODE.NETWORK) {
+    return {
+      duration: 7000,
+      message: normalizedError.message,
+      title: "Connection issue",
+      type: "danger",
+    };
+  }
+
+  return {
+    message: normalizedError.message,
+    title: status >= 500 ? "Server issue" : "Request failed",
+    type: "danger",
   };
 };
 

@@ -1,5 +1,6 @@
 import { combineReducers } from "@reduxjs/toolkit";
 import { sessionInvalidated } from "./actions/sessionActions";
+import accountSlice from "./slices/accountSlice";
 import adminSlice from "./slices/adminSlice";
 import authSlice, { logout } from "./slices/authSlice";
 import clanSlice from "./slices/clanSlice";
@@ -7,9 +8,11 @@ import gameSlice from "./slices/gameSlice";
 import loadingSlice from "./slices/loadingSlice";
 import notificationSlice from "./slices/notificationSlice";
 import paymentSlice from "./slices/paymentSlice";
+import playerSlice from "./slices/playerSlice";
 import requestScopeSlice, {
   isPrivateRequestAction,
 } from "./slices/requestScopeSlice";
+import socialSlice from "./slices/socialSlice";
 import toastSlice from "./slices/toastSlice";
 import tournamentSlice from "./slices/tournamentSlice";
 
@@ -20,19 +23,30 @@ import tournamentSlice from "./slices/tournamentSlice";
 // When new slices are added later, register them here first so the global
 // state shape stays explicit and easy to discover from one file.
 const combinedReducer = combineReducers({
+  account: accountSlice.reducer,
   admin: adminSlice.reducer,
   auth: authSlice.reducer,
   games: gameSlice.reducer,
   tournament: tournamentSlice.reducer,
   loading: loadingSlice.reducer,
   payment: paymentSlice.reducer,
+  player: playerSlice.reducer,
   clan: clanSlice.reducer,
   toast: toastSlice.reducer,
   notifications: notificationSlice.reducer,
   requestScope: requestScopeSlice.reducer,
+  social: socialSlice.reducer,
 });
 
-const privateSliceKeys = ["admin", "clan", "notifications", "payment"];
+const privateSliceKeys = [
+  "account",
+  "admin",
+  "clan",
+  "notifications",
+  "payment",
+  "player",
+  "social",
+];
 
 const clearPrivateSlices = (state) => {
   if (!state) return state;

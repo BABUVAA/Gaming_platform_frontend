@@ -15,6 +15,22 @@ const DEFAULT_TOAST_DURATION = 5000;
 const MAX_QUEUED_TOASTS = 5;
 let toastSequence = 0;
 
+const getToastText = (value, fallback) => {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => getToastText(entry, ""))
+      .find(Boolean) || fallback;
+  }
+  if (value && typeof value === "object") {
+    return getToastText(
+      value.message || value.error || value.title,
+      fallback,
+    );
+  }
+  return fallback;
+};
+
 // Metadata is created while preparing the action, not inside the reducer.
 // This keeps reducers deterministic and still guarantees unique local IDs.
 const prepareToast = (payload = {}) => {
@@ -46,8 +62,11 @@ const toastSlice = createSlice({
       reducer: (state, action) => {
         const toast = {
           id: action.payload.id,
-          title: action.payload.title || "",
-          message: action.payload.message || "Something went wrong.",
+          title: getToastText(action.payload.title, ""),
+          message: getToastText(
+            action.payload.message,
+            "Something went wrong.",
+          ),
           type: action.payload.type || types.SUCCESS,
           position: action.payload.position || "top-right",
           duration:

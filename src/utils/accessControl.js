@@ -22,7 +22,7 @@ export const isPlayer = (profile) => {
 };
 
 export const hasApprovedHostAccess = (profile) => {
-  // The profile API should return hostAccess at the top level beside role.
+  // The lightweight player summary returns hostAccess beside the base role.
   // Both conditions are required so approval can never turn another role into
   // a host accidentally.
   return (

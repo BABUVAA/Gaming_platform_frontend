@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import PropTypes from "prop-types";
 
 const AuthShell = ({
   eyebrow,
@@ -12,12 +13,11 @@ const AuthShell = ({
   footer,
 }) => {
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#04070d] text-slate-100">
+    <div className="min-h-[calc(100vh-5rem)] bg-[#111827] text-slate-100">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl gap-10 px-4 py-8 md:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-12">
-        <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.12),_transparent_28%),linear-gradient(180deg,_rgba(12,16,23,0.96),_rgba(4,7,13,0.98))] p-6 shadow-[0_28px_90px_rgba(2,8,23,0.5)] md:p-10">
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent_42%,rgba(251,191,36,0.06))]" />
+        <section className="relative overflow-hidden rounded-[32px] border border-slate-600 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.10),transparent_28%),linear-gradient(180deg,#253247,#1e293b)] p-6 shadow-[0_28px_70px_rgba(2,8,23,0.24)] md:p-10">
           <div className="relative">
-            <p className="text-xs uppercase tracking-[0.32em] text-amber-200/90">
+            <p className="text-xs uppercase tracking-[0.32em] text-amber-300">
               {eyebrow}
             </p>
             <h1 className="mt-4 max-w-xl text-4xl font-black tracking-tight text-white md:text-5xl">
@@ -31,17 +31,17 @@ const AuthShell = ({
               {badges.map((badge) => (
                 <span
                   key={badge}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200"
+                  className="rounded-full border border-slate-600 bg-slate-700/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200"
                 >
                   {badge}
                 </span>
               ))}
             </div>
 
-            <div className="mt-10 rounded-[28px] border border-white/10 bg-slate-950/70 p-5 backdrop-blur">
+            <div className="mt-10 rounded-[28px] border border-slate-600 bg-slate-800/70 p-5 backdrop-blur">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-amber-200/80">
+                  <p className="text-xs uppercase tracking-[0.24em] text-amber-300">
                     {asideTitle}
                   </p>
                   <p className="mt-2 max-w-md text-sm leading-6 text-slate-300">
@@ -50,7 +50,7 @@ const AuthShell = ({
                 </div>
                 <Link
                   to="/home"
-                  className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-amber-200/50 hover:text-amber-100 md:inline-flex"
+                  className="hidden rounded-full border border-slate-600 bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-amber-300/60 hover:text-amber-200 md:inline-flex"
                 >
                   Preview
                 </Link>
@@ -61,7 +61,7 @@ const AuthShell = ({
                   {asideStats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+                      className="rounded-2xl border border-slate-600 bg-slate-700 px-4 py-4"
                     >
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
                         {stat.label}
@@ -77,10 +77,10 @@ const AuthShell = ({
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-white/10 bg-slate-950/85 p-5 shadow-[0_24px_70px_rgba(2,8,23,0.45)] backdrop-blur md:p-8">
+        <section className="rounded-[32px] border border-slate-600 bg-slate-800/95 p-5 shadow-[0_24px_70px_rgba(2,8,23,0.24)] backdrop-blur md:p-8">
           {children}
           {footer ? (
-            <div className="mt-6 border-t border-white/10 pt-5 text-sm text-slate-400">
+            <div className="mt-6 border-t border-slate-700 pt-5 text-sm text-slate-400">
               {footer}
             </div>
           ) : null}
@@ -88,6 +88,23 @@ const AuthShell = ({
       </div>
     </div>
   );
+};
+
+AuthShell.propTypes = {
+  eyebrow: PropTypes.string.isRequired,
+  title: PropTypes.string.isRequired,
+  description: PropTypes.string.isRequired,
+  badges: PropTypes.arrayOf(PropTypes.string),
+  asideTitle: PropTypes.string.isRequired,
+  asideCopy: PropTypes.string.isRequired,
+  asideStats: PropTypes.arrayOf(
+    PropTypes.shape({
+      label: PropTypes.string.isRequired,
+      value: PropTypes.string.isRequired,
+    }),
+  ),
+  children: PropTypes.node.isRequired,
+  footer: PropTypes.node,
 };
 
 export default AuthShell;

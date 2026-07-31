@@ -6,8 +6,11 @@ import { useDispatch } from "react-redux";
 import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
 import { showToast, types } from "../store/slices/toastSlice";
+import useSocket from "../context/useSocket";
 
 const FLOW = [
+  "awaiting_operator",
+  "operator_assigned",
   "scheduled",
   "check_in",
   "lobby_ready",
@@ -19,6 +22,8 @@ const FLOW = [
 ];
 
 const STATUS_STYLE = {
+  awaiting_operator: "bg-amber-100 text-amber-900",
+  operator_assigned: "bg-cyan-100 text-cyan-900",
   scheduled: "bg-slate-800 text-slate-200",
   check_in: "bg-amber-100 text-amber-900",
   lobby_ready: "bg-sky-100 text-sky-900",
@@ -36,6 +41,7 @@ const ACTION_RULES = {
 };
 
 const MatchRoom = () => {
+  const { competitionRevision } = useSocket();
   const { id } = useParams();
   const dispatch = useDispatch();
   const [match, setMatch] = useState(null);
@@ -43,11 +49,12 @@ const MatchRoom = () => {
   const [isActing, setIsActing] = useState(false);
   const [scoreInput, setScoreInput] = useState("");
   const [proofNote, setProofNote] = useState("");
+  const [disputeReason, setDisputeReason] = useState("");
 
   const hydrateMatchState = (item) => {
     setMatch(item);
-    setScoreInput(item?.result?.score ?? "");
-    setProofNote(item?.result?.proofNote ?? "");
+    setScoreInput(item?.resultSummary?.finalScore ?? "");
+    setProofNote(item?.resultSummary?.proofNote ?? "");
   };
 
   const loadMatch = useCallback(async () => {
@@ -57,35 +64,17 @@ const MatchRoom = () => {
       const item = response.data?.data || null;
       hydrateMatchState(item);
     } catch (error) {
-      try {
-        const fallbackResponse = await api.get("/api/matches");
-        const matches = fallbackResponse.data?.data || [];
-        const fallbackMatch = matches.find((item) => item?._id === id) || null;
-
-        if (fallbackMatch) {
-          hydrateMatchState(fallbackMatch);
-          dispatch(
-            showToast({
-              message: "Match room loaded from fallback feed.",
-              type: types.WARNING,
-              position: "bottom-right",
-            })
-          );
-        } else {
-          throw new Error("Match not found in fallback feed");
-        }
-      } catch {
-        dispatch(
-          showToast({
-            message: getApiErrorMessage(
-              error,
-              "Unable to load match room.",
-            ),
-            type: types.DANGER,
-            position: "bottom-right",
-          })
-        );
-      }
+      setMatch(null);
+      dispatch(
+        showToast({
+          message: getApiErrorMessage(
+            error,
+            "Unable to load match room.",
+          ),
+          type: types.DANGER,
+          position: "bottom-right",
+        })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +82,7 @@ const MatchRoom = () => {
 
   useEffect(() => {
     loadMatch();
-  }, [loadMatch]);
+  }, [competitionRevision, loadMatch]);
 
   const stageIndex = useMemo(() => {
     if (!match?.status) return 0;
@@ -109,26 +98,9 @@ const MatchRoom = () => {
     [match?.status]
   );
 
-  const requestActionWithFallback = async (candidates, payload = {}) => {
-    let latestError = null;
-    for (const candidate of candidates) {
-      try {
-        if (candidate.method === "post") {
-          await api.post(candidate.path, payload);
-        } else {
-          await api.patch(candidate.path, payload);
-        }
-        return true;
-      } catch (error) {
-        latestError = error;
-      }
-    }
-    throw latestError || new Error("All action routes failed");
-  };
-
   const submitAction = async ({
     actionName,
-    candidates,
+    path,
     successMessage,
     payload = {},
   }) => {
@@ -148,7 +120,9 @@ const MatchRoom = () => {
       if (actionName === "submitResult" && !String(payload.score || "").trim()) {
         throw new Error("Score is required before submitting a result.");
       }
-      await requestActionWithFallback(candidates, payload);
+      // Each action has one canonical endpoint. Retrying aliases after a 4xx
+      // response could repeat a mutation and hide the real business error.
+      await api.patch(path, payload);
       dispatch(
         showToast({
           message: successMessage,
@@ -286,12 +260,7 @@ const MatchRoom = () => {
                   submitAction({
                     actionName: "checkIn",
                     successMessage: "Check-in submitted successfully.",
-                    candidates: [
-                      { method: "patch", path: `/api/matches/${id}/check-in` },
-                      { method: "post", path: `/api/matches/${id}/check-in` },
-                      { method: "patch", path: `/api/matches/${id}/checkin` },
-                      { method: "post", path: `/api/matches/${id}/checkin` },
-                    ],
+                    path: `/api/matches/${id}/check-in`,
                   })
                 }
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-60"
@@ -299,21 +268,29 @@ const MatchRoom = () => {
                 <FaCheckCircle />
                 Mark Check-in
               </button>
+              <textarea
+                className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-rose-400"
+                maxLength={1000}
+                onChange={(event) => setDisputeReason(event.target.value)}
+                placeholder="Tell us what went wrong."
+                rows={3}
+                value={disputeReason}
+              />
               <button
                 type="button"
-                disabled={isActing || !isActionEnabled("dispute")}
+                disabled={
+                  isActing ||
+                  !isActionEnabled("dispute") ||
+                  !disputeReason.trim()
+                }
                 onClick={() =>
                   submitAction({
                     actionName: "dispute",
                     successMessage: "Dispute raised. Admin will review.",
                     payload: {
-                      reason: "Player dispute raised from match room",
+                      reason: disputeReason.trim(),
                     },
-                    candidates: [
-                      { method: "patch", path: `/api/matches/${id}/dispute` },
-                      { method: "post", path: `/api/matches/${id}/dispute` },
-                      { method: "post", path: `/api/matches/${id}/raise-dispute` },
-                    ],
+                    path: `/api/matches/${id}/dispute`,
                   })
                 }
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
@@ -334,14 +311,14 @@ const MatchRoom = () => {
           <h3 className="mt-2 text-xl font-black text-white">Room Access</h3>
           <div className="mt-4 space-y-3 text-sm text-slate-300">
             <p>
-              Room ID: <span className="font-semibold text-white">{match.roomId || "-"}</span>
+              Room ID: <span className="font-semibold text-white">{match.lobby?.roomCode || "-"}</span>
             </p>
             <p>
               Room Password:{" "}
-              <span className="font-semibold text-white">{match.roomPassword || "-"}</span>
+              <span className="font-semibold text-white">{match.lobby?.roomPassword || "-"}</span>
             </p>
             <p>
-              Notes: <span className="text-slate-400">{match.roomNote || "No notes yet."}</span>
+              Notes: <span className="text-slate-400">{match.lobby?.instructions || "No notes yet."}</span>
             </p>
           </div>
         </div>
@@ -376,11 +353,7 @@ const MatchRoom = () => {
                     score: scoreInput,
                     proofNote,
                   },
-                  candidates: [
-                    { method: "patch", path: `/api/matches/${id}/result` },
-                    { method: "post", path: `/api/matches/${id}/result` },
-                    { method: "post", path: `/api/matches/${id}/submit-result` },
-                  ],
+                  path: `/api/matches/${id}/result`,
                 })
               }
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-60"

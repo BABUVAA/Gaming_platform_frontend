@@ -1,5 +1,9 @@
 import { useSelector } from "react-redux";
-import { Header, Toast } from "../components";
+import {
+  AccountVerificationStrip,
+  Header,
+  Toast,
+} from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Outlet } from "react-router-dom";
 
@@ -16,6 +20,8 @@ function App() {
     <div className="h-screen flex flex-col">
       {/* Header */}
       <Header />
+      {/* Account restrictions remain visible across every authenticated page. */}
+      <AccountVerificationStrip />
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <Outlet />

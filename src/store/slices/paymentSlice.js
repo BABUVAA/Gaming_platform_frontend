@@ -1,8 +1,37 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../../api/axios-api";
-import { getApiErrorMessage, rejectApiError } from "../../api/apiError";
+import {
+  getApiErrorToast,
+  normalizeApiError,
+} from "../../api/apiError";
 import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 import { showToast, types } from "./toastSlice";
+
+const rejectPaymentError = (
+  thunkAPI,
+  error,
+  fallbackMessage,
+  { notify = false } = {},
+) => {
+  // Normalize once so the toast and rejected Redux action always describe the
+  // same backend failure, including stable codes such as email verification.
+  const normalizedError = normalizeApiError(error, fallbackMessage);
+
+  if (notify) {
+    // The shared classifier chooses an appropriate title and severity instead
+    // of presenting expected 403 verification blocks as generic danger errors.
+    thunkAPI.dispatch(
+      showToast({
+        ...getApiErrorToast(normalizedError),
+        position: "bottom-right",
+      }),
+    );
+  }
+
+  // rejectWithValue keeps the structured error serializable for Redux state
+  // and lets components inspect its status, code, message, and field errors.
+  return thunkAPI.rejectWithValue(normalizedError);
+};
 
 export const initiatePhonePeOrder = createAsyncThunk(
   "payment/initiatePhonePeOrder",
@@ -13,18 +42,12 @@ export const initiatePhonePeOrder = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      const message = getApiErrorMessage(
+      return rejectPaymentError(
+        thunkAPI,
         error,
-        "Unable to start wallet top-up."
+        "Unable to start wallet top-up.",
+        { notify: true },
       );
-      thunkAPI.dispatch(
-        showToast({
-          message,
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
-      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -38,7 +61,7 @@ export const fetchWalletBalance = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      return rejectApiError(
+      return rejectPaymentError(
         thunkAPI,
         error,
         "Unable to fetch wallet balance.",
@@ -63,18 +86,12 @@ export const withdrawRequest = createAsyncThunk(
       );
       return response.data?.data || response.data;
     } catch (error) {
-      const message = getApiErrorMessage(
+      return rejectPaymentError(
+        thunkAPI,
         error,
-        "Unable to request withdrawal."
+        "Unable to request withdrawal.",
+        { notify: true },
       );
-      thunkAPI.dispatch(
-        showToast({
-          message,
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
-      return rejectApiError(thunkAPI, error, message);
     }
   }
 );
@@ -88,7 +105,7 @@ export const fetchUserTransactions = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
-      return rejectApiError(
+      return rejectPaymentError(
         thunkAPI,
         error,
         "Failed to fetch transactions.",
@@ -110,7 +127,7 @@ export const checkTransactionStatus = createAsyncThunk(
       );
       return response.data?.data || response.data;
     } catch (error) {
-      return rejectApiError(
+      return rejectPaymentError(
         thunkAPI,
         error,
         "Failed to check transaction status.",

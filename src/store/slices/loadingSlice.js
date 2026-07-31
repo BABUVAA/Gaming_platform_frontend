@@ -3,9 +3,11 @@ import {
   login,
   logout,
   register,
-  profile_data_update,
-  profile_file_update,
 } from "./authSlice";
+import {
+  updatePlayerProfileData,
+  updatePlayerProfileFile,
+} from "./playerSlice";
 import { createClan } from "./clanSlice";
 import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 
@@ -15,8 +17,8 @@ const globallyBlockingThunks = [
   login,
   logout,
   register,
-  profile_data_update,
-  profile_file_update,
+  updatePlayerProfileData,
+  updatePlayerProfileFile,
   createClan,
 ];
 
