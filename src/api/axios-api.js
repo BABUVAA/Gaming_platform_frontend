@@ -7,8 +7,14 @@ const requestTimeout =
     ? configuredTimeout
     : 15000;
 
+// One public backend origin keeps HTTP requests and Socket.IO on the same
+// production service while local development can still use localhost.
+const configuredApiBaseUrl = import.meta.env.VITE_SERVER_URL?.trim();
+export const API_BASE_URL =
+  configuredApiBaseUrl?.replace(/\/+$/, "") || "/";
+
 const refreshClient = axios.create({
-  baseURL: "/",
+  baseURL: API_BASE_URL,
   timeout: requestTimeout,
   withCredentials: true,
 });
@@ -48,10 +54,10 @@ export const refreshAuthentication = () => {
 
 // Create an axios instance with baseURL
 const api = axios.create({
-  // Relative API paths stay on the frontend origin. Development requests are
-  // forwarded by Vite; production uses the deployment reverse proxy.
-  baseURL: "/",
-  // Include the secure session cookie on same-origin API requests.
+  // Requests use the configured backend origin in every environment, so the
+  // production build does not depend on static-hosting rewrite behavior.
+  baseURL: API_BASE_URL,
+  // Include secure session cookies on the configured backend requests.
   withCredentials: true,
   // A transport timeout prevents abandoned requests from holding Redux loading
   // counters and route guards indefinitely.

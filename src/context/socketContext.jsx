@@ -2,7 +2,10 @@ import PropTypes from "prop-types";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { io } from "socket.io-client";
-import { refreshAuthentication } from "../api/axios-api";
+import {
+  API_BASE_URL,
+  refreshAuthentication,
+} from "../api/axios-api";
 import { sessionInvalidated } from "../store/actions/sessionActions";
 import { tournamentAction } from "../store/slices/tournamentSlice";
 import { showToast, types } from "../store/slices/toastSlice";
@@ -87,11 +90,9 @@ export const SocketProvider = ({ children }) => {
       return undefined;
     }
 
-    // The app shell owns one authenticated socket connection. WebSocket is
-    // preferred, with polling retained only as a compatibility fallback.
-    // A relative connection keeps Socket.IO on the frontend origin. Vite
-    // proxies it locally and the production host must proxy `/socket.io`.
-    const socket = io({
+    // The app shell owns one authenticated socket connection. Keeping this
+    // origin aligned with the API preserves one authenticated backend boundary.
+    const socket = io(API_BASE_URL, {
       withCredentials: true,
       transports: ["websocket", "polling"],
       reconnectionAttempts: 5,
