@@ -14,7 +14,7 @@ const Coc = () => {
     const gameData = formData(event);
     try {
       setIsLoading(true);
-      const response = await api.post(`/api/games/player`, gameData);
+      const response = await api.post(`/api/game-integrations/coc/player`, gameData);
       setPlayerData(response.data);
     } catch (error) {
       console.log(error);

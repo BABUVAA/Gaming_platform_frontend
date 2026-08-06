@@ -24,7 +24,7 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
     if (!clanTag) return alert("Enter a clan tag first");
     setLoading(true);
     try {
-      const res = await api.post("/api/games/checkClanStatus", { clanTag });
+      const res = await api.post("/api/game-integrations/coc/clan-verification", { clanTag });
       const data = res.data;
 
       const warState = data?.warState || "unknown";

@@ -5,7 +5,7 @@ import createApiThunk from "../thunks/createApiThunk";
 export const fetchGames = createApiThunk(
   "games/fetchGames",
   {
-    path: "/api/games",
+    path: "/api/catalog/games",
     selectData: (response) => {
       if (!Array.isArray(response.data)) {
         throw new Error("Games response must be an array.");

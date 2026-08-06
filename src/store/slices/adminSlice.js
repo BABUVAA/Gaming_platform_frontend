@@ -131,6 +131,20 @@ export const fetchCatalogGames = createApiThunk("admin/fetchCatalogGames", {
   toast: { error: true },
 });
 
+export const updateCatalogGame = createApiThunk("admin/updateCatalogGame", {
+  method: "patch",
+  path: ({ arg }) => `/api/admin/game-catalog/${arg.gameId}`,
+  // The game ID belongs in the route; the API receives only mutable fields.
+  getBody: (payload) => {
+    const changes = { ...payload };
+    delete changes.gameId;
+    return changes;
+  },
+  selectData: (response) => response.data?.data?.game,
+  errorMessage: "Unable to update this game.",
+  toast: { success: true, error: true },
+});
+
 export const updateStaffAssignmentStatus = createApiThunk(
   "admin/updateStaffAssignmentStatus",
   {
@@ -160,6 +174,7 @@ const adminThunks = [
   createStaffAssignment,
   createCatalogGame,
   fetchCatalogGames,
+  updateCatalogGame,
   updateStaffAssignmentStatus,
 ];
 
@@ -176,6 +191,7 @@ const adminRequestKeyByPrefix = Object.freeze({
   [createStaffAssignment.typePrefix]: "staffAssignmentMutation",
   [createCatalogGame.typePrefix]: "gameCatalogMutation",
   [fetchCatalogGames.typePrefix]: "catalogGames",
+  [updateCatalogGame.typePrefix]: "gameCatalogMutation",
   [updateStaffAssignmentStatus.typePrefix]: "staffAssignmentMutation",
 });
 
@@ -311,6 +327,14 @@ const adminSlice = createSlice({
       .addCase(createCatalogGame.fulfilled, (state, action) => {
         if (!isLatestAdminRequest(state, "gameCatalogMutation", action)) return;
         state.catalogGames.unshift(action.payload);
+        state.latestRequestIds.gameCatalogMutation = null;
+      })
+      .addCase(updateCatalogGame.fulfilled, (state, action) => {
+        if (!isLatestAdminRequest(state, "gameCatalogMutation", action)) return;
+        const index = state.catalogGames.findIndex(
+          (game) => game._id === action.payload?._id,
+        );
+        if (index >= 0) state.catalogGames[index] = action.payload;
         state.latestRequestIds.gameCatalogMutation = null;
       })
       .addCase(updateStaffAssignmentStatus.fulfilled, (state, action) => {

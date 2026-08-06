@@ -22,7 +22,6 @@ export { default as Input } from "./ui/Input/Input.jsx";
 export { default as Spinner } from "./ui/Spinner/Spinner.jsx";
 export { default as Toast } from "./ui/Toast/Toast.jsx";
 export { default as TournamentCard } from "./ui/GameCard/TournamentCard.jsx";
-export { default as GameCard } from "./ui/GameCard/GameCard.jsx";
 
 //my components
 

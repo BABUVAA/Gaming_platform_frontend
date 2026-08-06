@@ -5,6 +5,7 @@ import adminSlice from "./slices/adminSlice";
 import authSlice, { logout } from "./slices/authSlice";
 import clanSlice from "./slices/clanSlice";
 import gameSlice from "./slices/gameSlice";
+import gameManagementSlice from "./slices/gameManagementSlice";
 import loadingSlice from "./slices/loadingSlice";
 import matchmakingSlice from "./slices/matchmakingSlice";
 import notificationSlice from "./slices/notificationSlice";
@@ -29,6 +30,7 @@ const combinedReducer = combineReducers({
   admin: adminSlice.reducer,
   auth: authSlice.reducer,
   games: gameSlice.reducer,
+  gameManagement: gameManagementSlice.reducer,
   tournament: tournamentSlice.reducer,
   eventManagement: eventManagementSlice.reducer,
   loading: loadingSlice.reducer,
@@ -52,6 +54,7 @@ const privateSliceKeys = [
   "social",
   "matchmaking",
   "eventManagement",
+  "gameManagement",
 ];
 
 const clearPrivateSlices = (state) => {
