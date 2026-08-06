@@ -44,6 +44,10 @@ import {
 import { fetchGames } from "../slices/gameSlice";
 import { fetchTournaments } from "../slices/tournamentSlice";
 import {
+  joinQuickMatchQueue,
+  matchmakingActions,
+} from "../slices/matchmakingSlice";
+import {
   selectGames,
   selectGamesError,
   selectGamesStatus,
@@ -54,6 +58,11 @@ import {
   selectTournamentListStatus,
 } from "../selectors/tournamentSelectors";
 import unwrapThunkRequest from "../thunks/unwrapThunkRequest";
+import {
+  selectJoiningOfferingId,
+  selectQuickMatchJoinError,
+  selectQuickMatchJoinStatus,
+} from "../selectors/matchmakingSelectors";
 
 export const useStore = () => {
   // This hook is the store-facing convenience boundary for React code.
@@ -264,6 +273,32 @@ export const useCatalogStore = () => {
     loadGames,
     loadTournaments,
     loadCatalog,
+  };
+};
+
+export const useMatchmakingStore = () => {
+  // Components use this hook instead of importing Axios so all Quick Match
+  // commands share Redux status, normalized errors, and duplicate protection.
+  const joinStatus = useSelector(selectQuickMatchJoinStatus);
+  const joiningOfferingId = useSelector(selectJoiningOfferingId);
+  const joinError = useSelector(selectQuickMatchJoinError);
+  const dispatch = useDispatch();
+
+  const joinQuickMatch = useCallback(
+    (request) => dispatch(joinQuickMatchQueue(request)),
+    [dispatch],
+  );
+
+  const clearJoinError = useCallback(() => {
+    return dispatch(matchmakingActions.clearJoinError());
+  }, [dispatch]);
+
+  return {
+    joinStatus,
+    joiningOfferingId,
+    joinError,
+    joinQuickMatch,
+    clearJoinError,
   };
 };
 

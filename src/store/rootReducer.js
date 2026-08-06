@@ -6,6 +6,7 @@ import authSlice, { logout } from "./slices/authSlice";
 import clanSlice from "./slices/clanSlice";
 import gameSlice from "./slices/gameSlice";
 import loadingSlice from "./slices/loadingSlice";
+import matchmakingSlice from "./slices/matchmakingSlice";
 import notificationSlice from "./slices/notificationSlice";
 import paymentSlice from "./slices/paymentSlice";
 import playerSlice from "./slices/playerSlice";
@@ -15,6 +16,7 @@ import requestScopeSlice, {
 import socialSlice from "./slices/socialSlice";
 import toastSlice from "./slices/toastSlice";
 import tournamentSlice from "./slices/tournamentSlice";
+import eventManagementSlice from "./slices/eventManagementSlice";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -28,7 +30,9 @@ const combinedReducer = combineReducers({
   auth: authSlice.reducer,
   games: gameSlice.reducer,
   tournament: tournamentSlice.reducer,
+  eventManagement: eventManagementSlice.reducer,
   loading: loadingSlice.reducer,
+  matchmaking: matchmakingSlice.reducer,
   payment: paymentSlice.reducer,
   player: playerSlice.reducer,
   clan: clanSlice.reducer,
@@ -46,6 +50,8 @@ const privateSliceKeys = [
   "payment",
   "player",
   "social",
+  "matchmaking",
+  "eventManagement",
 ];
 
 const clearPrivateSlices = (state) => {

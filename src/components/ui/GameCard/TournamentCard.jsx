@@ -3,8 +3,8 @@ import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { buildTournamentOfferingPath } from "../../../routes/routeConstants";
 import InviteModal from "../../feature/InviteModal";
-import useSocket from "../../../context/useSocket";
 import { useSelector } from "react-redux";
+import { useMatchmakingStore } from "../../../store/hooks/useStore";
 
 const TournamentCard = ({ tournament, disableFetch }) => {
   const {
@@ -20,10 +20,10 @@ const TournamentCard = ({ tournament, disableFetch }) => {
   } = tournament;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
+  const { joinQuickMatch, joinStatus, joiningOfferingId } =
+    useMatchmakingStore();
 
   const { profile } = useSelector((store) => store.player);
-  const { connected, socket } = useSocket();
 
   const hasGame = profile?.profile?.games?.some(
     (gameObj) =>
@@ -31,13 +31,8 @@ const TournamentCard = ({ tournament, disableFetch }) => {
       gameObj.verificationStatus === "verified"
   );
 
-  const handleJoinClick = (event) => {
+  const handleJoinClick = async (event) => {
     event.preventDefault();
-
-    if (!socket || !connected) {
-      alert("Live matchmaking is reconnecting. Please try again.");
-      return;
-    }
 
     // This check gives immediate guidance, while the backend repeats the same
     // eligibility validation for every player in the submitted roster.
@@ -51,15 +46,19 @@ const TournamentCard = ({ tournament, disableFetch }) => {
       return;
     }
 
-    // The acknowledgement keeps the button locked until the server has either
-    // assigned a durable room or returned a useful matchmaking error.
-    setIsJoining(true);
-    socket.timeout(10000).emit(
-      "join_tournament",
-      { tournamentId: _id },
-      () => setIsJoining(false)
-    );
+    try {
+      // The store thunk owns the HTTP command, toast, and normalized error.
+      // Socket.IO only refreshes live queue and match data after success.
+      await joinQuickMatch({ offeringId: _id }).unwrap();
+    } catch {
+      // The configured thunk toast already gives the player the failure reason.
+    }
   };
+
+  // Disable every join control while the store submits one command. A player
+  // must receive the first queue result before they can choose another match.
+  const isJoinRequestInFlight = joinStatus === "loading";
+  const isJoiningThisMatch = joiningOfferingId === _id;
 
   return (
     <>
@@ -99,10 +98,10 @@ const TournamentCard = ({ tournament, disableFetch }) => {
           {status === "registration_open" && (
             <button
               onClick={handleJoinClick}
-              disabled={isJoining}
+              disabled={isJoinRequestInFlight}
               className="rounded-2xl bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60"
             >
-              {isJoining ? "Joining..." : "Join Now"}
+              {isJoiningThisMatch ? "Joining..." : "Join Now"}
             </button>
           )}
           {!disableFetch && (

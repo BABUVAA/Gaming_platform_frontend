@@ -9,6 +9,9 @@ import {
   OperatorRoute,
   PlayerRoute,
   ProtectedRoute,
+  StaffRoute,
+  EventManagerRoute,
+  GameManagerRoute,
   VerifiedPlayerRoute,
   VerifiedDetailedPlayerRoute,
 } from "./RouteGuards";
@@ -29,6 +32,9 @@ const accessWrappers = {
   operator: OperatorRoute,
   player: PlayerRoute,
   protected: ProtectedRoute,
+  staff: StaffRoute,
+  eventManager: EventManagerRoute,
+  gameManager: GameManagerRoute,
   // Verified-player access prevents restricted pages from mounting, which
   // also prevents their page-level API requests from starting.
   verifiedPlayer: VerifiedPlayerRoute,

@@ -77,7 +77,6 @@ const Matches = () => {
   const { competitionRevision } = useSocket();
   const [activity, setActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [leavingQueueId, setLeavingQueueId] = useState("");
 
   useEffect(() => {
     let isActive = true;
@@ -136,38 +135,6 @@ const Matches = () => {
     };
   }, [competitionRevision, dispatch]);
 
-  const leaveQueue = async (queue) => {
-    try {
-      setLeavingQueueId(queue._id);
-      await api.delete(`/api/matches/queues/${queue.offeringId}`);
-      setActivity((current) =>
-        current.filter(
-          (item) => !(item.kind === "queue" && item._id === queue._id),
-        ),
-      );
-      dispatch(
-        showToast({
-          message: "You left the match queue.",
-          type: types.SUCCESS,
-          position: "bottom-right",
-        }),
-      );
-    } catch (error) {
-      dispatch(
-        showToast({
-          message: getApiErrorMessage(
-            error,
-            "Unable to leave this queue right now.",
-          ),
-          type: types.DANGER,
-          position: "bottom-right",
-        }),
-      );
-    } finally {
-      setLeavingQueueId("");
-    }
-  };
-
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-sky-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
@@ -205,10 +172,8 @@ const Matches = () => {
           <div className="mt-5 space-y-3">
             {activity.map((item) => (
               <MatchActivityCard
-                isLeaving={leavingQueueId === item._id}
                 item={item}
                 key={`${item.kind || "match"}-${item._id}`}
-                onLeave={leaveQueue}
               />
             ))}
 
@@ -251,7 +216,7 @@ const Matches = () => {
   );
 };
 
-const MatchActivityCard = ({ isLeaving, item, onLeave }) => {
+const MatchActivityCard = ({ item }) => {
   const isQueue = item.kind === "queue";
   const status =
     STATUS_PRESENTATION[item.status] ||
@@ -302,21 +267,9 @@ const MatchActivityCard = ({ isLeaving, item, onLeave }) => {
               View tournament
               <FaArrowRight />
             </Link>
-            {item.canLeave ? (
-              <button
-                className="text-sm font-bold text-rose-300 transition hover:text-rose-200 disabled:cursor-wait disabled:opacity-60"
-                disabled={isLeaving}
-                onClick={() => onLeave(item)}
-                type="button"
-              >
-                {isLeaving ? "Leaving..." : "Leave queue"}
-              </button>
-            ) : null}
-            {!item.canLeave && item.entryType === "team" ? (
-              <span className="text-xs text-slate-500">
-                Team creator controls this entry
-              </span>
-            ) : null}
+            <span className="text-xs text-slate-500">
+              Your place is confirmed while this room fills.
+            </span>
           </div>
         </div>
       ) : (
@@ -356,7 +309,6 @@ const InfoPanel = ({ icon, text, title }) => (
 );
 
 MatchActivityCard.propTypes = {
-  isLeaving: PropTypes.bool.isRequired,
   item: PropTypes.shape({
     _id: PropTypes.string.isRequired,
     assignedOperator: PropTypes.shape({
@@ -365,8 +317,6 @@ MatchActivityCard.propTypes = {
       }),
     }),
     createdAt: PropTypes.string,
-    canLeave: PropTypes.bool,
-    entryType: PropTypes.string,
     game: PropTypes.string,
     joinedPlayers: PropTypes.number,
     kind: PropTypes.string,
@@ -377,7 +327,6 @@ MatchActivityCard.propTypes = {
     status: PropTypes.string,
     title: PropTypes.string,
   }).isRequired,
-  onLeave: PropTypes.func.isRequired,
 };
 
 InfoPanel.propTypes = {

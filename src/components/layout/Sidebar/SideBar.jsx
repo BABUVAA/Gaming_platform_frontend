@@ -5,7 +5,7 @@ import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
 
 const SideBar = () => {
   const playerSummary = useSelector(selectPlayerSummary);
-  const dashboardNavigation = getDashboardNavigation(playerSummary?.role);
+  const dashboardNavigation = getDashboardNavigation(playerSummary);
 
   return (
     <>

@@ -32,3 +32,5 @@ export { default as UserManagement } from "./adminComponents/userMangaement/User
 export { default as WalletManagement } from "./adminComponents/walletManagement/WalletManagement.jsx";
 export { default as RewardManagement } from "./adminComponents/RewardManagement.jsx";
 export { default as VerificationManagement } from "./adminComponents/VerificationManagement.jsx";
+export { default as RoleManagement } from "./adminComponents/RoleManagement.jsx";
+export { default as GameCatalog } from "./adminComponents/GameCatalog.jsx";

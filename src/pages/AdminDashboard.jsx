@@ -7,6 +7,8 @@ import {
   UserManagement,
   VerificationManagement,
   WalletManagement,
+  RoleManagement,
+  GameCatalog,
 } from "../components";
 
 const AdminDashboard = () => {
@@ -14,6 +16,8 @@ const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("verification");
 
   const menu = [
+    { label: "Role Management", key: "roles", description: "Employees, access roles, and scopes" },
+    { label: "Game Catalog", key: "games", description: "Games, modes, maps, and verification" },
     {
       label: "Verification Queue",
       key: "verification",
@@ -105,6 +109,8 @@ const AdminDashboard = () => {
             <TournamentManagement socket={socket} />
           )}
           {activeSection === "rewards" && <RewardManagement />}
+          {activeSection === "roles" && <RoleManagement />}
+          {activeSection === "games" && <GameCatalog />}
         </main>
       </div>
     </div>

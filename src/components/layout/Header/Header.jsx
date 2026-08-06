@@ -25,7 +25,7 @@ const Header = () => {
   const { goToLogin, goToSignUp } = useNavigateHook();
   const location = useLocation();
   const currentArea = getNavigationTitle(location.pathname);
-  const dashboardNavigation = getDashboardNavigation(playerSummary?.role);
+  const dashboardNavigation = getDashboardNavigation(playerSummary);
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
 
   return (

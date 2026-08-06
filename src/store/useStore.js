@@ -6,6 +6,7 @@ export {
   useAccountStore,
   useAuthStore,
   useCatalogStore,
+  useMatchmakingStore,
   usePlayerStore,
   useStore,
   default,

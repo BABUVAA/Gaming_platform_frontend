@@ -24,7 +24,7 @@ const HeaderBurgerMenu = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { goToLogin, goToSignUp } = useNavigateHook();
   const unreadCount = (notifications || []).filter((item) => !item.isRead).length;
-  const dashboardNavigation = getDashboardNavigation(playerSummary?.role);
+  const dashboardNavigation = getDashboardNavigation(playerSummary);
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
 
   const closeMenu = () => setMenuOpen(false);

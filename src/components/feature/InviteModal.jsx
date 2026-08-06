@@ -1,7 +1,8 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
-import useSocket from "../../context/useSocket";
+import { getStoredErrorMessage } from "../../api/apiError";
+import { useMatchmakingStore } from "../../store/hooks/useStore";
 
 const normalizeGameKey = (game) =>
   String(game || "").toLowerCase() === "pubg"
@@ -17,9 +18,9 @@ const InviteModal = ({
   tournamentId,
 }) => {
   const [errorMessage, setErrorMessage] = useState("");
-  const [isJoining, setIsJoining] = useState(false);
   const [teamId, setTeamId] = useState("");
-  const { connected, socket } = useSocket();
+  const { joinQuickMatch, joinStatus, joiningOfferingId } =
+    useMatchmakingStore();
   const teams = useSelector(
     (store) => store.player.profile?.profile?.teams || []
   );
@@ -36,46 +37,30 @@ const InviteModal = ({
 
   if (!isOpen) return null;
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!teamId) {
       setErrorMessage("Choose a saved team first.");
       return;
     }
 
-    if (!socket || !connected) {
-      setErrorMessage("Live matchmaking is reconnecting. Please try again.");
-      return;
-    }
-
     setErrorMessage("");
-    setIsJoining(true);
-
-    // Socket.IO acknowledgements make the modal reflect the durable server
-    // result rather than assuming that emitting an event means it succeeded.
-    socket
-      .timeout(10000)
-      .emit(
-        "join_tournament",
-        { teamId, tournamentId },
-        (timeoutError, response) => {
-          setIsJoining(false);
-
-          if (timeoutError) {
-            setErrorMessage("Matchmaking took too long. Please try again.");
-            return;
-          }
-
-          if (!response?.success) {
-            setErrorMessage(
-              response?.error?.message || "Unable to join this match."
-            );
-            return;
-          }
-
-          onClose();
-        }
-      );
+    try {
+      // The thunk submits the durable HTTP command. The backend still checks
+      // the team roster, while Socket.IO distributes later live updates.
+      await joinQuickMatch({
+        offeringId: tournamentId,
+        teamId,
+      }).unwrap();
+      onClose();
+    } catch (error) {
+      // Inline feedback keeps the dialog useful even when its toast is missed.
+      setErrorMessage(getStoredErrorMessage(error));
+    }
   };
+
+  // Block a second queue submission until the active HTTP command completes.
+  const isJoinRequestInFlight = joinStatus === "loading";
+  const isJoiningThisMatch = joiningOfferingId === tournamentId;
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
@@ -83,7 +68,7 @@ const InviteModal = ({
         <button
           aria-label="Close team selection"
           className="absolute right-4 top-4 text-xl text-slate-400 hover:text-white"
-          disabled={isJoining}
+          disabled={isJoinRequestInFlight}
           onClick={onClose}
           type="button"
         >
@@ -141,11 +126,11 @@ const InviteModal = ({
 
         <button
           className="mt-5 w-full rounded-2xl bg-cyan-300 py-3 font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={!teamId || isJoining}
+          disabled={!teamId || isJoinRequestInFlight}
           onClick={handleJoin}
           type="button"
         >
-          {isJoining ? "Finding a room..." : "Join match queue"}
+          {isJoiningThisMatch ? "Finding a room..." : "Join match queue"}
         </button>
       </div>
     </div>

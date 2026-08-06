@@ -37,6 +37,33 @@ const operatorNavigation = [
   },
 ];
 
+const staffNavigation = [
+  {
+    label: "Admin",
+    description: "Platform administration",
+    to: ROUTES.ADMIN_PANEL,
+    icon: FaCrown,
+    match: [ROUTES.ADMIN_PANEL],
+    requiredStaffRoles: ["super_admin", "platform_admin"],
+  },
+  {
+    label: "Operations",
+    description: "Lobby and match operations",
+    to: ROUTES.OPERATIONS,
+    icon: FaSatelliteDish,
+    match: [ROUTES.OPERATIONS],
+    requiredStaffRoles: ["super_admin", "platform_admin", "match_operator"],
+  },
+  {
+    label: "Event Manager",
+    description: "Create and schedule Events",
+    to: ROUTES.EVENT_MANAGER,
+    icon: FaTrophy,
+    match: [ROUTES.EVENT_MANAGER],
+    requiredStaffRoles: ["event_manager"],
+  },
+];
+
 const playerNavigation = [
   {
     label: "Compete",
@@ -121,10 +148,24 @@ export const getDefaultRouteForRole = (role) => {
   return ROUTES.DASHBOARD;
 };
 
-export const getDashboardNavigation = (role) => {
-  if (role === USER_ROLES.ADMIN) return adminNavigation;
-  if (role === USER_ROLES.OPERATOR) return operatorNavigation;
-  return playerNavigation;
+export const getDashboardNavigation = (summaryOrRole) => {
+  // Compatibility with older callers is retained while navigation moves from
+  // legacy user roles to server-provided staff assignments.
+  if (typeof summaryOrRole === "string") {
+    if (summaryOrRole === USER_ROLES.ADMIN) return adminNavigation;
+    if (summaryOrRole === USER_ROLES.OPERATOR) return operatorNavigation;
+    return playerNavigation;
+  }
+
+  const staffRoles = new Set(
+    summaryOrRole?.staffAssignments?.map((assignment) => assignment.role) || [],
+  );
+  return [
+    ...playerNavigation,
+    ...staffNavigation.filter((item) =>
+      item.requiredStaffRoles.some((role) => staffRoles.has(role)),
+    ),
+  ];
 };
 
 export const getNavigationTitle = (pathname) => {

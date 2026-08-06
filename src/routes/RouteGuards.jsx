@@ -148,13 +148,27 @@ export const RoleAwareRoute = ({ allowedRoles, children }) => (
 );
 
 export const AdminRoute = ({ children }) => (
-  <RoleAwareRoute allowedRoles={[USER_ROLES.ADMIN]}>{children}</RoleAwareRoute>
+  <AccessSummaryGate
+    hasProfileAccess={(summary) =>
+      summary.staffAssignments?.some((assignment) =>
+        ["super_admin", "platform_admin"].includes(assignment.role),
+      )
+    }
+  >
+    {children}
+  </AccessSummaryGate>
 );
 
 export const OperatorRoute = ({ children }) => (
-  <RoleAwareRoute allowedRoles={[USER_ROLES.OPERATOR]}>
+  <AccessSummaryGate
+    hasProfileAccess={(summary) =>
+      summary.staffAssignments?.some((assignment) =>
+        ["super_admin", "platform_admin", "match_operator"].includes(assignment.role),
+      )
+    }
+  >
     {children}
-  </RoleAwareRoute>
+  </AccessSummaryGate>
 );
 
 export const PlayerRoute = ({ children }) => (
@@ -228,10 +242,49 @@ export const ApprovedHostRoute = ({ children }) => (
   </AccessSummaryGate>
 );
 
+export const StaffRoute = ({ children }) => (
+  <AccessSummaryGate
+    hasProfileAccess={(summary) =>
+      Array.isArray(summary.staffAssignments) &&
+      summary.staffAssignments.length > 0
+    }
+  >
+    {children}
+  </AccessSummaryGate>
+);
+
+// Event workspace access is a staff capability, never a client-controlled
+// route flag. The summary is supplied by the authenticated backend session.
+export const EventManagerRoute = ({ children }) => (
+  <AccessSummaryGate
+    hasProfileAccess={(summary) =>
+      summary.staffAssignments?.some(
+        (assignment) => assignment.role === "event_manager",
+      )
+    }
+  >
+    {children}
+  </AccessSummaryGate>
+);
+
+export const GameManagerRoute = ({ children }) => (
+  <AccessSummaryGate
+    hasProfileAccess={(summary) =>
+      summary.staffAssignments?.some(
+        (assignment) => assignment.role === "game_manager",
+      )
+    }
+  >
+    {children}
+  </AccessSummaryGate>
+);
+
 export const DashboardLanding = () => (
   <AccessSummaryGate
     fallback={(summary) =>
-      summary.role === USER_ROLES.PLAYER ? (
+      summary.staffAssignments?.length ? (
+        <Navigate to={ROUTES.STAFF} replace />
+      ) : summary.role === USER_ROLES.PLAYER ? (
         <Navigate to={ROUTES.GAME} replace />
       ) : (
         <Navigate to={getDefaultRouteForRole(summary.role)} replace />
@@ -308,5 +361,17 @@ VerifiedDetailedPlayerRoute.propTypes = {
 };
 
 ApprovedHostRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+StaffRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+EventManagerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+GameManagerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
