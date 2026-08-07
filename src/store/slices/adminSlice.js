@@ -73,16 +73,29 @@ export const reviewVerificationRequest = createApiThunk(
 );
 
 export const fetchStaffRoles = createApiThunk("admin/fetchStaffRoles", {
-  path: "/api/admin/staff/roles",
+  path: "/api/access-control/roles",
   selectData: (response) => response.data?.data?.roles || [],
   errorMessage: "Unable to load staff roles.",
   toast: { error: true },
 });
+export const fetchStaffCandidates = createApiThunk(
+  "admin/fetchStaffCandidates",
+  {
+    path: "/api/access-control/candidates",
+    // Candidate filtering belongs to the staff-management boundary rather
+    // than the broader administrator user directory.
+    getParams: (search = "") => ({ limit: 25, search: search.trim() }),
+    selectData: (response) => response.data?.data?.candidates || [],
+    errorMessage: "Unable to load eligible staff candidates.",
+    toast: { error: true },
+  },
+);
+
 
 export const fetchStaffAssignments = createApiThunk(
   "admin/fetchStaffAssignments",
   {
-    path: "/api/admin/staff/assignments",
+    path: "/api/access-control/assignments",
     selectData: (response) => response.data?.data?.assignments || [],
     errorMessage: "Unable to load staff assignments.",
     toast: { error: true },
@@ -90,14 +103,14 @@ export const fetchStaffAssignments = createApiThunk(
 );
 
 export const fetchStaffReports = createApiThunk("admin/fetchStaffReports", {
-  path: "/api/admin/staff/reports",
+  path: "/api/access-control/reports",
   selectData: (response) => response.data?.data?.reports || [],
   errorMessage: "Unable to load staff reports.",
   toast: { error: true },
 });
 
 export const fetchStaffActivity = createApiThunk("admin/fetchStaffActivity", {
-  path: "/api/admin/staff/activity",
+  path: "/api/access-control/activity",
   selectData: (response) => response.data?.data?.activity || [],
   errorMessage: "Unable to load staff service history.",
   toast: { error: true },
@@ -107,7 +120,7 @@ export const createStaffAssignment = createApiThunk(
   "admin/createStaffAssignment",
   {
     method: "post",
-    path: "/api/admin/staff/assignments",
+    path: "/api/access-control/assignments",
     selectData: (response) => response.data?.data?.assignment,
     errorMessage: "Unable to assign this staff role.",
     toast: { success: true, error: true },
@@ -122,14 +135,24 @@ export const createCatalogGame = createApiThunk("admin/createCatalogGame", {
   toast: { success: true, error: true },
 });
 
-// Administrators receive drafts too because staff scopes must be assigned
-// before a game becomes visible in the player-facing catalog.
+// Administrators receive every lifecycle state. Player-facing catalog routes
+// remain responsible for exposing active games only.
 export const fetchCatalogGames = createApiThunk("admin/fetchCatalogGames", {
   path: "/api/admin/game-catalog",
   selectData: (response) => response.data?.data?.games || [],
   errorMessage: "Unable to load the game catalog.",
   toast: { error: true },
 });
+
+export const fetchCatalogActivity = createApiThunk(
+  "admin/fetchCatalogActivity",
+  {
+    path: "/api/admin/game-catalog/activity",
+    selectData: (response) => response.data?.data?.activity || [],
+    errorMessage: "Unable to load game-management history.",
+    toast: { error: true },
+  },
+);
 
 export const updateCatalogGame = createApiThunk("admin/updateCatalogGame", {
   method: "patch",
@@ -151,13 +174,28 @@ export const updateStaffAssignmentStatus = createApiThunk(
     method: "patch",
     // createApiThunk provides the dispatched payload under `arg`.
     path: ({ arg }) =>
-      `/api/admin/staff/assignments/${arg.assignmentId}/status`,
+      `/api/access-control/assignments/${arg.assignmentId}/status`,
     getBody: ({ status }) => ({ status }),
     selectData: (response) => response.data?.data?.assignment,
     errorMessage: "Unable to update staff access.",
     toast: { success: true, error: true },
   },
 );
+export const updateStaffAssignmentScopes = createApiThunk(
+  "admin/updateStaffAssignmentScopes",
+  {
+    method: "patch",
+    path: ({ arg }) =>
+      `/api/access-control/assignments/${arg.assignmentId}/scopes`,
+    // The assignment ID identifies the resource and only the selected games
+    // are mutable through this operation.
+    getBody: ({ gameIds }) => ({ gameIds }),
+    selectData: (response) => response.data?.data?.assignment,
+    errorMessage: "Unable to update staff game scope.",
+    toast: { success: true, error: true },
+  },
+);
+
 
 // These requests share loading and error behavior while keeping their
 // successful state updates explicit in extraReducers below.
@@ -168,14 +206,17 @@ const adminThunks = [
   findVerificationRequests,
   reviewVerificationRequest,
   fetchStaffRoles,
+  fetchStaffCandidates,
   fetchStaffAssignments,
   fetchStaffReports,
   fetchStaffActivity,
   createStaffAssignment,
   createCatalogGame,
+  fetchCatalogActivity,
   fetchCatalogGames,
   updateCatalogGame,
   updateStaffAssignmentStatus,
+  updateStaffAssignmentScopes,
 ];
 
 const adminRequestKeyByPrefix = Object.freeze({
@@ -185,14 +226,17 @@ const adminRequestKeyByPrefix = Object.freeze({
   [findVerificationRequests.typePrefix]: "verificationRequests",
   [reviewVerificationRequest.typePrefix]: "verificationReview",
   [fetchStaffRoles.typePrefix]: "staffRoles",
+  [fetchStaffCandidates.typePrefix]: "staffCandidates",
   [fetchStaffAssignments.typePrefix]: "staffAssignments",
   [fetchStaffReports.typePrefix]: "staffReports",
   [fetchStaffActivity.typePrefix]: "staffActivity",
   [createStaffAssignment.typePrefix]: "staffAssignmentMutation",
   [createCatalogGame.typePrefix]: "gameCatalogMutation",
+  [fetchCatalogActivity.typePrefix]: "catalogActivity",
   [fetchCatalogGames.typePrefix]: "catalogGames",
   [updateCatalogGame.typePrefix]: "gameCatalogMutation",
   [updateStaffAssignmentStatus.typePrefix]: "staffAssignmentMutation",
+  [updateStaffAssignmentScopes.typePrefix]: "staffAssignmentMutation",
 });
 
 const getAdminRequestKey = (action) => {
@@ -223,10 +267,12 @@ const adminSlice = createSlice({
     tournaments: [],
     verificationRequests: [],
     staffRoles: [],
+    staffCandidates: [],
     staffAssignments: [],
     staffReports: [],
     staffActivity: [],
     catalogGames: [],
+    catalogActivity: [],
     // A counter keeps loading accurate when dashboard requests overlap.
     pendingRequests: 0,
     // Each resource accepts only the newest request so rapid filters cannot
@@ -238,12 +284,14 @@ const adminSlice = createSlice({
       verificationRequests: null,
       verificationReview: null,
       staffRoles: null,
+      staffCandidates: null,
       staffAssignments: null,
       staffReports: null,
       staffActivity: null,
       staffAssignmentMutation: null,
       gameCatalogMutation: null,
       catalogGames: null,
+      catalogActivity: null,
     },
     isLoading: false,
     error: null,
@@ -295,6 +343,11 @@ const adminSlice = createSlice({
         state.staffRoles = action.payload;
         state.latestRequestIds.staffRoles = null;
       })
+      .addCase(fetchStaffCandidates.fulfilled, (state, action) => {
+        if (!isLatestAdminRequest(state, "staffCandidates", action)) return;
+        state.staffCandidates = action.payload;
+        state.latestRequestIds.staffCandidates = null;
+      })
       .addCase(fetchStaffAssignments.fulfilled, (state, action) => {
         if (!isLatestAdminRequest(state, "staffAssignments", action)) return;
         state.staffAssignments = action.payload;
@@ -324,6 +377,11 @@ const adminSlice = createSlice({
         state.catalogGames = action.payload;
         state.latestRequestIds.catalogGames = null;
       })
+      .addCase(fetchCatalogActivity.fulfilled, (state, action) => {
+        if (!isLatestAdminRequest(state, "catalogActivity", action)) return;
+        state.catalogActivity = action.payload;
+        state.latestRequestIds.catalogActivity = null;
+      })
       .addCase(createCatalogGame.fulfilled, (state, action) => {
         if (!isLatestAdminRequest(state, "gameCatalogMutation", action)) return;
         state.catalogGames.unshift(action.payload);
@@ -338,10 +396,20 @@ const adminSlice = createSlice({
         state.latestRequestIds.gameCatalogMutation = null;
       })
       .addCase(updateStaffAssignmentStatus.fulfilled, (state, action) => {
+        if (!isLatestAdminRequest(state, "staffAssignmentMutation", action)) return;
         const index = state.staffAssignments.findIndex(
           (assignment) => assignment._id === action.payload?._id,
         );
         if (index >= 0) state.staffAssignments[index] = action.payload;
+        state.latestRequestIds.staffAssignmentMutation = null;
+      })
+      .addCase(updateStaffAssignmentScopes.fulfilled, (state, action) => {
+        if (!isLatestAdminRequest(state, "staffAssignmentMutation", action)) return;
+        const index = state.staffAssignments.findIndex(
+          (assignment) => assignment._id === action.payload?._id,
+        );
+        if (index >= 0) state.staffAssignments[index] = action.payload;
+        state.latestRequestIds.staffAssignmentMutation = null;
       });
 
     addThunkLifecycleMatchers(builder, adminThunks, {

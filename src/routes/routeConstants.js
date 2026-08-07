@@ -9,6 +9,7 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   ADMIN_PANEL: "/panelAdmin",
   STAFF: "/staff",
+  STAFF_ACCESS_CONTROL: "/staff/access-control",
   EVENT_MANAGER: "/staff/events",
   GAME_MANAGER: "/staff/games",
   OPERATIONS: "/dashboard/operations",

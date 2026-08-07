@@ -1,49 +1,9 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import useSocket from "../context/useSocket";
-import {
-  RewardManagement,
-  TournamentManagement,
-  UserManagement,
-  VerificationManagement,
-  WalletManagement,
-  RoleManagement,
-  GameCatalog,
-} from "../components";
+import { GameCatalog, RoleManagement } from "../components";
 
 const AdminDashboard = () => {
-  const { socket, connected } = useSocket();
-  const [activeSection, setActiveSection] = useState("verification");
-
-  const menu = [
-    { label: "Role Management", key: "roles", description: "Employees, access roles, and scopes" },
-    { label: "Game Catalog", key: "games", description: "Games, modes, maps, and verification" },
-    {
-      label: "Verification Queue",
-      key: "verification",
-      description: "Manual game reviews and account trust",
-    },
-    {
-      label: "Users",
-      key: "users",
-      description: "Player accounts and access roles",
-    },
-    {
-      label: "Wallets",
-      key: "wallets",
-      description: "Deposits, withdrawals, and ledger review",
-    },
-    {
-      label: "Tournaments",
-      key: "tournaments",
-      description: "Templates, events, and monitoring",
-    },
-    {
-      label: "Rewards",
-      key: "rewards",
-      description: "Prize and incentive controls",
-    },
-  ];
+  const [activeSection, setActiveSection] = useState("roles");
 
   return (
     <div className="min-h-screen bg-[#050b14] text-slate-100">
@@ -54,28 +14,20 @@ const AdminDashboard = () => {
           </p>
           <h1 className="mt-3 text-3xl font-black text-white">Admin Panel</h1>
           <p className="mt-3 text-sm leading-6 text-slate-400">
-            Review identities, inspect finance flows, and supervise live
-            competition systems from one place.
+            Configure staff access before enabling additional platform tools.
           </p>
 
           <nav className="mt-8 space-y-2">
-            {menu.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setActiveSection(item.key)}
-                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
-                  activeSection === item.key
-                    ? "border-cyan-400/30 bg-cyan-400/12 text-white"
-                    : "border-slate-800 bg-slate-950/70 text-slate-400 hover:border-slate-700 hover:text-slate-200"
-                }`}
-              >
-                <span className="block text-sm font-bold">{item.label}</span>
-                <span className="mt-1 block text-xs text-slate-500">
-                  {item.description}
-                </span>
-              </button>
-            ))}
+            <button className={activeSection === "roles" ? "w-full rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-4 text-left text-white" : "w-full rounded-2xl border border-slate-800 px-4 py-4 text-left text-slate-300"} onClick={() => setActiveSection("roles")} type="button">
+              <span className="block text-sm font-bold">Role Management</span>
+              <span className="mt-1 block text-xs text-slate-400">
+                Employees, access roles, and scopes
+              </span>
+            </button>
+            <button className={activeSection === "games" ? "w-full rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-4 text-left text-white" : "w-full rounded-2xl border border-slate-800 px-4 py-4 text-left text-slate-300"} onClick={() => setActiveSection("games")} type="button">
+              <span className="block text-sm font-bold">Game Management</span>
+              <span className="mt-1 block text-xs text-slate-400">Drafts, readiness, publishing and history</span>
+            </button>
           </nav>
         </aside>
 
@@ -84,33 +36,25 @@ const AdminDashboard = () => {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/75">
-                  Admin Operations
+                  Admin Access
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-white">
-                  Platform oversight and moderation control
+                  {activeSection === "roles" ? "Role management" : "Game management"}
                 </h2>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
-                  Keep identity review, finance oversight, player management,
-                  and live tournament tooling under one darker command shell.
+                  {activeSection === "roles"
+                    ? "Assign staff roles, scopes, and hiring approvals."
+                    : "Create game identities, review readiness, and control publishing."}
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <StatusCard label="Live socket" value={connected ? "Online" : "Offline"} />
-                <StatusCard label="Active section" value={menu.find((item) => item.key === activeSection)?.label || "Overview"} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <StatusCard label="Active section" value={activeSection === "roles" ? "Role Management" : "Game Management"} />
                 <StatusCard label="Mode" value="Admin" />
               </div>
             </div>
           </section>
-          {activeSection === "verification" && <VerificationManagement />}
-          {activeSection === "users" && <UserManagement />}
-          {activeSection === "wallets" && <WalletManagement />}
-          {activeSection === "tournaments" && (
-            <TournamentManagement socket={socket} />
-          )}
-          {activeSection === "rewards" && <RewardManagement />}
-          {activeSection === "roles" && <RoleManagement />}
-          {activeSection === "games" && <GameCatalog />}
+          {activeSection === "roles" ? <RoleManagement /> : <GameCatalog />}
         </main>
       </div>
     </div>

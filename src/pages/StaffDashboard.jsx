@@ -12,6 +12,11 @@ const WORKSPACES = {
 
 const StaffDashboard = () => {
   const assignments = useSelector((state) => state.player.summary?.staffAssignments || []);
+  const canUseAccessControl = assignments.some((assignment) =>
+    ["super_admin", "platform_admin", "game_manager", "event_manager"].includes(
+      assignment.role,
+    ),
+  );
 
   return (
     <section className="mx-auto max-w-5xl rounded-[28px] border border-slate-800 bg-slate-950/90 p-6 text-slate-100">
@@ -33,6 +38,13 @@ const StaffDashboard = () => {
           );
         })}
       </div>
+      {canUseAccessControl && (
+        <article className="mt-4 rounded-2xl border border-cyan-300/25 bg-cyan-300/5 p-5">
+          <p className="text-lg font-bold text-white">People and hiring</p>
+          <p className="mt-2 text-sm text-slate-400">Search candidates, recommend permitted roles, review requests, and inspect access history.</p>
+          <Link className="mt-5 inline-flex rounded-lg bg-cyan-300 px-3 py-2 text-sm font-bold text-slate-950" to={ROUTES.STAFF_ACCESS_CONTROL}>Open access control</Link>
+        </article>
+      )}
       <Link className="mt-6 inline-flex rounded-lg border border-slate-600 px-3 py-2 text-sm font-bold text-slate-200" to={ROUTES.GAME}>Open player dashboard</Link>
     </section>
   );

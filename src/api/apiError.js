@@ -27,7 +27,15 @@ const STATUS_CODE_MAP = {
 const DEFAULT_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
 const getErrorText = (value) => {
-  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "string" && value.trim()) {
+    const text = value.trim();
+    // Reverse proxies and unmatched Express routes may return an HTML page.
+    // Markup and oversized transport bodies are diagnostics, not safe toast text.
+    if (/<(?:!doctype|html|head|body|pre)\b/i.test(text) || text.length > 500) {
+      return null;
+    }
+    return text;
+  }
   if (Array.isArray(value)) {
     return value.map(getErrorText).find(Boolean);
   }
@@ -126,7 +134,7 @@ export const normalizeApiError = (
   const message =
     nestedError?.message ||
     responseData?.message ||
-    (typeof responseData?.error === "string" && responseData.error) ||
+    getErrorText(responseData?.error) ||
     findFirstFieldMessage(fieldErrors) ||
     getErrorText(responseData?.errors) ||
     getErrorText(responseData) ||

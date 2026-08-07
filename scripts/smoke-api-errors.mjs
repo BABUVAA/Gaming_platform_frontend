@@ -47,6 +47,22 @@ const plainTextError = normalizeApiError(
 assert.equal(plainTextError.message, "Gateway temporarily unavailable.");
 assert.equal(plainTextError.retryable, true);
 
+const htmlRouteError = createAxiosError(
+  404,
+  "<!DOCTYPE html><html><body><pre>Cannot GET /api/missing</pre></body></html>",
+);
+// Axios normalizes once in the interceptor, then the feature thunk supplies a
+// useful operation-specific fallback instead of displaying the HTML document.
+htmlRouteError.appError = normalizeApiError(htmlRouteError);
+const normalizedHtmlRouteError = normalizeApiError(
+  htmlRouteError,
+  "Unable to load game-management history.",
+);
+assert.equal(normalizedHtmlRouteError.code, "NOT_FOUND");
+assert.equal(
+  normalizedHtmlRouteError.message,
+  "Unable to load game-management history.",
+);
 const rateLimitError = normalizeApiError(
   createAxiosError(429, {
     error: {

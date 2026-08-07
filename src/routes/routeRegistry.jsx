@@ -22,6 +22,7 @@ export const LazyComponents = {
   Operations: lazy(() => import("../pages/Operations.jsx")),
   AdminDashboard: lazy(() => import("../pages/AdminDashboard.jsx")),
   StaffDashboard: lazy(() => import("../pages/StaffDashboard.jsx")),
+  StaffAccessControl: lazy(() => import("../pages/StaffAccessControl.jsx")),
   EventManagerDashboard: lazy(() => import("../pages/EventManagerDashboard.jsx")),
   GameManagerDashboard: lazy(() => import("../pages/GameManagerDashboard.jsx")),
   Login: lazy(() => import("../pages/Login")),

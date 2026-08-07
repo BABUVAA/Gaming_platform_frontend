@@ -1,235 +1,286 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  createStaffAssignment,
-  fetchCatalogGames,
-  fetchStaffAssignments,
-  fetchStaffActivity,
-  fetchStaffReports,
-  fetchStaffRoles,
-  findUsers,
-  updateStaffAssignmentStatus,
-} from "../../store/slices/adminSlice";
+  changeAccessAssignmentScopes,
+  changeAccessAssignmentStatus,
+  clearAccessCandidate,
+  createAccessAssignment,
+  createStaffRecommendation,
+  fetchAccessActivity,
+  fetchAccessAssignments,
+  fetchAccessPolicy,
+  fetchAccessReports,
+  fetchScopeGames,
+  fetchStaffRecommendations,
+  findAccessCandidate,
+  reviewStaffRecommendation,
+  withdrawStaffRecommendation,
+} from "../../store/slices/accessControlSlice";
 
-const readableLabel = (value) => value.replaceAll("_", " ");
+const titleCase = (value = "") =>
+  value.replaceAll("_", " ").replace(/w/g, (letter) => letter.toUpperCase());
+const personName = (person) => person?.profile?.username || person?.email || "Unknown account";
+const formatDate = (value) => value ? new Date(value).toLocaleString() : "Not recorded";
+const badge = {
+  active: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
+  approved: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
+  pending: "border-amber-400/30 bg-amber-400/10 text-amber-100",
+  suspended: "border-amber-400/30 bg-amber-400/10 text-amber-100",
+  rejected: "border-rose-400/30 bg-rose-400/10 text-rose-100",
+  revoked: "border-rose-400/30 bg-rose-400/10 text-rose-100",
+  withdrawn: "border-slate-600 bg-slate-800 text-slate-300",
+  expired: "border-slate-600 bg-slate-800 text-slate-300",
+};
+const actionLabels = {
+  STAFF_RECOMMENDATION_CREATED: "recommended",
+  STAFF_RECOMMENDATION_APPROVED: "approved a recommendation for",
+  STAFF_RECOMMENDATION_REJECTED: "rejected a recommendation for",
+  STAFF_RECOMMENDATION_WITHDRAWN: "withdrew a recommendation for",
+  STAFF_ROLE_ASSIGNED: "assigned a role to",
+  STAFF_ROLE_REACTIVATED: "reactivated a role for",
+  STAFF_ROLE_ACTIVE: "restored access for",
+  STAFF_ROLE_SUSPENDED: "suspended access for",
+  STAFF_ROLE_REVOKED: "revoked access for",
+  STAFF_ROLE_SCOPE_UPDATED: "changed game scope for",
+};
 
 const RoleManagement = () => {
   const dispatch = useDispatch();
-  const { catalogGames, staffActivity, staffAssignments, staffReports, staffRoles, users } = useSelector(
-    (state) => state.admin,
-  );
-  const [form, setForm] = useState({ gameIds: [], role: "", userId: "" });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("assignments");
+  const state = useSelector((root) => root.accessControl);
+  const [tab, setTab] = useState("people");
+  const [email, setEmail] = useState("");
+  const [roleForm, setRoleForm] = useState({ gameIds: [], mode: "", reason: "", role: "" });
+  const [historyCategory, setHistoryCategory] = useState("");
+  const [reviewNotes, setReviewNotes] = useState({});
 
-  useEffect(() => {
-    // The assignment form needs verified users, server-owned roles, and both
-    // active and draft games before it can grant scoped access safely.
-    dispatch(findUsers());
-    dispatch(fetchStaffRoles());
-    dispatch(fetchStaffAssignments());
-    dispatch(fetchStaffReports());
-    dispatch(fetchStaffActivity());
-    dispatch(fetchCatalogGames());
-  }, [dispatch]);
+  const loadWorkspace = () => {
+    dispatch(fetchAccessPolicy());
+    dispatch(fetchScopeGames());
+    dispatch(fetchAccessAssignments());
+    dispatch(fetchStaffRecommendations());
+    dispatch(fetchAccessReports());
+    dispatch(fetchAccessActivity({ limit: 150 }));
+  };
 
-  const eligibleUsers = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return users.filter((user) => {
-      const identity = `${user.profile?.username || ""} ${user.email || ""}`;
-      return (
-        user.isVerified === true &&
-        user.isBanned !== true &&
-        identity.toLowerCase().includes(query)
-      );
+  useEffect(loadWorkspace, [dispatch]);
+
+  const selectedRole = state.roles.find((role) => role.role === roleForm.role);
+  const canAssign = state.manageableRoles.includes(roleForm.role);
+  const canRecommend = state.recommendableRoles.includes(roleForm.role);
+  const needsGames = selectedRole?.scope === "game";
+
+  const groupedAssignments = useMemo(() => {
+    const groups = new Map();
+    state.assignments.forEach((assignment) => {
+      const userId = assignment.user?._id || "unknown";
+      const current = groups.get(userId) || { user: assignment.user, assignments: [] };
+      current.assignments.push(assignment);
+      groups.set(userId, current);
     });
-  }, [searchQuery, users]);
+    return [...groups.values()];
+  }, [state.assignments]);
 
-  const toggleGameScope = (gameId) => {
-    setForm((currentForm) => ({
-      ...currentForm,
-      gameIds: currentForm.gameIds.includes(gameId)
-        ? currentForm.gameIds.filter((id) => id !== gameId)
-        : [...currentForm.gameIds, gameId],
-    }));
-  };
-
-  const assignRole = async (event) => {
+  const searchCandidate = async (event) => {
     event.preventDefault();
-    await dispatch(createStaffAssignment(form)).unwrap();
-    setForm({ gameIds: [], role: "", userId: "" });
+    dispatch(clearAccessCandidate());
+    setRoleForm({ gameIds: [], mode: "", reason: "", role: "" });
+    await dispatch(findAccessCandidate(email)).unwrap();
   };
 
-  const setAssignmentStatus = (assignmentId, status) =>
-    dispatch(updateStaffAssignmentStatus({ assignmentId, status }));
+  const selectRole = (roleName) => {
+    const direct = state.manageableRoles.includes(roleName);
+    setRoleForm({
+      gameIds: [],
+      mode: direct ? "assign" : "recommend",
+      reason: "",
+      role: roleName,
+    });
+  };
+
+  const toggleGame = (gameId) => setRoleForm((current) => ({
+    ...current,
+    gameIds: current.gameIds.includes(gameId)
+      ? current.gameIds.filter((id) => id !== gameId)
+      : [...current.gameIds, gameId],
+  }));
+
+  const submitRoleAction = async (event) => {
+    event.preventDefault();
+    const payload = { gameIds: roleForm.gameIds, role: roleForm.role };
+    if (roleForm.mode === "assign") {
+      await dispatch(createAccessAssignment({ ...payload, userId: state.candidate._id })).unwrap();
+    } else {
+      await dispatch(createStaffRecommendation({
+        ...payload,
+        candidateId: state.candidate._id,
+        reason: roleForm.reason,
+      })).unwrap();
+    }
+    await Promise.all([
+      dispatch(fetchAccessAssignments()).unwrap(),
+      dispatch(fetchStaffRecommendations()).unwrap(),
+      dispatch(fetchAccessActivity({ limit: 150 })).unwrap(),
+      dispatch(findAccessCandidate(email)).unwrap(),
+    ]);
+    setRoleForm({ gameIds: [], mode: "", reason: "", role: "" });
+  };
+
+  const refreshAfterMutation = async () => Promise.all([
+    dispatch(fetchAccessAssignments()).unwrap(),
+    dispatch(fetchStaffRecommendations()).unwrap(),
+    dispatch(fetchAccessReports()).unwrap(),
+    dispatch(fetchAccessActivity({ limit: 150, category: historyCategory })).unwrap(),
+  ]);
+
+  const changeStatus = async (assignmentId, status) => {
+    await dispatch(changeAccessAssignmentStatus({ assignmentId, status })).unwrap();
+    await refreshAfterMutation();
+  };
+
+  const changeScopes = async (assignmentId, gameIds) => {
+    await dispatch(changeAccessAssignmentScopes({ assignmentId, gameIds })).unwrap();
+    await refreshAfterMutation();
+  };
+
+  const review = async (recommendationId, decision) => {
+    await dispatch(reviewStaffRecommendation({
+      decision,
+      recommendationId,
+      reviewNote: reviewNotes[recommendationId] || "",
+    })).unwrap();
+    await refreshAfterMutation();
+  };
+
+  const withdraw = async (recommendationId) => {
+    await dispatch(withdrawStaffRecommendation({ recommendationId })).unwrap();
+    await refreshAfterMutation();
+  };
+
+  const filterHistory = (category) => {
+    setHistoryCategory(category);
+    dispatch(fetchAccessActivity({ category, limit: 150 }));
+  };
 
   return (
-    <section className="rounded-[28px] border border-slate-800 bg-slate-950/90 p-6">
-      <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/75">
-        Staff Access
-      </p>
-      <h2 className="mt-2 text-2xl font-black text-white">Role Management</h2>
-      <div className="mt-5 flex gap-2 border-b border-slate-800 pb-3 text-sm">
-        {["assignments", "reports"].map((tab) => (
-          <button key={tab} className={`rounded-lg px-3 py-2 font-bold ${activeTab === tab ? "bg-cyan-300 text-slate-950" : "text-slate-400"}`} onClick={() => setActiveTab(tab)} type="button">
-            {tab === "assignments" ? "Assignments" : "Role Reports & History"}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "assignments" ? (
-        <>
-      <form className="mt-6 grid gap-3 lg:grid-cols-4" onSubmit={assignRole}>
-        <input
-          className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white"
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search verified users"
-          value={searchQuery}
-        />
-        <select
-          className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white"
-          onChange={(event) => setForm({ ...form, userId: event.target.value })}
-          required
-          value={form.userId}
-        >
-          <option value="">Choose employee</option>
-          {eligibleUsers.map((user) => (
-            <option key={user._id} value={user._id}>
-              {user.profile?.username || user.email}
-            </option>
-          ))}
-        </select>
-        <select
-          className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white"
-          onChange={(event) => setForm({ ...form, role: event.target.value })}
-          required
-          value={form.role}
-        >
-          <option value="">Choose role</option>
-          {staffRoles.map((role) => (
-            <option key={role.role} value={role.role}>
-              {readableLabel(role.role)}
-            </option>
-          ))}
-        </select>
-        <button className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950">
-          Assign role
-        </button>
-      </form>
-
-      <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-        <p className="text-sm font-semibold text-white">Game access</p>
-        <p className="mt-1 text-xs text-slate-400">
-          Staff can only work on games selected here. Leave empty only for a role
-          that has no game work yet.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {catalogGames.map((game) => (
-            <label
-              className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200"
-              key={game._id}
-            >
-              <input
-                checked={form.gameIds.includes(game._id)}
-                onChange={() => toggleGameScope(game._id)}
-                type="checkbox"
-              />
-              {game.name} ({game.status})
-            </label>
-          ))}
-          {catalogGames.length === 0 && (
-            <p className="text-sm text-slate-400">Create a game before assigning game access.</p>
-          )}
+    <section className="overflow-hidden rounded-[30px] border border-slate-800 bg-[#07111f] shadow-[0_28px_80px_rgba(2,8,23,0.45)]">
+      <header className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.13),transparent_38%)] p-6 lg:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">Staff access</p>
+        <div className="mt-3 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <h2 className="text-3xl font-black text-white">People, roles and hiring</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">Find a verified account, add another role, recommend a hire, review requests, and follow every access decision.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <Metric label="People" value={groupedAssignments.length} />
+            <Metric label="Active roles" value={state.assignments.filter((item) => item.status === "active").length} />
+            <Metric label="Pending hires" value={state.recommendations.filter((item) => item.status === "pending").length} />
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="mt-6 space-y-3">
-        {staffAssignments.map((assignment) => {
-          const isRevoked = assignment.status === "revoked";
-          const gameNames = assignment.gameScopes?.map((game) => game.name).join(", ");
+      <nav className="flex gap-2 overflow-x-auto border-b border-slate-800 bg-slate-950/55 px-5 py-3">
+        {["people", "hiring", "directory", "history", "policy"].map((item) => (
+          <button className={item === tab ? "rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950" : "rounded-xl px-4 py-2 text-sm font-bold text-slate-400 hover:bg-slate-900 hover:text-white"} key={item} onClick={() => setTab(item)} type="button">{titleCase(item)}</button>
+        ))}
+      </nav>
 
-          return (
-            <article
-              className="flex flex-col gap-3 rounded-2xl border border-slate-800 p-4 md:flex-row md:items-center md:justify-between"
-              key={assignment._id}
-            >
-              <div>
-                <p className="font-semibold text-white">
-                  {assignment.user?.profile?.username || assignment.user?.email}
-                </p>
-                <p className="mt-1 text-sm text-slate-400">
-                  {readableLabel(assignment.role)} · {assignment.status}
-                </p>
-                <p className="mt-1 text-xs text-cyan-100/80">
-                  {gameNames || "No game access assigned"}
-                </p>
-              </div>
-              <div className="flex gap-2 text-sm">
-                {assignment.status === "active" && (
-                  <button
-                    className="rounded-lg border border-amber-400/40 px-3 py-2 text-amber-200"
-                    onClick={() => setAssignmentStatus(assignment._id, "suspended")}
-                    type="button"
-                  >
-                    Suspend
-                  </button>
-                )}
-                {assignment.status === "suspended" && (
-                  <button
-                    className="rounded-lg border border-cyan-400/40 px-3 py-2 text-cyan-200"
-                    onClick={() => setAssignmentStatus(assignment._id, "active")}
-                    type="button"
-                  >
-                    Restore
-                  </button>
-                )}
-                <button
-                  className="rounded-lg border border-rose-400/40 px-3 py-2 text-rose-200 disabled:border-slate-700 disabled:text-slate-600"
-                  disabled={isRevoked}
-                  onClick={() => setAssignmentStatus(assignment._id, "revoked")}
-                  type="button"
-                >
-                  {isRevoked ? "Revoked" : "Revoke"}
-                </button>
-              </div>
-            </article>
-          );
-        })}
+      <div className="p-5 lg:p-8">
+        {tab === "people" && (
+          <PeoplePanel
+            candidate={state.candidate}
+            canAssign={canAssign}
+            canRecommend={canRecommend}
+            email={email}
+            form={roleForm}
+            isLoading={state.isLoading}
+            needsGames={needsGames}
+            onEmailChange={setEmail}
+            onModeChange={(mode) => setRoleForm((current) => ({ ...current, mode }))}
+            onReasonChange={(reason) => setRoleForm((current) => ({ ...current, reason }))}
+            onRoleSelect={selectRole}
+            onSearch={searchCandidate}
+            onSubmit={submitRoleAction}
+            onToggleGame={toggleGame}
+            roles={state.roles}
+            scopeGames={state.scopeGames}
+          />
+        )}
+        {tab === "hiring" && <HiringPanel onNoteChange={(id, note) => setReviewNotes((current) => ({ ...current, [id]: note }))} onReview={review} onWithdraw={withdraw} recommendations={state.recommendations} reviewNotes={reviewNotes} />}
+        {tab === "directory" && <DirectoryPanel groups={groupedAssignments} onScopeChange={changeScopes} onStatusChange={changeStatus} roles={state.roles} scopeGames={state.scopeGames} />}
+        {tab === "history" && <HistoryPanel activity={state.activity} category={historyCategory} onCategoryChange={filterHistory} reports={state.reports} />}
+        {tab === "policy" && <PolicyPanel manageableRoles={state.manageableRoles} recommendableRoles={state.recommendableRoles} roles={state.roles} />}
       </div>
-        </>
-      ) : (
-        <RoleReports activity={staffActivity} reports={staffReports} />
-      )}
     </section>
   );
 };
 
-export default RoleManagement;
+const Metric = ({ label, value }) => <div className="min-w-24 rounded-2xl border border-slate-700/70 bg-slate-950/70 px-3 py-3"><p className="text-xl font-black text-cyan-100">{value}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">{label}</p></div>;
+Metric.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.number.isRequired };
 
-const RoleReports = ({ activity, reports }) => (
-  <div className="mt-6 space-y-6">
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {reports.map((report) => (
-        <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4" key={report.role}>
-          <p className="font-bold text-white">{readableLabel(report.role)}</p>
-          <p className="mt-3 text-2xl font-black text-cyan-200">{report.activeStaff}</p>
-          <p className="text-xs uppercase tracking-wide text-slate-500">active staff</p>
-          <p className="mt-3 text-sm text-slate-400">{report.serviceActionsLast30Days} service actions in 30 days</p>
-        </article>
-      ))}
+const PeoplePanel = ({ candidate, canAssign, canRecommend, email, form, isLoading, needsGames, onEmailChange, onModeChange, onReasonChange, onRoleSelect, onSearch, onSubmit, onToggleGame, roles, scopeGames }) => (
+  <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5">
+      <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Find account</p>
+      <h3 className="mt-2 text-xl font-black text-white">Search by exact email</h3>
+      <p className="mt-2 text-sm text-slate-400">Only verified, eligible accounts are returned. This prevents browsing the entire player directory.</p>
+      <form className="mt-5 flex flex-col gap-3 sm:flex-row" onSubmit={onSearch}>
+        <input className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-300" onChange={(event) => onEmailChange(event.target.value)} placeholder="player@example.com" type="email" value={email} />
+        <button className="rounded-xl bg-cyan-300 px-5 py-3 font-black text-slate-950 disabled:opacity-50" disabled={isLoading || !email.trim()} type="submit">Search</button>
+      </form>
+      {!candidate && <div className="mt-6 rounded-2xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">Search for an account to view identity and role details.</div>}
+      {candidate && <CandidateCard candidate={candidate} />}
     </div>
-    <div>
-      <h3 className="text-lg font-bold text-white">Service history</h3>
-      <div className="mt-3 space-y-2">
-        {activity.map((item) => (
-          <article className="rounded-xl border border-slate-800 p-3 text-sm" key={item._id}>
-            <span className="font-semibold text-white">{item.actor?.profile?.username || item.actor?.email || "System"}</span>
-            <span className="mx-2 text-cyan-200">{item.action.replaceAll("_", " ")}</span>
-            <span className="text-slate-500">{new Date(item.createdAt).toLocaleString()}</span>
-          </article>
-        ))}
-        {activity.length === 0 && <p className="text-sm text-slate-400">No staff activity recorded yet.</p>}
+
+    <form className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5" onSubmit={onSubmit}>
+      <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Role action</p>
+      <h3 className="mt-2 text-xl font-black text-white">Add a role</h3>
+      <p className="mt-2 text-sm text-slate-400">One person may hold several different roles. Existing roles are shown before you continue.</p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {roles.map((role) => <button className={form.role === role.role ? "rounded-2xl border border-cyan-300 bg-cyan-300/10 p-4 text-left" : "rounded-2xl border border-slate-700 bg-slate-900/70 p-4 text-left hover:border-slate-500"} key={role.role} onClick={() => onRoleSelect(role.role)} type="button"><span className="font-bold text-white">{titleCase(role.role)}</span><p className="mt-2 text-xs leading-5 text-slate-400">{role.description}</p></button>)}
       </div>
-    </div>
+      {form.role && <div className="mt-5 space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-4">
+        {canAssign && canRecommend && <div className="flex gap-2"><ModeButton active={form.mode === "assign"} label="Assign directly" onClick={() => onModeChange("assign")} /><ModeButton active={form.mode === "recommend"} label="Recommend for review" onClick={() => onModeChange("recommend")} /></div>}
+        <p className="text-sm text-slate-300">Action: <strong className="text-white">{form.mode === "assign" ? "Direct assignment" : "Higher-authority review"}</strong></p>
+        {needsGames && <GameChoices games={scopeGames} selected={form.gameIds} onToggle={onToggleGame} />}
+        {form.mode === "recommend" && <textarea className="min-h-28 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white" maxLength={1000} onChange={(event) => onReasonChange(event.target.value)} placeholder="Why is this person suitable? Include experience, reliability, and expected responsibilities." value={form.reason} />}
+        <button className="w-full rounded-xl bg-cyan-300 px-5 py-3 font-black text-slate-950 disabled:opacity-40" disabled={!candidate || !form.role || (needsGames && form.gameIds.length === 0) || (form.mode === "recommend" && form.reason.trim().length < 20)} type="submit">{form.mode === "assign" ? "Assign role" : "Send recommendation"}</button>
+      </div>}
+    </form>
   </div>
 );
+
+const CandidateCard = ({ candidate }) => <div className="mt-6 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-5"><div className="flex items-center gap-4"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300 font-black text-slate-950">{personName(candidate).slice(0, 2).toUpperCase()}</div><div><p className="font-black text-white">{personName(candidate)}</p><p className="text-sm text-slate-400">{candidate.email}</p><p className="mt-1 text-xs text-emerald-200">Verified account</p></div></div><div className="mt-4"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Visible role history</p><div className="mt-2 flex flex-wrap gap-2">{candidate.assignments?.map((item) => <StatusPill key={item._id} status={item.status} text={titleCase(item.role) + " · " + titleCase(item.status)} />)}{!candidate.assignments?.length && <span className="text-sm text-slate-500">No existing visible staff roles.</span>}</div></div></div>;
+CandidateCard.propTypes = { candidate: PropTypes.object.isRequired };
+
+const ModeButton = ({ active, label, onClick }) => <button className={active ? "rounded-lg bg-cyan-300 px-3 py-2 text-sm font-bold text-slate-950" : "rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300"} onClick={onClick} type="button">{label}</button>;
+ModeButton.propTypes = { active: PropTypes.bool.isRequired, label: PropTypes.string.isRequired, onClick: PropTypes.func.isRequired };
+
+const GameChoices = ({ games, onToggle, selected }) => <div><p className="text-sm font-bold text-white">Game scope</p><div className="mt-2 flex flex-wrap gap-2">{games.map((game) => <label className="flex cursor-pointer gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300" key={game._id}><input checked={selected.includes(game._id)} onChange={() => onToggle(game._id)} type="checkbox" />{game.name}</label>)}</div></div>;
+GameChoices.propTypes = { games: PropTypes.array.isRequired, onToggle: PropTypes.func.isRequired, selected: PropTypes.array.isRequired };
+
+const HiringPanel = ({ onNoteChange, onReview, onWithdraw, recommendations, reviewNotes }) => <div className="space-y-4"><SectionHeading title="Hiring queue" text="Recommendations stay powerless until a different authorized reviewer approves them." />{recommendations.map((item) => <article className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5" key={item._id}><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><p className="text-lg font-black text-white">{personName(item.candidate)}</p><StatusPill status={item.status} text={titleCase(item.status)} /></div><p className="mt-1 text-sm text-slate-400">{item.candidate?.email}</p><p className="mt-3 text-sm text-cyan-100">Requested role: {titleCase(item.role)}</p><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">{item.reason}</p><p className="mt-3 text-xs text-slate-500">Recommended by {personName(item.recommendedBy)} on {formatDate(item.createdAt)} · expires {formatDate(item.expiresAt)}</p>{item.reviewedBy && <p className="mt-2 text-xs text-slate-400">Reviewed by {personName(item.reviewedBy)}: {item.reviewNote || "No note"}</p>}</div>{item.status === "pending" && <div className="w-full max-w-md space-y-2">{item.canReview && <textarea className="min-h-20 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white" onChange={(event) => onNoteChange(item._id, event.target.value)} placeholder="Review note (required when rejecting)" value={reviewNotes[item._id] || ""} /> }<div className="flex flex-wrap gap-2">{item.canReview && <><button className="rounded-lg bg-emerald-300 px-3 py-2 text-sm font-black text-slate-950" onClick={() => onReview(item._id, "approved")} type="button">Approve</button><button className="rounded-lg border border-rose-400/40 px-3 py-2 text-sm font-bold text-rose-100" disabled={(reviewNotes[item._id] || "").trim().length < 10} onClick={() => onReview(item._id, "rejected")} type="button">Reject</button></>}{item.canWithdraw && <button className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300" onClick={() => onWithdraw(item._id)} type="button">Withdraw</button>}</div></div>}</div></article>)}{recommendations.length === 0 && <Empty text="No hiring recommendations are visible to your current roles." />}</div>;
+
+const DirectoryPanel = ({ groups, onScopeChange, onStatusChange, roles, scopeGames }) => <div className="space-y-4"><SectionHeading title="Staff directory" text="People are grouped once, with every visible role listed beneath their account." />{groups.map((group) => <article className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5" key={group.user?._id}><div className="border-b border-slate-800 pb-4"><p className="text-lg font-black text-white">{personName(group.user)}</p><p className="text-sm text-slate-400">{group.user?.email}</p></div><div className="mt-4 space-y-3">{group.assignments.map((assignment) => <AssignmentRow assignment={assignment} key={assignment._id} onScopeChange={onScopeChange} onStatusChange={onStatusChange} role={roles.find((item) => item.role === assignment.role)} scopeGames={scopeGames} />)}</div></article>)}{groups.length === 0 && <Empty text="No subordinate staff assignments are visible." />}</div>;
+
+const AssignmentRow = ({ assignment, onScopeChange, onStatusChange, role, scopeGames }) => { const [editing, setEditing] = useState(false); const [gameIds, setGameIds] = useState(() => assignment.gameScopes?.map((game) => game._id) || []); const toggle = (id) => setGameIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]); return <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"><div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><div className="flex items-center gap-2"><p className="font-bold text-white">{titleCase(assignment.role)}</p><StatusPill status={assignment.status} text={titleCase(assignment.status)} /></div><p className="mt-2 text-xs text-slate-500">{assignment.gameScopes?.map((game) => game.name).join(", ") || titleCase(role?.scope || "assigned work") + " scope"}</p></div><div className="flex flex-wrap gap-2">{role?.scope === "game" && assignment.status !== "revoked" && <button className="rounded-lg border border-sky-400/40 px-3 py-2 text-sm text-sky-100" onClick={() => setEditing((value) => !value)} type="button">Edit scope</button>}{assignment.status === "active" && <button className="rounded-lg border border-amber-400/40 px-3 py-2 text-sm text-amber-100" onClick={() => onStatusChange(assignment._id, "suspended")} type="button">Suspend</button>}{assignment.status === "suspended" && <button className="rounded-lg border border-cyan-400/40 px-3 py-2 text-sm text-cyan-100" onClick={() => onStatusChange(assignment._id, "active")} type="button">Restore</button>}<button className="rounded-lg border border-rose-400/40 px-3 py-2 text-sm text-rose-100 disabled:opacity-40" disabled={assignment.status === "revoked"} onClick={() => onStatusChange(assignment._id, "revoked")} type="button">Revoke</button></div></div>{editing && <div className="mt-4 border-t border-slate-800 pt-4"><GameChoices games={scopeGames} onToggle={toggle} selected={gameIds} /><button className="mt-3 rounded-lg bg-cyan-300 px-3 py-2 text-sm font-black text-slate-950 disabled:opacity-40" disabled={!gameIds.length} onClick={async () => { await onScopeChange(assignment._id, gameIds); setEditing(false); }} type="button">Save scope</button></div>}</div>; };
+AssignmentRow.propTypes = { assignment: PropTypes.object.isRequired, onScopeChange: PropTypes.func.isRequired, onStatusChange: PropTypes.func.isRequired, role: PropTypes.object, scopeGames: PropTypes.array.isRequired };
+
+const HistoryPanel = ({ activity, category, onCategoryChange, reports }) => <div><div className="grid gap-3 md:grid-cols-3">{reports.map((report) => <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4" key={report.role}><p className="text-sm font-bold text-cyan-100">{titleCase(report.role)}</p><p className="mt-2 text-2xl font-black text-white">{report.activeStaff}</p><p className="text-xs text-slate-500">active · {report.serviceActionsLast30Days} service actions in 30 days</p></div>)}</div><div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><SectionHeading title="Who changed what" text="Every row identifies the actor, action, affected person, role, and time." /><select className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" onChange={(event) => onCategoryChange(event.target.value)} value={category}><option value="">All history</option><option value="access">Role history</option><option value="service">Service history</option></select></div><div className="mt-4 space-y-3">{activity.map((item) => <article className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950/55 p-4 md:grid-cols-[1fr_auto]" key={item._id}><div><p className="text-sm text-slate-200"><strong className="text-white">{personName(item.actor)}</strong> {actionLabels[item.action] || titleCase(item.action)} <strong className="text-white">{personName(item.targetUser)}</strong></p><div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-cyan-300/10 px-2 py-1 text-cyan-100">{titleCase(item.role)}</span><span className="rounded-full bg-slate-800 px-2 py-1 text-slate-300">{titleCase(item.category)}</span>{item.metadata?.reviewNote && <span className="text-slate-400">Note: {item.metadata.reviewNote}</span>}</div></div><time className="text-xs text-slate-500">{formatDate(item.createdAt)}</time></article>)}{activity.length === 0 && <Empty text="No history matches this filter." />}</div></div>;
+
+const PolicyPanel = ({ manageableRoles, recommendableRoles, roles }) => <div className="grid gap-4 lg:grid-cols-2">{roles.map((role) => <article className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5" key={role.role}><div className="flex justify-between gap-3"><div><h3 className="text-lg font-black text-white">{titleCase(role.role)}</h3><p className="mt-2 text-sm leading-6 text-slate-400">{role.description}</p></div><span className="h-fit rounded-full border border-slate-700 px-2 py-1 text-xs text-cyan-100">{titleCase(role.scope)}</span></div><div className="mt-4 flex gap-2">{manageableRoles.includes(role.role) && <StatusPill status="approved" text="You can assign" />}{recommendableRoles.includes(role.role) && <StatusPill status="pending" text="You can recommend" />}</div><p className="mt-4 text-xs text-slate-500">Permissions: {role.permissions?.map(titleCase).join(", ") || "None"}</p></article>)}</div>;
+
+const StatusPill = ({ status, text }) => <span className={(badge[status] || badge.withdrawn) + " rounded-full border px-2 py-1 text-[11px] font-bold"}>{text}</span>;
+StatusPill.propTypes = { status: PropTypes.string.isRequired, text: PropTypes.string.isRequired };
+const SectionHeading = ({ text, title }) => <div><h3 className="text-xl font-black text-white">{title}</h3><p className="mt-1 text-sm text-slate-400">{text}</p></div>;
+SectionHeading.propTypes = { text: PropTypes.string.isRequired, title: PropTypes.string.isRequired };
+const Empty = ({ text }) => <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">{text}</div>;
+Empty.propTypes = { text: PropTypes.string.isRequired };
+
+PeoplePanel.propTypes = { candidate: PropTypes.object, canAssign: PropTypes.bool.isRequired, canRecommend: PropTypes.bool.isRequired, email: PropTypes.string.isRequired, form: PropTypes.object.isRequired, isLoading: PropTypes.bool.isRequired, needsGames: PropTypes.bool.isRequired, onEmailChange: PropTypes.func.isRequired, onModeChange: PropTypes.func.isRequired, onReasonChange: PropTypes.func.isRequired, onRoleSelect: PropTypes.func.isRequired, onSearch: PropTypes.func.isRequired, onSubmit: PropTypes.func.isRequired, onToggleGame: PropTypes.func.isRequired, roles: PropTypes.array.isRequired, scopeGames: PropTypes.array.isRequired };
+HiringPanel.propTypes = { onNoteChange: PropTypes.func.isRequired, onReview: PropTypes.func.isRequired, onWithdraw: PropTypes.func.isRequired, recommendations: PropTypes.array.isRequired, reviewNotes: PropTypes.object.isRequired };
+DirectoryPanel.propTypes = { groups: PropTypes.array.isRequired, onScopeChange: PropTypes.func.isRequired, onStatusChange: PropTypes.func.isRequired, roles: PropTypes.array.isRequired, scopeGames: PropTypes.array.isRequired };
+HistoryPanel.propTypes = { activity: PropTypes.array.isRequired, category: PropTypes.string.isRequired, onCategoryChange: PropTypes.func.isRequired, reports: PropTypes.array.isRequired };
+PolicyPanel.propTypes = { manageableRoles: PropTypes.array.isRequired, recommendableRoles: PropTypes.array.isRequired, roles: PropTypes.array.isRequired };
+
+export default RoleManagement;

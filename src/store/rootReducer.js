@@ -1,6 +1,7 @@
 import { combineReducers } from "@reduxjs/toolkit";
 import { sessionInvalidated } from "./actions/sessionActions";
 import accountSlice from "./slices/accountSlice";
+import accessControlSlice from "./slices/accessControlSlice";
 import adminSlice from "./slices/adminSlice";
 import authSlice, { logout } from "./slices/authSlice";
 import clanSlice from "./slices/clanSlice";
@@ -27,6 +28,7 @@ import eventManagementSlice from "./slices/eventManagementSlice";
 // state shape stays explicit and easy to discover from one file.
 const combinedReducer = combineReducers({
   account: accountSlice.reducer,
+  accessControl: accessControlSlice.reducer,
   admin: adminSlice.reducer,
   auth: authSlice.reducer,
   games: gameSlice.reducer,
@@ -46,6 +48,7 @@ const combinedReducer = combineReducers({
 
 const privateSliceKeys = [
   "account",
+  "accessControl",
   "admin",
   "clan",
   "notifications",
