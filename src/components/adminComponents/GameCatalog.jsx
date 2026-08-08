@@ -24,6 +24,7 @@ const GameCatalog = () => {
   const [editForm, setEditForm] = useState(null);
   const [editingGameId, setEditingGameId] = useState(null);
   const [panel, setPanel] = useState("catalog");
+  const [ownershipFilter, setOwnershipFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -96,45 +97,26 @@ const GameCatalog = () => {
       .toLowerCase()
       .includes(search.trim().toLowerCase());
     return (
-      matchesSearch && (statusFilter === "all" || game.status === statusFilter)
+      matchesSearch &&
+      (statusFilter === "all" || game.status === statusFilter) &&
+      (ownershipFilter === "all" ||
+        (ownershipFilter === "owned" && game.hasActiveManager) ||
+        (ownershipFilter === "unowned" && !game.hasActiveManager))
     );
   });
-  const counts = catalogGames.reduce(
-    (result, game) => ({ ...result, [game.status]: result[game.status] + 1 }),
-    { active: 0, archived: 0, draft: 0 },
-  );
   const editingGame = catalogGames.find((game) => game._id === editingGameId);
 
   return (
     <section className="space-y-6">
-      <header className="overflow-hidden rounded-[28px] border border-slate-800 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_42%)] p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/75">
-              Platform catalog
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
-              Game Management
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-400">
-              Define and publish a complete game first. Assign Game Managers
-              afterward for ongoing configuration and ownership.
-            </p>
-          </div>
-          <button
-            className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950"
-            onClick={() => setPanel("create")}
-            type="button"
-          >
-            Create game
-          </button>
-        </div>
-        <div className="mt-5 grid grid-cols-3 gap-2 sm:max-w-md">
-          <Metric label="Draft" value={counts.draft} />
-          <Metric label="Active" value={counts.active} />
-          <Metric label="Archived" value={counts.archived} />
-        </div>
-      </header>
+      <div className="flex justify-end">
+        <button
+          className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950"
+          onClick={() => setPanel("create")}
+          type="button"
+        >
+          Create game
+        </button>
+      </div>
 
       <nav className="flex flex-wrap gap-2 border-b border-slate-800 pb-4">
         <PanelButton
@@ -221,10 +203,11 @@ const GameCatalog = () => {
       )}
 
       {panel === "catalog" && (
-        <section className="rounded-[28px] border border-slate-800 bg-slate-950/90 p-6">
+        <section className="rounded-[28px] border border-slate-800 bg-[#07111f] p-5 shadow-[0_18px_50px_rgba(2,8,23,0.32)] lg:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-lg font-bold text-white">Platform games</h3>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Control board</p>
+              <h3 className="mt-1 text-xl font-black text-white">Platform games</h3>
               <p className="mt-1 text-sm text-slate-500">
                 Publishing readiness and manager ownership are tracked
                 separately.
@@ -246,6 +229,15 @@ const GameCatalog = () => {
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
+              </select>
+              <select
+                className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+                onChange={(event) => setOwnershipFilter(event.target.value)}
+                value={ownershipFilter}
+              >
+                <option value="all">All ownership</option>
+                <option value="owned">Manager assigned</option>
+                <option value="unowned">Needs manager</option>
               </select>
             </div>
           </div>
@@ -345,6 +337,11 @@ const GameHistory = ({ activity }) => (
 
 const CatalogGameCard = ({ game, onEdit, onStatusChange }) => {
   const readiness = game.activationReadiness || { checks: [], ready: false };
+  // A restarted frontend can briefly receive an older backend payload during
+  // local development or rollout. Ownership remains readable in both shapes.
+  const activeManagers = game.activeManagers || [];
+  const hasActiveManager =
+    game.hasActiveManager === true || activeManagers.length > 0;
   const connectionMethod =
     game.accountConnection?.method ||
     game.verificationMethod ||
@@ -388,23 +385,28 @@ const CatalogGameCard = ({ game, onEdit, onStatusChange }) => {
 
       <div
         className={
-          game.hasActiveManager
+          hasActiveManager
             ? "mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3"
             : "mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3"
         }
       >
         <p
           className={
-            game.hasActiveManager
+            hasActiveManager
               ? "text-xs font-bold text-emerald-300"
               : "text-xs font-bold text-amber-200"
           }
         >
-          {game.hasActiveManager
-            ? "Game Manager assigned"
+          {hasActiveManager
+            ? `Game Manager${activeManagers.length === 1 ? "" : "s"} assigned`
             : "No Game Manager assigned"}
         </p>
-        {!game.hasActiveManager && (
+        {hasActiveManager && activeManagers.length > 0 && (
+          <p className="mt-1 text-xs text-slate-400">
+            {activeManagers.map((manager) => manager.name).join(", ")}
+          </p>
+        )}
+        {!hasActiveManager && (
           <p className="mt-1 text-xs text-slate-500">
             This does not block publishing. Assign ownership from Role
             Management.
@@ -517,6 +519,12 @@ CatalogGameCard.propTypes = {
       ).isRequired,
       ready: PropTypes.bool.isRequired,
     }),
+    activeManagers: PropTypes.arrayOf(
+      PropTypes.shape({
+        _id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+      }),
+    ),
     hasActiveManager: PropTypes.bool,
     id: PropTypes.string,
     link: PropTypes.string.isRequired,

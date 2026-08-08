@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import Fuse from "fuse.js";
 import { useDispatch, useSelector } from "react-redux";
 import CreateTemplate from "../../myComponents/CreateTemplate";
@@ -243,6 +244,10 @@ const TournamentManagement = ({ socket }) => {
       </div>
     </div>
   );
+};
+
+TournamentManagement.propTypes = {
+  socket: PropTypes.shape({ emit: PropTypes.func }),
 };
 
 export default TournamentManagement;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import api from "../../api/axios-api";
 
 const CLAN_STATES = {
@@ -39,7 +40,7 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
         isWarLogPublic: data.isWarLogPublic,
         members: data.members || [],
       });
-    } catch (err) {
+    } catch {
       setStatus("Error fetching clan data");
       setClanData(null);
     } finally {
@@ -169,6 +170,12 @@ const ClanVerify = ({ isOpen, onClose, onValidationSuccess }) => {
       </div>
     </div>
   );
+};
+
+ClanVerify.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onValidationSuccess: PropTypes.func.isRequired,
 };
 
 export default ClanVerify;

@@ -15,7 +15,7 @@ import {
   VerifiedPlayerRoute,
   VerifiedDetailedPlayerRoute,
 } from "./RouteGuards";
-import { LazyComponents } from "./routeRegistry";
+import LazyComponents from "./routeRegistry";
 import RouteErrorPage from "../components/common/RouteErrorPage";
 
 const guardElements = {

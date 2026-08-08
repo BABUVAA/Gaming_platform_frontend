@@ -1,76 +1,90 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { GameCatalog, RoleManagement } from "../components";
+import { FiCheckSquare, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
+import { EventReviewQueue, GameCatalog, QuickMatchOfferingManagement, RoleManagement } from "../components";
+
+const ADMIN_AREAS = [
+  {
+    description: "Staff ownership, roles, scopes, and hiring history.",
+    icon: FiUsers,
+    id: "roles",
+    label: "People and access",
+  },
+  {
+    description: "Game setup, ownership, readiness, and publishing.",
+    icon: FiGrid,
+    id: "games",
+    label: "Game control",
+  },
+  {
+    description: "Event templates, schedules, and approval decisions.",
+    icon: FiCheckSquare,
+    id: "events",
+    label: "Event Management",
+  },
+  {
+    description: "Fixed-seat tournament configuration and lifecycle.",
+    icon: FiZap,
+    id: "quick-matches",
+    label: "Tournament Management",
+  },
+];
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("roles");
+  const activeArea = ADMIN_AREAS.find((area) => area.id === activeSection);
 
   return (
-    <div className="min-h-screen bg-[#050b14] text-slate-100">
-      <div className="mx-auto grid min-h-screen max-w-[1600px] md:grid-cols-[18rem_1fr]">
-        <aside className="border-r border-slate-800 bg-[#030812] px-4 py-6">
-          <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">
-            Admin Console
-          </p>
-          <h1 className="mt-3 text-3xl font-black text-white">Admin Panel</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-400">
-            Configure staff access before enabling additional platform tools.
-          </p>
-
-          <nav className="mt-8 space-y-2">
-            <button className={activeSection === "roles" ? "w-full rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-4 text-left text-white" : "w-full rounded-2xl border border-slate-800 px-4 py-4 text-left text-slate-300"} onClick={() => setActiveSection("roles")} type="button">
-              <span className="block text-sm font-bold">Role Management</span>
-              <span className="mt-1 block text-xs text-slate-400">
-                Employees, access roles, and scopes
-              </span>
-            </button>
-            <button className={activeSection === "games" ? "w-full rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-4 text-left text-white" : "w-full rounded-2xl border border-slate-800 px-4 py-4 text-left text-slate-300"} onClick={() => setActiveSection("games")} type="button">
-              <span className="block text-sm font-bold">Game Management</span>
-              <span className="mt-1 block text-xs text-slate-400">Drafts, readiness, publishing and history</span>
-            </button>
-          </nav>
-        </aside>
-
-        <main className="min-w-0 px-4 py-6 md:px-6">
-          <section className="mb-6 rounded-[28px] border border-slate-800 bg-slate-950/80 p-5 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="min-h-screen bg-[#040914] text-slate-100">
+      <div className="mx-auto min-h-screen max-w-[1680px] p-3 md:p-5">
+        <div className="grid min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[34px] border border-slate-800 bg-[#07111f] shadow-[0_32px_100px_rgba(0,0,0,0.42)] lg:grid-cols-[19rem_minmax(0,1fr)]">
+          <aside className="border-b border-slate-800 bg-[#030813] p-5 lg:border-b-0 lg:border-r lg:p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-300 text-lg font-black text-slate-950">EG</span>
               <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/75">
-                  Admin Access
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-white">
-                  {activeSection === "roles" ? "Role management" : "Game management"}
-                </h2>
-                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
-                  {activeSection === "roles"
-                    ? "Assign staff roles, scopes, and hiring approvals."
-                    : "Create game identities, review readiness, and control publishing."}
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <StatusCard label="Active section" value={activeSection === "roles" ? "Role Management" : "Game Management"} />
-                <StatusCard label="Mode" value="Admin" />
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Platform</p>
+                <p className="mt-1 font-black text-white">Control room</p>
               </div>
             </div>
-          </section>
-          {activeSection === "roles" ? <RoleManagement /> : <GameCatalog />}
-        </main>
+
+            <p className="mt-8 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">Workspaces</p>
+            <nav className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              {ADMIN_AREAS.map((area) => <WorkspaceButton active={area.id === activeSection} area={area} key={area.id} onClick={() => setActiveSection(area.id)} />)}
+            </nav>
+
+            <div className="mt-8 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
+              <FiShield className="text-lg text-cyan-300" />
+              <p className="mt-3 text-sm font-black text-white">Admin-only changes</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">Game setup, publishing, and staff authority stay inside this workspace. Operations staff can see work but cannot change platform rules.</p>
+            </div>
+          </aside>
+
+          <main className="min-w-0 p-4 md:p-6 lg:p-8">
+            <header className="mb-4 flex items-center justify-between border-b border-slate-800 pb-4">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">{activeArea.label}</p>
+              <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">Platform Admin</span>
+            </header>
+            {activeSection === "roles" ? (
+              <RoleManagement />
+            ) : activeSection === "games" ? (
+              <GameCatalog />
+            ) : activeSection === "events" ? (
+              <EventReviewQueue />
+            ) : (
+              <QuickMatchOfferingManagement />
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );
 };
 
-const StatusCard = ({ label, value }) => (
-  <div className="rounded-2xl border border-slate-800 bg-[#020617] px-4 py-4">
-    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
-    <p className="mt-3 text-lg font-black text-white">{value}</p>
-  </div>
-);
-
-StatusCard.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
+const WorkspaceButton = ({ active, area, onClick }) => {
+  const Icon = area.icon;
+  return <button className={active ? "flex items-start gap-3 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4 text-left" : "flex items-start gap-3 rounded-2xl border border-transparent p-4 text-left hover:bg-slate-900/70"} onClick={onClick} type="button"><span className={active ? "rounded-xl bg-cyan-300 p-2 text-slate-950" : "rounded-xl bg-slate-900 p-2 text-slate-400"}><Icon /></span><span><span className="block text-sm font-black text-white">{area.label}</span><span className="mt-1 block text-xs leading-5 text-slate-400">{area.description}</span></span></button>;
 };
+
+WorkspaceButton.propTypes = { active: PropTypes.bool.isRequired, area: PropTypes.shape({ description: PropTypes.string.isRequired, icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired }).isRequired, onClick: PropTypes.func.isRequired };
 
 export default AdminDashboard;

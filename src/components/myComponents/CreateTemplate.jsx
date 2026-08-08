@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 
 const CreateTemplate = ({ socket }) => {
   const [formData, setFormData] = useState({
@@ -228,6 +229,10 @@ const CreateTemplate = ({ socket }) => {
       </form>
     </div>
   );
+};
+
+CreateTemplate.propTypes = {
+  socket: PropTypes.shape({ emit: PropTypes.func }).isRequired,
 };
 
 export default CreateTemplate;

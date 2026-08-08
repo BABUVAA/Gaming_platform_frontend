@@ -1,4 +1,4 @@
-import { Form, redirect } from "react-router-dom";
+import { Form } from "react-router-dom";
 import { AuthShell, Button, Input } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
 import { FiMail, FiRefreshCw } from "react-icons/fi";
@@ -58,12 +58,5 @@ const ForgotPassword = () => {
     </AuthShell>
   );
 };
-
-export async function forgotPassword(data) {
-  const formData = await data.request.formData();
-  const logData = Object.fromEntries(formData);
-  console.log(logData); // This will log the user data to the console
-  return redirect("/"); // Redirect after logging
-}
 
 export default ForgotPassword;

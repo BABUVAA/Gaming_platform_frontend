@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import ChatBox from "../components/common/ChatBox";
 import { FiMessageSquare, FiUsers } from "react-icons/fi";
@@ -262,6 +263,23 @@ const NewChatModal = ({ onClose, personalChats, setPersonalChats, onOpenChat }) 
       </div>
     </div>
   );
+};
+
+ChatSidebar.propTypes = {
+  onOpenChat: PropTypes.func.isRequired,
+  clanChat: PropTypes.shape({
+    _id: PropTypes.string,
+    clanName: PropTypes.string,
+  }),
+  personalChats: PropTypes.arrayOf(PropTypes.object).isRequired,
+  onNewChat: PropTypes.func.isRequired,
+};
+
+NewChatModal.propTypes = {
+  onClose: PropTypes.func.isRequired,
+  personalChats: PropTypes.arrayOf(PropTypes.object).isRequired,
+  setPersonalChats: PropTypes.func.isRequired,
+  onOpenChat: PropTypes.func.isRequired,
 };
 
 export default Chats;

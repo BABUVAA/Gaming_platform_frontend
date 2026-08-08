@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import {
   findVerificationRequests,
@@ -293,5 +294,10 @@ const InfoBlock = ({ label, value }) => (
     <p className="mt-2 text-sm font-medium text-white">{value}</p>
   </div>
 );
+
+InfoBlock.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.node,
+};
 
 export default VerificationManagement;

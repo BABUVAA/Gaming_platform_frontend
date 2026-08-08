@@ -19,6 +19,8 @@ import socialSlice from "./slices/socialSlice";
 import toastSlice from "./slices/toastSlice";
 import tournamentSlice from "./slices/tournamentSlice";
 import eventManagementSlice from "./slices/eventManagementSlice";
+import eventReviewSlice from "./slices/eventReviewSlice";
+import quickMatchOfferingSlice from "./slices/quickMatchOfferingSlice";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -35,6 +37,8 @@ const combinedReducer = combineReducers({
   gameManagement: gameManagementSlice.reducer,
   tournament: tournamentSlice.reducer,
   eventManagement: eventManagementSlice.reducer,
+  eventReview: eventReviewSlice.reducer,
+  quickMatchOfferings: quickMatchOfferingSlice.reducer,
   loading: loadingSlice.reducer,
   matchmaking: matchmakingSlice.reducer,
   payment: paymentSlice.reducer,
@@ -57,6 +61,8 @@ const privateSliceKeys = [
   "social",
   "matchmaking",
   "eventManagement",
+  "eventReview",
+  "quickMatchOfferings",
   "gameManagement",
 ];
 

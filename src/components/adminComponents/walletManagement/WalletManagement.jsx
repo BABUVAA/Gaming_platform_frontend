@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import Fuse from "fuse.js";
 import { findTransactions } from "../../../store/slices/adminSlice";
@@ -143,6 +144,10 @@ const TransactionList = ({ transactions }) => {
       </div>
     </div>
   );
+};
+
+TransactionList.propTypes = {
+  transactions: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 const FundOperations = () => {

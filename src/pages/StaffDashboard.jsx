@@ -5,8 +5,8 @@ import { ROUTES } from "../routes/routeConstants";
 const WORKSPACES = {
   super_admin: ["Super Admin", "Platform governance and staff access.", ROUTES.ADMIN_PANEL],
   platform_admin: ["Platform Admin", "Staff, games, and platform operations.", ROUTES.ADMIN_PANEL],
-  game_manager: ["Game Manager", "Assigned game configuration.", ROUTES.GAME_MANAGER],
-  event_manager: ["Event Manager", "Create templates and schedule Events.", ROUTES.EVENT_MANAGER],
+  game_manager: ["Game Manager", "Monitor assigned rooms, operators, and Event readiness.", ROUTES.GAME_MANAGER],
+  event_manager: ["Event Manager", "Prepare Event and schedule proposals for approval.", ROUTES.EVENT_MANAGER],
   match_operator: ["Match Operator", "Run lobbies, check-ins, and results.", ROUTES.OPERATIONS],
 };
 

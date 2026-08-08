@@ -3,14 +3,6 @@ import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 import createApiThunk from "../thunks/createApiThunk";
 
 const field = (name) => (response) => response.data?.data?.[name] ?? null;
-const query = (path, name, errorMessage, getParams) => createApiThunk(name, {
-  path,
-  getParams,
-  selectData: field(name.split("/").at(-1)),
-  errorMessage,
-  toast: { error: true },
-});
-
 export const fetchAccessPolicy = createApiThunk("accessControl/policy", {
   path: "/api/access-control/roles",
   selectData: (response) => response.data?.data || {},

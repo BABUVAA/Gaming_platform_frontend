@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
 import { FiCopy, FiGift, FiShare2, FiUsers } from "react-icons/fi";
 
@@ -116,5 +117,18 @@ const ShareRow = ({ label, value, actionLabel, onAction }) => (
     </div>
   </div>
 );
+
+MetricCard.propTypes = {
+  icon: PropTypes.node.isRequired,
+  label: PropTypes.string.isRequired,
+  value: PropTypes.node.isRequired,
+};
+
+ShareRow.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.node.isRequired,
+  actionLabel: PropTypes.string.isRequired,
+  onAction: PropTypes.func.isRequired,
+};
 
 export default Refer;

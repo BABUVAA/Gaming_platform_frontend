@@ -33,3 +33,5 @@ export { default as RewardManagement } from "./adminComponents/RewardManagement.
 export { default as VerificationManagement } from "./adminComponents/VerificationManagement.jsx";
 export { default as RoleManagement } from "./adminComponents/RoleManagement.jsx";
 export { default as GameCatalog } from "./adminComponents/GameCatalog.jsx";
+export { default as EventReviewQueue } from "./adminComponents/EventReviewQueue.jsx";
+export { default as QuickMatchOfferingManagement } from "./adminComponents/QuickMatchOfferingManagement.jsx";

@@ -2,7 +2,7 @@ import { lazy } from "react";
 
 // Route components are registered in one place so config files can reference
 // them by key instead of importing page modules repeatedly.
-export const LazyComponents = {
+const LazyComponents = {
   App: lazy(() => import("../pages/App")),
   Home: lazy(() => import("../pages/Home")),
   ForgotPassword: lazy(() => import("../pages/ForgotPassword")),

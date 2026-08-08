@@ -16,17 +16,23 @@ import {
 import api from "../api/axios-api";
 import useSocket from "../context/useSocket";
 
-const statusOptions = [
-  "scheduled",
-  "check_in",
-  "lobby_ready",
-  "live",
-  "result_pending",
-  "verified",
-  "settled",
-  "cancelled",
-  "disputed",
-];
+const operatorCommands = Object.freeze({
+  operator_assigned: {
+    command: "prepare",
+    description: "Open this room for player check-in and lobby preparation.",
+    label: "Open check-in",
+  },
+  lobby_ready: {
+    command: "start",
+    description: "Start the match after lobby access has been shared.",
+    label: "Start match",
+  },
+  result_pending: {
+    command: "verify_result",
+    description: "Confirm the submitted result after checking its evidence.",
+    label: "Verify result",
+  },
+});
 
 const matchFilters = [
   { id: "all", label: "All matches" },
@@ -235,22 +241,22 @@ const Operations = () => {
     }
   };
 
-  const updateStatus = async (matchId, status) => {
+  const executeCommand = async (matchId, command) => {
     try {
-      setActiveAction(`${matchId}:status`);
+      setActiveAction(`${matchId}:command`);
       setError("");
       setNotice("");
       const response = await api.patch(
-        `/api/operator/matches/${matchId}/status`,
-        { status },
+        `/api/operator/matches/${matchId}/commands/${command}`,
       );
       updateMatchInState(response.data?.data);
       await refreshDashboard();
-      setNotice("Match status updated.");
+      setNotice(response.data?.message || "Match action completed.");
     } catch (requestError) {
       setError(
-        requestError?.response?.data?.message ||
-          "Unable to update match status.",
+        requestError?.response?.data?.error?.message ||
+          requestError?.response?.data?.message ||
+          "Unable to complete this match action.",
       );
     } finally {
       setActiveAction("");
@@ -462,7 +468,7 @@ const Operations = () => {
                 )
               }
               onUpdateLobbyDraft={updateLobbyDraft}
-              onUpdateStatus={updateStatus}
+              onExecuteCommand={executeCommand}
             />
           ))}
 
@@ -593,7 +599,7 @@ const AssignedMatchCard = ({
   onPublishLobby,
   onToggle,
   onUpdateLobbyDraft,
-  onUpdateStatus,
+  onExecuteCommand,
 }) => {
   const checkedInCount = (match.participants || []).filter(
     (participant) => participant.checkedIn,
@@ -601,9 +607,12 @@ const AssignedMatchCard = ({
   const participantCount = match.participants?.length || 0;
   const presentation =
     statusPresentation[match.status] || statusPresentation.scheduled;
-  const isStageLocked = match.status === "operator_assigned";
+  const availableCommand = operatorCommands[match.status] || null;
+  const canEditLobby = ["scheduled", "check_in", "lobby_ready"].includes(
+    match.status,
+  );
+  const isCommandBusy = activeAction === `${match._id}:command`;
   const isLobbyBusy = activeAction === `${match._id}:lobby`;
-  const isStatusBusy = activeAction === `${match._id}:status`;
 
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/65">
@@ -657,67 +666,67 @@ const AssignedMatchCard = ({
             />
           </div>
 
-          {isStageLocked ? (
-            <div className="mt-4 flex gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4">
-              <FiCheckCircle className="mt-0.5 shrink-0 text-xl text-cyan-300" />
-              <div>
-                <p className="font-black text-white">Assignment confirmed</p>
-                <p className="mt-1 text-sm leading-6 text-slate-400">
-                  This match is yours. Controls will unlock when the next
-                  match stage is added.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-              <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  Match status
-                  <select
-                    className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm font-bold text-white outline-none focus:border-cyan-300/50"
-                    disabled={isStatusBusy}
-                    onChange={(event) =>
-                      onUpdateStatus(match._id, event.target.value)
-                    }
-                    value={match.status}
-                  >
-                    {statusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {statusPresentation[status]?.label || status}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+          <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+            <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Current stage
+              </p>
+              <p className="mt-2 text-lg font-black text-white">
+                {presentation.label}
+              </p>
 
-                <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                  Player readiness
+              {availableCommand ? (
+                <div className="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3">
+                  <p className="text-sm leading-6 text-slate-300">
+                    {availableCommand.description}
+                  </p>
+                  <button
+                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-60"
+                    disabled={isCommandBusy}
+                    onClick={() =>
+                      onExecuteCommand(match._id, availableCommand.command)
+                    }
+                    type="button"
+                  >
+                    {isCommandBusy ? "Working..." : availableCommand.label}
+                    <FiArrowRight />
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-slate-400">
+                  The next action depends on player check-in, result submission,
+                  dispute review, or platform administration.
                 </p>
-                <div className="mt-2 max-h-52 space-y-2 overflow-y-auto pr-1">
-                  {(match.participants || []).map((participant) => (
-                    <div
-                      className="flex items-center justify-between gap-3 rounded-xl bg-slate-900 px-3 py-2.5 text-xs"
-                      key={
-                        participant.user?._id || participant.displayName
+              )}
+
+              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Player readiness
+              </p>
+              <div className="mt-2 max-h-52 space-y-2 overflow-y-auto pr-1">
+                {(match.participants || []).map((participant) => (
+                  <div
+                    className="flex items-center justify-between gap-3 rounded-xl bg-slate-900 px-3 py-2.5 text-xs"
+                    key={participant.user?._id || participant.displayName}
+                  >
+                    <span className="truncate font-bold text-slate-200">
+                      {participant.user?.profile?.username ||
+                        participant.displayName}
+                    </span>
+                    <span
+                      className={
+                        participant.checkedIn
+                          ? "text-emerald-300"
+                          : "text-slate-500"
                       }
                     >
-                      <span className="truncate font-bold text-slate-200">
-                        {participant.user?.profile?.username ||
-                          participant.displayName}
-                      </span>
-                      <span
-                        className={
-                          participant.checkedIn
-                            ? "text-emerald-300"
-                            : "text-slate-500"
-                        }
-                      >
-                        {participant.checkedIn ? "Ready" : "Waiting"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      {participant.checkedIn ? "Ready" : "Waiting"}
+                    </span>
+                  </div>
+                ))}
               </div>
+            </div>
 
+            {canEditLobby ? (
               <LobbyEditor
                 isBusy={isLobbyBusy}
                 lobbyDraft={lobbyDraft}
@@ -725,8 +734,19 @@ const AssignedMatchCard = ({
                 onPublish={onPublishLobby}
                 onUpdate={onUpdateLobbyDraft}
               />
-            </div>
-          )}
+            ) : (
+              <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-5">
+                <FiCheckCircle className="text-2xl text-cyan-300" />
+                <h4 className="mt-4 font-black text-white">
+                  Operations are stage controlled
+                </h4>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  Lobby credentials can be changed only while the room is being
+                  prepared. Completed and live stages remain protected.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
     </article>
@@ -887,7 +907,7 @@ AssignedMatchCard.propTypes = {
   onPublishLobby: PropTypes.func.isRequired,
   onToggle: PropTypes.func.isRequired,
   onUpdateLobbyDraft: PropTypes.func.isRequired,
-  onUpdateStatus: PropTypes.func.isRequired,
+  onExecuteCommand: PropTypes.func.isRequired,
 };
 
 MatchFact.propTypes = {
