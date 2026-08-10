@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import createApiThunk from "../thunks/createApiThunk";
+import createApiThunk from "../thunks/createApiThunk.js";
 
 export const fetchQuickMatchOfferings = createApiThunk(
   "quickMatchOfferings/fetchAll",
@@ -8,6 +8,15 @@ export const fetchQuickMatchOfferings = createApiThunk(
     selectData: (response) => response.data?.data?.offerings || [],
     errorMessage: "Unable to load Quick Match offerings.",
     toast: { error: true },
+  },
+);
+
+export const fetchPlayerQuickMatchOfferings = createApiThunk(
+  "quickMatchOfferings/fetchPlayerDiscovery",
+  {
+    path: "/api/player/quick-matches",
+    selectData: (response) => response.data?.data || [],
+    errorMessage: "Unable to load available tournaments.",
   },
 );
 
@@ -46,7 +55,14 @@ const upsertOffering = (offerings, offering) => {
 
 const quickMatchOfferingSlice = createSlice({
   name: "quickMatchOfferings",
-  initialState: { error: null, offerings: [], status: "idle" },
+  initialState: {
+    error: null,
+    offerings: [],
+    playerError: null,
+    playerOfferings: [],
+    playerStatus: "idle",
+    status: "idle",
+  },
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -61,6 +77,20 @@ const quickMatchOfferingSlice = createSlice({
       .addCase(fetchQuickMatchOfferings.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
         state.status = "failed";
+      })
+      .addCase(fetchPlayerQuickMatchOfferings.pending, (state) => {
+        state.playerError = null;
+        state.playerStatus = "loading";
+      })
+      .addCase(fetchPlayerQuickMatchOfferings.fulfilled, (state, action) => {
+        state.playerOfferings = Array.isArray(action.payload)
+          ? action.payload
+          : [];
+        state.playerStatus = "succeeded";
+      })
+      .addCase(fetchPlayerQuickMatchOfferings.rejected, (state, action) => {
+        state.playerError = action.payload || action.error.message;
+        state.playerStatus = action.meta.aborted ? "idle" : "failed";
       })
       .addCase(createQuickMatchOffering.fulfilled, (state, action) => {
         upsertOffering(state.offerings, action.payload);

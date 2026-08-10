@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-08
+Last updated: 2026-08-10
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -29,6 +29,10 @@ to continue the project without reopening settled decisions.
   review the same revision.
 - Match Operator requires assigned game scope and executes only matches they
   explicitly claim or receive within that scope.
+- Staff may open the player dashboard only as a read-only utility for platform
+  visibility. Staff accounts cannot join, register, check in, submit player
+  results/disputes, use social/team/clan participation, or initiate player
+  money actions.
 - Redux Toolkit thunks are the required feature-data boundary. Migration is
   incomplete; do not add new direct API calls to feature components.
 - Backend authorization is final. Frontend route guards and hidden UI are only
@@ -42,25 +46,133 @@ to continue the project without reopening settled decisions.
 - Platform Admin-only authority over game configuration and staff access.
 - Game Manager has no write route for games.
 - Event Manager cannot publish Templates or schedule Event Runs directly.
+- Staff player-dashboard access is read-only; only `User.role = player` may
+  execute player participation commands.
+
+### Fast Completion Critical Path
+
+Planning baseline recorded 2026-08-09: approximately **58% of the complete
+documented platform roadmap is implemented**, approximately 70-75% of the core
+playable system exists, and only approximately 35-40% is ready for unrestricted
+production real-money traffic. These percentages are planning estimates, not
+completion evidence; a feature moves to Completed only when its stated tests
+and exit gate pass.
+
+The goal is to reach 100% in the following strict order without opening new
+product domains or spending critical-path time on visual polish:
+
+1. **58% -> 65%: finish paid Quick Match safety.**
+   - Completed 2026-08-09: add protected cursor-paginated immutable ledger
+     history.
+   - Completed 2026-08-10: reviewed prize release with independent governance
+     approval, participant-conflict denial, and atomic ledger movement.
+   - Complete withdrawal/payout behavior.
+   - Prove paid solo and Team journeys with concurrent database tests and a
+     multi-user browser workflow, then deliberately enable paid discovery.
+2. **65% -> 75%: finish the canonical competition migration.**
+   - Migrate remaining legacy host/detail/data paths to Game-backed
+     `QuickMatchOffering`, Match, and Room boundaries.
+   - Rehearse stored-data migration and rollback, then retire legacy
+     Tournament/TournamentType routes only when no active client depends on
+     them.
+3. **75% -> 85%: deliver the Event MVP end to end.**
+   - Registration window and admission policy, capacity/waitlist, stages,
+     rounds/batches, verified results, advancement, leaderboard, disputes,
+     settlement, notifications, and restart-safe jobs.
+4. **85% -> 93%: finish role-specific staff workflows.**
+   - Complete Platform Admin Event review, Event Manager handoff, Game Manager
+     health/escalation, Match Operator workload/handoff, staff profiles, and
+     security-event review with responsive browser checks.
+5. **93% -> 100%: production operations and final system audit.**
+   - Distributed rate limits, pagination of remaining unbounded reads,
+     structured logs/metrics/alerts, background-job operations, accessibility,
+     authorization matrix, dependency/security review, load/failure testing,
+     backup restore, incident procedure, and requirement-by-requirement final
+     audit across both repositories.
+
+Acceleration rules:
+
+- Work on one highest-priority incomplete vertical slice at a time. Do not
+  interrupt it for P2 polish unless the user explicitly changes priority.
+- The planned Tournament card redesign remains deferred until the paid money
+  and canonical migration gates are complete.
+- Run focused tests while developing; run aggregate backend tests and frontend
+  test/lint/build once after the complete slice is stable, not after every
+  small edit.
+- Run CPU-heavy aggregate gates sequentially on the shared development machine;
+  use parallel agents for independent inspection and implementation work.
+- Reuse shared fixtures, service boundaries, Redux thunks, and migration
+  scripts instead of building page-specific shortcuts.
+- Record one concise checkpoint after verification. Keep historical evidence,
+  but do not duplicate the same current-state explanation across multiple
+  roadmap sections.
+- Keep `CURRENT_CHECKPOINT.md` as the replace-in-place fast-resume index. The
+  full tracker remains authoritative; use the checkpoint on subsequent turns
+  in one uninterrupted session and require a full tracker read on new
+  sessions, handoffs, context loss, or contract-changing work.
+- External provider or deployment evidence must not block unrelated local
+  work. Record the external gate and continue with the next independently
+  verifiable slice.
+- Speed never permits bypassing authorization, transactionality, idempotency,
+  migration rollback, or the real-money release gates.
 
 ### Ordered Next Work Queue
 
 
-1. Replace the legacy competition core.
+1. Completed locally 2026-08-09: activate and integration-test transactional
+   account email.
+   - Completed locally 2026-08-09: `RESEND_API_KEY` and the explicit
+     non-production `onboarding@resend.dev` sender are stored only in the
+     ignored backend `.env`; the application email-service wrapper received a
+     Resend delivery ID and the account owner confirmed receipt.
+   - Verify a dedicated account-email subdomain and set `RESEND_FROM_EMAIL`
+     before arbitrary-recipient or production delivery.
+   - Database-backed replica-set tests cover signup OTP promotion, resend
+     cooldown, expired/incorrect codes, reset-link expiry, concurrent recovery
+     requests, and single use. An isolated browser workflow against the real
+     Redux thunks and backend routes completed signup, OTP verification,
+     reset-link request, and password replacement.
+   - The verified sender domain, staging delivery/failure monitoring, and
+     bounce handling remain production release gates; they do not block the
+     next local product slice.
+
+2. Replace the legacy competition core.
+   - Completed player-discovery slice 2026-08-09: the protected Tournaments
+     page now reads active Game-backed `QuickMatchOffering` records through a
+     dedicated Redux lifecycle and shows canonical capability, seat, money,
+     schedule, and eligibility data. It never falls back to the legacy queue.
+   - Completed free-entry queue slice 2026-08-09: verified eligible players
+     join through `POST /api/player/quick-matches/:offeringId/queue`; Redis
+     serialization, database uniqueness, optimistic capacity checks, and
+     idempotent execution creation converge a full queue on one canonical
+     Room and Match. Paid offerings still fail closed at discovery until the
+     remaining ledger, prize-release, and browser gates pass.
+   - Completed Team/player-read slice 2026-08-09: new clan Teams resolve an
+     active catalog Game, canonical mode, immutable game key, and explicit
+     roster size; a dry-run/apply migration covers legacy Team records. Player
+     queue, Match timeline, detail, check-in, result, and dispute requests now
+     use a Redux boundary and canonical player-safe Match serialization.
+   - Completed Match execution slice 2026-08-09: two scoped operators racing
+     to claim one canonical Match converge on one owner; lobby publication and
+     player check-ins converge on `lobby_ready`; result submission is
+     first-writer-wins; verification opens a 30-minute dispute window; and a
+     different governance actor resolves disputes before settlement. Match
+     Control now uses Redux thunks/selectors and displays submitted evidence,
+     dispute deadlines, notes, and resolutions.
    - Introduce `QuickMatchOffering` and migrate Match/Room references away
      from `Tournament` and `TournamentType`.
    - Remove hardcoded BGMI/CoC enums from runtime competition records; use the
      immutable Game key or Game Object ID under server validation.
    - Retire compatibility routes only after frontend and stored data migrate.
 
-2. Harden payments before enabling real-money production traffic.
+3. Harden payments before enabling real-money production traffic.
    - Verify signed provider callbacks, enqueue status reconciliation in a
      durable worker, add a unique merchant transaction key, and use integer
      minor units or a decimal money type.
    - Replace the withdrawal success stub with a reviewed lifecycle or return a
      clear not-implemented response until that lifecycle exists.
 
-3. Redesign staff workspaces as role-specific control rooms.
+4. Redesign staff workspaces as role-specific control rooms.
    - Establish the shared workspace shell: clear role context, scoped work
      summary, attention queue, recent activity, and explicit player return.
    - Complete Platform Admin Event review UI, then reshape Game Manager and
@@ -68,7 +180,7 @@ to continue the project without reopening settled decisions.
    - Keep Role Management and Game Management as governance workspaces, not
      operational dashboards.
 
-4. Establish the production baseline, then consider service extraction.
+5. Establish the production baseline, then consider service extraction.
    - Redis-backed distributed rate limits, background jobs, structured logs,
      metrics, alerts, backups, recovery drills, pagination, and load tests.
    - Keep the modular monolith until ownership, APIs, data boundaries, and
@@ -98,9 +210,11 @@ Exit: a clean checkout has a reliable quality command in each repository.
 
 1. Visitor lands on `/home`, can browse public catalog content, and chooses
    signup or login.
-2. Signup creates only a `PendingRegistration`; verification promotes it to a
-   player account. Build the email OTP request, verification, and resend
-   cooldown flow before presenting real-money participation as available.
+2. Completed in code 2026-08-09: signup creates only a
+   `PendingRegistration`; a Resend-delivered email OTP, bounded verification
+   attempts, resend cooldown, and transactional promotion create the verified
+   player account. Live provider delivery still requires environment setup and
+   integration evidence before real-money participation is available.
 3. Login restores the protected player shell at `/dashboard`; session refresh,
    logout, banned-account handling, and account recovery remain server-owned.
 4. Player completes profile, game-account connection where a Game requires it,
@@ -113,12 +227,12 @@ restricted competitions.
 
 #### 2. Canonical Game and Quick Match Foundation
 
-1. Platform Admin creates and activates a Game with its immutable key,
+1. Completed in code: Platform Admin creates and activates a Game with its immutable key,
    supported modes/maps, and account-connection policy.
-2. Introduce `QuickMatchOffering` as the canonical configurable product:
+2. Completed in code: `QuickMatchOffering` is the canonical configurable product:
    Game, supported mode/map, team size, capacity, region, entry policy,
    schedule policy, and lifecycle (`draft`, `active`, `paused`, `retired`).
-3. Make Match and Room records reference `QuickMatchOffering` and the
+3. Completed for new Quick Match runtime records: Match and Room reference `QuickMatchOffering` and the
    Game-backed capability values. New runtime competition records must not use
    hardcoded BGMI/CoC or legacy Tournament enums.
 4. Publish data migration, compatibility, rollback, and test plans; migrate
@@ -130,17 +244,22 @@ and an eligible player can enter its queue without a legacy Tournament record.
 
 #### 3. Player Competition Journey
 
-1. Dashboard shows eligible active offerings with entry requirements, rules,
-   capacity, price/prize disclosure, and clear loading, empty, and error
-   states through Redux thunks/selectors.
-2. Player joins a Quick Match queue; the server performs eligibility,
-   capacity, duplicate-entry, and payment-hold checks atomically.
-3. When capacity is reached, the system creates the Match/Room and gives the
-   assigned Match Operator operational work. Socket events notify players but
+1. Completed in code 2026-08-09: Dashboard shows active Game-backed offerings
+   with eligibility, capacity, price/prize and schedule disclosure, dynamic
+   filters, and clear loading, empty, and error states through Redux
+   thunks/selectors. Eligible free offerings expose the canonical join action.
+2. Completed for free entry 2026-08-09: the player joins a Quick Match queue;
+   the server performs identity, capacity, and duplicate-entry checks inside a
+   serialized command. Paid entry remains hidden pending the complete money
+   lifecycle release gate.
+3. Completed through operator handoff 2026-08-09: when capacity is reached,
+   the system creates one canonical Match/Room and places the Match in the
+   game-scoped `awaiting_operator` queue. Socket events notify players but
    never authorize a join or state change.
-4. Player sees check-in, lobby details, match state, result, and a time-bound
-   dispute path. Results stay pending until the defined verification/dispute
-   process completes.
+4. Completed locally 2026-08-09: player check-in, lobby access, match state,
+   first-writer-wins result submission, verification, and a time-bound dispute
+   path use server-owned state transitions. Settlement is blocked while the
+   30-minute dispute window is open or while a dispute is unresolved.
 
 Exit: a player can discover, join, play, track, and dispute one Quick Match
 end to end with server-enforced eligibility and no direct feature API calls.
@@ -331,13 +450,14 @@ prove the completion criteria.
 
 | Priority | Domain | Verified current risk | Completion gate |
 |---|---|---|---|
-| Closed | Match operations | Match Operator assignments now require game scopes; queue reads and atomic claims are scoped, mutations require scope plus ownership, and free-form status writes were replaced by commands. | Verified by operator policy, lifecycle, unique-index, and duplicate-generation tests on 2026-08-08. |
+| Closed | Match operations | Match Operator assignments require game scopes; operational reads and claims are scoped; post-claim mutations require ownership; readiness, result, verification, dispute, resolution, and settlement use conditional writes. Governance roles cannot execute operator commands, while dispute resolution/settlement remain governance-only. | Verified by policy tests, a full MongoDB concurrency lifecycle, Redux transport tests, and an isolated scoped-operator browser check on 2026-08-09. |
 | Closed | Event approval | Event Templates and Runs use submitted revisions, reviewer notes, return/reject states, independent reviewer checks, bounded queue/history reads, append-only review evidence, and a Platform Admin Redux review queue. | Verified by Event governance policy tests and frontend route/build checks on 2026-08-08. |
-| P0 | Competition data | Match, Tournament, and TournamentType hardcode BGMI/CoC and legacy mode/map enums. Match and Room still depend on legacy Tournament records, so catalog-created games are not truly dynamic. | Migrate to Game-backed `QuickMatchOffering`, Match, Room, EventTemplate, and EventRun boundaries with compatibility migration tests. |
+| P0 | Competition data | Game-backed offering administration, player discovery, free and transactionally held paid queueing, canonical Team creation, Room/Match handoff, protected player Match reads, and the complete operator/result/dispute lifecycle avoid legacy Tournament records and hardcoded game enums. Paid discovery, legacy host/detail aliases, and old stored competition records remain. | Finish the paid-entry release gates, then migrate remaining host/data paths with rollback evidence before retiring aliases. |
 | P0 | Payment safety | Callbacks fail closed unless PhonePe SDK signature credentials are configured, capture the signed raw body, enqueue a durable reconciliation record, and merchant transaction IDs are unique. The standalone `worker:payments` claims/retries/verifies jobs and settles idempotently. Withdrawal explicitly returns not-implemented. The immutable integer/decimal ledger, worker deployment/sandbox evidence, and reviewed payout lifecycle remain incomplete, so deposits must not be treated as production-ready. | Deploy and monitor the worker, complete provider sandbox callback/retry verification, introduce the immutable minor-unit ledger, and implement the reviewed withdrawal lifecycle. |
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
+| P1 | Transactional account email | Resend-backed verification and password recovery are implemented behind a server service. Local environment-only credentials, live authorized-recipient delivery, database transaction tests, and an isolated real-route browser workflow are verified. A dedicated sender domain and operational delivery evidence remain open. | Verify a dedicated account-email domain for broader delivery, then certify staging delivery, failure, and bounce monitoring without storing secrets in the repository. |
 | P1 | Distributed security | Express rate limiters use process memory, so limits reset on restart and are not shared by multiple server instances. Governance actions lack MFA/recent-auth controls. | Redis-backed rate-limit store, endpoint-specific keys/alerts, and MFA or recent-auth for staff and financial actions. |
-| P1 | Frontend boundaries | Multiple feature pages call the Axios client directly despite the documented Redux boundary. Sensitive signup/login-related data is logged by `ForgotPassword.jsx`. | Migrate one domain at a time to shared thunks/selectors, remove sensitive console output, and add component/integration tests. |
+| P1 | Frontend boundaries | Multiple feature pages call the Axios client directly despite the documented Redux boundary. Identity verification and recovery now use Redux thunks, but other domains remain. | Migrate one domain at a time to shared thunks/selectors and add component/integration tests. |
 | P1 | API scale | Event, operator, social, and several administrative list reads can return unbounded collections; compatibility endpoints duplicate behavior. | Cursor pagination with bounded limits and stable sorting; record endpoint deprecation dates and remove aliases after client migration. |
 | P1 | Financial model | Wallet embeds transaction summaries while Transaction is also stored separately, and money uses JavaScript Number values. The two representations can drift and arrays can grow without bound. | Adopt an immutable ledger as source of truth, minor-unit/decimal amounts, paginated projections, and reconciliation jobs. |
 | P2 | Operations | Logging is console-based; no structured request tracing, metrics, alerting, job queue, backup verification, or disaster-recovery evidence was found. | Define SLOs, correlation IDs, redaction, metrics/alerts, durable jobs, backup restore drills, and failure runbooks. |
@@ -349,14 +469,17 @@ prove the completion criteria.
   Game Manager catalog/activity reads. Only the former manager PATCH route is
   retired; the operational summary endpoint does not yet replace both reads.
 - The frontend architecture says feature components use Redux thunks, but
-  direct API calls remain in Clan, game-account, wallet, profile, match, and
-  operator pages. Treat the Redux migration as in progress.
+  direct API calls remain in parts of Clan, game-account, wallet, and profile
+  pages. Match Control has moved to the Redux boundary; treat the broader
+  migration as in progress.
 - The backend default `npm test` now runs the maintained auth, social,
   competition, and realtime suites. CI is still required to enforce it on
   every change.
-- Current automated checks cover important units and contracts but do not yet
-  provide database integration, browser end-to-end, payment callback, staff
-  authorization matrix, or concurrent Event/operator workflow coverage.
+- Identity now has database-backed integration coverage and an isolated manual
+  browser workflow. Automated browser end-to-end coverage, payment-provider
+  sandbox certification, broader domain database integration, a complete staff
+  authorization matrix, and concurrent Event workflows remain open. Operator
+  concurrency now has database-backed lifecycle coverage.
 
 ## Access Model
 
@@ -393,7 +516,7 @@ Rules currently enforced:
 | Visitor | No session | Can use only public pages and the payment-provider callback never acts as a visitor identity. |
 | Pending registration | `PendingRegistration` document | Has submitted signup data but is not a User, cannot log in, and has no wallet, role, or session. |
 | Player | `User.role = player` | Standard platform account. Uses player dashboard and can receive optional capabilities. |
-| Staff | `User.role = staff` plus active StaffAssignment | Player identity with one or more operational responsibilities and staff workspace access. |
+| Staff | `User.role = staff` plus active StaffAssignment | Operational identity with one or more staff responsibilities. Player-dashboard access is a read-only visibility utility and never grants competition participation. |
 
 ### Capabilities and Roles
 
@@ -409,6 +532,9 @@ Rules currently enforced:
 ### Scope Rules
 
 - `User.role` is never an authorization source. It is only `player` or `staff`.
+- Player participation commands require `User.role = player` in addition to
+  normal authentication, verification, eligibility, and ownership checks.
+  Active StaffAssignments never grant player participation.
 - Every privileged API verifies active staff assignments on the server.
 - `gameScopes` are Game Object IDs on a StaffAssignment.
 - Game Manager, Event Manager, and Match Operator assignments require at least
@@ -456,7 +582,7 @@ Rules currently enforced:
 | Visitor | `/home` | Marketing, signup, login. |
 | Player | `/dashboard` | Player shell: compete, tournaments, matches, clans, chats, wallet, profile, game accounts, account settings. |
 | Approved Host | Player dashboard | Host actions for existing games; no separate staff dashboard. |
-| Staff with any assignment | `/staff` | Role switcher. Shows one workspace card per active assignment and an explicit player-dashboard link. |
+| Staff with any assignment | `/staff` | Role switcher. Shows one workspace card per active assignment and an explicit read-only player-dashboard utility link. Staff cannot participate from that dashboard. |
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |
 | Super Admin | `/panelAdmin` | Platform administration and governance controls. |
 | Platform Admin | `/panelAdmin` | Staff management, game catalog, verification, finance, and platform oversight. |
@@ -466,14 +592,32 @@ Rules currently enforced:
 
 Frontend route guards improve navigation only. Backend route middleware and
 service-level scope checks are the final authority for all privileged actions.
+Player-facing read routes may support staff visibility where their serializer
+is safe, but every player participation mutation must fail server-side for a
+staff-classified account and the frontend must present it as view-only.
 
 ## Completed
 
 - Secure cookie-based authentication with short-lived access tokens, refresh
   rotation, Redis-backed session validation, session versioning, and logout
   revocation.
-- Pending registration flow: signup creates a pending registration rather than
-  a full player account. Email OTP verification is intentionally not built yet.
+- Player identity email flow: signup creates a pending registration and asks
+  the backend Resend service to deliver a 6-digit OTP. Codes are HMAC-hashed,
+  expire after 10 minutes, allow five failed attempts, and have a 60-second
+  resend cooldown. Successful verification transactionally promotes the
+  pending record to a verified `User` without creating a login session.
+- Password recovery uses a non-enumerating request response and a Resend email
+  containing a 30-minute, HMAC-hashed, single-use reset credential. Successful
+  reset changes the password, increments `authVersion`, consumes the token, and
+  revokes the current Redis session. Signup verification and recovery UI use
+  Redux Toolkit thunks rather than component-level API calls.
+- Recovery issuance has a 60-second atomic per-account cooldown. Concurrent
+  requests converge on one stored credential and send only one currently valid
+  link instead of emailing a link that a racing write immediately invalidates.
+- Signup and recovery use native React-managed forms. Signup is intentionally
+  excluded from the whole-app loading overlay so its pending OTP state remains
+  mounted while the request completes; the submit button owns its local loading
+  state.
 - Consistent API success/error envelope and frontend error toast normalization.
   Unmatched `/api/*` routes now return the JSON `API_ROUTE_NOT_FOUND`
   envelope, and frontend normalization rejects HTML/oversized transport bodies
@@ -489,6 +633,11 @@ service-level scope checks are the final authority for all privileged actions.
   chat, friends, clans, teams, and live clan updates.
 - Matchmaking HTTP command flow with Socket.IO used for live updates instead of
   queue joining.
+- Player Tournaments discovery now uses `/api/player/quick-matches` through a
+  private Redux lifecycle. It renders only active Game-backed offerings with
+  catalog capabilities, fixed seats, minor-unit price/prize disclosure,
+  schedule policy, game-account eligibility, and explicit payment/queue
+  blockers; it does not send new offering IDs to the legacy join endpoint.
 - Match Operator safety boundary: assignments require at least one valid game
   scope; available and assigned match reads are scope-filtered; claim, lobby,
   and lifecycle mutations require server-resolved game scope plus explicit
@@ -497,6 +646,15 @@ service-level scope checks are the final authority for all privileged actions.
   stale transitions, and one unique generated Match is enforced per legacy
   tournament instance with duplicate-key convergence. Existing unscoped Match
   Operator assignments fail closed until Platform Admin adds game scope.
+- Match operations now complete the canonical runtime lifecycle: atomic claim,
+  prepare/check-in, lobby publication, all-player readiness, start, one accepted
+  result under concurrent submissions, operator verification, a bounded
+  dispute window, governance-only dispute resolution, and governance-only
+  settlement. Lobby and command writes repeat status/version/ownership scope in
+  their update predicates, settlement cannot bypass an open dispute window,
+  and settled results cannot be disputed. Match Control uses private Redux
+  state and exposes result evidence and dispute details without direct Axios
+  calls.
 - Staff assignment, role reports, service activity history, and security-event
   storage for prohibited privilege fields in public signup requests.
 - Server-owned role policy registry with explicit management hierarchy,
@@ -562,8 +720,9 @@ service-level scope checks are the final authority for all privileged actions.
   `QuickMatchOffering` records at `/api/admin/quick-match-offerings`. New
   offerings reference an active Game, canonicalize its configured mode/map,
   require complete-team capacity, use integer minor-unit fee/prize fields, and
-  write staff activity. This is additive; legacy Tournament matchmaking still
-  owns live queue, Room, and Match creation until the documented migration.
+  write staff activity. Canonical free-entry offerings now own their player
+  queue, Room, and Match creation; legacy Tournament matchmaking remains only
+  for existing compatibility clients and records.
 - Quick Match execution compatibility foundation: new full-room executions can
   create `Room` and `Match` records directly from an active
   `QuickMatchOffering`, using the canonical Game Object ID/key rather than
@@ -573,6 +732,15 @@ service-level scope checks are the final authority for all privileged actions.
   safely rebuilds the previous legacy index shape before HTTP traffic starts.
   Match Operator scope queries recognize either the legacy game snapshot or
   the new canonical game key.
+- Clan Team creation now resolves the active Game catalog instead of accepting
+  a fixed game enum. New records store Game Object ID/key, canonical mode, and
+  explicit roster size; legacy request keys remain a temporary alias and the
+  dry-run-first `migrate:teams` command backfills compatible stored records.
+- Player Match timeline, detail, check-in, result, and dispute requests use a
+  dedicated Redux slice. Backend reads are participant-authorized, bounded to
+  100 records, use the shared response envelope, prefer canonical Game and
+  offering identity, hide unpublished lobby credentials, and omit internal
+  execution/legacy source keys.
 - Platform Admin now has a dedicated Quick Matches workspace in `/panelAdmin`.
   It uses Redux thunks/selectors (not component-level API calls) to list,
   create, edit, activate, pause, reactivate, and retire offerings. The form
@@ -587,6 +755,50 @@ service-level scope checks are the final authority for all privileged actions.
   Frontend lint is clean and is recorded in the audit snapshot.
 
 ## Active Work
+
+### 0. Transactional Account Email Activation
+
+State: Completed for local development and test on 2026-08-09. The backend
+service, endpoints, models, Redux thunks, and public verification/recovery
+interfaces are implemented. Environment-only provider delivery, six isolated
+MongoDB replica-set integration tests, and the full real-route browser workflow
+passed. Production still requires a verified account-email domain in
+`RESEND_FROM_EMAIL`, staging delivery/failure evidence, and bounce monitoring.
+Those external deployment controls remain a P1 release gate.
+
+### Current Next Slice: Legacy Competition Core Replacement
+
+State: In progress. The durable free-entry Quick Match queue slice was
+completed locally on 2026-08-09 across both repositories. It enforces verified
+Game identity, exact roster size, duplicate membership, complete-team
+capacity, Redis serialization, database uniqueness, optimistic concurrency,
+and idempotent full-room Match creation without `Tournament` or
+`TournamentType`. A generated Match enters `awaiting_operator`, where the
+existing game-scoped operator queue owns assignment. The frontend joins only
+through its Redux command boundary and explains server eligibility failures.
+
+Completed next slice 2026-08-09: new Teams persist `gameRef`, `gameKey`,
+canonical Game mode, and explicit `teamSize`; no fixed BGMI/CoC enum governs
+new Team records. Legacy Team requests resolve through the Game catalog and a
+reviewable `npm run migrate:teams -- --apply` command backfills stored records.
+Its development dry run found zero candidates and zero unresolved records.
+Player Match list/detail and player commands now use Redux, bounded backend
+reads, shared envelopes, canonical offering/Game identity, and explicit
+serialization that excludes execution and legacy source internals.
+
+Completed next slice 2026-08-09: canonical Match execution is verified from
+two-operator claim contention through prepare, lobby/check-in convergence,
+start, competing player result submissions, verification, the 30-minute
+dispute window, governance resolution, and settlement. Operator routes now
+separate strict Match Operator work from governance-only commands. The Match
+Control page uses Redux, shows result/dispute evidence, and passed an isolated
+scoped-operator browser check; aborted navigation requests stay silent.
+
+Next: paid discovery remains blocked until the immutable ledger has protected
+pagination, prize release/payout review, and multi-user browser evidence.
+Retain compatibility reads
+until frontend and stored-data migration tests pass; do not add new role or
+route authority.
 
 ### 1. Staff Hiring and Access Control
 
@@ -691,12 +903,66 @@ management uses `/api/access-control/roles`, `/candidates`, `/assignments`,
 `/reports`, and `/activity`; assignment scope updates use
 `PATCH /api/access-control/assignments/:assignmentId/scopes`.
 
+Completed UI refinement 2026-08-10: `/staff` is now a responsive control-room
+landing page containing only trusted assignment-derived workspace cards. The
+former username hero, explanation, and summary counters are removed; a plain
+`Welcome back` heading remains. Rich role cards retain their role label,
+description, responsibility preview, scope, and Open action. Read-only player
+pages remain in global navigation and governance access remains inside Admin
+Panel. Welcome and workspace content use separate restrained section
+boundaries, with one short instruction below the welcome heading. Staff header
+branding no longer describes the area as Player Arena. No fabricated
+operational metrics or new authority were introduced.
+
+Staff workspace visual rule recorded 2026-08-10: assigned role dashboards use
+the same restrained dark surface, rounded bordered header boundary, separate
+content sections, and consistent spacing as the `/staff` landing. Game Manager
+and Match Control already follow this structure; Event Manager now uses the
+same bounded header and page surface. Role-specific controls and information
+density remain driven by operational need.
+
+Completed route ownership refinement 2026-08-10: Match Operator live controls
+now live at `/staff/operations` under the dedicated Operator authorization
+guard and no longer render inside the player `/dashboard` shell. Navigation
+and the Match Operator workspace card target the staff-owned route. The former
+`/dashboard/operations` URL is compatibility-only and redirects to the new
+location; backend operator APIs and authority are unchanged.
+
+Completed navigation separation 2026-08-10: while staff inspect the read-only
+player dashboard, its desktop header, sidebar, mobile bar, and mobile menu do
+not show Admin or Operations tabs. The Staff Workspace return link remains;
+assigned administrative and operational links appear only on staff-owned
+surfaces. This changes navigation placement, not server authorization.
+
+Completed directory lifecycle refinement 2026-08-10: the Staff Directory feed
+retains active, suspended, and revoked assignment rows. Suspended rows expose
+Restore; revoked rows expose Reassign, which uses the governed assignment
+endpoint with the durable role identity and prior game scope. Revoked status is
+terminal for ordinary status transitions, so it is never treated as a simple
+Restore. Reactivation records `STAFF_ROLE_REACTIVATED` while preserving the
+earlier revocation and activity history.
+
+Completed Directory density refinement 2026-08-10: Role Management renders
+one compact row per current assignment with email/identity, role/status/scope,
+and inline actions. Per-person cards are removed; game-scope controls expand
+only for the selected row. Header and body rows share a fixed action column so
+roles and buttons remain aligned when different roles expose different action
+counts. This is presentation-only and does not alter role authority or audit
+retention.
+
+Completed governance/workspace separation 2026-08-10: People and Hiring remain
+inside the Super Admin/Platform Admin Admin Panel only. The staff-owned access
+page exposes Directory, History, and Policy, is guarded by governance admin
+assignments, and is no longer linked for Game Manager, Event Manager, or Match
+Operator identities. Backend assignment authority remains unchanged and final.
+
 Needs completion:
 
 - Per-person staff profile with assignments, scopes, service history, and
   current workload.
 - Security-event review UI.
-- Match Operator task queue, handoffs, notes, evidence, and SLA metrics.
+- Complete the Match Operator workspace beyond its existing live queue and
+  controls with handoffs, notes, richer evidence, and SLA metrics.
 - Platform Admin Event approval UI for the existing draft Template/Run approval
   endpoints, including rejection reason and audit history. The backend approval
   endpoints are complete; this visible review workspace is still required.
@@ -722,8 +988,10 @@ The create boundary accepts only active catalog Games, resolves configured mode
 and optional map to the canonical Game capability, rejects incomplete team
 capacity, and stores `entryFeeMinor`/`prizePoolMinor` with an explicit
 currency. New records may be `draft` or `active`; creation is written to the
-staff activity ledger. No player queue or wallet movement uses this resource
-yet.
+staff activity ledger. Verified players now use this resource for free-entry
+discovery and durable queueing. Paid solo and Team queue commands can create
+atomic per-player holds internally, but paid discovery remains disabled until
+the complete money release gate passes.
 
 Lifecycle policy: `draft -> active -> paused -> active` and any non-retired
 state may transition to `retired`; retired offerings are immutable. An active
@@ -747,33 +1015,159 @@ Compatibility migration and rollback plan:
 1. Deploy the additive Match/Room schema and indexes first. Existing legacy
    Matchmaking reads/writes remain untouched; startup rebuilds only the named
    legacy membership index if it lacks the required `tournamentTypeId` filter.
-2. Internal execution creation accepts a stable execution key, an active
-   offering, and an exactly full roster. It creates a full Room plus one
-   idempotent Match without a legacy Tournament record. No player-facing route
-   calls this boundary yet.
-3. After payment holds, queue eligibility, and player discovery are complete,
-   direct only new offering queues to this execution boundary. Keep legacy
-   reads and routes until stored-data/client migration evidence is complete.
+2. Completed locally 2026-08-09: internal execution creation accepts a stable
+   execution key, an active offering, and an exactly full roster. It creates a
+   full Room plus one idempotent Match without a legacy Tournament record.
+3. Completed for free entry 2026-08-09: the verified player route directs only
+   canonical offering joins to this execution boundary. Paid offerings fail
+   closed before queue state is created. Keep legacy reads and routes until
+   stored-data/client migration evidence is complete.
 4. Roll back by disabling the new queue caller; the additive fields do not
    alter legacy records, and legacy matchmaking continues to use its original
    Tournament/TournamentType path. Do not drop new fields or indexes until all
    executions that reference them have aged out or been migrated.
 
 Validation: model, lifecycle, source-isolation, operator-scope, and index-shape
-policy tests cover this boundary. Database-backed migration rehearsal remains
-required before production rollout.
+policy tests cover this boundary. A MongoDB replica-set integration suite now
+proves concurrent joins converge on one canonical Room and one Match, retries
+are idempotent, paid offerings create no queue state, arbitrary Game-backed
+Team formats resolve, legacy Teams backfill, and canonical player Match reads
+preserve lobby secrecy. A seventh replica-set test proves concurrent operator
+claim, readiness convergence, competing result submission, dispute timing,
+governance resolution, and settlement. The configured development migration
+dry run found no legacy Team candidates. Broader competition-data migration
+rehearsal remains required before production rollout.
 
-Next work: harden payment callbacks and disable the withdrawal success stub,
-then implement player discovery/queue joins only after money holds are safe.
+Next work: paid offerings remain unavailable in discovery until protected
+ledger pagination, prize release/payout review, and multi-user browser evidence
+are complete; the existing legacy queue stays available only for compatibility.
 
-Player discovery foundation: verified players can read active Game-backed
-offerings at `GET /api/quick-matches`. The server returns canonical offering
-details and eligibility explanations, including missing game-account
-verification and the current `payment_holds_not_available` join block. This
-endpoint is discovery-only; it exposes no queue/join command until the ledger
-and atomic payment-hold boundary are complete.
+Player discovery and join foundation: verified players read active Game-backed
+offerings at `GET /api/player/quick-matches`. The server returns canonical
+offering details and eligibility explanations, including missing game-account
+verification and paid-entry payment holds. Eligible free offerings can be
+joined at `POST /api/player/quick-matches/:offeringId/queue`; team offerings
+use compatible saved Teams backed by canonical Game identity, mode, and size.
+The application mount was corrected to the documented `/api/player` boundary
+on 2026-08-09 after the staff-to-player Tournaments page exposed a 404. A
+regression test now covers the full mount, and a signed-in Match Operator was
+verified opening the player tournament card without console errors.
+
+Planned player-card refinement (not implemented): redesign the Tournaments
+offering card around the new `QuickMatchOffering` plus canonical Game data;
+do not restore or read legacy `TournamentType`/`Tournament` presentation data.
+The card should recover the stronger visual quality of the earlier design
+while keeping the current canonical API boundary:
+
+- Lead with recognizable Game presentation, offering title, and a compact
+  lifecycle badge without repeating the Game name unnecessarily.
+- Give Entry, Prize, and Seats a clear primary-stat hierarchy.
+- Replace the generated sentence `duo · erangal · 2-player team · india` with
+  clean human-facing chips or labeled facts such as `Duo`, `Erangel`, and
+  `India`. Do not show the awkward `2-player team` phrase; when roster size is
+  not already obvious from the mode, present it separately as `Players per
+  team: 2`.
+- Separate schedule information from eligibility. Show the start rule as a
+  concise status row, then place account-verification and paid-entry blockers
+  in a dedicated action area with one clear recovery CTA.
+- Use the existing frontend Game presentation registry for artwork/accent
+  treatment. Do not add visual fields back to the Game or competition models.
+- Preserve responsive desktop/mobile layouts, accessible labels, loading,
+  empty, disabled, and blocked states. Completion requires focused component
+  coverage plus browser verification with solo, duo/team, free, and paid
+  offerings.
 
 ### 5. Payment Callback Safety (In progress)
+
+#### Paid Quick Match money contract
+
+State: In progress 2026-08-09. Owner: verified Player initiates entry;
+Payments owns money movement; Match governance releases/captures holds only
+through server lifecycle commands.
+
+Implemented foundation 2026-08-09: `WalletLedgerEntry` declares balanced,
+append-only, idempotent INR minor-unit postings; Wallet has the five canonical
+projection buckets plus ledger initialization/version fields; legacy balances
+are lazily captured by an opening entry; and completed PhonePe reconciliation
+posts deposits into available funds through the same Mongo transaction. The
+Wallet page now loads through Redux, shows settlement buckets, never calls the
+provider callback from the browser, and keeps withdrawal visibly disabled
+while payout review is incomplete. Atomic solo and Team holds, cancellation
+release, final entry capture, verified participant-ID prize allocation into
+`prize-pending`, concurrent idempotency evidence, and protected immutable
+ledger pagination are complete. Prize release/payout review and a multi-user
+browser flow remain, so paid discovery is still blocked.
+
+Paid Quick Match progress 2026-08-09:
+
+- Three wallet-ledger MongoDB replica-set tests pass: one-time legacy opening,
+  idempotent deposit/entry-hold postings, and complete insufficient-funds
+  rollback.
+- `WalletHold` now records one paid seat per player, Room queue entries retain
+  their hold IDs, and paid queue membership plus every roster hold execute in
+  one Mongo transaction inside the offering lock. Free queue regression tests
+  remained green.
+- The expanded Quick Match integration suite now passes 8/8 tests. The funded
+  paid test initially found that the Match ID was attached only to the final
+  player hold when a waiting Room became full; the corrected query now attaches
+  the Match to every held record for that Room and the full regression passed.
+- Completed after the checkpoint: the suite now passes 12/12 tests. A funded
+  Team join holds one seat against every member and fully rolls back when any
+  member lacks funds. Concurrent cancellation releases each hold once and
+  closes the Room. Concurrent settlement captures each hold once, closes the
+  Room, and credits `prize-pending` only to winner IDs selected from Match
+  participants. Player result submission now requires a winning player or
+  complete winning Team through the Redux boundary.
+- Completed after the checkpoint: verified players can read their own immutable
+  history at `GET /api/payment/ledger?limit=&cursor=`. The bounded cursor uses
+  stable descending `(createdAt, _id)` ordering (default 20, maximum 50), the
+  database query requires an owner leg, and serialization returns only safe
+  entry metadata plus that player's account legs. It never exposes another
+  user, platform balancing legs, idempotency keys, or internal reference IDs.
+- The Wallet Redux boundary owns initial load, refresh, pagination, append
+  de-duplication, stale-response rejection, and error preservation. The UI
+  renders immutable per-account movements with distinct loading, empty, retry,
+  refresh, and load-more states; it does not infer a misleading net amount for
+  internal transfers.
+- Completed 2026-08-10: `GET /api/admin/prize-releases?limit=&cursor=` provides
+  a bounded safe review queue, and
+  `POST /api/admin/prize-releases/:matchId/release` accepts only Match identity.
+  The server derives winners and exact amounts from canonical settled
+  `prize_pending` ledger entries, requires a different governance reviewer,
+  blocks any reviewer who participated in the Match, rejects unresolved or
+  corrupt evidence, and atomically moves each allocation to `withdrawable`
+  with durable Match audit state.
+- The Platform Admin Prize Review workspace uses Redux for queue pagination,
+  stale-response protection, evidence, confirmation, blocked states, and
+  per-Match errors. It never accepts a client-selected winner or amount.
+- Do not unblock paid discovery yet. Next required implementation is the new
+  staff read-only player-dashboard rule, then withdrawal/payout behavior and a
+  multi-user paid lifecycle browser workflow.
+
+- `QuickMatchOffering.entryFeeMinor` is the fee for one player seat, including
+  every member of a submitted Team. A Team join succeeds only when every
+  member can fund their own seat; the captain never silently pays for others.
+- INR is stored and moved as integer minor units. A posted append-only
+  double-entry ledger is the financial source of truth; Wallet is a rebuildable
+  per-user projection with `available`, `entry-held`, `prize-pending`,
+  `withdrawable`, and `withdrawal-pending` buckets.
+- Join API remains `POST /api/player/quick-matches/:offeringId/queue`. For a
+  paid offering, one MongoDB transaction must create every roster hold and the
+  queue membership, or create neither. Retries return the existing membership
+  and holds; partial roster charges are forbidden.
+- Entry holds remain locked through result verification and the dispute
+  window. Cancellation releases them. Final settlement captures them exactly
+  once; prize allocation requires verified participant IDs and is not inferred
+  from free-form score text.
+- Completed gates: replica-set insufficient-funds rollback,
+  concurrent/retried joins, atomic Team holds, cancellation release,
+  disputed-settlement blocking, capture/prize idempotency, and the protected
+  wallet projection API/Redux UI. Protected cursor-paginated owner-only ledger
+  reads, explicit append-only mutation rejection, and the compound owner/time/id
+  index and independent reviewed prize release are also complete. Remaining
+  completion requires withdrawal/payout behavior, staff participation denial,
+  execution-level financial-term snapshots, and a multi-user browser workflow.
+  Paid discovery stays blocked until these gates pass.
 
 The public PhonePe callback no longer starts delayed status polling in the web
 process or credits a wallet directly. It retains the bounded raw request body,
@@ -840,7 +1234,8 @@ match generation, and concurrent transition tests all pass.
 
 #### Phase 2: Canonical Competition Domain
 
-- Introduce Game-backed `QuickMatchOffering` and remove legacy Tournament
+- Completed for new Quick Match runtime records 2026-08-09: introduce
+  Game-backed `QuickMatchOffering` and remove legacy Tournament
   dependencies from new Match and Room records.
 - Implement Event registration, stages, batches, results, leaderboard, and
   disputes as separate bounded records.
@@ -1014,8 +1409,14 @@ Security rule for all three dashboards:
 
 ### Identity and Security
 
-- Email OTP request, verification, resend cooldown, and pending-registration
-  promotion to `User`.
+- Completed in code 2026-08-09: email OTP issuance, verification, resend
+  cooldown, bounded attempts, and pending-registration promotion to `User`;
+  password recovery uses expiring single-use links and session invalidation.
+- Resend is active locally with environment-only credentials. Verify a
+  dedicated sender domain and monitor staging bounces/delivery failures before
+  declaring transactional email production-ready. Local authorized delivery,
+  identity-specific database integration, and an isolated real-route browser
+  workflow passed 2026-08-09.
 - Staff invitation/creation flow separate from player signup.
 - MFA/passkeys and recent-authentication checks for all governance actions.
 - Dedicated rate limits and alerts for staff assignment, activation, wallet,
@@ -1050,12 +1451,88 @@ Security rule for all three dashboards:
 
 ## Latest Verification
 
-Run on 2026-08-08 against the current dirty working trees:
+Run on 2026-08-09 against the current working trees:
 
-- Backend `npm test`: 86 passed, 0 failed (16 auth, 21 social, 40 competition,
-  and 9 realtime tests).
+- Backend `npm test`: 153 passed, 0 failed (25 auth unit/contract, 6 auth
+  database integration, 23 social, 54 competition policy/unit, 12 Quick Match
+  database integration, 8 payment policy/unit, 14 payment/ledger database
+  integration, and 11 realtime tests).
+  The auth coverage includes the Resend adapter, credential hashing,
+  reset-link, TTL, password-strength, hashed-password promotion, concurrent
+  issuance, transactional promotion, and session revocation contracts.
+- Focused backend `npm run test:auth:integration`: 6 passed, 0 failed against
+  an isolated in-memory MongoDB replica set. The aggregate command includes and
+  successfully reran this suite.
+- Live Resend check: the application `emailService` was accepted by the
+  provider using environment-only credentials and the authorized account
+  recipient confirmed receipt. No provider key or recipient address is tracked.
 - Frontend route smoke and API-error smoke checks: passed.
-- Frontend production build: passed.
+- Frontend production build and lint: passed after OTP verification, resend,
+  password-reset request, and reset confirmation UI integration.
+- Isolated in-app browser workflow: passed against the real frontend Redux
+  thunks, backend auth routes, and replica-set database for signup, OTP
+  promotion, password-reset request, and password replacement. This check also
+  found and verified the fix for signup state being unmounted by global loading.
+- Player Quick Match discovery and free queue: five competition policy tests
+  verify canonical eligibility plus free/paid queue policy; three MongoDB
+  replica-set tests verify concurrent capacity, idempotency, canonical
+  Room/Match creation, and fail-closed paid entry. Frontend lint, production
+  build, route smoke, and API-error smoke checks pass. Five executable frontend
+  tests cover discovery state plus the canonical solo/team request contract;
+  frontend CI runs them.
+- Staff-to-player Tournaments route: the backend now mounts the Quick Match
+  player router at `/api/player`, the full mount has a regression test, and a
+  signed-in Match Operator browser workflow displayed `BGMI CLASSIC ERANGAL`
+  at `/dashboard/tournament` with no console errors.
+- Canonical Team/player Match slice: model/policy tests cover arbitrary
+  Game-backed Team modes and bounded explicit roster sizes. MongoDB integration
+  covers Game format resolution, legacy Team backfill, and canonical player
+  list/detail reads. The development `migrate:teams` dry run reported zero
+  candidates/unresolved records. Eight frontend state/transport tests pass;
+  Match pages no longer call Axios directly, and lint/build/route/API-error
+  gates pass.
+- Canonical Match Operator lifecycle: the seventh Quick Match replica-set test
+  covers concurrent claim, prepare, lobby/check-in convergence, start,
+  competing player result writes, verification, early-settlement rejection,
+  dispute, governance resolution, and settlement. Operator policy tests prove
+  governance cannot execute operational commands. Eleven frontend
+  state/transport tests pass after Match Control moved behind Redux and player
+  disputes stopped accepting settled matches. A real scoped operator opened
+  `/dashboard/operations` in the in-app browser with clean loading/empty states
+  and no console errors; this check found and verified silent aborted-request
+  handling.
+- Wallet ledger UI and protected history: sixteen frontend state/transport tests
+  now pass.
+  Wallet reads expose integer available/held/prize/withdrawal projections,
+  browser code no longer impersonates a signed payment-provider callback, and
+  withdrawal is disabled instead of presenting the intentional backend 501 as
+  a working payout flow. Owner-only, bounded, stable cursor history is available
+  through Redux with stale-response and append de-duplication protection. Four
+  focused backend policy/unit tests and six replica-set ledger integration tests
+  pass. A signed-in browser check displayed the Wallet ledger empty state and
+  refresh action without console warnings or errors. This gate alone does not
+  authorize paid discovery.
+- Paid Quick Match money lifecycle: twelve replica-set integration tests now
+  include atomic Team funding/rollback, one-time concurrent cancellation
+  release, and one-time concurrent settlement capture with verified
+  participant-ID prize allocation. Player result transport includes the
+  selected winning player or complete Team; frontend tests, lint, and the
+  production build pass. Paid discovery remains blocked by the documented
+  ledger pagination, prize-release/payout, and browser gates.
+- Reviewed prize release: eight payment policy tests, fourteen payment/ledger
+  replica-set integration tests, and the complete 153-test backend aggregate
+  pass. The queue and release command enforce independent governance review,
+  participant conflict denial, exact canonical two-leg source allocations,
+  stable cursor pages, one-time concurrent release, and multi-winner rollback.
+  Twenty-two frontend state/transport tests, full lint, and production build
+  pass. A real Platform Admin opened Prize Review at `/panelAdmin`; after the
+  local backend was restarted to load the new router, the Redux empty state and
+  refresh action rendered without API or console errors.
+- Staff workspace experience: focused ESLint and production build pass after
+  the `/staff` control-room redesign. A real Platform Admin browser session
+  displayed the persisted Staff classification, Platform Admin assignment,
+  platform-wide scope, access-control action, and explicit read-only player
+  view with no new console warnings or errors.
 - Frontend `src/pages/Operations.jsx` focused ESLint check: passed.
 - Frontend lint: passed with zero warnings/errors after PropTypes and unused
   import/variable cleanup, removal of sensitive password-reset console logging,
@@ -1064,18 +1541,21 @@ Run on 2026-08-08 against the current dirty working trees:
   to run on pushes and pull requests, but have not yet been host-verified
   because the changes are not pushed.
 
-Not run or not currently available: browser end-to-end tests, payment-provider
-sandbox certification, database-backed integration tests, dependency/security
-scanner, accessibility audit, load test, backup restore drill, and production
-penetration test.
+Not run or not currently available: automated browser end-to-end tests for the
+full multi-user Quick Match lifecycle, payment-provider sandbox certification, remaining-domain
+database integration tests, dependency/security scanner, accessibility audit,
+load test, backup restore drill, and production penetration test.
 
 ## Route Security Rules
 
-- Public: landing assets and the payment-provider callback only.
+- Public: landing assets; signup/login; email verification/resend; password
+  reset request/confirmation; and the payment-provider callback. Auth mutations
+  remain behind trusted-origin enforcement and endpoint-specific rate limits.
 - Authenticated: catalog, CoC integration, tournaments, payment orders,
   player, clan, match, and notification APIs.
 - Verified player: actions that alter player competition, wallet, social, or
-  game-account state.
+  game-account state also require `User.role = player`. A staff account may use
+  safe player-dashboard reads but cannot invoke player participation commands.
 - Staff: role and game-scope checks are performed server-side per request.
 - Staff route sequence: trusted origin, valid session, verified account,
   active staff assignment, then route-specific role and scope checks.
@@ -1100,18 +1580,28 @@ script refuses production execution unless `--allow-production` is supplied.
 
 ### Agent Operating Protocol
 
-Any coding agent joining this project must read this file before inspecting or
-editing code. It must then:
+Any coding agent joining this project, receiving a handoff, recovering from
+context loss, or working without proof that it read the current revision must
+read this file completely and then read `CURRENT_CHECKPOINT.md`. During later
+turns in the same uninterrupted working session, it may use the complete
+checkpoint plus the relevant sections of this file. A full reread is required
+before changing roles, scopes, authorization, architecture, route ownership,
+money contracts, roadmap order, or completion state. If the two files disagree,
+this file is authoritative and the fast path is suspended until the checkpoint
+is corrected. It must then:
 
 1. Confirm the relevant current state, completed work, and known risks.
 2. Work in an end-to-end vertical slice: inspect, implement, verify, then
-   update this tracker.
+   update this tracker and replace the operational state in
+   `CURRENT_CHECKPOINT.md`.
 3. Preserve existing architecture and avoid broad rewrites unless this file
    records an approved migration decision.
 4. Update Completed, Active Work, Required Future Flows, and security notes
    whenever a meaningful feature, route, data model, or decision changes.
 5. Record unfinished work as `In progress` or `Blocked`; never imply that a
    partial implementation is complete.
+6. Use focused checks while iterating and run each expensive aggregate gate
+   once after the complete slice stabilizes, unless a failure requires a rerun.
 
 The user should only need to say: `Read PROJECT_STATUS.md and continue.`
 

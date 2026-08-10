@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { FiCheckSquare, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
-import { EventReviewQueue, GameCatalog, QuickMatchOfferingManagement, RoleManagement } from "../components";
+import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
+import { EventReviewQueue, GameCatalog, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement } from "../components";
 
 const ADMIN_AREAS = [
   {
@@ -27,6 +27,12 @@ const ADMIN_AREAS = [
     icon: FiZap,
     id: "quick-matches",
     label: "Tournament Management",
+  },
+  {
+    description: "Independent review of settled winner prize releases.",
+    icon: FiDollarSign,
+    id: "prize-releases",
+    label: "Prize Review",
   },
 ];
 
@@ -62,7 +68,7 @@ const AdminDashboard = () => {
           <main className="min-w-0 p-4 md:p-6 lg:p-8">
             <header className="mb-4 flex items-center justify-between border-b border-slate-800 pb-4">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">{activeArea.label}</p>
-              <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">Platform Admin</span>
+              <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">Governance workspace</span>
             </header>
             {activeSection === "roles" ? (
               <RoleManagement />
@@ -70,8 +76,10 @@ const AdminDashboard = () => {
               <GameCatalog />
             ) : activeSection === "events" ? (
               <EventReviewQueue />
-            ) : (
+            ) : activeSection === "quick-matches" ? (
               <QuickMatchOfferingManagement />
+            ) : (
+              <PrizeReleaseReview />
             )}
           </main>
         </div>

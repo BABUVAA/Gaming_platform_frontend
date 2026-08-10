@@ -14,6 +14,8 @@ const InviteModal = ({
   isOpen,
   mode,
   onClose,
+  onJoined,
+  source = "legacy",
   teamSize,
   tournamentId,
 }) => {
@@ -30,7 +32,11 @@ const InviteModal = ({
   const availableTeams = teams.filter(
     (team) =>
       team.players?.length === teamSize &&
-      (!team.game || normalizeGameKey(team.game) === normalizeGameKey(game)) &&
+      (!team.gameKey && !team.game
+        ? true
+        : normalizeGameKey(team.gameKey || team.game) ===
+          normalizeGameKey(game)) &&
+      (!team.teamSize || Number(team.teamSize) === Number(teamSize)) &&
       (!team.mode ||
         String(team.mode).toLowerCase() === String(mode).toLowerCase())
   );
@@ -49,8 +55,10 @@ const InviteModal = ({
       // the team roster, while Socket.IO distributes later live updates.
       await joinQuickMatch({
         offeringId: tournamentId,
+        source,
         teamId,
       }).unwrap();
+      onJoined?.();
       onClose();
     } catch (error) {
       // Inline feedback keeps the dialog useful even when its toast is missed.
@@ -142,6 +150,8 @@ InviteModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   mode: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
+  onJoined: PropTypes.func,
+  source: PropTypes.oneOf(["legacy", "quick_match"]),
   teamSize: PropTypes.number.isRequired,
   tournamentId: PropTypes.string.isRequired,
 };

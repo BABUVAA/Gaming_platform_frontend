@@ -1,4 +1,5 @@
-import { getStoredErrorMessage } from "../../api/apiError";
+import { getStoredErrorMessage } from "../../api/apiError.js";
+import { isStaffUtilitySummary } from "../../utils/staffUtilityMode.js";
 
 // Player selectors isolate consumers from the `state.player` storage shape.
 // Authentication selectors intentionally expose no profile-domain data.
@@ -12,3 +13,5 @@ export const selectPlayerProfileStatus = (state) =>
 export const selectPlayerApiError = (state) => state.player.error;
 export const selectPlayerError = (state) =>
   getStoredErrorMessage(selectPlayerApiError(state));
+export const selectIsStaffUtilityMode = (state) =>
+  isStaffUtilitySummary(selectPlayerSummary(state));

@@ -2,11 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FaArrowLeft, FaCheckCircle, FaFlag, FaHeadset } from "react-icons/fa";
 import { FiClock, FiUploadCloud, FiUsers } from "react-icons/fi";
-import { useDispatch } from "react-redux";
-import api from "../api/axios-api";
-import { getApiErrorMessage } from "../api/apiError";
+import { useDispatch, useSelector } from "react-redux";
 import { showToast, types } from "../store/slices/toastSlice";
+import {
+  checkInPlayerMatch,
+  fetchPlayerMatch,
+  raisePlayerMatchDispute,
+  submitPlayerMatchResult,
+} from "../store/slices/matchActivitySlice.js";
+import {
+  selectPlayerMatch,
+  selectPlayerMatchActionStatus,
+  selectPlayerMatchError,
+  selectPlayerMatchStatus,
+} from "../store/selectors/matchActivitySelectors.js";
 import useSocket from "../context/useSocket";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
 
 const FLOW = [
   "awaiting_operator",
@@ -36,53 +48,104 @@ const STATUS_STYLE = {
 
 const ACTION_RULES = {
   checkIn: ["scheduled", "check_in"],
-  dispute: ["lobby_ready", "live", "result_pending", "verified", "settled"],
+  dispute: ["lobby_ready", "live", "result_pending", "verified"],
   submitResult: ["live", "result_pending"],
 };
+
+const getEntityId = (value) => String(value?._id || value || "");
+const sameIds = (first = [], second = []) =>
+  first.length === second.length &&
+  [...first].sort().every((value, index) => value === [...second].sort()[index]);
 
 const MatchRoom = () => {
   const { competitionRevision } = useSocket();
   const { id } = useParams();
   const dispatch = useDispatch();
-  const [match, setMatch] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isActing, setIsActing] = useState(false);
+  const match = useSelector(selectPlayerMatch);
+  const matchError = useSelector(selectPlayerMatchError);
+  const matchStatus = useSelector(selectPlayerMatchStatus);
+  const actionStatus = useSelector(selectPlayerMatchActionStatus);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
+  const isLoading = matchStatus === "loading";
+  const isActing = actionStatus === "loading";
   const [scoreInput, setScoreInput] = useState("");
   const [proofNote, setProofNote] = useState("");
+  const [winnerKey, setWinnerKey] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
 
-  const hydrateMatchState = (item) => {
-    setMatch(item);
-    setScoreInput(item?.resultSummary?.finalScore ?? "");
-    setProofNote(item?.resultSummary?.proofNote ?? "");
-  };
-
-  const loadMatch = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get(`/api/matches/${id}`);
-      const item = response.data?.data || null;
-      hydrateMatchState(item);
-    } catch (error) {
-      setMatch(null);
-      dispatch(
-        showToast({
-          message: getApiErrorMessage(
-            error,
-            "Unable to load match room.",
-          ),
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [dispatch, id]);
+  const loadMatch = useCallback(
+    () => dispatch(fetchPlayerMatch(id)),
+    [dispatch, id],
+  );
 
   useEffect(() => {
-    loadMatch();
+    const request = loadMatch();
+    return () => request.abort();
   }, [competitionRevision, loadMatch]);
+
+  const winnerOptions = useMemo(() => {
+    const participants = match?.participants || [];
+    const teamGroups = new Map();
+    const soloOptions = [];
+    for (const participant of participants) {
+      const userId = getEntityId(participant.user);
+      if (!userId) continue;
+      const teamId = getEntityId(participant.team);
+      if (!teamId) {
+        soloOptions.push({
+          key: `user:${userId}`,
+          label:
+            participant.displayName ||
+            participant.user?.profile?.username ||
+            "Player",
+          winnerIds: [userId],
+        });
+        continue;
+      }
+      const group = teamGroups.get(teamId) || {
+        key: `team:${teamId}`,
+        label: participant.team?.teamName || "Team",
+        memberNames: [],
+        winnerIds: [],
+      };
+      group.winnerIds.push(userId);
+      group.memberNames.push(
+        participant.displayName ||
+          participant.user?.profile?.username ||
+          "Player",
+      );
+      teamGroups.set(teamId, group);
+    }
+    const teamOptions = [...teamGroups.values()].map((group) => ({
+      ...group,
+      label: `${group.label} (${group.memberNames.join(", ")})`,
+    }));
+    return teamOptions.length ? teamOptions : soloOptions;
+  }, [match?.participants]);
+
+  const selectedWinner = useMemo(
+    () => winnerOptions.find((option) => option.key === winnerKey) || null,
+    [winnerKey, winnerOptions],
+  );
+
+  useEffect(() => {
+    setScoreInput(match?.resultSummary?.finalScore ?? "");
+    setProofNote(match?.resultSummary?.proofNote ?? "");
+    const savedWinnerIds = (match?.resultSummary?.winnerIds || []).map(
+      getEntityId,
+    );
+    setWinnerKey(
+      winnerOptions.find((option) =>
+        sameIds(option.winnerIds, savedWinnerIds),
+      )?.key || "",
+    );
+  }, [
+    match?._id,
+    match?.resultSummary?.finalScore,
+    match?.resultSummary?.proofNote,
+    match?.resultSummary?.winnerIds,
+    winnerOptions,
+  ]);
 
   const stageIndex = useMemo(() => {
     if (!match?.status) return 0;
@@ -92,18 +155,15 @@ const MatchRoom = () => {
 
   const isActionEnabled = useCallback(
     (actionName) => {
+      if (isStaffUtilityMode) return false;
       const allowedStatuses = ACTION_RULES[actionName] || [];
       return allowedStatuses.includes(match?.status);
     },
-    [match?.status]
+    [isStaffUtilityMode, match?.status]
   );
 
-  const submitAction = async ({
-    actionName,
-    path,
-    successMessage,
-    payload = {},
-  }) => {
+  const submitAction = async ({ actionName, payload = {} }) => {
+    if (isStaffUtilityMode) return;
     if (!isActionEnabled(actionName)) {
       dispatch(
         showToast({
@@ -115,32 +175,39 @@ const MatchRoom = () => {
       return;
     }
 
-    setIsActing(true);
+    if (actionName === "submitResult" && !String(payload.score || "").trim()) {
+      dispatch(
+        showToast({
+          message: "Score is required before submitting a result.",
+          type: types.WARNING,
+          position: "bottom-right",
+        }),
+      );
+      return;
+    }
+    if (actionName === "submitResult" && !payload.winnerIds?.length) {
+      dispatch(
+        showToast({
+          message: "Choose the winning player or team before submitting.",
+          type: types.WARNING,
+          position: "bottom-right",
+        }),
+      );
+      return;
+    }
+
+    const command = {
+      checkIn: checkInPlayerMatch,
+      dispute: raisePlayerMatchDispute,
+      submitResult: submitPlayerMatchResult,
+    }[actionName];
+    if (!command) return;
+
     try {
-      if (actionName === "submitResult" && !String(payload.score || "").trim()) {
-        throw new Error("Score is required before submitting a result.");
-      }
-      // Each action has one canonical endpoint. Retrying aliases after a 4xx
-      // response could repeat a mutation and hide the real business error.
-      await api.patch(path, payload);
-      dispatch(
-        showToast({
-          message: successMessage,
-          type: types.SUCCESS,
-          position: "bottom-right",
-        })
-      );
-      await loadMatch();
-    } catch (error) {
-      dispatch(
-        showToast({
-          message: getApiErrorMessage(error, "Match action failed."),
-          type: types.DANGER,
-          position: "bottom-right",
-        })
-      );
-    } finally {
-      setIsActing(false);
+      await dispatch(command({ matchId: id, ...payload })).unwrap();
+      if (actionName === "dispute") setDisputeReason("");
+    } catch {
+      // The shared thunk already normalizes and displays the API error.
     }
   };
 
@@ -155,7 +222,7 @@ const MatchRoom = () => {
   if (!match) {
     return (
       <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-6 text-slate-300">
-        Match not found.
+        {matchError || "Match not found."}
       </div>
     );
   }
@@ -186,7 +253,7 @@ const MatchRoom = () => {
               {match.title || "Untitled Match"}
             </h1>
             <p className="mt-2 text-sm text-slate-300">
-              {match.game} - {match.mode}
+              {match.gameName || match.game} - {match.mode}
             </p>
           </div>
           <span
@@ -252,6 +319,11 @@ const MatchRoom = () => {
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
               Action Center
             </p>
+            {isStaffUtilityMode ? (
+              <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+                {STAFF_UTILITY_MESSAGE} Check-in and disputes are player-only.
+              </p>
+            ) : (
             <div className="mt-4 space-y-3">
               <button
                 type="button"
@@ -259,8 +331,6 @@ const MatchRoom = () => {
                 onClick={() =>
                   submitAction({
                     actionName: "checkIn",
-                    successMessage: "Check-in submitted successfully.",
-                    path: `/api/matches/${id}/check-in`,
                   })
                 }
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-60"
@@ -286,11 +356,9 @@ const MatchRoom = () => {
                 onClick={() =>
                   submitAction({
                     actionName: "dispute",
-                    successMessage: "Dispute raised. Admin will review.",
                     payload: {
                       reason: disputeReason.trim(),
                     },
-                    path: `/api/matches/${id}/dispute`,
                   })
                 }
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
@@ -299,6 +367,7 @@ const MatchRoom = () => {
                 Raise Dispute
               </button>
             </div>
+            )}
           </div>
         </div>
       </section>
@@ -309,6 +378,11 @@ const MatchRoom = () => {
             Lobby Credentials
           </p>
           <h3 className="mt-2 text-xl font-black text-white">Room Access</h3>
+          {isStaffUtilityMode ? (
+            <p className="mt-4 text-sm leading-6 text-slate-400">
+              Lobby credentials remain hidden in staff utility mode.
+            </p>
+          ) : (
           <div className="mt-4 space-y-3 text-sm text-slate-300">
             <p>
               Room ID: <span className="font-semibold text-white">{match.lobby?.roomCode || "-"}</span>
@@ -321,6 +395,7 @@ const MatchRoom = () => {
               Notes: <span className="text-slate-400">{match.lobby?.instructions || "No notes yet."}</span>
             </p>
           </div>
+          )}
         </div>
 
         <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
@@ -328,6 +403,11 @@ const MatchRoom = () => {
             Result Submission
           </p>
           <h3 className="mt-2 text-xl font-black text-white">Upload Outcome</h3>
+          {isStaffUtilityMode ? (
+            <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+              {STAFF_UTILITY_MESSAGE} Result submission is player-only.
+            </p>
+          ) : (
           <div className="mt-4 space-y-3">
             <input
               value={scoreInput}
@@ -335,6 +415,21 @@ const MatchRoom = () => {
               className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
               placeholder="Enter score (example: 25-17)"
             />
+            <label className="block text-sm font-semibold text-slate-300">
+              Winning player or team
+              <select
+                className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                onChange={(event) => setWinnerKey(event.target.value)}
+                value={winnerKey}
+              >
+                <option value="">Select the verified winner</option>
+                {winnerOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <textarea
               rows={4}
               value={proofNote}
@@ -344,16 +439,19 @@ const MatchRoom = () => {
             />
             <button
               type="button"
-              disabled={isActing || !isActionEnabled("submitResult")}
+              disabled={
+                isActing ||
+                !isActionEnabled("submitResult") ||
+                !selectedWinner
+              }
               onClick={() =>
                 submitAction({
                   actionName: "submitResult",
-                  successMessage: "Result submitted for verification.",
                   payload: {
                     score: scoreInput,
                     proofNote,
+                    winnerIds: selectedWinner?.winnerIds || [],
                   },
-                  path: `/api/matches/${id}/result`,
                 })
               }
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-60"
@@ -362,6 +460,7 @@ const MatchRoom = () => {
               Submit Result
             </button>
           </div>
+          )}
         </div>
       </section>
     </div>

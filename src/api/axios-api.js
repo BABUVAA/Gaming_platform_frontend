@@ -1,7 +1,7 @@
 import axios from "axios";
-import { normalizeApiError } from "./apiError";
+import { normalizeApiError } from "./apiError.js";
 
-const configuredTimeout = Number(import.meta.env.VITE_API_TIMEOUT_MS);
+const configuredTimeout = Number(import.meta.env?.VITE_API_TIMEOUT_MS);
 const requestTimeout =
   Number.isFinite(configuredTimeout) && configuredTimeout > 0
     ? configuredTimeout
@@ -9,7 +9,7 @@ const requestTimeout =
 
 // One public backend origin keeps HTTP requests and Socket.IO on the same
 // production service while local development can still use localhost.
-const configuredApiBaseUrl = import.meta.env.VITE_SERVER_URL?.trim();
+const configuredApiBaseUrl = import.meta.env?.VITE_SERVER_URL?.trim();
 export const API_BASE_URL =
   configuredApiBaseUrl?.replace(/\/+$/, "") || "/";
 
@@ -67,6 +67,10 @@ const api = axios.create({
 const refreshExcludedPaths = new Set([
   "/api/auth/login",
   "/api/auth/logout",
+  "/api/auth/email-verification/resend",
+  "/api/auth/email-verification/verify",
+  "/api/auth/password-reset/request",
+  "/api/auth/password-reset/confirm",
   "/api/auth/refresh",
   "/api/auth/signup",
   "/api/auth/verifySession",

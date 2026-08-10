@@ -177,6 +177,14 @@ export const PlayerRoute = ({ children }) => (
   </RoleAwareRoute>
 );
 
+// Staff receive a narrow, read-only view of selected player pages. This guard
+// is deliberately separate so PlayerRoute remains participation-only.
+export const DashboardViewerRoute = ({ children }) => (
+  <RoleAwareRoute allowedRoles={[USER_ROLES.PLAYER, "staff"]}>
+    {children}
+  </RoleAwareRoute>
+);
+
 const VerifiedAccountGate = ({ children }) => {
   const { isVerified } = useAuthStore();
 
@@ -193,6 +201,12 @@ export const VerifiedPlayerRoute = ({ children }) => (
   <PlayerRoute>
     <VerifiedAccountGate>{children}</VerifiedAccountGate>
   </PlayerRoute>
+);
+
+export const VerifiedDashboardViewerRoute = ({ children }) => (
+  <DashboardViewerRoute>
+    <VerifiedAccountGate>{children}</VerifiedAccountGate>
+  </DashboardViewerRoute>
 );
 
 const DetailedProfileGate = ({ children }) => {
@@ -227,10 +241,22 @@ export const DetailedPlayerRoute = ({ children }) => (
   </PlayerRoute>
 );
 
+export const DetailedDashboardViewerRoute = ({ children }) => (
+  <DashboardViewerRoute>
+    <DetailedProfileGate>{children}</DetailedProfileGate>
+  </DashboardViewerRoute>
+);
+
 export const VerifiedDetailedPlayerRoute = ({ children }) => (
   <VerifiedPlayerRoute>
     <DetailedProfileGate>{children}</DetailedProfileGate>
   </VerifiedPlayerRoute>
+);
+
+export const VerifiedDetailedDashboardViewerRoute = ({ children }) => (
+  <VerifiedDashboardViewerRoute>
+    <DetailedProfileGate>{children}</DetailedProfileGate>
+  </VerifiedDashboardViewerRoute>
 );
 
 export const ApprovedHostRoute = ({ children }) => (
@@ -340,11 +366,19 @@ PlayerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+DashboardViewerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 VerifiedAccountGate.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
 VerifiedPlayerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+VerifiedDashboardViewerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
@@ -356,7 +390,15 @@ DetailedPlayerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 
+DetailedDashboardViewerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 VerifiedDetailedPlayerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+VerifiedDetailedDashboardViewerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 

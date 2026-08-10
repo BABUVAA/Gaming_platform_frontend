@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import createApiThunk from "../thunks/createApiThunk";
+import createApiThunk from "../thunks/createApiThunk.js";
 
 /**
  * Adds a player or an eligible saved team to a Quick Match queue.
@@ -11,8 +11,17 @@ import createApiThunk from "../thunks/createApiThunk";
 export const joinQuickMatchQueue = createApiThunk(
   "matchmaking/joinQuickMatchQueue",
   {
-    path: "/api/matches/queues",
+    path: ({ arg }) =>
+      arg.source === "quick_match"
+        ? `/api/player/quick-matches/${arg.offeringId}/queue`
+        : "/api/matches/queues",
     method: "post",
+    getBody: ({ offeringId, source, teamId }) =>
+      source === "quick_match"
+        ? teamId
+          ? { teamId }
+          : {}
+        : { offeringId, ...(teamId ? { teamId } : {}) },
     // The response contains the queue position/status needed by future match
     // screens, without exposing Axios response objects to Redux state.
     selectData: (response) => response.data?.data || response.data,
@@ -26,7 +35,11 @@ export const joinQuickMatchQueue = createApiThunk(
     condition: (_, { getState }) => {
       // A player can submit only one join command at a time. This prevents a
       // double-click from creating competing queue requests in the browser.
-      return getState().matchmaking.joinStatus !== "loading";
+      const state = getState();
+      return (
+        state.player?.summary?.role !== "staff" &&
+        state.matchmaking.joinStatus !== "loading"
+      );
     },
   },
 );

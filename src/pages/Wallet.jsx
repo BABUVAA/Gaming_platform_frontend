@@ -1,57 +1,83 @@
 import PropTypes from "prop-types";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FiArrowDownLeft, FiArrowUpRight, FiClock } from "react-icons/fi";
-import { Button } from "../components";
-import api from "../api/axios-api";
 import {
+  FiArrowDownLeft,
+  FiArrowUpRight,
+  FiClock,
+  FiRefreshCw,
+} from "react-icons/fi";
+import { Button } from "../components";
+import {
+  fetchWalletLedger,
+  fetchWalletBalance,
   initiatePhonePeOrder,
-  withdrawRequest,
 } from "../store/slices/paymentSlice";
+import {
+  selectPaymentLoading,
+  selectWallet,
+  selectWalletLedgerEntries,
+  selectWalletLedgerError,
+  selectWalletLedgerLoading,
+  selectWalletLedgerLoadingMore,
+  selectWalletLedgerPage,
+} from "../store/selectors/walletSelectors";
 import { showToast, types } from "../store/slices/toastSlice";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
 
-const statusColor = {
-  COMPLETED: "bg-emerald-500/15 text-emerald-300",
-  PENDING: "bg-amber-500/15 text-amber-200",
-  FAILED: "bg-rose-500/15 text-rose-200",
+const ledgerTypeLabels = {
+  adjustment: "Wallet adjustment",
+  deposit: "Funds deposited",
+  entry_capture: "Entry fee settled",
+  entry_hold: "Entry fee held",
+  entry_release: "Entry hold released",
+  opening_balance: "Opening balance",
+  prize_pending: "Prize under review",
+  prize_release: "Prize released",
+  withdrawal_complete: "Withdrawal completed",
+  withdrawal_hold: "Withdrawal requested",
+  withdrawal_release: "Withdrawal released",
 };
 
 const quickAmounts = [100, 250, 500, 1000];
+const formatMinor = (amountMinor = 0, currency = "INR") =>
+  new Intl.NumberFormat("en-IN", {
+    currency,
+    style: "currency",
+  }).format(Number(amountMinor || 0) / 100);
+const formatLedgerLabel = (value = "") =>
+  value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 
 const Wallet = () => {
   const dispatch = useDispatch();
-  const { wallet, isLoading } = useSelector((state) => state.payment);
+  const wallet = useSelector(selectWallet);
+  const isLoading = useSelector(selectPaymentLoading);
+  const ledgerEntries = useSelector(selectWalletLedgerEntries);
+  const ledgerError = useSelector(selectWalletLedgerError);
+  const ledgerIsLoading = useSelector(selectWalletLedgerLoading);
+  const ledgerIsLoadingMore = useSelector(selectWalletLedgerLoadingMore);
+  const ledgerPage = useSelector(selectWalletLedgerPage);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
-  const [activeTab, setActiveTab] = useState("real");
-  const [txnTypeFilter, setTxnTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
 
-  const activeTransactions = useMemo(
-    () =>
-      activeTab === "platform"
-        ? wallet?.platformTransactions || []
-        : wallet?.realTransactions || [],
-    [activeTab, wallet?.platformTransactions, wallet?.realTransactions]
-  );
-
-  const filteredTransactions = useMemo(
-    () =>
-      activeTransactions.filter((txn) => {
-        const matchesType = txnTypeFilter === "all" || txn.type === txnTypeFilter;
-        const txnStatus = (txn?.transactionId?.status || "pending").toLowerCase();
-        const matchesStatus =
-          statusFilter === "all" || txnStatus === statusFilter.toLowerCase();
-        return matchesType && matchesStatus;
-      }),
-    [activeTransactions, statusFilter, txnTypeFilter]
-  );
+  useEffect(() => {
+    const walletRequest = dispatch(fetchWalletBalance());
+    const ledgerRequest = dispatch(fetchWalletLedger());
+    return () => {
+      walletRequest.abort();
+      ledgerRequest.abort();
+    };
+  }, [dispatch]);
 
   const closeModals = () => {
     setIsAddModalOpen(false);
-    setIsWithdrawModalOpen(false);
     setAmount("");
   };
 
@@ -85,6 +111,7 @@ const Wallet = () => {
   };
 
   const handleAddMoney = async () => {
+    if (isStaffUtilityMode) return;
     const value = validateAmount(amount);
     if (!value) return;
 
@@ -98,10 +125,7 @@ const Wallet = () => {
       ).unwrap();
 
       if (response?.redirectUrl) {
-        if (response.callbackUrl) {
-          await api.post(response.callbackUrl);
-        }
-
+        // Only the payment provider may call the signed callback endpoint.
         window.location.href = response.redirectUrl;
         closeModals();
         return;
@@ -114,23 +138,18 @@ const Wallet = () => {
           position: "bottom-right",
         })
       );
-    } catch (error) {
-      console.error("PhonePe initiation failed:", error);
+    } catch {
+      // The thunk owns the normalized failure toast and Redux error state.
     }
   };
 
-  const handleWithdrawMoney = async () => {
-    const value = validateAmount(amount, {
-      maxAmount: Number(wallet?.realMoney || 0),
-    });
-    if (!value) return;
+  const handleLedgerRefresh = () => {
+    dispatch(fetchWalletLedger());
+  };
 
-    try {
-      await dispatch(withdrawRequest({ amount: value })).unwrap();
-      closeModals();
-    } catch (error) {
-      console.error("Withdraw request failed:", error);
-    }
+  const handleLoadMoreLedger = () => {
+    if (!ledgerPage.nextCursor || ledgerIsLoadingMore) return;
+    dispatch(fetchWalletLedger({ cursor: ledgerPage.nextCursor }));
   };
 
   return (
@@ -150,162 +169,166 @@ const Wallet = () => {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              label="Real Wallet"
-              value={`Rs ${wallet?.realMoney || 0}`}
+              label="Available"
+              value={formatMinor(wallet?.availableMinor, wallet?.currency)}
               accent="text-cyan-300"
               icon={<FiArrowDownLeft />}
             />
             <MetricCard
-              label="Platform Coins"
-              value={wallet?.platformMoney || 0}
-              accent="text-emerald-300"
+              label="Entry held"
+              value={formatMinor(wallet?.entryHeldMinor, wallet?.currency)}
+              accent="text-amber-200"
+              icon={<FiClock />}
+            />
+            <MetricCard
+              label="Prize pending"
+              value={formatMinor(wallet?.prizePendingMinor, wallet?.currency)}
+              accent="text-violet-200"
               icon={<FiArrowUpRight />}
             />
             <MetricCard
-              label="Recent Activity"
-              value={activeTransactions.length}
-              accent="text-amber-200"
-              icon={<FiClock />}
+              label="Withdrawable"
+              value={formatMinor(wallet?.withdrawableMinor, wallet?.currency)}
+              accent="text-emerald-300"
+              icon={<FiArrowUpRight />}
             />
           </div>
         </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr_0.8fr]">
-        <ActionPanel
-          title="Add funds"
-          copy="Top up your real wallet before joining paid brackets and tournaments."
-          actionLabel="Add Money"
-          onClick={() => {
-            setAmount("");
-            setIsAddModalOpen(true);
-          }}
-          tone="primary"
-        />
-        <ActionPanel
-          title="Withdraw funds"
-          copy="Move eligible winnings out with a withdrawal request from the same command deck."
-          actionLabel="Withdraw"
-          onClick={() => {
-            setAmount("");
-            setIsWithdrawModalOpen(true);
-          }}
-          tone="danger"
-        />
+        {isStaffUtilityMode ? (
+          <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-amber-50 xl:col-span-2">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
+              View-only wallet history
+            </p>
+            <p className="mt-3 text-sm leading-6">{STAFF_UTILITY_MESSAGE}</p>
+            <p className="mt-2 text-sm leading-6">
+              Deposits and withdrawals are player-only actions.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ActionPanel
+              title="Add funds"
+              copy="Top up your real wallet before joining paid brackets and tournaments."
+              actionLabel="Add Money"
+              onClick={() => {
+                setAmount("");
+                setIsAddModalOpen(true);
+              }}
+              tone="primary"
+            />
+            <ActionPanel
+              title="Withdraw funds"
+              copy="Move eligible winnings out with a withdrawal request from the same command deck."
+              actionLabel="Withdrawal review pending"
+              disabled
+              onClick={() => undefined}
+              tone="danger"
+            />
+          </>
+        )}
         <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
             Quick Rules
           </p>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
             <li>Deposits redirect you to the payment provider securely.</li>
-            <li>Platform ledger entries track in-app rewards and usage.</li>
-            <li>Pending statuses usually settle after backend confirmation.</li>
+            <li>Paid entries move funds into Entry held until final settlement.</li>
+            <li>Prizes remain pending through result and dispute review.</li>
+            <li>Withdrawal stays disabled until the reviewed payout lifecycle ships.</li>
           </ul>
         </div>
       </section>
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-2">
-            {[
-              { key: "real", label: "Real Wallet" },
-              { key: "platform", label: "Platform Ledger" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition ${
-                  activeTab === tab.key
-                    ? "bg-cyan-400/14 text-cyan-200"
-                    : "text-slate-500 hover:text-slate-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
+              Immutable history
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-white">
+              Wallet ledger
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Posted movements are permanent. Each row shows only the wallet
+              buckets involved in your account.
+            </p>
           </div>
-
-          <div className="flex gap-2">
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200"
-              value={txnTypeFilter}
-              onChange={(event) => setTxnTypeFilter(event.target.value)}
-            >
-              <option value="all">All Types</option>
-              <option value="credit">Credit</option>
-              <option value="debit">Debit</option>
-            </select>
-
-            <select
-              className="rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-200"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-            </select>
-          </div>
+          <button
+            type="button"
+            onClick={handleLedgerRefresh}
+            disabled={ledgerIsLoading || ledgerIsLoadingMore}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <FiRefreshCw className={ledgerIsLoading ? "animate-spin" : ""} />
+            Refresh
+          </button>
         </div>
 
-        <div className="mt-5 space-y-3">
-          {filteredTransactions.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-              No transactions found for this view.
+        <div className="mt-5 space-y-3" aria-live="polite">
+          {ledgerIsLoading && ledgerEntries.length === 0 ? (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-300">
+              Loading your ledger history...
             </div>
-          ) : (
-            [...filteredTransactions].reverse().map((txn, index) => {
-              const status =
-                txn?.transactionId?.status?.toUpperCase() || "PENDING";
-              const isCredit = txn.type === "credit";
+          ) : null}
 
-              return (
-                <article
-                  key={txn._id || index}
-                  className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4"
-                >
-                  <div>
-                    <p className="font-semibold text-white">
-                      {txn.reason || "Transaction"}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {new Date(txn.timestamp || txn.createdAt).toLocaleString("en-IN")}
-                    </p>
-                    {txn?.transactionId?.meta?.merchantTransactionId ? (
-                      <p className="mt-1 text-xs text-slate-500">
-                        Txn ID:{" "}
-                        {txn.transactionId.meta.merchantTransactionId.slice(-12)}
-                      </p>
-                    ) : null}
-                  </div>
+          {!ledgerIsLoading && ledgerError && ledgerEntries.length === 0 ? (
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center">
+              <p className="text-sm text-rose-100">{ledgerError}</p>
+              <button
+                type="button"
+                onClick={handleLedgerRefresh}
+                className="mt-4 rounded-xl bg-rose-300 px-4 py-2 text-sm font-bold text-slate-950"
+              >
+                Try again
+              </button>
+            </div>
+          ) : null}
 
-                  <div className="text-right">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        statusColor[status] || "bg-slate-800 text-slate-200"
-                      }`}
-                    >
-                      {status}
-                    </span>
-                    <p
-                      className={`mt-3 text-lg font-black ${
-                        isCredit ? "text-emerald-300" : "text-rose-300"
-                      }`}
-                    >
-                      {isCredit ? "+" : "-"} Rs {txn.amount}
-                    </p>
-                  </div>
-                </article>
-              );
-            })
-          )}
+          {!ledgerIsLoading && !ledgerError && ledgerEntries.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+              No ledger entries yet. Your first posted wallet movement will
+              appear here.
+            </div>
+          ) : null}
+
+          {ledgerEntries.map((entry) => (
+            <LedgerEntry key={entry.id} entry={entry} />
+          ))}
+
+          {ledgerError && ledgerEntries.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+              <span>{ledgerError} Your loaded history is still available.</span>
+              <button
+                type="button"
+                onClick={handleLedgerRefresh}
+                className="font-bold text-amber-200 underline underline-offset-4"
+              >
+                Refresh history
+              </button>
+            </div>
+          ) : null}
+
+          {ledgerPage.hasMore ? (
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={handleLoadMoreLedger}
+                disabled={ledgerIsLoading || ledgerIsLoadingMore}
+                className="rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {ledgerIsLoadingMore ? "Loading more..." : "Load more"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {isAddModalOpen ? (
+      {isAddModalOpen && !isStaffUtilityMode ? (
         <AmountModal
           title="Add Money"
           amount={amount}
@@ -317,16 +340,6 @@ const Wallet = () => {
         />
       ) : null}
 
-      {isWithdrawModalOpen ? (
-        <AmountModal
-          title="Withdraw Money"
-          amount={amount}
-          setAmount={setAmount}
-          onClose={closeModals}
-          onConfirm={handleWithdrawMoney}
-          isLoading={isLoading}
-        />
-      ) : null}
     </div>
   );
 };
@@ -386,6 +399,47 @@ const AmountModal = ({
   </div>
 );
 
+const LedgerEntry = ({ entry }) => (
+  <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p className="font-semibold text-white">
+          {ledgerTypeLabels[entry.type] || formatLedgerLabel(entry.type) ||
+            "Wallet movement"}
+        </p>
+        <p className="mt-1 text-sm text-slate-400">
+          {new Date(entry.createdAt).toLocaleString("en-IN")}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          {formatLedgerLabel(entry.referenceType)}
+        </p>
+      </div>
+      <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300">
+        Posted
+      </span>
+    </div>
+
+    <div className="mt-4 flex flex-wrap gap-2">
+      {(entry.legs || []).map((leg, index) => {
+        const isCredit = leg.direction === "credit";
+        return (
+          <span
+            key={`${leg.account}-${leg.direction}-${index}`}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+              isCredit
+                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+                : "border-rose-500/25 bg-rose-500/10 text-rose-200"
+            }`}
+          >
+            {formatLedgerLabel(leg.account)} · {isCredit ? "+" : "−"}
+            {formatMinor(leg.amountMinor, entry.currency)}
+          </span>
+        );
+      })}
+    </div>
+  </article>
+);
+
 const MetricCard = ({ label, value, accent, icon }) => (
   <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
     <div className="flex items-center justify-between gap-3">
@@ -396,12 +450,20 @@ const MetricCard = ({ label, value, accent, icon }) => (
   </div>
 );
 
-const ActionPanel = ({ title, copy, actionLabel, onClick, tone }) => (
+const ActionPanel = ({
+  title,
+  copy,
+  actionLabel,
+  disabled = false,
+  onClick,
+  tone,
+}) => (
   <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
     <h2 className="text-xl font-black text-white">{title}</h2>
     <p className="mt-3 text-sm leading-7 text-slate-400">{copy}</p>
     <Button
       onClick={onClick}
+      disabled={disabled}
       className={`mt-5 w-full rounded-2xl py-3 ${
         tone === "danger"
           ? "bg-rose-500 text-white hover:bg-rose-400"
@@ -434,8 +496,26 @@ ActionPanel.propTypes = {
   title: PropTypes.string.isRequired,
   copy: PropTypes.string.isRequired,
   actionLabel: PropTypes.string.isRequired,
+  disabled: PropTypes.bool,
   onClick: PropTypes.func.isRequired,
   tone: PropTypes.string.isRequired,
+};
+
+LedgerEntry.propTypes = {
+  entry: PropTypes.shape({
+    createdAt: PropTypes.string.isRequired,
+    currency: PropTypes.string.isRequired,
+    id: PropTypes.string.isRequired,
+    legs: PropTypes.arrayOf(
+      PropTypes.shape({
+        account: PropTypes.string.isRequired,
+        amountMinor: PropTypes.number.isRequired,
+        direction: PropTypes.oneOf(["credit", "debit"]).isRequired,
+      }),
+    ).isRequired,
+    referenceType: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+  }).isRequired,
 };
 
 export default Wallet;

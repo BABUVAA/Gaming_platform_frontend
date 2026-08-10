@@ -3,6 +3,8 @@ import {
   AdminRoute,
   ApprovedHostRoute,
   DashboardLanding,
+  DashboardViewerRoute,
+  DetailedDashboardViewerRoute,
   DetailedPlayerRoute,
   LandingPage,
   Loading,
@@ -13,6 +15,8 @@ import {
   EventManagerRoute,
   GameManagerRoute,
   VerifiedPlayerRoute,
+  VerifiedDashboardViewerRoute,
+  VerifiedDetailedDashboardViewerRoute,
   VerifiedDetailedPlayerRoute,
 } from "./RouteGuards";
 import LazyComponents from "./routeRegistry";
@@ -26,6 +30,8 @@ const guardElements = {
 const accessWrappers = {
   admin: AdminRoute,
   detailedPlayer: DetailedPlayerRoute,
+  dashboardViewer: DashboardViewerRoute,
+  detailedDashboardViewer: DetailedDashboardViewerRoute,
   // Hosting is an approved player capability, so its access key names the
   // capability instead of pretending that host is another user role.
   approvedHost: ApprovedHostRoute,
@@ -38,6 +44,8 @@ const accessWrappers = {
   // Verified-player access prevents restricted pages from mounting, which
   // also prevents their page-level API requests from starting.
   verifiedPlayer: VerifiedPlayerRoute,
+  verifiedDashboardViewer: VerifiedDashboardViewerRoute,
+  verifiedDetailedDashboardViewer: VerifiedDetailedDashboardViewerRoute,
   verifiedDetailedPlayer: VerifiedDetailedPlayerRoute,
 };
 

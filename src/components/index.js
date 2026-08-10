@@ -35,3 +35,4 @@ export { default as RoleManagement } from "./adminComponents/RoleManagement.jsx"
 export { default as GameCatalog } from "./adminComponents/GameCatalog.jsx";
 export { default as EventReviewQueue } from "./adminComponents/EventReviewQueue.jsx";
 export { default as QuickMatchOfferingManagement } from "./adminComponents/QuickMatchOfferingManagement.jsx";
+export { default as PrizeReleaseReview } from "./adminComponents/PrizeReleaseReview.jsx";

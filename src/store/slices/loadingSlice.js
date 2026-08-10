@@ -2,7 +2,6 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   login,
   logout,
-  register,
 } from "./authSlice";
 import {
   updatePlayerProfileData,
@@ -16,7 +15,6 @@ import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 const globallyBlockingThunks = [
   login,
   logout,
-  register,
   updatePlayerProfileData,
   updatePlayerProfileFile,
   createClan,

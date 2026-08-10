@@ -11,8 +11,8 @@ import {
   FaLink,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
-import { ROUTES } from "../routes/routeConstants";
-import { USER_ROLES } from "./accessControl";
+import { ROUTES } from "../routes/routeConstants.js";
+import { USER_ROLES } from "./accessControl.js";
 
 // Navigation data reuses route constants so the menu, guards, and router all
 // point at the same URLs. That keeps future role/domain splits from drifting.
@@ -61,6 +61,65 @@ const staffNavigation = [
     icon: FaTrophy,
     match: [ROUTES.EVENT_MANAGER],
     requiredStaffRoles: ["event_manager"],
+  },
+];
+
+const staffUtilityNavigation = [
+  {
+    label: "Staff Workspace",
+    description: "Open your assigned operational tools",
+    to: ROUTES.STAFF,
+    icon: FaShieldAlt,
+    match: [ROUTES.STAFF],
+  },
+  {
+    label: "Games",
+    description: "View the player-facing game catalog",
+    to: ROUTES.GAME,
+    icon: FaGamepad,
+    match: [ROUTES.GAME],
+  },
+  {
+    label: "Tournaments",
+    description: "View player-facing competitions",
+    to: ROUTES.TOURNAMENT,
+    icon: FaTrophy,
+    match: [ROUTES.TOURNAMENT, "/dashboard/tournaments", "/tournamentDetails"],
+  },
+  {
+    label: "Matches",
+    description: "View safe match information",
+    to: ROUTES.MATCHES,
+    icon: FaMapMarkedAlt,
+    match: [ROUTES.MATCHES],
+  },
+  {
+    label: "Wallet history",
+    description: "View account ledger without money actions",
+    to: ROUTES.WALLET,
+    icon: FaWallet,
+    match: [ROUTES.WALLET],
+  },
+  {
+    label: "Profile",
+    description: "View account identity information",
+    to: ROUTES.PROFILE,
+    icon: FaUser,
+    match: [ROUTES.PROFILE],
+  },
+  {
+    label: "Game Accounts",
+    description: "View linked-account and request status",
+    to: ROUTES.GAME_ACCOUNTS,
+    icon: FaLink,
+    match: [ROUTES.GAME_ACCOUNTS, ROUTES.ACCOUNT_LEGACY],
+  },
+  {
+    label: "Account Settings",
+    description: "Email, password and sign-in security",
+    to: ROUTES.ACCOUNT_SETTINGS,
+    icon: FaShieldAlt,
+    match: [ROUTES.ACCOUNT_SETTINGS],
   },
 ];
 
@@ -138,6 +197,7 @@ const allNavigation = [
   ...adminNavigation,
   ...operatorNavigation,
   ...playerNavigation,
+  ...staffUtilityNavigation,
 ];
 
 export const getDefaultRouteForRole = (role) => {
@@ -148,7 +208,10 @@ export const getDefaultRouteForRole = (role) => {
   return ROUTES.DASHBOARD;
 };
 
-export const getDashboardNavigation = (summaryOrRole) => {
+export const getDashboardNavigation = (
+  summaryOrRole,
+  { includeStaffWorkspaces = true } = {},
+) => {
   // Compatibility with older callers is retained while navigation moves from
   // legacy user roles to server-provided staff assignments.
   if (typeof summaryOrRole === "string") {
@@ -160,6 +223,15 @@ export const getDashboardNavigation = (summaryOrRole) => {
   const staffRoles = new Set(
     summaryOrRole?.staffAssignments?.map((assignment) => assignment.role) || [],
   );
+  if (summaryOrRole?.role === "staff") {
+    const assignedWorkspaces = includeStaffWorkspaces
+      ? staffNavigation.filter((item) =>
+          item.requiredStaffRoles.some((role) => staffRoles.has(role)),
+        )
+      : [];
+
+    return [...staffUtilityNavigation, ...assignedWorkspaces];
+  }
   return [
     ...playerNavigation,
     ...staffNavigation.filter((item) =>

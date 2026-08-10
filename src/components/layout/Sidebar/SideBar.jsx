@@ -2,24 +2,31 @@ import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { getDashboardNavigation } from "../../../utils/navigation";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
+import { isStaffUtilitySummary } from "../../../utils/staffUtilityMode";
 
 const SideBar = () => {
   const playerSummary = useSelector(selectPlayerSummary);
-  const dashboardNavigation = getDashboardNavigation(playerSummary);
+  // This shell is player-owned even when staff open its read-only utility
+  // view. Operational workspaces stay on the dedicated staff surface.
+  const dashboardNavigation = getDashboardNavigation(playerSummary, {
+    includeStaffWorkspaces: false,
+  });
+  const isStaffUtilityMode = isStaffUtilitySummary(playerSummary);
 
   return (
     <>
       <aside className="hidden md:flex md:w-72 md:flex-col md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-4 md:py-5 md:backdrop-blur">
         <div className="rounded-2xl border border-cyan-400/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.16),transparent_42%),linear-gradient(135deg,#1e3a4a,#25344a)] p-4 shadow-[0_18px_40px_rgba(2,8,23,0.18)]">
           <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300">
-            Player Arena
+            {isStaffUtilityMode ? "Staff utility" : "Player Arena"}
           </p>
           <h2 className="mt-3 text-2xl font-black text-white">
-            Competition Hub
+            {isStaffUtilityMode ? "Read-only player view" : "Competition Hub"}
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">
-            Find tournaments, follow your matches, and stay connected with your
-            team.
+            {isStaffUtilityMode
+              ? "Inspect safe player-facing information, then use your assigned workspace for operational actions."
+              : "Find tournaments, follow your matches, and stay connected with your team."}
           </p>
         </div>
 

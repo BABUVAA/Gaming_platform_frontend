@@ -1,150 +1,110 @@
-import { useMemo, useState } from "react";
-import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
-import TournamentCard from "../components/ui/GameCard/TournamentCard";
-import { selectTournamentList } from "../store/selectors/tournamentSelectors";
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import QuickMatchCard from "../components/ui/GameCard/QuickMatchCard";
+import { fetchPlayerQuickMatchOfferings } from "../store/slices/quickMatchOfferingSlice";
+import {
+  selectPlayerQuickMatchError,
+  selectPlayerQuickMatchOfferings,
+  selectPlayerQuickMatchStatus,
+} from "../store/selectors/quickMatchOfferingSelectors";
 
 const TournamentPage = () => {
-  const tournaments = useSelector(selectTournamentList);
+  const dispatch = useDispatch();
+  const offerings = useSelector(selectPlayerQuickMatchOfferings);
+  const status = useSelector(selectPlayerQuickMatchStatus);
+  const error = useSelector(selectPlayerQuickMatchError);
   const [activeFilter, setActiveFilter] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
 
-  const filters = ["coc", "bgmi", "solo", "5v5", "squad", "Featured"];
+  useEffect(() => {
+    const request = dispatch(fetchPlayerQuickMatchOfferings());
+    return () => request.abort();
+  }, [dispatch]);
 
-  const filteredTournaments = useMemo(() => {
-    if (!activeFilter || activeFilter === "All") return tournaments;
-    if (activeFilter === "Featured") {
-      return tournaments.filter((tournament) => tournament.isFeatured);
-    }
+  const filters = useMemo(
+    () => [
+      "All",
+      ...new Set(
+        offerings.flatMap((offering) =>
+          [offering.gameKey, offering.mode, offering.map].filter(Boolean),
+        ),
+      ),
+    ],
+    [offerings],
+  );
 
-    return tournaments.filter(
-      (tournament) =>
-        tournament.mode === activeFilter ||
-        tournament.map === activeFilter ||
-        tournament.category === activeFilter ||
-        tournament.game === activeFilter
+  const filteredOfferings = useMemo(() => {
+    if (activeFilter === "All") return offerings;
+    return offerings.filter((offering) =>
+      [offering.gameKey, offering.mode, offering.map].includes(activeFilter),
     );
-  }, [tournaments, activeFilter]);
-
-  const totalPages = Math.ceil(filteredTournaments.length / itemsPerPage);
-  const paginatedTournaments = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredTournaments.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredTournaments, currentPage]);
+  }, [activeFilter, offerings]);
 
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-amber-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
         <p className="text-xs uppercase tracking-[0.3em] text-amber-300/80">
-          Tournament Control
+          Tournaments
         </p>
         <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
-          Browse live formats, join verified queues, and track your event load.
+          Choose a live Quick Match format.
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
-          This area is now tuned for faster scanning: format filters, event
-          count, and a proper split between all tournaments and your active
-          commitments.
+          Every card comes from the active Game catalog and shows its fixed seats,
+          team format, entry rule, prize disclosure, schedule, and your current
+          eligibility.
         </p>
       </section>
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <h2 className="text-lg font-black text-white">Tournament feed</h2>
-          <Link
-            className="rounded-full bg-cyan-400/14 px-4 py-2 text-sm font-semibold text-cyan-200"
-            to="/dashboard/matches"
-          >
-            My matches
-          </Link>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {["All", ...filters].map((filter) => (
+        <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-4">
+          {filters.map((filter) => (
             <button
-              key={filter}
-              onClick={() => {
-                setActiveFilter(filter);
-                setCurrentPage(1);
-              }}
               className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
                 activeFilter === filter
                   ? "border-cyan-400/30 bg-cyan-400/12 text-cyan-200"
                   : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700 hover:text-slate-200"
               }`}
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              type="button"
             >
               {filter}
             </button>
           ))}
         </div>
 
-        <div className="mt-6">
-          <TournamentGrid tournaments={paginatedTournaments} />
-          <Pagination
-            totalPages={totalPages}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-          />
-        </div>
+        {status === "loading" && offerings.length === 0 && (
+          <p className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+            Loading active tournaments...
+          </p>
+        )}
+        {status === "failed" && (
+          <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/10 p-5">
+            <p className="text-sm text-rose-100">{error}</p>
+            <button
+              className="mt-3 rounded-xl bg-rose-100 px-4 py-2 text-sm font-black text-rose-950"
+              onClick={() => dispatch(fetchPlayerQuickMatchOfferings())}
+              type="button"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {status === "succeeded" && filteredOfferings.length === 0 && (
+          <p className="mt-6 rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
+            No active tournaments match this filter.
+          </p>
+        )}
+        {filteredOfferings.length > 0 && (
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredOfferings.map((offering) => (
+              <QuickMatchCard key={offering._id} offering={offering} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
-};
-
-const TournamentGrid = ({ tournaments }) => {
-  if (!tournaments || tournaments.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-        No tournaments available for this view yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {tournaments.map((tournament) => (
-        <TournamentCard
-          key={tournament._id}
-          tournament={tournament}
-          disableFetch={false}
-        />
-      ))}
-    </div>
-  );
-};
-
-const Pagination = ({ totalPages, currentPage, setCurrentPage }) => {
-  if (totalPages <= 1) return null;
-
-  return (
-    <div className="mt-6 flex justify-center gap-2">
-      {Array.from({ length: totalPages }, (_, index) => (
-        <button
-          key={index}
-          onClick={() => setCurrentPage(index + 1)}
-          className={`h-10 w-10 rounded-full text-sm font-semibold transition ${
-            currentPage === index + 1
-              ? "bg-cyan-300 text-slate-950"
-              : "bg-slate-900 text-slate-300 hover:bg-slate-800"
-          }`}
-        >
-          {index + 1}
-        </button>
-      ))}
-    </div>
-  );
-};
-
-TournamentGrid.propTypes = {
-  tournaments: PropTypes.arrayOf(PropTypes.object).isRequired,
-};
-
-Pagination.propTypes = {
-  totalPages: PropTypes.number.isRequired,
-  currentPage: PropTypes.number.isRequired,
-  setCurrentPage: PropTypes.func.isRequired,
 };
 
 export default TournamentPage;

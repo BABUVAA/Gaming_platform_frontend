@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
-import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
-import createApiThunk from "../thunks/createApiThunk";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers.js";
+import createApiThunk from "../thunks/createApiThunk.js";
 
 const field = (name) => (response) => response.data?.data?.[name] ?? null;
 export const fetchAccessPolicy = createApiThunk("accessControl/policy", {
@@ -126,10 +126,13 @@ const accessControlSlice = createSlice({
       .addCase(fetchAccessReports.fulfilled, (state, action) => { state.reports = action.payload || []; })
       .addCase(fetchAccessActivity.fulfilled, (state, action) => { state.activity = action.payload || []; });
 
-    [createAccessAssignment, changeAccessAssignmentStatus, changeAccessAssignmentScopes]
+    [createAccessAssignment, changeAccessAssignmentScopes]
       .forEach((thunk) => builder.addCase(thunk.fulfilled, (state, action) => {
         replaceById(state.assignments, action.payload);
       }));
+    builder.addCase(changeAccessAssignmentStatus.fulfilled, (state, action) => {
+      replaceById(state.assignments, action.payload);
+    });
     [reviewStaffRecommendation, withdrawStaffRecommendation]
       .forEach((thunk) => builder.addCase(thunk.fulfilled, (state, action) => {
         replaceById(state.recommendations, action.payload);

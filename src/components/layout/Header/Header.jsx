@@ -16,6 +16,7 @@ import {
   getNavigationTitle,
 } from "../../../utils/navigation";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
+import { ROUTES } from "../../../routes/routeConstants";
 
 const Header = () => {
   const isAuthenticated = useSelector(
@@ -25,14 +26,17 @@ const Header = () => {
   const { goToLogin, goToSignUp } = useNavigateHook();
   const location = useLocation();
   const currentArea = getNavigationTitle(location.pathname);
-  const dashboardNavigation = getDashboardNavigation(playerSummary);
+  const isPlayerDashboardArea = location.pathname.startsWith(ROUTES.DASHBOARD);
+  const dashboardNavigation = getDashboardNavigation(playerSummary, {
+    includeStaffWorkspaces: !isPlayerDashboardArea,
+  });
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-700 bg-[#182235]/95 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-3 md:h-20 md:px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <HeaderLogo />
+          <HeaderLogo isStaff={playerSummary?.role === "staff"} />
 
           {isAuthenticated && (
             <div className="hidden min-w-0 lg:block">

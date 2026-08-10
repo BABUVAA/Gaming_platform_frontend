@@ -17,25 +17,40 @@ import {
   USER_ROLES,
 } from "../../../utils/accessControl";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
+import {
+  getStaffUtilityRoleLabel,
+  isStaffUtilitySummary,
+} from "../../../utils/staffUtilityMode";
 
 const HeaderProfileMenu = () => {
   const dispatch = useDispatch();
   const playerSummary = useSelector(selectPlayerSummary);
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
-  const roleLabel = hasApprovedHostAccess(playerSummary)
+  const isStaffUtilityMode = isStaffUtilitySummary(playerSummary);
+  const roleLabel = isStaffUtilityMode
+    ? getStaffUtilityRoleLabel(playerSummary)
+    : hasApprovedHostAccess(playerSummary)
     ? "Player / Approved Host"
     : playerSummary?.role
       ? playerSummary.role.charAt(0).toUpperCase() + playerSummary.role.slice(1)
       : "Player";
 
-  const menuItems =
-    playerSummary?.role === USER_ROLES.ADMIN
+  const menuItems = isStaffUtilityMode
+    ? [
+        { to: ROUTES.STAFF, label: "Staff Workspace", icon: FiShield },
+        {
+          to: ROUTES.ACCOUNT_SETTINGS,
+          label: "Account Settings",
+          icon: FiSettings,
+        },
+      ]
+    : playerSummary?.role === USER_ROLES.ADMIN
       ? [{ to: "/panelAdmin", label: "Admin Panel", icon: FiShield }]
       : playerSummary?.role === USER_ROLES.OPERATOR
         ? [
             {
-              to: "/dashboard/operations",
+              to: ROUTES.OPERATIONS,
               label: "Operator Control",
               icon: FiActivity,
             },
@@ -52,8 +67,8 @@ const HeaderProfileMenu = () => {
               label: "Account Settings",
               icon: FiSettings,
             },
-            { to: "/dashboard/clan", label: "Clan & Social", icon: FiUsers },
-            { to: "/dashboard/refer", label: "Refer a Friend", icon: FiUsers },
+            { to: ROUTES.CLAN, label: "Clan & Social", icon: FiUsers },
+            { to: ROUTES.REFER, label: "Refer a Friend", icon: FiUsers },
           ];
 
   useEffect(() => {
@@ -93,7 +108,7 @@ const HeaderProfileMenu = () => {
               Signed in as
             </p>
             <p className="mt-2 truncate font-semibold text-white">
-              {playerSummary?.username || "Player"}
+              {playerSummary?.username || (isStaffUtilityMode ? "Staff" : "Player")}
             </p>
             <p className="mt-1 truncate text-sm text-slate-400">
               {playerSummary?.email || "No email available"}

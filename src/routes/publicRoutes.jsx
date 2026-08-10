@@ -7,6 +7,7 @@ export const publicRoutes = [
   { index: true, guardElement: "LandingPage" },
   { path: ROUTES.HOME, componentKey: "Home" },
   { path: ROUTES.FORGOT_PASSWORD, componentKey: "ForgotPassword" },
+  { path: ROUTES.RESET_PASSWORD, componentKey: "ForgotPassword" },
   { path: ROUTES.LOGIN, componentKey: "Login" },
   { path: ROUTES.SIGNUP, componentKey: "SignUp" },
   { path: ROUTES.COC, componentKey: "Coc" },

@@ -8,32 +8,32 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.GAME,
     componentKey: "Game",
-    access: "player",
+    access: "dashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT,
     componentKey: "Tournament",
-    access: "verifiedDetailedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.MATCHES,
     componentKey: "Matches",
-    access: "verifiedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.MATCH_ROOM,
     componentKey: "MatchRoom",
-    access: "verifiedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_GAME,
     componentKey: "TournamentGame",
-    access: "verifiedDetailedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_OFFERING_DETAILS,
     componentKey: "TournamentDetails",
-    access: "verifiedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.CHATS,
@@ -48,40 +48,42 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.PROFILE,
     componentKey: "Profile",
-    access: "detailedPlayer",
+    access: "detailedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.GAME_ACCOUNTS,
     componentKey: "GameAccounts",
-    access: "verifiedDetailedPlayer",
+    access: "verifiedDetailedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.ACCOUNT_SETTINGS,
     componentKey: "AccountSettings",
-    access: "player",
+    access: "dashboardViewer",
   },
   {
     // Password security remains available before email verification so every
     // authenticated player can protect their account.
     path: DASHBOARD_ROUTE_SEGMENTS.CHANGE_PASSWORD,
     componentKey: "ChangePassword",
-    access: "player",
+    access: "dashboardViewer",
   },
   {
     // Existing bookmarks keep working while the former Account page moves to
     // its accurate Game Accounts route.
     path: DASHBOARD_ROUTE_SEGMENTS.ACCOUNT_LEGACY,
     element: <Navigate to={ROUTES.GAME_ACCOUNTS} replace />,
-    access: "verifiedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.WALLET,
     componentKey: "Wallet",
-    access: "verifiedPlayer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.OPERATIONS,
-    componentKey: "Operations",
+    // Match operations now belongs to the staff workspace. Keep old links
+    // working without mounting operator controls in the player dashboard.
+    element: <Navigate to={ROUTES.OPERATIONS} replace />,
     access: "operator",
   },
   {

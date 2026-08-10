@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
+import { useDispatch, useSelector } from "react-redux";
 import {
   FiActivity,
   FiAlertTriangle,
@@ -13,8 +14,21 @@ import {
   FiUsers,
   FiWifi,
 } from "react-icons/fi";
-import api from "../api/axios-api";
 import useSocket from "../context/useSocket";
+import {
+  claimOperatorMatch,
+  executeOperatorMatchCommand,
+  fetchOperatorWorkspace,
+  publishOperatorLobby,
+} from "../store/slices/operatorOperationsSlice";
+import {
+  selectOperatorActiveAction,
+  selectOperatorDashboard,
+  selectOperatorMatches,
+  selectOperatorWorkspaceError,
+  selectOperatorWorkspaceStatus,
+  selectUnassignedOperatorMatches,
+} from "../store/selectors/operatorOperationsSelectors";
 
 const operatorCommands = Object.freeze({
   operator_assigned: {
@@ -106,19 +120,21 @@ const formatDateTime = (value) => {
   }).format(date);
 };
 
+const getMatchGameLabel = (match) =>
+  match.gameRef?.name || match.gameKey || match.game || "Game";
+
 const Operations = () => {
   const { competitionRevision, connected } = useSocket();
-  const [dashboard, setDashboard] = useState(null);
-  const [matches, setMatches] = useState([]);
-  const [unassignedMatches, setUnassignedMatches] = useState([]);
+  const dispatch = useDispatch();
+  const dashboard = useSelector(selectOperatorDashboard);
+  const matches = useSelector(selectOperatorMatches);
+  const unassignedMatches = useSelector(selectUnassignedOperatorMatches);
+  const workspaceStatus = useSelector(selectOperatorWorkspaceStatus);
+  const error = useSelector(selectOperatorWorkspaceError);
+  const activeAction = useSelector(selectOperatorActiveAction);
   const [lobbyDrafts, setLobbyDrafts] = useState({});
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeAction, setActiveAction] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [expandedMatchId, setExpandedMatchId] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const syncLobbyDrafts = useCallback((incomingMatches) => {
     // Drafts are keyed by match so opening one command panel never overwrites
@@ -134,35 +150,14 @@ const Operations = () => {
     setLobbyDrafts(drafts);
   }, []);
 
-  const loadData = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      setError("");
-      const [dashboardRes, matchRes, unassignedRes] = await Promise.all([
-        api.get("/api/operator/dashboard"),
-        api.get("/api/operator/matches"),
-        api.get("/api/operator/matches/unassigned"),
-      ]);
-      const incomingMatches = matchRes.data?.data || [];
-
-      setDashboard(dashboardRes.data?.data || null);
-      setMatches(incomingMatches);
-      setUnassignedMatches(unassignedRes.data?.data || []);
-      syncLobbyDrafts(incomingMatches);
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ||
-          "Unable to load operator activity.",
-      );
-    } finally {
-      setHasLoaded(true);
-      setIsRefreshing(false);
-    }
-  }, [syncLobbyDrafts]);
+  useEffect(() => {
+    const request = dispatch(fetchOperatorWorkspace());
+    return () => request.abort();
+  }, [competitionRevision, dispatch]);
 
   useEffect(() => {
-    loadData();
-  }, [competitionRevision, loadData]);
+    syncLobbyDrafts(matches);
+  }, [matches, syncLobbyDrafts]);
 
   const orderedMatches = useMemo(
     () =>
@@ -186,80 +181,19 @@ const Operations = () => {
     return orderedMatches;
   }, [activeFilter, orderedMatches]);
 
-  const updateMatchInState = (updatedMatch) => {
-    setMatches((current) =>
-      current.map((match) =>
-        match._id === updatedMatch._id ? updatedMatch : match,
-      ),
-    );
-    setLobbyDrafts((current) => ({
-      ...current,
-      [updatedMatch._id]: {
-        roomCode: updatedMatch.lobby?.roomCode || "",
-        roomPassword: updatedMatch.lobby?.roomPassword || "",
-        instructions: updatedMatch.lobby?.instructions || "",
-      },
-    }));
-  };
-
-  const refreshDashboard = async () => {
-    const response = await api.get("/api/operator/dashboard");
-    setDashboard(response.data?.data || null);
-  };
-
   const claimMatch = async (matchId) => {
-    try {
-      setActiveAction(`${matchId}:claim`);
-      setError("");
-      setNotice("");
-      const response = await api.patch(
-        `/api/operator/matches/${matchId}/claim`,
-      );
-      const claimedMatch = response.data?.data;
-
-      setUnassignedMatches((current) =>
-        current.filter((match) => match._id !== matchId),
-      );
-      setMatches((current) => [claimedMatch, ...current]);
-      setLobbyDrafts((current) => ({
-        ...current,
-        [claimedMatch._id]: {
-          roomCode: claimedMatch.lobby?.roomCode || "",
-          roomPassword: claimedMatch.lobby?.roomPassword || "",
-          instructions: claimedMatch.lobby?.instructions || "",
-        },
-      }));
-      await refreshDashboard();
-      setNotice("Match added to your shift.");
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ||
-          "Unable to take this match.",
-      );
-    } finally {
-      setActiveAction("");
+    const action = await dispatch(claimOperatorMatch(matchId));
+    if (claimOperatorMatch.fulfilled.match(action)) {
+      dispatch(fetchOperatorWorkspace());
     }
   };
 
   const executeCommand = async (matchId, command) => {
-    try {
-      setActiveAction(`${matchId}:command`);
-      setError("");
-      setNotice("");
-      const response = await api.patch(
-        `/api/operator/matches/${matchId}/commands/${command}`,
-      );
-      updateMatchInState(response.data?.data);
-      await refreshDashboard();
-      setNotice(response.data?.message || "Match action completed.");
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.error?.message ||
-          requestError?.response?.data?.message ||
-          "Unable to complete this match action.",
-      );
-    } finally {
-      setActiveAction("");
+    const action = await dispatch(
+      executeOperatorMatchCommand({ matchId, command }),
+    );
+    if (executeOperatorMatchCommand.fulfilled.match(action)) {
+      dispatch(fetchOperatorWorkspace());
     }
   };
 
@@ -274,30 +208,25 @@ const Operations = () => {
   };
 
   const publishLobby = async (matchId) => {
-    try {
-      setActiveAction(`${matchId}:lobby`);
-      setError("");
-      setNotice("");
-      const response = await api.patch(
-        `/api/operator/matches/${matchId}/lobby`,
-        lobbyDrafts[matchId] || emptyLobby,
-      );
-      updateMatchInState(response.data?.data);
-      await refreshDashboard();
-      setNotice("Lobby shared with players.");
-    } catch (requestError) {
-      setError(
-        requestError?.response?.data?.message ||
-          "Unable to publish lobby details.",
-      );
-    } finally {
-      setActiveAction("");
+    const action = await dispatch(
+      publishOperatorLobby({
+        matchId,
+        lobby: lobbyDrafts[matchId] || emptyLobby,
+      }),
+    );
+    if (publishOperatorLobby.fulfilled.match(action)) {
+      dispatch(fetchOperatorWorkspace());
     }
   };
 
-  if (!hasLoaded) {
+  if (
+    workspaceStatus === "idle" ||
+    (workspaceStatus === "loading" && !dashboard)
+  ) {
     return <OperationsSkeleton />;
   }
+
+  const isRefreshing = workspaceStatus === "loading";
 
   const metrics = [
     {
@@ -360,7 +289,7 @@ const Operations = () => {
           <button
             className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-900/70 px-4 py-3 text-sm font-black text-white transition hover:border-cyan-300/40 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
             disabled={isRefreshing}
-            onClick={loadData}
+            onClick={() => dispatch(fetchOperatorWorkspace())}
             type="button"
           >
             <FiRefreshCw className={isRefreshing ? "animate-spin" : ""} />
@@ -380,13 +309,6 @@ const Operations = () => {
           icon={<FiAlertTriangle />}
           message={error}
           tone="error"
-        />
-      ) : null}
-      {notice ? (
-        <StatusMessage
-          icon={<FiCheckCircle />}
-          message={notice}
-          tone="success"
         />
       ) : null}
 
@@ -542,7 +464,7 @@ const AssignmentCard = ({
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.17em] text-amber-200">
-          {match.game || "Game"} / {match.mode || "Format"}
+          {getMatchGameLabel(match)} / {match.mode || "Format"}
         </p>
         <h3 className="mt-2 truncate text-xl font-black text-white">
           {match.title || "Tournament match"}
@@ -623,7 +545,7 @@ const AssignedMatchCard = ({
       >
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-300/10 font-black text-cyan-200">
-            {String(match.game || "GM").slice(0, 2).toUpperCase()}
+            {getMatchGameLabel(match).slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0">
             <h3 className="truncate font-black text-white">{match.title}</h3>
@@ -747,9 +669,56 @@ const AssignedMatchCard = ({
               </div>
             )}
           </div>
+
+          {match.resultSummary?.submittedBy || match.status === "disputed" ? (
+            <ResultEvidence match={match} />
+          ) : null}
         </div>
       ) : null}
     </article>
+  );
+};
+
+const ResultEvidence = ({ match }) => {
+  const result = match.resultSummary || {};
+  const deadline = result.disputeDeadline
+    ? formatDateTime(result.disputeDeadline)
+    : "Not opened";
+
+  return (
+    <div className="mt-4 rounded-2xl border border-orange-300/20 bg-orange-300/5 p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-200">
+        Result and dispute evidence
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MatchFact
+          icon={<FiActivity />}
+          label="Submitted score"
+          value={result.finalScore || "Awaiting score"}
+        />
+        <MatchFact
+          icon={<FiClock />}
+          label="Dispute deadline"
+          value={deadline}
+        />
+        <MatchFact
+          icon={<FiAlertTriangle />}
+          label="Dispute"
+          value={result.disputeNote || "No dispute raised"}
+        />
+        <MatchFact
+          icon={<FiCheckCircle />}
+          label="Resolution"
+          value={result.disputeResolutionNote || "Not resolved"}
+        />
+      </div>
+      {result.proofNote ? (
+        <p className="mt-3 rounded-xl bg-slate-950/50 px-3 py-3 text-sm leading-6 text-slate-300">
+          <span className="font-black text-white">Player evidence:</span>{" "}
+          {result.proofNote}
+        </p>
+      ) : null}
+    </div>
   );
 };
 
@@ -865,6 +834,8 @@ const matchPropType = PropTypes.shape({
   _id: PropTypes.string.isRequired,
   createdAt: PropTypes.string,
   game: PropTypes.string,
+  gameKey: PropTypes.string,
+  gameRef: PropTypes.shape({ name: PropTypes.string }),
   lobby: PropTypes.shape({
     publishedAt: PropTypes.string,
     roomCode: PropTypes.string,
@@ -884,6 +855,14 @@ const matchPropType = PropTypes.shape({
     }),
   ),
   scheduledFor: PropTypes.string,
+  resultSummary: PropTypes.shape({
+    disputeDeadline: PropTypes.string,
+    disputeNote: PropTypes.string,
+    disputeResolutionNote: PropTypes.string,
+    finalScore: PropTypes.string,
+    proofNote: PropTypes.string,
+    submittedBy: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  }),
   status: PropTypes.string,
   title: PropTypes.string,
 });
@@ -908,6 +887,10 @@ AssignedMatchCard.propTypes = {
   onToggle: PropTypes.func.isRequired,
   onUpdateLobbyDraft: PropTypes.func.isRequired,
   onExecuteCommand: PropTypes.func.isRequired,
+};
+
+ResultEvidence.propTypes = {
+  match: matchPropType.isRequired,
 };
 
 MatchFact.propTypes = {

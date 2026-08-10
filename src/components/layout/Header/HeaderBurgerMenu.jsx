@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FiBell, FiMenu } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
@@ -12,6 +12,11 @@ import { logout } from "../../../store/slices/authSlice";
 import { getDashboardNavigation } from "../../../utils/navigation";
 import { USER_ROLES } from "../../../utils/accessControl";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
+import { ROUTES } from "../../../routes/routeConstants";
+import {
+  getStaffUtilityRoleLabel,
+  isStaffUtilitySummary,
+} from "../../../utils/staffUtilityMode";
 
 const HeaderBurgerMenu = () => {
   const dispatch = useDispatch();
@@ -23,9 +28,13 @@ const HeaderBurgerMenu = () => {
   const notifications = useSelector((store) => store.notifications.items);
   const [menuOpen, setMenuOpen] = useState(false);
   const { goToLogin, goToSignUp } = useNavigateHook();
+  const location = useLocation();
   const unreadCount = (notifications || []).filter((item) => !item.isRead).length;
-  const dashboardNavigation = getDashboardNavigation(playerSummary);
+  const dashboardNavigation = getDashboardNavigation(playerSummary, {
+    includeStaffWorkspaces: !location.pathname.startsWith(ROUTES.DASHBOARD),
+  });
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
+  const isStaffUtilityMode = isStaffUtilitySummary(playerSummary);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -37,7 +46,7 @@ const HeaderBurgerMenu = () => {
       <div className="relative flex items-center justify-between border-b border-slate-700 pb-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.28em] text-cyan-300">
-            Player menu
+            {isStaffUtilityMode ? "Staff utility" : "Player menu"}
           </p>
           <h2 className="mt-2 text-2xl font-black text-white">
             E-Gaming
@@ -62,6 +71,11 @@ const HeaderBurgerMenu = () => {
             <p className="mt-2 text-lg font-bold text-white">
               {playerSummary?.username || "Player"}
             </p>
+            {isStaffUtilityMode ? (
+              <p className="mt-1 text-sm text-amber-200">
+                {getStaffUtilityRoleLabel(playerSummary)} · Read-only player view
+              </p>
+            ) : null}
           </div>
 
           <div

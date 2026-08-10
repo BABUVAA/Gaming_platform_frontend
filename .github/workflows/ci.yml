@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   quality:
-    name: Lint, build, and smoke checks
+    name: Test, lint, build, and smoke checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +20,7 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm test
       - run: npm run lint
       - run: npm run build
       - run: npm run smoke:routes

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Outlet } from "react-router-dom";
 import { SideBar } from "../components";
+import StaffReadOnlyNotice from "../components/common/StaffReadOnlyNotice";
 import { fetchNotifications } from "../store/slices/notificationSlice";
 import { fetchWalletBalance } from "../store/slices/paymentSlice";
 import unwrapThunkRequest from "../store/thunks/unwrapThunkRequest";
@@ -65,6 +66,7 @@ const Dashboard = () => {
         <SideBar />
 
         <div className="min-w-0 min-h-0 px-3 pb-24 pt-4 md:px-6 md:pb-10 md:pt-6">
+          <StaffReadOnlyNotice />
           <Outlet />
         </div>
       </div>

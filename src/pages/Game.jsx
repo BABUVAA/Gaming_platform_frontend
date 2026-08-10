@@ -15,6 +15,7 @@ import {
   ROUTES,
 } from "../routes/routeConstants";
 import {
+  selectIsStaffUtilityMode,
   selectPlayerSummary,
 } from "../store/selectors/playerSelectors";
 import {
@@ -101,6 +102,7 @@ const rankTournament = (tournament) => {
 const Game = () => {
   const [activeGame, setActiveGame] = useState("all");
   const playerSummary = useSelector(selectPlayerSummary);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const tournaments = useSelector(selectTournamentList);
   const tournamentsStatus = useSelector(selectTournamentListStatus);
 
@@ -130,10 +132,10 @@ const Game = () => {
         <div>
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
             <FaGamepad />
-            Compete
+            {isStaffUtilityMode ? "Staff catalog view" : "Compete"}
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white md:text-4xl">
-            Ready, {username}?
+            {isStaffUtilityMode ? `Player-facing catalog for ${username}` : `Ready, ${username}?`}
           </h1>
         </div>
 
@@ -142,7 +144,7 @@ const Game = () => {
             to={ROUTES.MATCHES}
             className="rounded-xl border border-slate-600 bg-slate-700 px-4 py-3 text-xs font-black text-slate-100 transition hover:border-slate-500 hover:bg-slate-600"
           >
-            My matches
+            {isStaffUtilityMode ? "Match history" : "My matches"}
           </Link>
           <Link
             to={ROUTES.TOURNAMENT}

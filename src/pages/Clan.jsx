@@ -43,6 +43,7 @@ import {
 import {
   searchPlayer,
 } from "../store/slices/playerSlice";
+import { fetchGames } from "../store/slices/gameSlice";
 import {
   acceptFriendRequest,
   acceptTeamInvitation,
@@ -83,6 +84,9 @@ const Clan = () => {
     teams,
     teamsStatus,
   } = useSelector((store) => store.social);
+  const { data: catalogGames = [], status: gamesStatus } = useSelector(
+    (store) => store.games,
+  );
   const { globalLoading } = useSelector((store) => store.loading);
   const [activeTab, setActiveTab] = useState("myClan");
   const [isCreatingClan, setIsCreatingClan] = useState(false);
@@ -146,6 +150,10 @@ const Clan = () => {
       dispatch(fetchSocialConnections());
     }
   }, [connectionsStatus, dispatch]);
+
+  useEffect(() => {
+    if (gamesStatus === "idle") dispatch(fetchGames());
+  }, [dispatch, gamesStatus]);
 
   useEffect(() => {
     if (activeClanId) {
@@ -647,6 +655,7 @@ const Clan = () => {
 
       {hasClan && activeTab === "teams" ? (
         <TeamPanel
+          catalogGames={catalogGames}
           clanMembers={clanData?.members || []}
           currentUserId={currentUserId}
           isBusy={mutationStatus === "loading"}
@@ -1479,14 +1488,18 @@ const KickClanMemberDialog = ({
   </div>
 );
 
-const TEAM_MODES_BY_GAME = {
-  bgmi: ["duo", "squad"],
-  coc: ["5v5", "10v10", "15v15", "20v20"],
+const suggestTeamSize = (mode) => {
+  const normalized = String(mode || "").toLowerCase();
+  if (normalized === "duo") return 2;
+  if (normalized === "squad") return 4;
+  const versusSize = normalized.match(/^(\d+)v\d+$/)?.[1];
+  return versusSize ? Number(versusSize) : 2;
 };
 
 const getEntityId = (entity) => String(entity?._id || entity || "");
 
 const TeamPanel = ({
+  catalogGames,
   clanMembers,
   currentUserId,
   isBusy,
@@ -1501,21 +1514,46 @@ const TeamPanel = ({
   teams,
 }) => {
   const [draft, setDraft] = useState({
-    game: "bgmi",
-    mode: "squad",
+    gameId: "",
+    mode: "",
     teamName: "",
+    teamSize: 2,
   });
   const [inviteSelections, setInviteSelections] = useState({});
+  const selectedGame = catalogGames.find(
+    (game) => game._id === draft.gameId,
+  );
+
+  useEffect(() => {
+    if (catalogGames.length === 0) return;
+    const currentGame = catalogGames.find(
+      (game) => game._id === draft.gameId,
+    );
+    if (currentGame?.supportedModes?.includes(draft.mode)) return;
+
+    const game = currentGame || catalogGames[0];
+    const mode = game.supportedModes?.[0] || "";
+    setDraft((current) => ({
+      ...current,
+      gameId: game._id,
+      mode,
+      teamSize: suggestTeamSize(mode),
+    }));
+  }, [catalogGames, draft.gameId, draft.mode]);
 
   const updateDraft = (field, value) => {
     setDraft((current) => ({
       ...current,
       [field]: value,
-      // Changing games resets mode so an incompatible hidden value is never
-      // submitted to the backend.
-      ...(field === "game"
-        ? { mode: TEAM_MODES_BY_GAME[value][0] }
-        : {}),
+      ...(field === "gameId"
+        ? (() => {
+            const game = catalogGames.find((item) => item._id === value);
+            const mode = game?.supportedModes?.[0] || "";
+            return { mode, teamSize: suggestTeamSize(mode) };
+          })()
+        : field === "mode"
+          ? { teamSize: suggestTeamSize(value) }
+          : {}),
     }));
   };
 
@@ -1526,6 +1564,7 @@ const TeamPanel = ({
     await onCreateTeam({
       ...draft,
       teamName: draft.teamName.trim(),
+      teamSize: Number(draft.teamSize),
     });
     setDraft((current) => ({ ...current, teamName: "" }));
   };
@@ -1570,11 +1609,18 @@ const TeamPanel = ({
             </span>
             <select
               className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
-              onChange={(event) => updateDraft("game", event.target.value)}
-              value={draft.game}
+              disabled={catalogGames.length === 0}
+              onChange={(event) => updateDraft("gameId", event.target.value)}
+              value={draft.gameId}
             >
-              <option value="bgmi">BGMI</option>
-              <option value="coc">Clash of Clans</option>
+              {catalogGames.length === 0 ? (
+                <option value="">No active games available</option>
+              ) : null}
+              {catalogGames.map((game) => (
+                <option key={game._id} value={game._id}>
+                  {game.name}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -1587,16 +1633,28 @@ const TeamPanel = ({
               onChange={(event) => updateDraft("mode", event.target.value)}
               value={draft.mode}
             >
-              {TEAM_MODES_BY_GAME[draft.game].map((mode) => (
+              {(selectedGame?.supportedModes || []).map((mode) => (
                 <option key={mode} value={mode}>
-                  {mode.toUpperCase()}
+                  {mode}
                 </option>
               ))}
             </select>
           </label>
 
+          <Input
+            label="Players per team"
+            max="100"
+            min="2"
+            name="teamSize"
+            onChange={(event) => updateDraft("teamSize", event.target.value)}
+            required
+            type="number"
+            value={draft.teamSize}
+          />
+
           <Button
             className="h-14 w-full rounded-2xl bg-cyan-300 text-sm font-black uppercase tracking-[0.14em] text-slate-950 hover:bg-cyan-200"
+            disabled={!draft.gameId || !draft.mode}
             isLoading={isBusy}
             type="submit"
           >
@@ -1637,7 +1695,8 @@ const TeamPanel = ({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
-                      {team.game} {team.mode}
+                      {team.gameName || team.gameKey || team.game} {team.mode}
+                      {team.teamSize ? ` · ${team.teamSize} players` : ""}
                     </p>
                     <h3 className="mt-2 text-2xl font-black text-white">
                       {team.teamName}
@@ -2731,12 +2790,15 @@ const teamPlayerType = PropTypes.shape({
 const teamType = PropTypes.shape({
   _id: PropTypes.string.isRequired,
   createdBy: entityReferenceType.isRequired,
-  game: PropTypes.string.isRequired,
+  game: PropTypes.string,
+  gameKey: PropTypes.string,
+  gameName: PropTypes.string,
   mode: PropTypes.string.isRequired,
   pendingInvites: PropTypes.arrayOf(teamPlayerType).isRequired,
   players: PropTypes.arrayOf(teamPlayerType).isRequired,
   status: PropTypes.oneOf(["forming", "ready"]).isRequired,
   teamName: PropTypes.string.isRequired,
+  teamSize: PropTypes.number,
 });
 
 CreateClanPanel.propTypes = {
@@ -2792,6 +2854,13 @@ KickClanMemberDialog.propTypes = {
 };
 
 TeamPanel.propTypes = {
+  catalogGames: PropTypes.arrayOf(
+    PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      supportedModes: PropTypes.arrayOf(PropTypes.string).isRequired,
+    }),
+  ).isRequired,
   clanMembers: PropTypes.arrayOf(clanMemberType).isRequired,
   currentUserId: PropTypes.string,
   isBusy: PropTypes.bool.isRequired,

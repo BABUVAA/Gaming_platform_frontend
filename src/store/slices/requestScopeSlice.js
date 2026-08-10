@@ -4,7 +4,10 @@ import { sessionInvalidated } from "../actions/sessionActions";
 const privateActionPrefixes = [
   "admin/",
   "clan/",
+  "matchActivity/",
+  "matchmaking/",
   "notifications/",
+  "operatorOperations/",
   "payment/",
   "player/",
   "social/",

@@ -159,8 +159,9 @@ const EventManagerDashboard = () => {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6 text-slate-100">
-      <header>
+    <main className="min-h-screen bg-[#050b14] px-4 py-6 text-slate-100 sm:px-6 lg:px-8 lg:py-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+      <header className="rounded-3xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(15,23,42,0.55))] px-5 py-5 sm:px-6">
         <p className="text-xs uppercase tracking-[0.22em] text-cyan-300">
           Competition operations
         </p>
@@ -470,6 +471,7 @@ const EventManagerDashboard = () => {
           )}
         </div>
       </section>
+      </div>
     </main>
   );
 };

@@ -6,6 +6,8 @@ import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
 import { fetchPlayerProfile } from "../store/slices/playerSlice";
 import { showToast, types } from "../store/slices/toastSlice";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
 
 const statusClasses = {
   verified: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
@@ -30,6 +32,7 @@ const GameAccounts = () => {
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data);
   const profile = useSelector((store) => store.player?.profile);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
   const [linkedAccounts, setLinkedAccounts] = useState([]);
   const [verificationRequests, setVerificationRequests] = useState([]);
@@ -81,6 +84,7 @@ const GameAccounts = () => {
   }, [linkedAccounts]);
 
   const openConnectModal = (game) => {
+    if (isStaffUtilityMode) return;
     setSelectedGame(game);
     setForm(emptyForm);
   };
@@ -92,7 +96,7 @@ const GameAccounts = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!selectedGame) return;
+    if (!selectedGame || isStaffUtilityMode) return;
 
     setIsSubmitting(true);
 
@@ -278,19 +282,25 @@ const GameAccounts = () => {
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => openConnectModal(game)}
-                        className="mt-5 inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
-                      >
-                        {game.verificationMethod === "api_token"
-                          ? account
-                            ? "Reconnect Account"
-                            : "Verify Account"
-                          : account
-                            ? "Resubmit for Review"
-                            : "Request Review"}
-                      </button>
+                      {isStaffUtilityMode ? (
+                        <p className="mt-5 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
+                          {STAFF_UTILITY_MESSAGE} Game-account changes are player-only.
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openConnectModal(game)}
+                          className="mt-5 inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
+                        >
+                          {game.verificationMethod === "api_token"
+                            ? account
+                              ? "Reconnect Account"
+                              : "Verify Account"
+                            : account
+                              ? "Resubmit for Review"
+                              : "Request Review"}
+                        </button>
+                      )}
                     </div>
                   </article>
                 );
@@ -387,7 +397,7 @@ const GameAccounts = () => {
         )}
       </div>
 
-      {selectedGame && (
+      {selectedGame && !isStaffUtilityMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-950 p-6 shadow-[0_24px_70px_rgba(2,8,23,0.65)]">
             <div className="flex items-start justify-between gap-4">

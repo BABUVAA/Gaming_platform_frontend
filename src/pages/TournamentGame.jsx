@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { FiDownload, FiGrid, FiLayers } from "react-icons/fi";
 import { TournamentCard } from "../components";
 import { selectTournamentList } from "../store/selectors/tournamentSelectors";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 
 const gameData = {
   coc: {
@@ -34,6 +35,7 @@ const gameData = {
 const TournamentGame = () => {
   const { game } = useParams();
   const tournaments = useSelector(selectTournamentList);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const [activeTab, setActiveTab] = useState("tournaments");
   const [activeFilter, setActiveFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,7 +112,9 @@ const TournamentGame = () => {
                 Download Game
               </a>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-200">
-                Choose a format and enter matchmaking
+                {isStaffUtilityMode
+                  ? "Read-only player-facing format view"
+                  : "Choose a format and enter matchmaking"}
               </div>
             </div>
           </div>

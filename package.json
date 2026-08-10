@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "npm run test:state",
+    "test:state": "node --test tests/*.test.mjs",
     "smoke:api-errors": "node scripts/smoke-api-errors.mjs",
     "smoke:routes": "node scripts/smoke-routes.mjs"
   },

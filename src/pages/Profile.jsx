@@ -25,6 +25,8 @@ import {
   updatePlayerProfileData,
   updatePlayerProfileFile,
 } from "../store/slices/playerSlice";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
 
 const SOCIAL_PLATFORMS = [
   { key: "discord", label: "Discord", icon: FaDiscord, color: "text-indigo-300" },
@@ -40,6 +42,7 @@ const Profile = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const { profile } = useSelector((store) => store.player);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const externalPlayerTag = searchParams.get("playerTag");
   const playerProfile = profile?.profile || {};
   const internalPlayerTag = profile?.profileTag || playerProfile?.profileTag || "";
@@ -131,6 +134,7 @@ const Profile = () => {
   ];
 
   const openSocialEditor = () => {
+    if (isStaffUtilityMode) return;
     setDraftSocials(playerProfile.linkedAccounts || {});
     setIsSocialModalOpen(true);
   };
@@ -150,7 +154,7 @@ const Profile = () => {
   };
 
   const uploadAsset = async (file) => {
-    if (!file || !selectedImageType) return;
+    if (!file || !selectedImageType || isStaffUtilityMode) return;
     try {
       setIsSaving(true);
       const formPayload = new FormData();
@@ -174,6 +178,7 @@ const Profile = () => {
   };
 
   const saveSocialLinks = async () => {
+    if (isStaffUtilityMode) return;
     try {
       setIsSaving(true);
       const payload = Object.fromEntries(
@@ -203,6 +208,11 @@ const Profile = () => {
             : "Viewing external player profile and public stats."}
         </section>
       ) : null}
+      {isStaffUtilityMode ? (
+        <section className="rounded-[28px] border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm leading-6 text-amber-100">
+          {STAFF_UTILITY_MESSAGE} Profile media and social-link changes are unavailable here.
+        </section>
+      ) : null}
       <section className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/85 shadow-[0_24px_70px_rgba(2,8,23,0.45)]">
         <div
           className="relative h-52 bg-cover bg-center md:h-64"
@@ -212,7 +222,7 @@ const Profile = () => {
         >
           <button
             type="button"
-            disabled={isViewingExternal}
+            disabled={isViewingExternal || isStaffUtilityMode}
             onClick={() => {
               setSelectedImageType("banner");
               setIsImageModalOpen(true);
@@ -243,7 +253,7 @@ const Profile = () => {
                 />
                 <button
                   type="button"
-                  disabled={isViewingExternal}
+                  disabled={isViewingExternal || isStaffUtilityMode}
                   onClick={() => {
                     setSelectedImageType("profile");
                     setIsImageModalOpen(true);
@@ -286,7 +296,7 @@ const Profile = () => {
 
             <button
               type="button"
-              disabled={isViewingExternal}
+              disabled={isViewingExternal || isStaffUtilityMode}
               onClick={openSocialEditor}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -442,7 +452,7 @@ const Profile = () => {
         </div>
       </section>
 
-      {isImageModalOpen ? (
+      {isImageModalOpen && !isStaffUtilityMode ? (
         <ModalCard
           title={`Update ${selectedImageType === "profile" ? "profile picture" : "banner image"}`}
           onClose={() => setIsImageModalOpen(false)}
@@ -467,7 +477,7 @@ const Profile = () => {
         </ModalCard>
       ) : null}
 
-      {isSocialModalOpen ? (
+      {isSocialModalOpen && !isStaffUtilityMode ? (
         <ModalCard title="Edit social links" onClose={() => setIsSocialModalOpen(false)}>
           <div className="grid gap-3">
             {SOCIAL_PLATFORMS.map(({ key, label, icon: Icon, color }) => (

@@ -1,11 +1,11 @@
 import axios from "axios";
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import api from "../../api/axios-api";
+import api from "../../api/axios-api.js";
 import {
   getApiErrorToast,
   normalizeApiError,
-} from "../../api/apiError";
-import { showToast, types } from "../slices/toastSlice";
+} from "../../api/apiError.js";
+import { showToast, types } from "../slices/toastSlice.js";
 
 const SUPPORTED_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
 

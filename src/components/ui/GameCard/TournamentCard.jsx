@@ -5,6 +5,8 @@ import { buildTournamentOfferingPath } from "../../../routes/routeConstants";
 import InviteModal from "../../feature/InviteModal";
 import { useSelector } from "react-redux";
 import { useMatchmakingStore } from "../../../store/hooks/useStore";
+import { selectIsStaffUtilityMode } from "../../../store/selectors/playerSelectors";
+import { STAFF_UTILITY_MESSAGE } from "../../../utils/staffUtilityMode";
 
 const TournamentCard = ({ tournament, disableFetch }) => {
   const {
@@ -24,6 +26,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
     useMatchmakingStore();
 
   const { profile } = useSelector((store) => store.player);
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
   const hasGame = profile?.profile?.games?.some(
     (gameObj) =>
@@ -33,6 +36,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
 
   const handleJoinClick = async (event) => {
     event.preventDefault();
+    if (isStaffUtilityMode) return;
 
     // This check gives immediate guidance, while the backend repeats the same
     // eligibility validation for every player in the submitted roster.
@@ -95,7 +99,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-3">
-          {status === "registration_open" && (
+          {status === "registration_open" && !isStaffUtilityMode && (
             <button
               onClick={handleJoinClick}
               disabled={isJoinRequestInFlight}
@@ -104,6 +108,11 @@ const TournamentCard = ({ tournament, disableFetch }) => {
               {isJoiningThisMatch ? "Joining..." : "Join Now"}
             </button>
           )}
+          {isStaffUtilityMode ? (
+            <span className="text-xs leading-5 text-amber-100">
+              {STAFF_UTILITY_MESSAGE}
+            </span>
+          ) : null}
           {!disableFetch && (
             <Link
               to={buildTournamentOfferingPath(_id)}
@@ -115,7 +124,7 @@ const TournamentCard = ({ tournament, disableFetch }) => {
         </div>
       </div>
 
-      {isModalOpen && (
+      {isModalOpen && !isStaffUtilityMode && (
         <InviteModal
           tournamentId={_id}
           teamSize={teamSize}

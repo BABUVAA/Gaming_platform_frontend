@@ -265,7 +265,7 @@ const TournamentDetails = () => {
   const handleShare = async () => {
     const shareData = {
       title: tournament.tournamentName,
-      text: `Join ${tournament.tournamentName} on Player Arena.`,
+      text: `View ${tournament.tournamentName} on E-Gaming.`,
       url: window.location.href,
     };
 

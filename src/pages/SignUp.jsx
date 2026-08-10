@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
-import { Form } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import { register } from "../store/slices/authSlice";
+import {
+  register,
+  resendEmailVerification,
+  verifyEmailRegistration,
+} from "../store/slices/authSlice";
 import { AuthShell, Button, Input } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
 import validator from "validator";
@@ -13,6 +16,11 @@ const SignUp = () => {
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationComplete, setVerificationComplete] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(0);
   const [errors, setErrors] = useState({
     email: "",
     password: "",
@@ -29,6 +37,25 @@ const SignUp = () => {
     ],
     []
   );
+
+  useEffect(() => {
+    const availableAt = pendingRegistration?.resendAvailableAt;
+    if (!availableAt) {
+      setResendSeconds(0);
+      return undefined;
+    }
+
+    const refreshCountdown = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((new Date(availableAt).getTime() - Date.now()) / 1000),
+      );
+      setResendSeconds(remaining);
+    };
+    refreshCountdown();
+    const timer = window.setInterval(refreshCountdown, 1000);
+    return () => window.clearInterval(timer);
+  }, [pendingRegistration?.resendAvailableAt]);
 
   const getAgeFromDob = (dobValue) => {
     const today = new Date();
@@ -147,6 +174,45 @@ const SignUp = () => {
       });
   };
 
+  const handleVerification = async (event) => {
+    event.preventDefault();
+    setVerificationError("");
+    setIsVerifying(true);
+    try {
+      await dispatch(
+        verifyEmailRegistration({
+          code: verificationCode,
+          email: pendingRegistration.email,
+        }),
+      ).unwrap();
+      setVerificationComplete(true);
+    } catch (error) {
+      setVerificationError(
+        error?.fieldErrors?.code ||
+          error?.message ||
+          "Unable to verify this code.",
+      );
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setVerificationError("");
+    try {
+      const result = await dispatch(
+        resendEmailVerification({ email: pendingRegistration.email }),
+      ).unwrap();
+      setPendingRegistration((current) => ({
+        ...current,
+        resendAvailableAt: result.resendAvailableAt,
+        verificationEmailSent: true,
+      }));
+    } catch (error) {
+      setVerificationError(error?.message || "Unable to resend the code.");
+    }
+  };
+
   return (
     <AuthShell
       eyebrow="Player Onboarding"
@@ -169,7 +235,23 @@ const SignUp = () => {
         </p>
       }
     >
-      {pendingRegistration ? (
+      {verificationComplete ? (
+        <section className="space-y-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-300/10 text-2xl text-emerald-200">
+            <FiMail />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white">Account verified</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Your player account is active. Sign in with the password you
+              created to open your dashboard.
+            </p>
+          </div>
+          <Button type="button" size="large" className="w-full" onClick={goToLogin}>
+            Continue to login
+          </Button>
+        </section>
+      ) : pendingRegistration ? (
         <section className="space-y-5">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 text-2xl text-amber-200">
             <FiMail />
@@ -192,14 +274,56 @@ const SignUp = () => {
             </p>
           </div>
           <p className="text-sm leading-6 text-slate-400">
-            Requesting and verifying an email OTP will be enabled in the next
-            step. No email has been sent yet.
+            {pendingRegistration.verificationEmailSent
+              ? "Enter the 6-digit code we sent. It expires after 10 minutes."
+              : "Email delivery was unavailable. Use resend to request a code."}
           </p>
+          <form onSubmit={handleVerification} className="space-y-3">
+            <Input
+              name="verificationCode"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              autoComplete="one-time-code"
+              placeholder="000000"
+              label="Verification code"
+              value={verificationCode}
+              onChange={(event) =>
+                setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              error={verificationError}
+            />
+            <Button
+              type="submit"
+              size="large"
+              className="w-full"
+              isLoading={isVerifying}
+              disabled={verificationCode.length !== 6}
+            >
+              Verify email
+            </Button>
+          </form>
+          <Button
+            type="button"
+            variant="secondary"
+            size="large"
+            className="w-full"
+            disabled={resendSeconds > 0}
+            onClick={handleResend}
+          >
+            {resendSeconds > 0
+              ? `Resend code in ${resendSeconds}s`
+              : "Resend verification code"}
+          </Button>
           <Button
             type="button"
             size="large"
             className="w-full"
-            onClick={() => setPendingRegistration(null)}
+            onClick={() => {
+              setPendingRegistration(null);
+              setVerificationCode("");
+              setVerificationError("");
+            }}
           >
             Use another email
           </Button>
@@ -213,7 +337,7 @@ const SignUp = () => {
         </p>
       </div>
 
-      <Form onSubmit={handleSubmit} method="POST" className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <Input
           name="username"
           type="text"
@@ -275,7 +399,7 @@ const SignUp = () => {
         >
           Create Player Account
         </Button>
-      </Form>
+      </form>
         </>
       )}
     </AuthShell>

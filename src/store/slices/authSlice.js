@@ -48,7 +48,9 @@ const selectPendingRegistration = (responseData = {}) => {
   return {
     email: registration.email,
     isVerified: false,
+    resendAvailableAt: registration.resendAvailableAt || null,
     requiresEmailVerification: true,
+    verificationEmailSent: registration.verificationEmailSent === true,
   };
 };
 
@@ -147,6 +149,50 @@ export const register = createApiThunk(
         response.data.message || "Signup completed successfully.",
       error: true,
     },
+  },
+);
+
+export const resendEmailVerification = createApiThunk(
+  "auth/resendEmailVerification",
+  {
+    path: "/api/auth/email-verification/resend",
+    method: "post",
+    selectData: (response) => response.data.data,
+    errorMessage: "Unable to resend the verification code.",
+    toast: { success: true, error: true },
+  },
+);
+
+export const verifyEmailRegistration = createApiThunk(
+  "auth/verifyEmailRegistration",
+  {
+    path: "/api/auth/email-verification/verify",
+    method: "post",
+    selectData: (response) => response.data.data,
+    errorMessage: "Unable to verify this email.",
+    toast: { success: true, error: true },
+  },
+);
+
+export const requestPasswordReset = createApiThunk(
+  "auth/requestPasswordReset",
+  {
+    path: "/api/auth/password-reset/request",
+    method: "post",
+    selectData: (response) => ({ message: response.data.message }),
+    errorMessage: "Unable to request a password reset.",
+    toast: { error: true },
+  },
+);
+
+export const confirmPasswordReset = createApiThunk(
+  "auth/confirmPasswordReset",
+  {
+    path: "/api/auth/password-reset/confirm",
+    method: "post",
+    selectData: (response) => ({ message: response.data.message }),
+    errorMessage: "Unable to reset this password.",
+    toast: { success: true, error: true },
   },
 );
 

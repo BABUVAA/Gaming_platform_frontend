@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   FaArrowRight,
   FaClock,
@@ -9,14 +9,18 @@ import {
   FaShieldAlt,
   FaUsers,
 } from "react-icons/fa";
-import api from "../api/axios-api";
-import { getApiErrorMessage } from "../api/apiError";
 import {
   buildTournamentOfferingPath,
   ROUTES,
 } from "../routes/routeConstants";
-import { showToast, types } from "../store/slices/toastSlice";
+import { fetchPlayerMatchActivity } from "../store/slices/matchActivitySlice.js";
+import {
+  selectMatchActivity,
+  selectMatchActivityError,
+  selectMatchActivityStatus,
+} from "../store/selectors/matchActivitySelectors.js";
 import useSocket from "../context/useSocket";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 
 const STATUS_PRESENTATION = Object.freeze({
   awaiting_operator: {
@@ -69,80 +73,30 @@ const STATUS_PRESENTATION = Object.freeze({
   },
 });
 
-const getActivityTime = (activity) =>
-  new Date(activity.createdAt || activity.scheduledFor || 0).getTime();
-
 const Matches = () => {
   const dispatch = useDispatch();
   const { competitionRevision } = useSocket();
-  const [activity, setActivity] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const activity = useSelector(selectMatchActivity);
+  const activityError = useSelector(selectMatchActivityError);
+  const activityStatus = useSelector(selectMatchActivityStatus);
+  const isLoading = activityStatus === "loading";
+  const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
   useEffect(() => {
-    let isActive = true;
-
-    const loadActivity = async () => {
-      setIsLoading(true);
-      const [queuesRequest, matchesRequest] = await Promise.allSettled([
-        api.get("/api/matches/queues"),
-        api.get("/api/matches"),
-      ]);
-      if (!isActive) return;
-
-      const queues =
-        queuesRequest.status === "fulfilled"
-          ? queuesRequest.value.data?.data || []
-          : [];
-      const matches =
-        matchesRequest.status === "fulfilled"
-          ? matchesRequest.value.data?.data || []
-          : [];
-
-      // Queue and match responses share one presentation contract here. The
-      // backend collections remain separate and can evolve independently.
-      setActivity(
-        [...queues, ...matches].sort(
-          (first, second) =>
-            getActivityTime(second) - getActivityTime(first),
-        ),
-      );
-
-      const failedRequest =
-        queuesRequest.status === "rejected"
-          ? queuesRequest.reason
-          : matchesRequest.status === "rejected"
-            ? matchesRequest.reason
-            : null;
-      if (failedRequest) {
-        dispatch(
-          showToast({
-            message: getApiErrorMessage(
-              failedRequest,
-              "Some match activity could not be loaded.",
-            ),
-            type: types.DANGER,
-            position: "bottom-right",
-          }),
-        );
-      }
-
-      setIsLoading(false);
-    };
-
-    loadActivity();
-    return () => {
-      isActive = false;
-    };
+    const request = dispatch(fetchPlayerMatchActivity());
+    return () => request.abort();
   }, [competitionRevision, dispatch]);
 
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-sky-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
         <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
-          My matches
+          {isStaffUtilityMode ? "Staff match view" : "My matches"}
         </p>
         <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
-          Everything you joined, in one place.
+          {isStaffUtilityMode
+            ? "Read-only match history and lifecycle information."
+            : "Everything you joined, in one place."}
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
           Follow player availability and operator assignment without switching
@@ -165,7 +119,7 @@ const Matches = () => {
               className="text-sm font-bold text-sky-200"
               to={ROUTES.TOURNAMENT}
             >
-              Find tournaments
+              {isStaffUtilityMode ? "View tournaments" : "Find tournaments"}
             </Link>
           </div>
 
@@ -181,7 +135,9 @@ const Matches = () => {
               <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center">
                 <p className="font-bold text-white">No matches yet</p>
                 <p className="mt-2 text-sm text-slate-400">
-                  Join a tournament and your player queue will appear here.
+                  {isStaffUtilityMode
+                    ? "No safe match history is available for this account."
+                    : "Join a tournament and your player queue will appear here."}
                 </p>
               </div>
             ) : null}
@@ -189,6 +145,12 @@ const Matches = () => {
             {isLoading ? (
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
                 Loading your matches...
+              </div>
+            ) : null}
+
+            {activityStatus === "failed" ? (
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-950/30 p-5 text-sm text-rose-200">
+                {activityError || "Unable to load your match activity."}
               </div>
             ) : null}
           </div>
