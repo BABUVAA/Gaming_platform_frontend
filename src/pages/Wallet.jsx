@@ -14,6 +14,11 @@ import {
   initiatePhonePeOrder,
 } from "../store/slices/paymentSlice";
 import {
+  fetchPayoutDestinations,
+  fetchWithdrawalHistory,
+  requestWithdrawal,
+} from "../store/slices/withdrawalSlice.js";
+import {
   selectPaymentLoading,
   selectWallet,
   selectWalletLedgerEntries,
@@ -23,8 +28,22 @@ import {
   selectWalletLedgerPage,
 } from "../store/selectors/walletSelectors";
 import { showToast, types } from "../store/slices/toastSlice";
-import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import {
+  selectIsStaffUtilityMode,
+  selectPlayerSummary,
+} from "../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
+import {
+  selectPayoutDestinations,
+  selectPayoutDestinationStatus,
+  selectWithdrawalAvailability,
+  selectWithdrawalHistory,
+  selectWithdrawalHistoryError,
+  selectWithdrawalHistoryPage,
+  selectWithdrawalHistoryStatus,
+  selectWithdrawalRequest,
+  selectWithdrawalRequestError,
+} from "../store/selectors/withdrawalSelectors.js";
 
 const ledgerTypeLabels = {
   adjustment: "Wallet adjustment",
@@ -41,6 +60,24 @@ const ledgerTypeLabels = {
 };
 
 const quickAmounts = [100, 250, 500, 1000];
+const withdrawalStatusLabels = {
+  approved: "Approved",
+  failed: "Failed - funds returned",
+  paid: "Paid",
+  provider_processing: "Processing",
+  reconciled: "Reconciled",
+  rejected: "Rejected - funds returned",
+  requested: "Requested",
+  under_review: "Under review",
+};
+const getWithdrawalStatusLabel = (item) => {
+  if (item.status === "reconciled") {
+    return item.outcome === "paid"
+      ? "Reconciled - paid"
+      : "Reconciled - funds returned";
+  }
+  return withdrawalStatusLabels[item.status] || formatLedgerLabel(item.status);
+};
 const formatMinor = (amountMinor = 0, currency = "INR") =>
   new Intl.NumberFormat("en-IN", {
     currency,
@@ -63,9 +100,24 @@ const Wallet = () => {
   const ledgerIsLoadingMore = useSelector(selectWalletLedgerLoadingMore);
   const ledgerPage = useSelector(selectWalletLedgerPage);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
+  const playerSummary = useSelector(selectPlayerSummary);
+  const isPlayer = playerSummary?.role === "player";
+  const payoutDestinations = useSelector(selectPayoutDestinations);
+  const payoutDestinationStatus = useSelector(selectPayoutDestinationStatus);
+  const withdrawalAvailability = useSelector(selectWithdrawalAvailability);
+  const withdrawalHistory = useSelector(selectWithdrawalHistory);
+  const withdrawalHistoryError = useSelector(selectWithdrawalHistoryError);
+  const withdrawalHistoryPage = useSelector(selectWithdrawalHistoryPage);
+  const withdrawalHistoryStatus = useSelector(selectWithdrawalHistoryStatus);
+  const withdrawalRequestState = useSelector(selectWithdrawalRequest);
+  const withdrawalRequestError = useSelector(selectWithdrawalRequestError);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  const [withdrawalAmount, setWithdrawalAmount] = useState("");
+  const [payoutDestinationId, setPayoutDestinationId] = useState("");
+  const [withdrawalAttemptKey, setWithdrawalAttemptKey] = useState(null);
 
   useEffect(() => {
     const walletRequest = dispatch(fetchWalletBalance());
@@ -75,6 +127,16 @@ const Wallet = () => {
       ledgerRequest.abort();
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!isPlayer) return undefined;
+    const destinationsRequest = dispatch(fetchPayoutDestinations());
+    const historyRequest = dispatch(fetchWithdrawalHistory());
+    return () => {
+      destinationsRequest.abort();
+      historyRequest.abort();
+    };
+  }, [dispatch, isPlayer]);
 
   const closeModals = () => {
     setIsAddModalOpen(false);
@@ -152,6 +214,64 @@ const Wallet = () => {
     dispatch(fetchWalletLedger({ cursor: ledgerPage.nextCursor }));
   };
 
+  const resetWithdrawalIntent = () => setWithdrawalAttemptKey(null);
+
+  const openWithdrawal = () => {
+    setWithdrawalAmount("");
+    setPayoutDestinationId(payoutDestinations[0]?.id || "");
+    resetWithdrawalIntent();
+    setIsWithdrawalModalOpen(true);
+  };
+
+  const closeWithdrawal = () => {
+    setIsWithdrawalModalOpen(false);
+    setWithdrawalAmount("");
+    setPayoutDestinationId("");
+    resetWithdrawalIntent();
+  };
+
+  const handleWithdrawal = async () => {
+    if (isStaffUtilityMode || !withdrawalAvailability.canRequest) return;
+    if (!/^\d+(?:\.\d{1,2})?$/.test(withdrawalAmount.trim())) {
+      dispatch(showToast({
+        message: "Enter a withdrawal amount with no more than two decimal places.",
+        position: "bottom-right",
+        type: types.WARNING,
+      }));
+      return;
+    }
+    const amountMajor = validateAmount(withdrawalAmount, {
+      maxAmount: Number(wallet?.withdrawableMinor || 0) / 100,
+    });
+    const destination = payoutDestinations.find(
+      (item) => item.id === payoutDestinationId,
+    );
+    if (!amountMajor || !destination) return;
+
+    const attemptKey =
+      withdrawalAttemptKey || `withdrawal-${crypto.randomUUID()}`;
+    if (!withdrawalAttemptKey) setWithdrawalAttemptKey(attemptKey);
+    try {
+      await dispatch(
+        requestWithdrawal({
+          amountMinor: Math.round(amountMajor * 100),
+          idempotencyKey: attemptKey,
+          payoutDestinationId,
+        }),
+      ).unwrap();
+      closeWithdrawal();
+      dispatch(fetchWalletBalance());
+      dispatch(fetchWithdrawalHistory());
+    } catch {
+      // The same attempt key is retained so a transport retry is idempotent.
+    }
+  };
+
+  const handleLoadMoreWithdrawals = () => {
+    if (!withdrawalHistoryPage.nextCursor || withdrawalHistoryStatus === "loadingMore") return;
+    dispatch(fetchWithdrawalHistory({ cursor: withdrawalHistoryPage.nextCursor }));
+  };
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
@@ -189,6 +309,12 @@ const Wallet = () => {
               icon={<FiArrowUpRight />}
             />
             <MetricCard
+              label="Withdrawal pending"
+              value={formatMinor(wallet?.withdrawalPendingMinor, wallet?.currency)}
+              accent="text-amber-200"
+              icon={<FiClock />}
+            />
+            <MetricCard
               label="Withdrawable"
               value={formatMinor(wallet?.withdrawableMinor, wallet?.currency)}
               accent="text-emerald-300"
@@ -224,9 +350,9 @@ const Wallet = () => {
             <ActionPanel
               title="Withdraw funds"
               copy="Move eligible winnings out with a withdrawal request from the same command deck."
-              actionLabel="Withdrawal review pending"
-              disabled
-              onClick={() => undefined}
+              actionLabel={withdrawalAvailability.canRequest ? "Request withdrawal" : "Unavailable"}
+              disabled={!withdrawalAvailability.canRequest || payoutDestinations.length === 0}
+              onClick={openWithdrawal}
               tone="danger"
             />
           </>
@@ -239,10 +365,32 @@ const Wallet = () => {
             <li>Deposits redirect you to the payment provider securely.</li>
             <li>Paid entries move funds into Entry held until final settlement.</li>
             <li>Prizes remain pending through result and dispute review.</li>
-            <li>Withdrawal stays disabled until the reviewed payout lifecycle ships.</li>
+            <li>Withdrawals move to pending and require governance review before provider processing.</li>
           </ul>
         </div>
       </section>
+
+      {!isStaffUtilityMode ? (
+        <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Reviewed payouts</p>
+              <h2 className="mt-2 text-2xl font-black text-white">Withdrawal history</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-400">Requests remain pending until the server records each review and provider outcome.</p>
+            </div>
+            <button className="rounded-2xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 disabled:opacity-50" disabled={withdrawalHistoryStatus === "loading" || withdrawalHistoryStatus === "loadingMore"} onClick={() => dispatch(fetchWithdrawalHistory())} type="button">Refresh</button>
+          </div>
+          {!withdrawalAvailability.canRequest ? <p className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">Payout processing is not configured yet. Your wallet and existing withdrawal history remain available.</p> : null}
+          {payoutDestinationStatus === "succeeded" && payoutDestinations.length === 0 ? <p className="mt-4 rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">No verified payout destination is available. Add and verify one when payout destination management becomes available.</p> : null}
+          <div className="mt-4 space-y-3" aria-live="polite">
+            {withdrawalHistoryStatus === "loading" && withdrawalHistory.length === 0 ? <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">Loading withdrawal history...</p> : null}
+            {withdrawalHistoryError ? <p className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{withdrawalHistoryError}</p> : null}
+            {withdrawalHistoryStatus === "succeeded" && withdrawalHistory.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-400">No withdrawal requests yet.</p> : null}
+            {withdrawalHistory.map((item) => <WithdrawalRow item={item} key={item.id} />)}
+            {withdrawalHistoryPage.hasMore ? <button className="rounded-2xl border border-cyan-400/40 px-5 py-3 text-sm font-bold text-cyan-200 disabled:opacity-50" disabled={withdrawalHistoryStatus === "loadingMore"} onClick={handleLoadMoreWithdrawals} type="button">{withdrawalHistoryStatus === "loadingMore" ? "Loading more..." : "Load more"}</button> : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -340,8 +488,52 @@ const Wallet = () => {
         />
       ) : null}
 
+      {isWithdrawalModalOpen && !isStaffUtilityMode ? (
+        <WithdrawalModal
+          amount={withdrawalAmount}
+          destinations={payoutDestinations}
+          error={withdrawalRequestError}
+          isLoading={withdrawalRequestState.status === "loading"}
+          onAmountChange={(value) => { setWithdrawalAmount(value); resetWithdrawalIntent(); }}
+          onClose={closeWithdrawal}
+          onConfirm={handleWithdrawal}
+          onDestinationChange={(value) => { setPayoutDestinationId(value); resetWithdrawalIntent(); }}
+          selectedDestinationId={payoutDestinationId}
+        />
+      ) : null}
+
     </div>
   );
+};
+
+const WithdrawalRow = ({ item }) => (
+  <article className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="font-bold text-white">{formatMinor(item.amountMinor, item.currency)}</p>
+      <p className="mt-1 text-sm text-slate-400">{item.destination?.maskedLabel || "Saved payout destination"}</p>
+      <p className="mt-1 text-xs text-slate-500">{new Date(item.requestedAt).toLocaleString("en-IN")}</p>
+    </div>
+    <span className="self-start rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs font-bold text-slate-200">{getWithdrawalStatusLabel(item)}</span>
+  </article>
+);
+
+const WithdrawalModal = ({ amount, destinations, error, isLoading, onAmountChange, onClose, onConfirm, onDestinationChange, selectedDestinationId }) => {
+  const [confirmed, setConfirmed] = useState(false);
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="withdrawal-title">
+    <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-950 p-6">
+      <h2 className="text-2xl font-black text-white" id="withdrawal-title">Request withdrawal</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-400">Funds move to Withdrawal pending. Review and provider processing happen after this request.</p>
+      <label className="mt-5 block text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Amount (INR)</label>
+      <input className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-400" min="1" onChange={(event) => { setConfirmed(false); onAmountChange(event.target.value); }} type="number" value={amount} />
+      <label className="mt-4 block text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Verified payout destination</label>
+      <select className="mt-2 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-white" onChange={(event) => { setConfirmed(false); onDestinationChange(event.target.value); }} value={selectedDestinationId}>
+        {destinations.map((destination) => <option key={destination.id} value={destination.id}>{formatLedgerLabel(destination.type)} - {destination.maskedLabel}</option>)}
+      </select>
+      {error ? <p className="mt-4 rounded-xl bg-rose-400/10 p-3 text-sm text-rose-100">{error}</p> : null}
+      <label className="mt-4 flex items-start gap-3 text-sm leading-6 text-slate-300"><input checked={confirmed} className="mt-1" onChange={(event) => setConfirmed(event.target.checked)} type="checkbox" /> <span>I confirm the amount and saved destination. This request is not an instant payment.</span></label>
+      <div className="mt-5 flex justify-end gap-3"><button className="rounded-2xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300" disabled={isLoading} onClick={onClose} type="button">Cancel</button><button className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={isLoading || !selectedDestinationId || !amount || !confirmed} onClick={onConfirm} type="button">{isLoading ? "Submitting..." : "Submit for review"}</button></div>
+    </div>
+  </div>;
 };
 
 const AmountModal = ({
@@ -499,6 +691,34 @@ ActionPanel.propTypes = {
   disabled: PropTypes.bool,
   onClick: PropTypes.func.isRequired,
   tone: PropTypes.string.isRequired,
+};
+
+WithdrawalRow.propTypes = {
+  item: PropTypes.shape({
+    amountMinor: PropTypes.number.isRequired,
+    currency: PropTypes.string.isRequired,
+    destination: PropTypes.shape({ maskedLabel: PropTypes.string }),
+    id: PropTypes.string.isRequired,
+    outcome: PropTypes.oneOf(["paid", "failed"]),
+    requestedAt: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+  }).isRequired,
+};
+
+WithdrawalModal.propTypes = {
+  amount: PropTypes.string.isRequired,
+  destinations: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    maskedLabel: PropTypes.string.isRequired,
+    type: PropTypes.string.isRequired,
+  })).isRequired,
+  error: PropTypes.string,
+  isLoading: PropTypes.bool.isRequired,
+  onAmountChange: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  onDestinationChange: PropTypes.func.isRequired,
+  selectedDestinationId: PropTypes.string.isRequired,
 };
 
 LedgerEntry.propTypes = {

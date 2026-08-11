@@ -9,22 +9,23 @@ const normalizeGameKey = (game) =>
     ? "bgmi"
     : String(game || "").toLowerCase();
 
+const EMPTY_TEAMS = Object.freeze([]);
+
 const InviteModal = ({
   game,
   isOpen,
   mode,
   onClose,
   onJoined,
-  source = "legacy",
+  offeringId,
   teamSize,
-  tournamentId,
 }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [teamId, setTeamId] = useState("");
   const { joinQuickMatch, joinStatus, joiningOfferingId } =
     useMatchmakingStore();
   const teams = useSelector(
-    (store) => store.player.profile?.profile?.teams || []
+    (store) => store.player.profile?.profile?.teams || EMPTY_TEAMS
   );
 
   // Display only teams that can plausibly satisfy this offering. The server
@@ -54,8 +55,7 @@ const InviteModal = ({
       // The thunk submits the durable HTTP command. The backend still checks
       // the team roster, while Socket.IO distributes later live updates.
       await joinQuickMatch({
-        offeringId: tournamentId,
-        source,
+        offeringId,
         teamId,
       }).unwrap();
       onJoined?.();
@@ -68,7 +68,7 @@ const InviteModal = ({
 
   // Block a second queue submission until the active HTTP command completes.
   const isJoinRequestInFlight = joinStatus === "loading";
-  const isJoiningThisMatch = joiningOfferingId === tournamentId;
+  const isJoiningThisMatch = joiningOfferingId === offeringId;
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
@@ -151,9 +151,8 @@ InviteModal.propTypes = {
   mode: PropTypes.string.isRequired,
   onClose: PropTypes.func.isRequired,
   onJoined: PropTypes.func,
-  source: PropTypes.oneOf(["legacy", "quick_match"]),
+  offeringId: PropTypes.string.isRequired,
   teamSize: PropTypes.number.isRequired,
-  tournamentId: PropTypes.string.isRequired,
 };
 
 export default InviteModal;

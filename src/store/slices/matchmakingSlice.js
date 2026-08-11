@@ -12,16 +12,9 @@ export const joinQuickMatchQueue = createApiThunk(
   "matchmaking/joinQuickMatchQueue",
   {
     path: ({ arg }) =>
-      arg.source === "quick_match"
-        ? `/api/player/quick-matches/${arg.offeringId}/queue`
-        : "/api/matches/queues",
+      `/api/player/quick-matches/${arg.offeringId}/queue`,
     method: "post",
-    getBody: ({ offeringId, source, teamId }) =>
-      source === "quick_match"
-        ? teamId
-          ? { teamId }
-          : {}
-        : { offeringId, ...(teamId ? { teamId } : {}) },
+    getBody: ({ teamId }) => (teamId ? { teamId } : {}),
     // The response contains the queue position/status needed by future match
     // screens, without exposing Axios response objects to Redux state.
     selectData: (response) => response.data?.data || response.data,

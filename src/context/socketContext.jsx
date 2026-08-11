@@ -7,7 +7,6 @@ import {
   refreshAuthentication,
 } from "../api/axios-api";
 import { sessionInvalidated } from "../store/actions/sessionActions";
-import { tournamentAction } from "../store/slices/tournamentSlice";
 import { showToast, types } from "../store/slices/toastSlice";
 import { playerActions } from "../store/slices/playerSlice";
 import { notificationActions } from "../store/slices/notificationSlice";
@@ -139,12 +138,6 @@ export const SocketProvider = ({ children }) => {
         ...prev,
         [chatId]: appendUniqueMessage(prev[chatId] || [], newMessage),
       }));
-    };
-
-    const handleTournamentUpdate = (updatedTournament) => {
-      // Every live tournament event is normalized through one reducer path so
-      // list screens and detail screens stay consistent.
-      dispatch(tournamentAction.upsertTournament(updatedTournament));
     };
 
     const scheduleDomainRefresh = (domain, thunk) => {
@@ -319,22 +312,6 @@ export const SocketProvider = ({ children }) => {
       );
     };
 
-    const onTournamentJoin = (data) => {
-      if (!data?.queueId && !data?.offeringId) return;
-
-      // Participation is loaded from match/event APIs. Never copy generated
-      // events into the player profile or reusable offering catalogue.
-      dispatch(
-        showToast({
-          message: data.alreadyJoined
-            ? "You are already in this matchmaking room."
-            : "Your matchmaking entry is confirmed.",
-          type: types.SUCCESS,
-          position: "bottom-right",
-        }),
-      );
-    };
-
     const onNotification = (notification) => {
       dispatch(
         showToast({
@@ -365,10 +342,9 @@ export const SocketProvider = ({ children }) => {
     socket.on("clan_message", handleNewMessage);
     socket.on(REALTIME_CHANNEL, handleRealtimeEvent);
     socket.on("personal_message", handleNewMessage);
-    socket.on("newTournament", handleTournamentUpdate);
-    socket.on("updateTournament", handleTournamentUpdate);
-    socket.on("TOURNAMENT_JOIN_SUCCESS", onTournamentJoin);
-    socket.on("JOINED_TOURNAMENT_UPDATE", onTournamentJoin);
+    // Canonical Quick Match socket messages are invalidation signals handled
+    // through REALTIME_CHANNEL. Legacy Tournament payloads are deliberately
+    // not copied into active competition state.
     socket.on("notification", onNotification);
     socket.on("ERROR", onError);
 
@@ -385,10 +361,6 @@ export const SocketProvider = ({ children }) => {
       socket.off("clan_message", handleNewMessage);
       socket.off(REALTIME_CHANNEL, handleRealtimeEvent);
       socket.off("personal_message", handleNewMessage);
-      socket.off("newTournament", handleTournamentUpdate);
-      socket.off("updateTournament", handleTournamentUpdate);
-      socket.off("TOURNAMENT_JOIN_SUCCESS", onTournamentJoin);
-      socket.off("JOINED_TOURNAMENT_UPDATE", onTournamentJoin);
       socket.off("notification", onNotification);
       socket.off("ERROR", onError);
       socket.disconnect();

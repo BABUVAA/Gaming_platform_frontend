@@ -13,3 +13,14 @@ export const selectPlayerQuickMatchStatus = (state) =>
 
 export const selectPlayerQuickMatchError = (state) =>
   getStoredErrorMessage(state.quickMatchOfferings.playerError);
+
+export const selectPlayerQuickMatchDetail = (state, offeringId) =>
+  state.quickMatchOfferings.playerDetails[offeringId] || null;
+
+export const selectPlayerQuickMatchDetailStatus = (state, offeringId) =>
+  state.quickMatchOfferings.playerDetailStatusById[offeringId] || "idle";
+
+export const selectPlayerQuickMatchDetailError = (state, offeringId) =>
+  getStoredErrorMessage(
+    state.quickMatchOfferings.playerDetailErrorsById[offeringId],
+  );

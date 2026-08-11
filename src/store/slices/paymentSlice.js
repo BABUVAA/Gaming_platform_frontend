@@ -5,7 +5,7 @@ import {
   normalizeApiError,
 } from "../../api/apiError.js";
 import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers.js";
-import { showToast, types } from "./toastSlice.js";
+import { showToast } from "./toastSlice.js";
 
 export const WALLET_LEDGER_PAGE_LIMIT = 20;
 
@@ -98,32 +98,6 @@ export const fetchWalletLedger = createAsyncThunk(
   },
 );
 
-export const withdrawRequest = createAsyncThunk(
-  "payment/withdrawRequest",
-  async (payload, thunkAPI) => {
-    try {
-      const response = await api.post("/api/payment/withdraw", payload, {
-        withCredentials: true,
-      });
-      thunkAPI.dispatch(
-        showToast({
-          message: response.data?.message || "Withdraw request submitted.",
-          type: types.SUCCESS,
-          position: "bottom-right",
-        })
-      );
-      return response.data?.data || response.data;
-    } catch (error) {
-      return rejectPaymentError(
-        thunkAPI,
-        error,
-        "Unable to request withdrawal.",
-        { notify: true },
-      );
-    }
-  }
-);
-
 export const fetchUserTransactions = createAsyncThunk(
   "payment/fetchUserTransactions",
   async (_, thunkAPI) => {
@@ -169,7 +143,6 @@ export const checkTransactionStatus = createAsyncThunk(
 const paymentThunks = [
   initiatePhonePeOrder,
   fetchWalletBalance,
-  withdrawRequest,
   fetchUserTransactions,
   checkTransactionStatus,
 ];
@@ -197,7 +170,6 @@ const initialState = {
     withdrawalPendingMinor: 0,
   },
   latestOrder: null,
-  latestWithdrawal: null,
   ledger: {
     entries: [],
     error: null,
@@ -292,9 +264,6 @@ const paymentSlice = createSlice({
         state.transactions = Array.isArray(action.payload)
           ? action.payload
           : action.payload?.transactions || [];
-      })
-      .addCase(withdrawRequest.fulfilled, (state, action) => {
-        state.latestWithdrawal = action.payload;
       })
       .addCase(checkTransactionStatus.fulfilled, (state, action) => {
         state.statusCheck = action.payload;

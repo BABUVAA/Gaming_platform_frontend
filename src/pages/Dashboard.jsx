@@ -16,16 +16,16 @@ const Dashboard = () => {
   const hasLoadedVerifiedData = useRef(false);
   const dispatch = useDispatch();
   const { isVerified, user } = useAuthStore();
-  const { loadCatalog } = useCatalogStore();
+  const { loadGames } = useCatalogStore();
   const wallet = useSelector((state) => state.payment.wallet);
 
   useEffect(() => {
-    // Dashboard pages consume games and tournaments, so this layout owns their
-    // bootstrap instead of making every public route pay for those requests.
-    loadCatalog().catch((error) => {
+    // The dashboard shell owns only the shared Game catalog. Competition pages
+    // load their canonical Quick Match projections through their own slice.
+    loadGames().catch((error) => {
       console.error("Catalog bootstrap failed:", error);
     });
-  }, [loadCatalog]);
+  }, [loadGames]);
 
   useEffect(() => {
     if (!user) return;
@@ -61,11 +61,11 @@ const Dashboard = () => {
   }, [dispatch, isVerified, user, wallet]);
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.08),transparent_24%),#111827] md:min-h-[calc(100vh-80px)]">
-      <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-[1600px] md:grid-cols-[18rem_1fr] md:px-0">
+    <div className="min-w-0 w-full overflow-x-hidden min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.08),transparent_24%),#111827] md:min-h-[calc(100vh-80px)]">
+      <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)] min-h-[calc(100vh-64px)] max-w-[1600px] md:grid-cols-[18rem_minmax(0,1fr)] md:px-0">
         <SideBar />
 
-        <div className="min-w-0 min-h-0 px-3 pb-24 pt-4 md:px-6 md:pb-10 md:pt-6">
+        <div className="min-w-0 min-h-0 w-full max-w-full px-3 pb-24 pt-4 md:px-6 md:pb-10 md:pt-6">
           <StaffReadOnlyNotice />
           <Outlet />
         </div>

@@ -27,13 +27,18 @@ export const dashboardChildRoutes = [
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_GAME,
-    componentKey: "TournamentGame",
+    element: <Navigate to={ROUTES.TOURNAMENT} replace />,
     access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_OFFERING_DETAILS,
-    componentKey: "TournamentDetails",
+    componentKey: "QuickMatchDetails",
     access: "verifiedDashboardViewer",
+  },
+  {
+    path: DASHBOARD_ROUTE_SEGMENTS.HOST_TOURNAMENT_PROPOSAL,
+    componentKey: "HostTournamentProposal",
+    access: "approvedHost",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.CHATS,

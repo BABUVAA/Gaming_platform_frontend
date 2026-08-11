@@ -35,7 +35,6 @@ test("canonical Quick Match join uses the player offering route and minimal body
     const action = await store.dispatch(
       joinQuickMatchQueue({
         offeringId: "offering-1",
-        source: "quick_match",
       }),
     );
 
@@ -62,7 +61,6 @@ test("staff utility mode never sends a Quick Match join request", async () => {
     const action = await store.dispatch(
       joinQuickMatchQueue({
         offeringId: "offering-staff",
-        source: "quick_match",
       }),
     );
 
@@ -93,7 +91,6 @@ test("canonical team join sends only its selected team", async () => {
     await store.dispatch(
       joinQuickMatchQueue({
         offeringId: "offering-2",
-        source: "quick_match",
         teamId: "team-1",
       }),
     );

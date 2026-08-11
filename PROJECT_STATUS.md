@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -588,7 +588,7 @@ Rules currently enforced:
 | Platform Admin | `/panelAdmin` | Staff management, game catalog, verification, finance, and platform oversight. |
 | Game Manager | `/staff/games` | Scoped operational overview: room health, operator workload, and Event readiness. No mutation controls. |
 | Event Manager | `/staff/events` | Creates scoped draft template and Event Run proposals. Platform Admin approval is required for activation/scheduling. |
-| Match Operator | `/dashboard/operations` | Assigned-match operational console. |
+| Match Operator | `/staff/operations` | Assigned-match operational console. |
 
 Frontend route guards improve navigation only. Backend route middleware and
 service-level scope checks are the final authority for all privileged actions.
@@ -597,6 +597,47 @@ is safe, but every player participation mutation must fail server-side for a
 staff-classified account and the frontend must present it as view-only.
 
 ## Completed
+
+- Staff player-dashboard visibility is now a verified read-only utility. One
+  shared backend participation policy rejects staff competition, social,
+  game-account, profile, and money mutations with the stable
+  `PLAYER_PARTICIPATION_REQUIRED` 403 contract, including direct HTTP calls.
+  Safe player reads remain available with explicit staff read-only UI state;
+  staff operational controls remain in assigned `/staff/*` workspaces.
+- Canonical Quick Match execution financial terms are immutable and
+  server-owned. Match creation snapshots versioned INR currency, entry policy,
+  per-seat fee, prize pool, capture time, and offering provenance; settlement
+  and cancellation explicitly validate that evidence plus every participant's
+  exact hold and original append-only hold ledger posting. Mutable offering
+  values are never reloaded for settlement. Missing, corrupt, or mismatched
+  evidence fails closed with complete transactional rollback, and shared
+  offering locking blocks repricing or retirement while a queue is active.
+- Reviewed withdrawal lifecycle is locally complete. Verified players use
+  server-owned immutable payout destinations; requests atomically move exact
+  ledger-derived funds from withdrawable to withdrawal-pending. Governance
+  uses expiring claims and audited approve/reject decisions; rejection or
+  terminal provider failure releases once, while authenticated provider
+  reconciliation finalizes paid funds once. Provider submission identity and
+  payout references are durable and idempotent. Runtime requests remain
+  deliberately unavailable until a real payout adapter and deployed worker
+  are configured and sandbox-certified.
+- Paid Quick Match Solo and complete-Team journeys are proven locally through
+  real HTTP sessions, persisted player and StaffAssignment identities, browser
+  role workflows, and exact ledger/database evidence. A shared server-owned
+  paid-entry capability now protects both discovery and the queue command;
+  default runtime direct POST attempts return 503 before any Room, Match, hold,
+  or ledger write. The proof-only harness injects capability explicitly and
+  cannot enable production. Production paid entry remains disabled because
+  deposit and payout provider deployment/sandbox gates are still red.
+- Legacy active competition migration is complete locally. Active frontend
+  discovery/detail/join/host paths now use canonical Game-backed
+  QuickMatchOffering APIs and Redux; Approved Hosts create audited drafts only
+  and cannot publish. The old queue mutation returns zero-write 410 while
+  historical reads remain temporarily available. A reviewed-hash migration
+  supports dry-run/apply/no-op/rollback/reapply, source/target evidence,
+  dependency-safe refusal, Redis restoration, canonical seed data, and
+  unresolved fail-closed reporting. No legacy route/model is removed while a
+  deliberate historical compatibility read remains.
 
 - Secure cookie-based authentication with short-lived access tokens, refresh
   rotation, Redis-backed session validation, session versioning, and logout
@@ -794,8 +835,9 @@ separate strict Match Operator work from governance-only commands. The Match
 Control page uses Redux, shows result/dispute evidence, and passed an isolated
 scoped-operator browser check; aborted navigation requests stay silent.
 
-Next: paid discovery remains blocked until the immutable ledger has protected
-pagination, prize release/payout review, and multi-user browser evidence.
+Next: paid discovery remains blocked until immutable execution financial-term
+snapshots, withdrawal/payout review, and multi-user browser evidence are
+complete.
 Retain compatibility reads
 until frontend and stored-data migration tests pass; do not add new role or
 route authority.
@@ -1038,9 +1080,10 @@ governance resolution, and settlement. The configured development migration
 dry run found no legacy Team candidates. Broader competition-data migration
 rehearsal remains required before production rollout.
 
-Next work: paid offerings remain unavailable in discovery until protected
-ledger pagination, prize release/payout review, and multi-user browser evidence
-are complete; the existing legacy queue stays available only for compatibility.
+Next work: paid offerings remain unavailable in discovery until execution-level
+financial terms are snapshotted, withdrawal/payout review is complete, and
+multi-user browser evidence exists; the existing legacy queue stays available
+only for compatibility.
 
 Player discovery and join foundation: verified players read active Game-backed
 offerings at `GET /api/player/quick-matches`. The server returns canonical
@@ -1081,7 +1124,7 @@ while keeping the current canonical API boundary:
 
 #### Paid Quick Match money contract
 
-State: In progress 2026-08-09. Owner: verified Player initiates entry;
+State: In progress. Owner: verified Player initiates entry;
 Payments owns money movement; Match governance releases/captures holds only
 through server lifecycle commands.
 
@@ -1140,9 +1183,11 @@ Paid Quick Match progress 2026-08-09:
 - The Platform Admin Prize Review workspace uses Redux for queue pagination,
   stale-response protection, evidence, confirmation, blocked states, and
   per-Match errors. It never accepts a client-selected winner or amount.
-- Do not unblock paid discovery yet. Next required implementation is the new
-  staff read-only player-dashboard rule, then withdrawal/payout behavior and a
-  multi-user paid lifecycle browser workflow.
+- Do not unblock paid discovery yet. Staff participation denial is complete.
+  Immutable execution-level financial snapshots and the reviewed withdrawal
+  lifecycle are complete locally. The next required proof is a multi-user paid
+  solo and Team lifecycle browser workflow. Production payout and paid
+  discovery remain blocked on real provider adapter/worker evidence.
 
 - `QuickMatchOffering.entryFeeMinor` is the fee for one player seat, including
   every member of a submitted Team. A Team join succeeds only when every
@@ -1375,7 +1420,7 @@ Event Manager dashboard (`/staff/events`):
 - Shows proposal checklist, upcoming approved work, capacity/batch planning,
   and handoff status to Game Manager operations.
 
-Match Operator dashboard (`/dashboard/operations`):
+Match Operator dashboard (`/staff/operations`):
 
 - Scope: active Match Operator `gameScopes` plus explicit match assignment.
   Unassigned work is visible and claimable only for assigned games.
@@ -1450,6 +1495,79 @@ Security rule for all three dashboards:
 - Deployment monitoring, structured logs, backups, and disaster recovery.
 
 ## Latest Verification
+
+Run on 2026-08-11 for the staff read-only player-dashboard slice:
+
+- Backend aggregate: 159/159 passed. The route inventory found and closed the
+  remaining direct profile data/file mutation gap; both routes now require the
+  verified-player participation policy. `git diff --check` passed.
+- Frontend aggregate: 35/35 passed; full lint, the 520-module production build,
+  and `git diff --check` passed.
+- A real seeded Game Manager verified `/staff` plus safe desktop/mobile
+  Tournaments, Matches, Wallet, Profile, and Game Accounts views. Admin,
+  Operations, Join, top-up, withdrawal, and game-account mutation controls were
+  absent or disabled. Authenticated direct profile and Quick Match queue POSTs
+  both returned 403 `PLAYER_PARTICIPATION_REQUIRED`; no application console or
+  API errors were observed.
+
+Run on 2026-08-11 for immutable Quick Match execution financial terms:
+
+- Backend aggregate: 176/176 passed: 26 auth, 6 auth integration, 23 social,
+  68 competition, 20 competition integration, 8 payment policy, 14 payment
+  integration, and 11 realtime tests.
+- Eight dedicated replica-set cases prove later offering edits cannot change
+  fees or prizes, concurrent settlement remains one-time, missing/corrupt
+  snapshots and hold/ledger mismatches roll back, cancellation also fails
+  without partial writes, free Matches remain compatible, queued Rooms block
+  repricing/retirement, and internal terms do not leak through normal reads.
+- Independent financial-integrity audit and `git diff --check` passed.
+
+Run on 2026-08-11 for reviewed withdrawals:
+
+- Backend aggregate: 190/190 passed, including 11 payment policy and 25
+  payment replica-set integration cases; the withdrawal-focused replica suite
+  passed 11/11. Independent financial review found no code-level must-fix.
+- Frontend aggregate: 43/43 passed; full lint and the 525-module production
+  build passed. Player and governance withdrawal flows remain Redux-owned.
+- Desktop/mobile Player Wallet showed the explicit provider-unavailable state,
+  a real Game Manager saw view-only Wallet history with no money controls, and
+  a real Platform Admin loaded the safe empty Withdrawal Review queue. No
+  application console/API errors were observed.
+- Production limitation: no real payout adapter, deployed provider worker,
+  authenticated callback certification, or sandbox payout evidence exists;
+  the backend request capability therefore stays disabled by default.
+
+Run on 2026-08-11 for paid Solo/Team proof and release control:
+
+- Backend aggregate: 196/196 passed: 26 auth, 6 auth integration, 23 social,
+  70 competition policy/unit, 24 competition integration, 11 payment policy,
+  25 payment integration, and 11 realtime tests.
+- Default-closed real HTTP paid POST returned 503
+  `QUICK_MATCH_PAID_ENTRY_DISABLED` with zero Room, Match, hold, or ledger
+  writes. `.env.example` documents the false default and rollback rule; the
+  actual local environment remains unset/closed.
+- An isolated explicit-capability harness completed paid Solo and two complete
+  Duo Teams through concurrent/retried joins, operator execution, dispute,
+  independent settlement, and independent prize release. Final evidence was
+  two settled/released Matches, two closed Rooms, six exact captured ₹10 holds,
+  zero held/prize-pending funds, and ₹140.02 total withdrawable prizes.
+- Desktop/mobile Player, Match Operator, and Platform Admin browser workflows,
+  owner-safe Match/ledger serialization, and post-fix console/network checks
+  passed. Frontend aggregate 44/44, full lint, and 525-module build passed.
+- Release verdict: internal paid lifecycle is green, but PhonePe callback/
+  worker deployment and sandbox evidence plus real payout adapter/worker/
+  reconciliation certification remain red. Paid entry stays disabled.
+
+Run on 2026-08-11 for legacy competition migration:
+
+- Backend aggregate 206/206 passed: competition 75/75 and competition
+  integration 29/29. Configured local dry-run reported zero candidates,
+  zero unresolved records, complete inventory/index evidence, and no apply.
+- Frontend 52/52, full lint, route smoke, and 526-module build passed.
+- Browser/API proof passed canonical direct details, Approved Host canonical
+  draft submission, normal-player route/API denial, and true 390×844 mobile.
+  The submitted draft created zero Tournament/TournamentType records; all test
+  users, audit, draft, sessions, and browser fixtures were cleaned up.
 
 Run on 2026-08-09 against the current working trees:
 

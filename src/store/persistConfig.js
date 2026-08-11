@@ -24,10 +24,7 @@ const publicCacheTransform = createTransform(
       };
     }
 
-    return {
-      tournaments: inboundState.tournaments,
-      lastFetchedAt: inboundState.lastFetchedAt,
-    };
+    return inboundState;
   },
   (outboundState, key) => {
     // Rehydrated caches receive a stable runtime shape before components and
@@ -41,22 +38,9 @@ const publicCacheTransform = createTransform(
       };
     }
 
-    return {
-      tournaments: outboundState?.tournaments || {},
-      listStatus: outboundState?.lastFetchedAt ? "succeeded" : "idle",
-      listError: null,
-      lastFetchedAt: outboundState?.lastFetchedAt || null,
-      selectedTournament: null,
-      selectedTournamentFetchedAt: null,
-      detailStatus: "idle",
-      detailError: null,
-      detailRequestId: null,
-      requestedTournamentId: null,
-      requestedDetailKind: null,
-      selectedDetailKind: null,
-    };
+    return outboundState;
   },
-  { whitelist: ["games", "tournament"] }
+  { whitelist: ["games"] }
 );
 
 const migrations = {
@@ -84,13 +68,19 @@ const migrations = {
     delete migratedState.tournament;
     return migratedState;
   },
+  5: (state) => {
+    if (!state) return state;
+    const migratedState = { ...state };
+    delete migratedState.tournament;
+    return migratedState;
+  },
 };
 
 const persistConfig = {
   key: "root",
-  version: 4,
+  version: 5,
   storage,
-  whitelist: ["games", "tournament"],
+  whitelist: ["games"],
   transforms: [publicCacheTransform],
   migrate: createMigrate(migrations, { debug: false }),
 };

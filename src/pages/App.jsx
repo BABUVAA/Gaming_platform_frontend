@@ -23,7 +23,7 @@ function App() {
       {/* Account restrictions remain visible across every authenticated page. */}
       <AccountVerificationStrip />
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <Outlet />
       </main>
       <Toast />

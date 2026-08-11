@@ -12,41 +12,6 @@ const normalizeDetailRequest = (request) =>
         force: request?.force || false,
       };
 
-export const fetchTournaments = createApiThunk(
-  "tournament/fetchTournaments",
-  {
-    path: "/api/tournaments/offerings",
-    selectData: (response) => {
-      const tournaments =
-        response.data?.data?.offerings || response.data?.tournaments;
-
-      if (
-        !tournaments ||
-        typeof tournaments !== "object" ||
-        Array.isArray(tournaments)
-      ) {
-        throw new Error("Tournament list response must contain a map.");
-      }
-
-      return { tournaments, fetchedAt: Date.now() };
-    },
-    errorMessage: "Failed to fetch tournaments.",
-  },
-  {
-    condition: ({ force = false } = {}, { getState }) => {
-      const tournamentState = getState().tournament;
-
-      if (tournamentState.listStatus === "loading") return false;
-      if (force) return true;
-
-      return !isCacheFresh(
-        tournamentState.lastFetchedAt,
-        PUBLIC_CACHE_TTL.TOURNAMENTS,
-      );
-    },
-  },
-);
-
 export const fetchTournamentById = createApiThunk(
   "tournament/fetchTournamentById",
   {
@@ -106,10 +71,6 @@ export const fetchTournamentById = createApiThunk(
 );
 
 const initialState = {
-  tournaments: {},
-  listStatus: "idle",
-  listError: null,
-  lastFetchedAt: null,
   selectedTournament: null,
   selectedTournamentFetchedAt: null,
   detailStatus: "idle",
@@ -124,39 +85,6 @@ const tournamentSlice = createSlice({
   name: "tournament",
   initialState,
   reducers: {
-    upsertTournament(state, action) {
-      const tournament = action.payload;
-      if (!tournament?._id) return;
-
-      state.tournaments[tournament._id] = {
-        ...state.tournaments[tournament._id],
-        ...tournament,
-      };
-
-      // Keep the open detail screen synchronized with matching socket events.
-      if (state.selectedTournament?._id === tournament._id) {
-        state.selectedTournament = {
-          ...state.selectedTournament,
-          ...tournament,
-        };
-      }
-    },
-    removeTournament(state, action) {
-      const tournamentId = action.payload;
-      if (!tournamentId) return;
-
-      delete state.tournaments[tournamentId];
-      if (state.selectedTournament?._id === tournamentId) {
-        state.selectedTournament = null;
-        state.selectedTournamentFetchedAt = null;
-        state.detailStatus = "idle";
-        state.detailError = null;
-        state.detailRequestId = null;
-        state.requestedTournamentId = null;
-        state.requestedDetailKind = null;
-        state.selectedDetailKind = null;
-      }
-    },
     clearSelectedTournament(state) {
       state.selectedTournament = null;
       state.selectedTournamentFetchedAt = null;
@@ -167,33 +95,9 @@ const tournamentSlice = createSlice({
       state.requestedDetailKind = null;
       state.selectedDetailKind = null;
     },
-    invalidateTournamentList(state) {
-      state.lastFetchedAt = null;
-    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchTournaments.pending, (state) => {
-        state.listStatus = "loading";
-        state.listError = null;
-      })
-      .addCase(fetchTournaments.fulfilled, (state, action) => {
-        state.listStatus = "succeeded";
-        state.tournaments = action.payload.tournaments;
-        state.lastFetchedAt = action.payload.fetchedAt;
-      })
-      .addCase(fetchTournaments.rejected, (state, action) => {
-        // A condition rejection represents a deduplicated caller, not the
-        // completion of the request that is already loading.
-        if (action.meta.condition) return;
-        if (action.meta.aborted) {
-          state.listStatus = "idle";
-          return;
-        }
-
-        state.listStatus = "failed";
-        state.listError = action.payload || "Failed to fetch tournaments.";
-      })
       .addCase(fetchTournamentById.pending, (state, action) => {
         state.detailStatus = "loading";
         state.detailError = null;
@@ -220,13 +124,6 @@ const tournamentSlice = createSlice({
         state.detailRequestId = null;
         state.requestedTournamentId = null;
         state.requestedDetailKind = null;
-
-        if (tournament?.kind !== "event" && tournament?._id) {
-          state.tournaments[tournament._id] = {
-            ...state.tournaments[tournament._id],
-            ...tournament,
-          };
-        }
       })
       .addCase(fetchTournamentById.rejected, (state, action) => {
         if (state.detailRequestId !== action.meta.requestId) return;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
-import { EventReviewQueue, GameCatalog, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement } from "../components";
+import { EventReviewQueue, GameCatalog, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement, WithdrawalReview } from "../components";
 
 const ADMIN_AREAS = [
   {
@@ -33,6 +33,12 @@ const ADMIN_AREAS = [
     icon: FiDollarSign,
     id: "prize-releases",
     label: "Prize Review",
+  },
+  {
+    description: "Claim, approve, or reject player withdrawal requests.",
+    icon: FiDollarSign,
+    id: "withdrawals",
+    label: "Withdrawal Review",
   },
 ];
 
@@ -78,8 +84,10 @@ const AdminDashboard = () => {
               <EventReviewQueue />
             ) : activeSection === "quick-matches" ? (
               <QuickMatchOfferingManagement />
-            ) : (
+            ) : activeSection === "prize-releases" ? (
               <PrizeReleaseReview />
+            ) : (
+              <WithdrawalReview />
             )}
           </main>
         </div>

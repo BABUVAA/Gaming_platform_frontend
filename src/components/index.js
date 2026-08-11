@@ -21,7 +21,6 @@ export { default as Button } from "./ui/Button/Button.jsx";
 export { default as Input } from "./ui/Input/Input.jsx";
 export { default as Spinner } from "./ui/Spinner/Spinner.jsx";
 export { default as Toast } from "./ui/Toast/Toast.jsx";
-export { default as TournamentCard } from "./ui/GameCard/TournamentCard.jsx";
 
 //my components
 
@@ -36,3 +35,4 @@ export { default as GameCatalog } from "./adminComponents/GameCatalog.jsx";
 export { default as EventReviewQueue } from "./adminComponents/EventReviewQueue.jsx";
 export { default as QuickMatchOfferingManagement } from "./adminComponents/QuickMatchOfferingManagement.jsx";
 export { default as PrizeReleaseReview } from "./adminComponents/PrizeReleaseReview.jsx";
+export { default as WithdrawalReview } from "./adminComponents/WithdrawalReview.jsx";

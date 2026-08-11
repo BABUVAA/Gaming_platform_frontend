@@ -14,7 +14,7 @@ const routeFiles = [
 ];
 const routesText = routeFiles.map(read).join("\n");
 const navigationText = read("src/utils/navigation.js");
-const tournamentCardText = read("src/components/ui/GameCard/TournamentCard.jsx");
+const quickMatchCardText = read("src/components/ui/GameCard/QuickMatchCard.jsx");
 const verificationDialogText = read(
   "src/components/common/EmailVerificationDialog.jsx"
 );
@@ -60,8 +60,11 @@ requiredNavigationPatterns.forEach((tokens) => {
   }
 });
 
-if (!tournamentCardText.includes("to={buildTournamentOfferingPath(_id)}")) {
-  failures.push("Tournament card is not using the explicit offering-details route.");
+if (
+  !quickMatchCardText.includes("offeringId={offering._id}") ||
+  !quickMatchCardText.includes("buildTournamentOfferingPath(offering._id)")
+) {
+  failures.push("Quick Match cards no longer use the canonical queue/detail boundary.");
 }
 
 if (
@@ -116,7 +119,9 @@ if (
 }
 
 const verifiedDashboardRouteCount = (
-  routesText.match(/access: "verified(?:Detailed)?Player"/g) || []
+  routesText.match(
+    /access: "verified(?:Detailed)?(?:Player|DashboardViewer)"/g,
+  ) || []
 ).length;
 
 if (verifiedDashboardRouteCount < 9) {

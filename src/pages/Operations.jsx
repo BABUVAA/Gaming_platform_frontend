@@ -848,10 +848,15 @@ const matchPropType = PropTypes.shape({
     PropTypes.shape({
       checkedIn: PropTypes.bool,
       displayName: PropTypes.string,
-      user: PropTypes.shape({
-        _id: PropTypes.string,
-        profile: PropTypes.shape({ username: PropTypes.string }),
-      }),
+      // Queue summaries intentionally keep participant identity as an ID,
+      // while assigned-match detail may populate the safe display profile.
+      user: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.shape({
+          _id: PropTypes.string,
+          profile: PropTypes.shape({ username: PropTypes.string }),
+        }),
+      ]),
     }),
   ),
   scheduledFor: PropTypes.string,

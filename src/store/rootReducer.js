@@ -24,6 +24,9 @@ import eventReviewSlice from "./slices/eventReviewSlice";
 import quickMatchOfferingSlice from "./slices/quickMatchOfferingSlice";
 import operatorOperationsSlice from "./slices/operatorOperationsSlice";
 import prizeReleaseReviewSlice from "./slices/prizeReleaseReviewSlice.js";
+import withdrawalSlice from "./slices/withdrawalSlice.js";
+import withdrawalReviewSlice from "./slices/withdrawalReviewSlice.js";
+import hostQuickMatchProposalSlice from "./slices/hostQuickMatchProposalSlice.js";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -44,6 +47,9 @@ const combinedReducer = combineReducers({
   quickMatchOfferings: quickMatchOfferingSlice.reducer,
   operatorOperations: operatorOperationsSlice.reducer,
   prizeReleaseReview: prizeReleaseReviewSlice.reducer,
+  withdrawals: withdrawalSlice.reducer,
+  withdrawalReview: withdrawalReviewSlice.reducer,
+  hostQuickMatchProposal: hostQuickMatchProposalSlice.reducer,
   loading: loadingSlice.reducer,
   matchmaking: matchmakingSlice.reducer,
   matchActivity: matchActivitySlice.reducer,
@@ -73,6 +79,9 @@ const privateSliceKeys = [
   "gameManagement",
   "operatorOperations",
   "prizeReleaseReview",
+  "withdrawals",
+  "withdrawalReview",
+  "hostQuickMatchProposal",
 ];
 
 const clearPrivateSlices = (state) => {

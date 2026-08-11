@@ -32,6 +32,7 @@ export const ROUTES = {
   TOURNAMENT_DETAILS: "/tournamentDetails/:id",
   TOURNAMENT_DETAILS_LEGACY: "/tournamentDeatils/:id",
   TOURNAMENT_OFFERING_DETAILS: "/dashboard/tournaments/offering/:id",
+  HOST_TOURNAMENT_PROPOSAL: "/dashboard/host/tournament-proposal",
 };
 
 // Child route segments are kept beside public URLs so dashboard children can
@@ -43,6 +44,7 @@ export const DASHBOARD_ROUTE_SEGMENTS = {
   MATCH_ROOM: "matches/:id",
   TOURNAMENT_GAME: "tournament/:game",
   TOURNAMENT_OFFERING_DETAILS: "tournaments/offering/:id",
+  HOST_TOURNAMENT_PROPOSAL: "host/tournament-proposal",
   CHATS: "chats",
   CLAN: "clan",
   PROFILE: "profile",

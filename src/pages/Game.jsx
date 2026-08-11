@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import {
   FaArrowRight,
@@ -19,9 +19,10 @@ import {
   selectPlayerSummary,
 } from "../store/selectors/playerSelectors";
 import {
-  selectTournamentList,
-  selectTournamentListStatus,
-} from "../store/selectors/tournamentSelectors";
+  selectPlayerQuickMatchOfferings,
+  selectPlayerQuickMatchStatus,
+} from "../store/selectors/quickMatchOfferingSelectors";
+import { fetchPlayerQuickMatchOfferings } from "../store/slices/quickMatchOfferingSlice";
 import {
   gameFilterOptions,
   getGameKey,
@@ -100,11 +101,33 @@ const rankTournament = (tournament) => {
 };
 
 const Game = () => {
+  const dispatch = useDispatch();
   const [activeGame, setActiveGame] = useState("all");
   const playerSummary = useSelector(selectPlayerSummary);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
-  const tournaments = useSelector(selectTournamentList);
-  const tournamentsStatus = useSelector(selectTournamentListStatus);
+  const offerings = useSelector(selectPlayerQuickMatchOfferings);
+  const tournamentsStatus = useSelector(selectPlayerQuickMatchStatus);
+  const tournaments = useMemo(
+    () =>
+      offerings.map((offering) => ({
+        _id: offering._id,
+        entryFee: offering.entryFeeMinor / 100,
+        game: offering.gameKey,
+        maxParticipants: offering.maxParticipants,
+        mode: offering.mode,
+        prizePool: offering.prizePoolMinor / 100,
+        registeredPlayers: [],
+        registeredTeams: [],
+        status: offering.status,
+        tournamentName: offering.title,
+      })),
+    [offerings],
+  );
+
+  useEffect(() => {
+    const request = dispatch(fetchPlayerQuickMatchOfferings());
+    return () => request.abort();
+  }, [dispatch]);
 
   const filteredTournaments = tournaments
     .filter(

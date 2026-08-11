@@ -7,12 +7,15 @@ import { useMatchmakingStore } from "../../../store/hooks/useStore";
 import InviteModal from "../../feature/InviteModal";
 import { selectIsStaffUtilityMode } from "../../../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../../../utils/staffUtilityMode";
+import { buildTournamentOfferingPath } from "../../../routes/routeConstants";
 
 const reasonLabels = {
   game_account_verification_required:
     "Verify this game account to become eligible.",
   payment_holds_not_available:
     "Paid entry is not available until wallet holds are enabled.",
+  paid_entry_unavailable:
+    "Paid entry remains unavailable while payment release checks are incomplete.",
   staff_read_only:
     "Staff accounts can view this offering but cannot join from the player dashboard.",
   queue_activation_pending: "Queue entry is being activated for this format.",
@@ -30,7 +33,7 @@ const formatMinorAmount = (amount, currency) => {
   }
 };
 
-const QuickMatchCard = ({ offering }) => {
+const QuickMatchCard = ({ offering, showDetails = true }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -53,7 +56,6 @@ const QuickMatchCard = ({ offering }) => {
     try {
       await joinQuickMatch({
         offeringId: offering._id,
-        source: "quick_match",
       }).unwrap();
       setJoined(true);
     } catch (error) {
@@ -96,12 +98,20 @@ const QuickMatchCard = ({ offering }) => {
           <Detail label="Seats" value={offering.maxParticipants} />
         </dl>
 
-        <p className="mt-4 text-sm text-slate-300">
-          {offering.mode}
-          {offering.map ? ` · ${offering.map}` : ""} · {offering.teamSize}
-          -player{offering.teamSize === 1 ? " entry" : " team"} ·{" "}
-          {offering.region}
-        </p>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-300">
+          {[offering.mode, offering.map, offering.region]
+            .filter(Boolean)
+            .map((fact, index) => (
+              <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5" key={`${fact}-${index}`}>
+                {fact}
+              </span>
+            ))}
+          {offering.teamSize > 1 ? (
+            <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5">
+              Players per team: {offering.teamSize}
+            </span>
+          ) : null}
+        </div>
         <p className="mt-2 text-xs text-slate-500">
           {offering.schedulePolicy === "on_demand"
             ? "Starts when every seat is filled."
@@ -162,6 +172,14 @@ const QuickMatchCard = ({ offering }) => {
               {errorMessage}
             </p>
           )}
+          {showDetails ? (
+            <Link
+              className="mt-3 inline-flex text-sm font-bold text-cyan-200 hover:text-cyan-100"
+              to={buildTournamentOfferingPath(offering._id)}
+            >
+              View details
+            </Link>
+          ) : null}
         </div>
       </article>
 
@@ -172,9 +190,8 @@ const QuickMatchCard = ({ offering }) => {
           mode={offering.mode}
           onClose={() => setIsTeamPickerOpen(false)}
           onJoined={() => setJoined(true)}
-          source="quick_match"
+          offeringId={offering._id}
           teamSize={offering.teamSize}
-          tournamentId={offering._id}
         />
       ) : null}
     </>
@@ -210,6 +227,7 @@ QuickMatchCard.propTypes = {
     teamSize: PropTypes.number.isRequired,
     title: PropTypes.string.isRequired,
   }).isRequired,
+  showDetails: PropTypes.bool,
 };
 
 Detail.propTypes = {

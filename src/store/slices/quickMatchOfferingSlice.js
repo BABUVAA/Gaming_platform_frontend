@@ -20,6 +20,16 @@ export const fetchPlayerQuickMatchOfferings = createApiThunk(
   },
 );
 
+export const fetchPlayerQuickMatchOfferingById = createApiThunk(
+  "quickMatchOfferings/fetchPlayerDetail",
+  {
+    path: ({ arg }) => `/api/player/quick-matches/${arg}`,
+    selectData: (response) =>
+      response.data?.data?.offering || response.data?.data,
+    errorMessage: "Unable to load this tournament.",
+  },
+);
+
 export const createQuickMatchOffering = createApiThunk(
   "quickMatchOfferings/create",
   {
@@ -59,6 +69,10 @@ const quickMatchOfferingSlice = createSlice({
     error: null,
     offerings: [],
     playerError: null,
+    playerDetails: {},
+    playerDetailErrorsById: {},
+    playerDetailRequestIdsById: {},
+    playerDetailStatusById: {},
     playerOfferings: [],
     playerStatus: "idle",
     status: "idle",
@@ -91,6 +105,45 @@ const quickMatchOfferingSlice = createSlice({
       .addCase(fetchPlayerQuickMatchOfferings.rejected, (state, action) => {
         state.playerError = action.payload || action.error.message;
         state.playerStatus = action.meta.aborted ? "idle" : "failed";
+      })
+      .addCase(fetchPlayerQuickMatchOfferingById.pending, (state, action) => {
+        state.playerDetailErrorsById[action.meta.arg] = null;
+        state.playerDetailRequestIdsById[action.meta.arg] =
+          action.meta.requestId;
+        state.playerDetailStatusById[action.meta.arg] = "loading";
+      })
+      .addCase(fetchPlayerQuickMatchOfferingById.fulfilled, (state, action) => {
+        if (
+          state.playerDetailRequestIdsById[action.meta.arg] !==
+          action.meta.requestId
+        ) {
+          return;
+        }
+        state.playerDetailRequestIdsById[action.meta.arg] = null;
+        if (action.payload?._id) {
+          state.playerDetails[action.meta.arg] = action.payload;
+          state.playerDetailStatusById[action.meta.arg] = "succeeded";
+        } else {
+          state.playerDetailStatusById[action.meta.arg] = "failed";
+          state.playerDetailErrorsById[action.meta.arg] = {
+            message: "Tournament detail response is invalid.",
+          };
+        }
+      })
+      .addCase(fetchPlayerQuickMatchOfferingById.rejected, (state, action) => {
+        if (
+          state.playerDetailRequestIdsById[action.meta.arg] !==
+          action.meta.requestId
+        ) {
+          return;
+        }
+        state.playerDetailRequestIdsById[action.meta.arg] = null;
+        state.playerDetailStatusById[action.meta.arg] = action.meta.aborted
+          ? "idle"
+          : "failed";
+        state.playerDetailErrorsById[action.meta.arg] = action.meta.aborted
+          ? null
+          : action.payload || action.error;
       })
       .addCase(createQuickMatchOffering.fulfilled, (state, action) => {
         upsertOffering(state.offerings, action.payload);

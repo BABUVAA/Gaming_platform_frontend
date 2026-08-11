@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import QuickMatchCard from "../components/ui/GameCard/QuickMatchCard";
 import { fetchPlayerQuickMatchOfferings } from "../store/slices/quickMatchOfferingSlice";
 import {
@@ -7,12 +8,16 @@ import {
   selectPlayerQuickMatchOfferings,
   selectPlayerQuickMatchStatus,
 } from "../store/selectors/quickMatchOfferingSelectors";
+import { selectPlayerSummary } from "../store/selectors/playerSelectors";
+import { hasApprovedHostAccess } from "../utils/accessControl";
+import { ROUTES } from "../routes/routeConstants";
 
 const TournamentPage = () => {
   const dispatch = useDispatch();
   const offerings = useSelector(selectPlayerQuickMatchOfferings);
   const status = useSelector(selectPlayerQuickMatchStatus);
   const error = useSelector(selectPlayerQuickMatchError);
+  const playerSummary = useSelector(selectPlayerSummary);
   const [activeFilter, setActiveFilter] = useState("All");
 
   useEffect(() => {
@@ -53,6 +58,11 @@ const TournamentPage = () => {
           team format, entry rule, prize disclosure, schedule, and your current
           eligibility.
         </p>
+        {hasApprovedHostAccess(playerSummary) ? (
+          <Link className="mt-5 inline-flex rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-2.5 text-sm font-black text-cyan-100 hover:bg-cyan-300/15" to={ROUTES.HOST_TOURNAMENT_PROPOSAL}>
+            Propose tournament
+          </Link>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">

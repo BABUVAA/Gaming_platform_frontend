@@ -264,7 +264,7 @@ export const ApprovedHostRoute = ({ children }) => (
     allowedRoles={[USER_ROLES.PLAYER]}
     hasProfileAccess={hasApprovedHostAccess}
   >
-    {children}
+    <VerifiedAccountGate>{children}</VerifiedAccountGate>
   </AccessSummaryGate>
 );
 

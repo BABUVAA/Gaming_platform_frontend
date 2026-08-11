@@ -42,7 +42,6 @@ import {
   selectPlayerSummaryStatus,
 } from "../selectors/playerSelectors";
 import { fetchGames } from "../slices/gameSlice";
-import { fetchTournaments } from "../slices/tournamentSlice";
 import {
   joinQuickMatchQueue,
   matchmakingActions,
@@ -52,12 +51,6 @@ import {
   selectGamesError,
   selectGamesStatus,
 } from "../selectors/gameSelectors";
-import {
-  selectTournamentList,
-  selectTournamentListError,
-  selectTournamentListStatus,
-} from "../selectors/tournamentSelectors";
-import unwrapThunkRequest from "../thunks/unwrapThunkRequest";
 import {
   selectJoiningOfferingId,
   selectQuickMatchJoinError,
@@ -227,14 +220,12 @@ export const usePlayerStore = () => {
 };
 
 export const useCatalogStore = () => {
-  // Public game and tournament catalogs share one read boundary because pages
-  // commonly need both, while their slices retain independent cache policies.
+  // The shared catalog boundary owns only Games. Quick Match discovery has a
+  // separate authenticated Redux boundary and must not fall back to legacy
+  // Tournament/TournamentType catalog routes.
   const games = useSelector(selectGames);
   const gamesStatus = useSelector(selectGamesStatus);
   const gamesError = useSelector(selectGamesError);
-  const tournaments = useSelector(selectTournamentList);
-  const tournamentsStatus = useSelector(selectTournamentListStatus);
-  const tournamentsError = useSelector(selectTournamentListError);
   const dispatch = useDispatch();
 
   const loadGames = useCallback(
@@ -242,37 +233,11 @@ export const useCatalogStore = () => {
     [dispatch],
   );
 
-  const loadTournaments = useCallback(
-    (options) => dispatch(fetchTournaments(options)),
-    [dispatch],
-  );
-
-  const loadCatalog = useCallback(
-    (options) => {
-      // Both thunks own TTL and in-flight deduplication, so callers can request
-      // the pair without reproducing cache checks in page components.
-      const gamesRequest = dispatch(fetchGames(options));
-      const tournamentsRequest = dispatch(fetchTournaments(options));
-      // Dispatch promises resolve to action objects even when thunks reject.
-      // The helper throws real failures while treating cache skips as normal.
-      return Promise.all([
-        unwrapThunkRequest(gamesRequest),
-        unwrapThunkRequest(tournamentsRequest),
-      ]);
-    },
-    [dispatch],
-  );
-
   return {
     games,
     gamesStatus,
     gamesError,
-    tournaments,
-    tournamentsStatus,
-    tournamentsError,
     loadGames,
-    loadTournaments,
-    loadCatalog,
   };
 };
 

@@ -35,14 +35,6 @@ export const findTransactions = createApiThunk("admin/findTransactions", {
   toast: { error: true },
 });
 
-export const findTournaments = createApiThunk("admin/findTournaments", {
-  method: "post",
-  path: "/api/admin/findTournaments",
-  selectData: selectNestedArrayData,
-  errorMessage: "Failed to fetch tournaments",
-  toast: { error: true },
-});
-
 export const findVerificationRequests = createApiThunk(
   "admin/findVerificationRequests",
   {
@@ -202,7 +194,6 @@ export const updateStaffAssignmentScopes = createApiThunk(
 const adminThunks = [
   findUsers,
   findTransactions,
-  findTournaments,
   findVerificationRequests,
   reviewVerificationRequest,
   fetchStaffRoles,
@@ -222,7 +213,6 @@ const adminThunks = [
 const adminRequestKeyByPrefix = Object.freeze({
   [findUsers.typePrefix]: "users",
   [findTransactions.typePrefix]: "transactions",
-  [findTournaments.typePrefix]: "tournaments",
   [findVerificationRequests.typePrefix]: "verificationRequests",
   [reviewVerificationRequest.typePrefix]: "verificationReview",
   [fetchStaffRoles.typePrefix]: "staffRoles",
@@ -264,7 +254,6 @@ const adminSlice = createSlice({
   initialState: {
     users: [],
     transactions: [],
-    tournaments: [],
     verificationRequests: [],
     staffRoles: [],
     staffCandidates: [],
@@ -280,7 +269,6 @@ const adminSlice = createSlice({
     latestRequestIds: {
       users: null,
       transactions: null,
-      tournaments: null,
       verificationRequests: null,
       verificationReview: null,
       staffRoles: null,
@@ -310,12 +298,6 @@ const adminSlice = createSlice({
 
         state.transactions = action.payload;
         state.latestRequestIds.transactions = null;
-      })
-      .addCase(findTournaments.fulfilled, (state, action) => {
-        if (!isLatestAdminRequest(state, "tournaments", action)) return;
-
-        state.tournaments = action.payload;
-        state.latestRequestIds.tournaments = null;
       })
       .addCase(findVerificationRequests.fulfilled, (state, action) => {
         if (
