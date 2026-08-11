@@ -110,9 +110,23 @@ browser and configured-environment dry-run passed with fixtures cleaned.
 
 ## Next Slice: Event MVP (Not Started)
 
-Per user instruction, work is stopped after step 4. Resume with Event
-registration/admission/capacity, stages/rounds/batches, verified advancement,
-leaderboards, disputes, settlement, notifications, and restart-safe jobs.
+Keep EventTemplate/EventRun as governance records. First add separate,
+transactional EventRegistration records for `open`, `invitation_only`, and
+`limited_seats` Runs: verified-player eligibility, open/close window, one
+registration per player, capacity, and explicit waitlist policy. Rounds,
+batches, leaderboards, disputes, settlement, notifications, and jobs follow
+only after this boundary is verified.
+
+## Latest Small Fix: Account Email Presentation
+
+- Port 8080 development backend was stopped.
+- Canonical email normalization is now identity-only; confirmation UI and
+  Resend delivery preserve the player-entered email address.
+- OTP success redirects to Login, the only session-creation path.
+- Backend auth checks: 26 unit + 7 replica integration passed. Frontend: 52
+  state tests and lint passed.
+- PhonePe SDK loading is lazy and callback-only, so Render can boot even when
+  its optional SDK install is malformed; configured callbacks fail closed 503.
 
 ## Work Immediately After This Slice
 

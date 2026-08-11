@@ -166,7 +166,7 @@ Acceleration rules:
    - Retire compatibility routes only after frontend and stored data migrate.
 
 3. Harden payments before enabling real-money production traffic.
-   - Verify signed provider callbacks, enqueue status reconciliation in a
+- Verify signed provider callbacks, enqueue status reconciliation in a
      durable worker, add a unique merchant transaction key, and use integer
      minor units or a decimal money type.
    - Replace the withdrawal success stub with a reviewed lifecycle or return a
@@ -224,6 +224,11 @@ Exit: a clean checkout has a reliable quality command in each repository.
 Exit: an eligible verified player can securely reach the dashboard, while an
 ineligible or unverified player receives a clear recovery path and cannot join
 restricted competitions.
+
+Completed refinement 2026-08-11: canonical provider-aware email normalization
+is an internal identity/uniqueness key only. `emailDisplay` preserves the
+address the player entered for UI and Resend delivery, and OTP promotion sends
+the player to Login because verification never creates a session.
 
 #### 2. Canonical Game and Quick Match Foundation
 
@@ -290,6 +295,11 @@ Quick Matches do not use an Event registration window or round bracket.
 Exit: duplicate callbacks, retries, disputed outcomes, and failed payouts
 cannot credit/debit a player twice or silently change a balance.
 
+Deployment safeguard 2026-08-11: the PhonePe SDK is loaded only when a fully
+configured callback is actually validated. A missing or malformed optional SDK
+cannot stop API startup; the callback fails closed with a 503 provider-unavailable
+response until the provider deployment is repaired.
+
 #### 5. Platform Administration and Governance
 
 1. Super Admin and Platform Admin use `/panelAdmin` for governance. Platform
@@ -331,6 +341,13 @@ Exit: every staff member sees only assigned, authorized work and can complete
 their responsibility without accessing governance or financial controls.
 
 #### 7. Events as a Separate Competition Product
+
+Status: **Planned — not started.** The first implementation will add separate
+`EventRegistration` records with unique `(run, player)` identity, immutable
+admission evidence, and transactional server-owned registration for approved
+published Runs. It must enforce the window, verified-player eligibility,
+`open`/`invitation_only`/`limited_seats` policy, capacity, and explicit
+waitlist before rounds or prize logic begin.
 
 1. Retain EventTemplate and EventRun as the approved planning boundary; do
    not overload them with participant or result state.

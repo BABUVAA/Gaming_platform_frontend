@@ -81,7 +81,9 @@ const SignUp = () => {
     // Sanitize input
     const sanitized = {
       username: validator.trim(validator.escape(rawData.username || "")),
-      email: validator.normalizeEmail(rawData.email || "") || "",
+      // Keep the familiar address for the confirmation view and delivery.
+      // Server-side identity matching applies its canonical representation.
+      email: validator.trim(rawData.email || ""),
       // Passwords are opaque credentials. Trimming would silently change what
       // the user chose and make signup behavior differ from login.
       password: String(rawData.password || ""),
@@ -186,6 +188,9 @@ const SignUp = () => {
         }),
       ).unwrap();
       setVerificationComplete(true);
+      // Verification creates the player account but never a session. Take the
+      // player straight to the one credential/session entry point.
+      goToLogin();
     } catch (error) {
       setVerificationError(
         error?.fieldErrors?.code ||
