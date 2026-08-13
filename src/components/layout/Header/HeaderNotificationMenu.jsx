@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { FiBell, FiChevronRight } from "react-icons/fi";
-import { markNotificationAsRead } from "../../../store/slices/notificationSlice";
+import { fetchNotifications, markNotificationAsRead } from "../../../store/slices/notificationSlice";
 
 const HeaderNotificationMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
   const dispatch = useDispatch();
 
-  const { items: notifications = [], loading } = useSelector(
+  const { items: notifications = [], loading, hasMore, nextCursor } = useSelector(
     (state) => state.notifications
   );
   const unreadCount = notifications.filter((item) => !item.isRead).length;
@@ -108,6 +108,18 @@ const HeaderNotificationMenu = () => {
               ))
             )}
           </div>
+
+          {sortedNotifications.length > 0 ? (
+            hasMore ? (
+              <button
+                type="button"
+                onClick={() => dispatch(fetchNotifications({ cursor: nextCursor }))}
+                className="w-full border-t border-slate-700 px-4 py-3 text-sm font-semibold text-cyan-300 transition hover:bg-slate-700"
+              >
+                Load older notifications
+              </button>
+            ) : null
+          ) : null}
 
           {sortedNotifications.length > 0 ? (
             <Link

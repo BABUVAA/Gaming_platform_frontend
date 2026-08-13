@@ -122,6 +122,8 @@ const formatDateTime = (value) => {
 
 const getMatchGameLabel = (match) =>
   match.gameRef?.name || match.gameKey || match.game || "Game";
+const isEventMatch = (match) =>
+  match.source === "event" || Boolean(match.eventBatch);
 
 const Operations = () => {
   const { competitionRevision, connected } = useSocket();
@@ -464,6 +466,9 @@ const AssignmentCard = ({
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.17em] text-amber-200">
+          {isEventMatch(match)
+            ? `Event batch ${match.eventBatch?.ordinal || ""} / `
+            : ""}
           {getMatchGameLabel(match)} / {match.mode || "Format"}
         </p>
         <h3 className="mt-2 truncate text-xl font-black text-white">
@@ -550,6 +555,9 @@ const AssignedMatchCard = ({
           <div className="min-w-0">
             <h3 className="truncate font-black text-white">{match.title}</h3>
             <p className="mt-1 truncate text-xs capitalize text-slate-400">
+              {isEventMatch(match)
+                ? `Event batch ${match.eventBatch?.ordinal || ""} / `
+                : ""}
               {match.mode || "Format"} /{" "}
               {match.map && match.map !== "none" ? match.map : "Map pending"}
             </p>
@@ -836,6 +844,18 @@ const matchPropType = PropTypes.shape({
   game: PropTypes.string,
   gameKey: PropTypes.string,
   gameRef: PropTypes.shape({ name: PropTypes.string }),
+  // Queue refreshes may carry only the safe EventBatch ID; expanded detail
+  // populates the same field with its bounded Event execution summary.
+  eventBatch: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      _id: PropTypes.string,
+      eventRun: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+      ordinal: PropTypes.number,
+      stage: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+    }),
+  ]),
+  source: PropTypes.string,
   lobby: PropTypes.shape({
     publishedAt: PropTypes.string,
     roomCode: PropTypes.string,

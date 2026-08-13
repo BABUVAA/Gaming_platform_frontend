@@ -16,6 +16,11 @@ export const dashboardChildRoutes = [
     access: "verifiedDashboardViewer",
   },
   {
+    path: DASHBOARD_ROUTE_SEGMENTS.EVENTS,
+    componentKey: "Events",
+    access: "verifiedDashboardViewer",
+  },
+  {
     path: DASHBOARD_ROUTE_SEGMENTS.MATCHES,
     componentKey: "Matches",
     access: "verifiedDashboardViewer",

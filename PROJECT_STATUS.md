@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-11
+Last updated: 2026-08-13
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -51,9 +51,9 @@ to continue the project without reopening settled decisions.
 
 ### Fast Completion Critical Path
 
-Planning baseline recorded 2026-08-09: approximately **58% of the complete
-documented platform roadmap is implemented**, approximately 70-75% of the core
-playable system exists, and only approximately 35-40% is ready for unrestricted
+Planning estimate updated 2026-08-13: approximately **76% of the complete
+documented platform roadmap is implemented**, approximately 88% of the core
+playable system exists, and approximately 42% is ready for unrestricted
 production real-money traffic. These percentages are planning estimates, not
 completion evidence; a feature moves to Completed only when its stated tests
 and exit gate pass.
@@ -66,19 +66,40 @@ product domains or spending critical-path time on visual polish:
      history.
    - Completed 2026-08-10: reviewed prize release with independent governance
      approval, participant-conflict denial, and atomic ledger movement.
-   - Complete withdrawal/payout behavior.
-   - Prove paid solo and Team journeys with concurrent database tests and a
-     multi-user browser workflow, then deliberately enable paid discovery.
+   - Completed locally 2026-08-11: reviewed withdrawal/payout lifecycle;
+     production requests stay disabled until the provider adapter/worker gate.
+   - Completed locally 2026-08-11: paid Solo and Team database/browser proof;
+     paid discovery stays disabled until the external provider gates pass.
 2. **65% -> 75%: finish the canonical competition migration.**
-   - Migrate remaining legacy host/detail/data paths to Game-backed
+   - Completed 2026-08-11: migrate legacy host/detail/data paths to Game-backed
      `QuickMatchOffering`, Match, and Room boundaries.
-   - Rehearse stored-data migration and rollback, then retire legacy
-     Tournament/TournamentType routes only when no active client depends on
-     them.
+   - Completed 2026-08-11: rehearse stored-data migration and rollback; active
+     legacy writes are retired and controlled historical reads remain.
 3. **75% -> 85%: deliver the Event MVP end to end.**
-   - Registration window and admission policy, capacity/waitlist, stages,
-     rounds/batches, verified results, advancement, leaderboard, disputes,
-     settlement, notifications, and restart-safe jobs.
+   - Completed 2026-08-13: registration window, admission policy,
+     capacity/waitlist, cancellation/promotion, and invitation governance.
+   - Completed locally 2026-08-13: immutable verified outcomes, restart-safe
+     later rounds, disputes/corrections, bounded tied standings, and durable
+     sporting completion.
+   - In progress 2026-08-13: Event placement rewards. Each Run carries a
+     proposed INR minor-unit reward table keyed by finishing place (for example,
+     1st through 10th); Platform Admin independently approves the immutable
+     table before registration. Every player sharing a standing place receives
+     that place's configured amount, so tied ranks are funded explicitly rather
+     than split or inferred. Completion will create ledger-backed
+     `prize_pending` allocations from the final immutable standings, followed
+     by an independent governance release to `withdrawable`. Initial draft UI,
+     validation, review disclosure, completion allocation, and governed release
+     UI are in place. Replica-set proof covers tied-place allocations,
+     approver/recipient denial, concurrent idempotent release, and exact wallet
+     movement. Focused frontend Event tests, lint, and the 548-module build
+     pass. Browser/API proof and a final financial audit remain before
+     completion.
+     Local runtime note 2026-08-13: the frontend public smoke was console-clean;
+     the backend refused startup when Redis at its configured local address was
+     unavailable. This is the expected fail-closed rate-limit/security behavior.
+   - Remaining: Event reward browser verification/final audit and production worker
+     deployment evidence.
 4. **85% -> 93%: finish role-specific staff workflows.**
    - Complete Platform Admin Event review, Event Manager handoff, Game Manager
      health/escalation, Match Operator workload/handoff, staff profiles, and
@@ -342,12 +363,100 @@ their responsibility without accessing governance or financial controls.
 
 #### 7. Events as a Separate Competition Product
 
-Status: **Planned — not started.** The first implementation will add separate
-`EventRegistration` records with unique `(run, player)` identity, immutable
-admission evidence, and transactional server-owned registration for approved
-published Runs. It must enforce the window, verified-player eligibility,
-`open`/`invitation_only`/`limited_seats` policy, capacity, and explicit
-waitlist before rounds or prize logic begin.
+Status: **Sporting lifecycle and durable player notifications complete locally;
+Event finance and production worker deployment remain.** Separate `EventRegistration` and platform-owned `EventInvitation`
+records now provide transactional `open`/`invitation_only`/`limited_seats`
+admission, bounded capacity, optional FIFO waitlists, cancellation/promotion,
+fair re-entry, and safe invitation consumption/restoration/revocation. Event
+Manager draft Runs declare admission terms; Platform Admin approval validates
+and displays them, then uses bounded invitation-run discovery, verified-player
+candidate search, and cursor-paginated safe history. Player discovery,
+register/cancel, and authoritative counter refresh are Redux-owned; staff sees
+read-only availability and cannot send participation commands. This vertical
+slice passed its admission gates on 2026-08-13. The first-stage handoff is also
+complete locally: a reviewed immutable format/execution plan, durable EventJob,
+frozen eligible roster, deterministic EventStage/EventBatch/Event Match graph,
+bounded recovery APIs, player-own-batch privacy, and transactional Match start
+propagation now exist. Later-round advancement is also complete locally:
+immutable dispute-closed outcomes feed restart-safe leased jobs, deterministic
+later stages, tied bounded standings, and durable Event completion evidence.
+Completed Events remain visible to players and Platform Admin governance.
+
+The advancement exit gate passed 19 focused backend cases, frontend 66/66 plus
+lint and a 533-module build, and an independent clear audit. A real four-player
+browser/API bracket produced the champion and placements `1, 2, 3, 3`; its
+temporary data and credentials were removed. Event prize settlement remains
+explicitly `not_configured` and Event wallet writes are forbidden. Event roster
+freeze and final standings atomically enqueue per-player notification records;
+the Event worker retries delivery and uses a unique Notification source link to
+converge after a crash without duplicate player messages. Production still
+needs that worker deployed and supervised as a separate process.
+
+Operational baseline refinement 2026-08-13: public `GET /healthz` reports
+process liveness without datastore calls, while `GET /readyz` fails closed with
+the shared 503 envelope until both MongoDB and Redis are ready. The backend
+environment example documents the Event worker interval and bounded job/outbox
+batch sizes. Deployment must configure the web-service health check and run
+`npm run worker:events` as a separately supervised worker against the same
+MongoDB and Redis; local code cannot prove that external deployment state.
+
+Observability refinement 2026-08-13: every HTTP response receives a bounded
+`X-Request-Id`. Completion and error logs are structured JSON records with
+method, template-safe path, status, duration, stable error code, and request
+ID only; they deliberately omit bodies, tokens, email addresses, IP addresses,
+and raw identifiers. Production log collection, metrics, alerts, SLOs, and
+incident drills remain external operations gates.
+
+Dependency audit refinement 2026-08-13: semver-compatible lockfile updates
+leave the backend production dependency audit at zero vulnerabilities. The
+frontend production audit has two moderate React Router v6 advisories whose
+upstream remediation requires React Router v7.18+; the attempted upgrade did
+not alter the lockfile before its local registry timeout. Treat that major
+route-library migration as an explicit verified compatibility slice rather
+than silently forcing it during financial/Event work.
+
+Current stages/rounds implementation contract:
+
+- Owner and authorization: Event Manager may configure an unapproved
+  execution plan inside assigned game scope; Platform Admin independently
+  approves it; a durable platform worker closes registration and generates
+  work; Game Manager observes; Match Operator uses the existing scoped Match
+  claim/ownership commands. No client or staff request supplies participant IDs.
+- API boundary: player Event reads expose only the viewer's frozen entry and
+  safe stage/batch/Match state; Event Manager draft APIs own plan input;
+  Platform Admin review owns approval; worker/manual recovery commands are
+  privileged, idempotent, and return server projections rather than accepting
+  generated rosters.
+- Data boundary: a reviewed EventRun execution plan initially supports explicit
+  single elimination only. Separate immutable roster entries, EventStage,
+  EventBatch, and durable EventJob records own execution. Match gains an
+  exactly-one EventBatch source and never pretends to be a Quick Match or
+  legacy Tournament execution.
+- Safety: individual registration cannot safely define a team roster, so
+  `teamSize > 1` fails closed until a separate immutable Event team-entry model
+  exists. Format, participants per Match, advancement count, seeding policy,
+  schedule spacing, and bye rules are validated and reviewed rather than
+  inferred from game names or modes.
+- Completion criteria for this slice: concurrent/restarted closure freezes the
+  admitted roster once, excludes waitlisted/cancelled players, creates one
+  deterministic first stage/batch/Match graph, survives injected failures
+  without duplicate/partial execution, hands safe work to scoped operators,
+  and never marks the Event complete. Replica-set, authorization, Redux,
+  desktop/mobile browser, and clean-console gates are required.
+
+First-stage completion evidence (2026-08-13): 13/13 Event-stage replica tests,
+79/79 competition policy checks, 55/55 competition integration checks, the
+237/237 backend aggregate, 62/62 frontend checks, full lint, and a 532-module
+production build passed. Independent audit found no code must-fix. A real
+Platform Admin froze two admitted players and generated one Stage/Batch/Match;
+both players saw only their own batch and checked in; the scoped Match Operator
+claimed, prepared, and started the Event Match; Match, Batch, Stage, and Run all
+became `in_progress`. Desktop and 390x844 player views were responsive, and a
+fresh operator tab was console-clean after fixing the safe string/populated
+EventBatch PropType boundary. Production automatic closure still requires a
+separately supervised `npm run worker:events` process using the same MongoDB
+configuration and restart policy; manual Platform Admin recovery remains
+available but is not deployment proof.
 
 1. Retain EventTemplate and EventRun as the approved planning boundary; do
    not overload them with participant or result state.
@@ -469,16 +578,17 @@ prove the completion criteria.
 |---|---|---|---|
 | Closed | Match operations | Match Operator assignments require game scopes; operational reads and claims are scoped; post-claim mutations require ownership; readiness, result, verification, dispute, resolution, and settlement use conditional writes. Governance roles cannot execute operator commands, while dispute resolution/settlement remain governance-only. | Verified by policy tests, a full MongoDB concurrency lifecycle, Redux transport tests, and an isolated scoped-operator browser check on 2026-08-09. |
 | Closed | Event approval | Event Templates and Runs use submitted revisions, reviewer notes, return/reject states, independent reviewer checks, bounded queue/history reads, append-only review evidence, and a Platform Admin Redux review queue. | Verified by Event governance policy tests and frontend route/build checks on 2026-08-08. |
+| Closed | Event admission | Scheduled/open Event Runs enforce verified-player windows, open/invitation/limited-seat policy, transactional capacity and FIFO waitlists, safe cancellation/promotion, invitation governance, bounded reads, and staff participation denial. | Verified by 13 replica-set Event tests, full aggregates, independent audit, and desktop/mobile player/staff/governance browser/API checks on 2026-08-13. |
 | P0 | Competition data | Game-backed offering administration, player discovery, free and transactionally held paid queueing, canonical Team creation, Room/Match handoff, protected player Match reads, and the complete operator/result/dispute lifecycle avoid legacy Tournament records and hardcoded game enums. Paid discovery, legacy host/detail aliases, and old stored competition records remain. | Finish the paid-entry release gates, then migrate remaining host/data paths with rollback evidence before retiring aliases. |
 | P0 | Payment safety | Callbacks fail closed unless PhonePe SDK signature credentials are configured, capture the signed raw body, enqueue a durable reconciliation record, and merchant transaction IDs are unique. The standalone `worker:payments` claims/retries/verifies jobs and settles idempotently. Withdrawal explicitly returns not-implemented. The immutable integer/decimal ledger, worker deployment/sandbox evidence, and reviewed payout lifecycle remain incomplete, so deposits must not be treated as production-ready. | Deploy and monitor the worker, complete provider sandbox callback/retry verification, introduce the immutable minor-unit ledger, and implement the reviewed withdrawal lifecycle. |
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
 | P1 | Transactional account email | Resend-backed verification and password recovery are implemented behind a server service. Local environment-only credentials, live authorized-recipient delivery, database transaction tests, and an isolated real-route browser workflow are verified. A dedicated sender domain and operational delivery evidence remain open. | Verify a dedicated account-email domain for broader delivery, then certify staging delivery, failure, and bounce monitoring without storing secrets in the repository. |
-| P1 | Distributed security | Express rate limiters use process memory, so limits reset on restart and are not shared by multiple server instances. Governance actions lack MFA/recent-auth controls. | Redis-backed rate-limit store, endpoint-specific keys/alerts, and MFA or recent-auth for staff and financial actions. |
+| P1 | Distributed security | Authentication, signup, verification, recovery, password-change, refresh, staff-assignment, Event-governance, operator, and player-financial mutations use atomic Redis counters keyed by hashed client/actor correlation and fail closed if protection storage is unavailable. MFA/recent-auth controls and mutation-specific operational alerts remain. | Add actionable alerts and MFA or recent-auth for sensitive governance and financial actions. |
 | P1 | Frontend boundaries | Multiple feature pages call the Axios client directly despite the documented Redux boundary. Identity verification and recovery now use Redux thunks, but other domains remain. | Migrate one domain at a time to shared thunks/selectors and add component/integration tests. |
-| P1 | API scale | Event, operator, social, and several administrative list reads can return unbounded collections; compatibility endpoints duplicate behavior. | Cursor pagination with bounded limits and stable sorting; record endpoint deprecation dates and remove aliases after client migration. |
+| P1 | API scale | Event execution, wallet history, security attention, staff profiles, and player notifications now use bounded stable reads; the notification header can request older cursor pages without replacing live items. Other operator, social, and administrative list reads plus compatibility endpoints remain. | Cursor pagination with bounded limits and stable sorting for every remaining list; record endpoint deprecation dates and remove aliases after client migration. |
 | P1 | Financial model | Wallet embeds transaction summaries while Transaction is also stored separately, and money uses JavaScript Number values. The two representations can drift and arrays can grow without bound. | Adopt an immutable ledger as source of truth, minor-unit/decimal amounts, paginated projections, and reconciliation jobs. |
 | P2 | Operations | Logging is console-based; no structured request tracing, metrics, alerting, job queue, backup verification, or disaster-recovery evidence was found. | Define SLOs, correlation IDs, redaction, metrics/alerts, durable jobs, backup restore drills, and failure runbooks. |
-| P2 | Frontend quality | Frontend lint is clean, but there is no automated component test suite and the largest route chunks include Clan, Game Catalog, Role Management, and Operations. | Add tests for critical flows and split large pages by feature boundary without changing behavior. |
+| P2 | Frontend quality | Frontend lint is clean. Route-level lazy loading is retained and stable vendor chunks now split React/router, state, realtime, and icons; the largest emitted JavaScript chunk fell from 508 kB to 261 kB. Automated component/browser coverage and further route-specific splitting remain. | Add tests for critical flows and continue splitting only when measured route load evidence justifies it. |
 
 ### Documentation Drift Found
 
@@ -715,6 +825,12 @@ staff-classified account and the frontend must present it as view-only.
   calls.
 - Staff assignment, role reports, service activity history, and security-event
   storage for prohibited privilege fields in public signup requests.
+- Completed locally 2026-08-13: Platform/Super Admin Security Attention uses a
+  cursor-bounded, hash-safe review feed. It records blocked privilege-field
+  signup attempts plus refresh replay/fingerprint mismatch session signals;
+  no tokens, raw IPs, full hashes, or player records are exposed, and no
+  security mutation authority was added. Backend policy 97/97, frontend 72/72,
+  lint/build, and desktop/390px browser verification passed.
 - Server-owned role policy registry with explicit management hierarchy,
   assignment authority, and access scope. Staff assignment status changes now
   enforce the policy graph instead of a governance-only special case.
@@ -1359,6 +1475,10 @@ and what needs attention.
 - Role Management: role-first directory, person search, game-scope filters,
   staff profile drawer, active/suspended/revoked status filters, current
   workload, service history, and clear assignment/revocation confirmation.
+- Completed locally 2026-08-13: Directory rows open a compact, governance-only
+  read profile showing current roles/scopes and bounded service/access history.
+  Mutation controls remain separate. The profile passed backend policy 92/92,
+  frontend 70/70, lint/build, and desktop/390px browser verification.
 - Game Management: game health board with lifecycle, named Game Manager
   ownership, configuration readiness, upcoming Event impact, active room
   counts, and a deliberate change history.
@@ -1428,6 +1548,12 @@ Game Manager dashboard (`/staff/games`):
   Event readiness, delayed work, and escalation history.
 - Cannot modify games, staff assignments, Templates, Event Runs, wallet data,
   or player identities.
+- Completed locally 2026-08-13: assigned-game metrics include a bounded
+  attention queue for operator assignment, delayed starts, result verification,
+  and disputes plus safe recent operator action history. Backend authority
+  remains the active Game Manager assignment and `gameScopes`; no mutation route
+  was added. Verification passed backend competition policy 82/82, frontend
+  68/68, lint/build, and real desktop/390px browser checks with a clean console.
 
 Event Manager dashboard (`/staff/events`):
 
@@ -1483,8 +1609,9 @@ Security rule for all three dashboards:
 - MFA/passkeys and recent-authentication checks for all governance actions.
 - Dedicated rate limits and alerts for staff assignment, activation, wallet,
   and verification mutations.
-- Security-event UI, denied-access logging, production alerting, and incident
-  response procedure.
+- Completed locally 2026-08-13: Security-event UI for durable signup privilege
+  abuse and session replay/fingerprint signals. Remaining: broader denied-access
+  logging, production alerting, and an incident response procedure.
 
 ### Competition
 
@@ -1675,6 +1802,43 @@ Run on 2026-08-09 against the current working trees:
 - GitHub Actions CI workflows were added to both repositories. They are ready
   to run on pushes and pull requests, but have not yet been host-verified
   because the changes are not pushed.
+
+Run on 2026-08-13 for Event registration and admission:
+
+- Backend aggregate 223/223 passed, including 78 competition policy checks,
+  42 competition replica-set integrations, and 13 focused Event admission
+  cases covering final-seat races, idempotent retries, FIFO promotion and fair
+  re-entry, invitation consumption/restoration/revocation, all-or-nothing
+  race rollback, approval readiness, bounded cursors, and safe serialization.
+- Frontend 56/56, full lint, and the 530-module production build passed.
+- Independent audit found no remaining code-level must-fix. Real desktop/mobile
+  browser/API checks passed player register/cancel with authoritative counts,
+  staff read-only visibility with no mutation controls, and Platform Admin
+  bounded player search plus invite/revoke. The gate found and fixed the
+  revoked-player response summary and nullable review selection warning.
+- Temporary users, Event records, invitation/registration evidence, sessions,
+  password override, and Redis/backend verification processes were removed;
+  development ports 6379 and 8080 were closed.
+
+Run on 2026-08-13 for Event first-stage generation and operator handoff:
+
+- Backend aggregate 237/237 passed, including 79 competition policy checks,
+  55 competition replica-set integrations, and 13 focused Event-stage cases.
+- Frontend 62/62, full lint, and the 532-module production build passed.
+- Independent audit verified reviewed snapshots/plans, due-job/run coupling,
+  transactional freeze and crash rollback, bounded Stage/Batch reads, safe
+  player-own-batch serialization, recovery taxonomy, and transactional
+  Match/Batch/Stage/Run start propagation.
+- Real Platform Admin, two-player, and scoped Match Operator sessions generated
+  and ran one Event Match through live status. The 390x844 player view had no
+  horizontal overflow; a fresh post-fix operator tab had zero console warnings
+  or errors. The gate corrected null frozen-date display and the string versus
+  populated EventBatch PropType contract.
+- All temporary records, password override, sessions, Redis/backend processes,
+  logs, and verification files were removed; ports 6379 and 8080 were closed.
+- Production worker deployment remains unproven and must stay an operations
+  gate until `npm run worker:events` is separately supervised with restart and
+  monitoring evidence.
 
 Not run or not currently available: automated browser end-to-end tests for the
 full multi-user Quick Match lifecycle, payment-provider sandbox certification, remaining-domain

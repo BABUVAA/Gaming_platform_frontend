@@ -25,6 +25,7 @@ const LazyComponents = {
   StaffDashboard: lazy(() => import("../pages/StaffDashboard.jsx")),
   StaffAccessControl: lazy(() => import("../pages/StaffAccessControl.jsx")),
   EventManagerDashboard: lazy(() => import("../pages/EventManagerDashboard.jsx")),
+  Events: lazy(() => import("../pages/Events.jsx")),
   GameManagerDashboard: lazy(() => import("../pages/GameManagerDashboard.jsx")),
   Login: lazy(() => import("../pages/Login")),
   SignUp: lazy(() => import("../pages/SignUp")),

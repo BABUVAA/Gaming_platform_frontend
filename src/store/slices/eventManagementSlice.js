@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import createApiThunk from "../thunks/createApiThunk";
+import createApiThunk from "../thunks/createApiThunk.js";
 
 export const fetchManagedEvents = createApiThunk(
   "eventManagement/fetchManagedEvents",

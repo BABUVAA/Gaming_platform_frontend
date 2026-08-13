@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-11
+Last updated: 2026-08-13
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -34,20 +34,23 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 
 ## Current Verified State
 
-- Planning estimate: approximately 62% of the complete roadmap, 76% of the
+- Planning estimate: approximately 76% of the complete roadmap, 88% of the
   core playable platform, and 42% ready for unrestricted real-money traffic.
   These are planning estimates, not completion evidence.
-- Backend aggregate: 206/206 passed on 2026-08-11.
-- Frontend aggregate: 52/52 passed; full lint and 526-module production build
-  passed on 2026-08-11.
+- Latest affected backend gates: competition policy 97/97, competition
+  integration 67/67 before final targeted additions, and 19 focused
+  advancement/recovery cases passed. A later full test wrapper timed out under
+  local process contention without reporting a failure.
+- Frontend aggregate: 72/72 passed; full lint and 535-module production build
+  passed on 2026-08-13.
 - Owner-only immutable wallet history and independent reviewed prize release
   are complete.
 - Paid entry and withdrawal requests remain intentionally blocked in normal
   runtime. Internal Solo/Team money flows are fully proven; external PhonePe
   and payout adapter/worker/sandbox gates remain red.
-- Both worktrees were clean before the final backend profile-route guard fix.
-  Current intentional backend changes are `routes/userRoutes.js` and
-  `tests/playerParticipationPolicy.test.js`; tracker changes are intentional.
+- Current worktrees contain the intentional completed vertical-slice changes
+  recorded below. Browser fixtures, sessions, temporary credentials, and local
+  Event records were removed after verification; ports 8080 and 6379 are closed.
 
 ## Completed Slice: Staff Read-Only Player Visibility
 
@@ -108,14 +111,130 @@ recovery are covered; legacy queue POST is zero-write 410; historical reads are
 deliberately retained. Backend 206/206 and frontend 52/52 passed. Desktop/mobile
 browser and configured-environment dry-run passed with fixtures cleaned.
 
-## Next Slice: Event MVP (Not Started)
+## Completed Slice: Event Registration and Admission
 
-Keep EventTemplate/EventRun as governance records. First add separate,
-transactional EventRegistration records for `open`, `invitation_only`, and
-`limited_seats` Runs: verified-player eligibility, open/close window, one
-registration per player, capacity, and explicit waitlist policy. Rounds,
-batches, leaderboards, disputes, settlement, notifications, and jobs follow
-only after this boundary is verified.
+Completed and verified 2026-08-13. `EventRegistration` and platform-owned
+`EventInvitation` are separate from EventRun planning records. Open,
+invitation-only, and limited-seat admission enforce verified-player identity,
+registration windows, capacity, optional FIFO waitlists, safe cancellation and
+promotion, fair re-entry order, invitation consumption/restoration/revocation,
+and transactional all-or-nothing counters. Platform Admin invitation-run
+discovery, bounded verified-player search, paginated history, and safe
+serializers are Redux-owned. Approval discloses and validates admission terms.
+Staff sees only read-only Event availability.
+
+The final gate passed 13 Event replica-set cases, 223 backend aggregate checks,
+56 frontend checks, lint, a 530-module build, independent audit, and real
+desktop/mobile browser/API workflows for player register/cancel, staff denial,
+and Platform Admin invite/revoke. The browser gate found and fixed the revoked
+player-summary response and a nullable review selection warning.
+
+## Completed Slice: Event First-Stage Generation and Handoff
+
+Completed locally and verified 2026-08-13. Reviewed solo single-elimination
+plans now close registration through a durable job, freeze the admitted and
+eligible roster once, and generate deterministic EventStage, EventBatch, and
+first-class Event Match records. Team Events and implicit byes fail closed.
+Recovery is bounded, classified, and audited. Player reads expose only the
+viewer’s batch; scoped Match Operators claim and operate Event Matches.
+
+The final gate passed 13/13 Event-stage replica cases, backend 237/237,
+frontend 62/62, lint/build, independent audit, and real Platform Admin,
+two-player, and Match Operator desktop/mobile workflows. Starting the Match
+transactionally moved Match, Batch, Stage, and Run to `in_progress`; a fresh
+operator tab was console-clean. Temporary fixtures, credentials, logs, and
+ports 8080/6379 were cleaned. Production automation still requires a deployed,
+supervised `npm run worker:events` process with restart/monitoring evidence.
+
+## Completed Slice: Event Advancement and Sporting Completion
+
+Completed locally and verified 2026-08-13. Immutable dispute-closed outcomes
+drive restart-safe leased jobs, deterministic later stages, tied bounded
+standings, and durable sporting completion. The independent audit was clear;
+19 backend advancement/recovery cases and frontend 66/66 plus lint/build passed.
+A real four-player browser/API bracket displayed the champion and placements
+`1, 2, 3, 3`. Temporary data, credentials, logs, and ports were removed.
+
+Event financial settlement remains explicitly `not_configured` and Event
+wallet writes are forbidden. Roster-freeze and final-results notifications use
+a transactionally created outbox, unique durable notification source links,
+and the existing Event worker retry loop. Production still requires a deployed,
+supervised Event worker.
+
+Operational baseline refinement: backend exposes public `/healthz` liveness
+and fail-closed `/readyz` dependency readiness checks. Configure the deployed
+web service to use `/readyz`; deploy `npm run worker:events` separately with
+the same MongoDB and Redis configuration.
+
+Observability refinement: HTTP responses carry a bounded request ID and safe
+structured completion/error logs omit request bodies, credentials, identifiers,
+and raw network addresses. Centralized log collection, metrics/alerts, SLOs,
+and incident drills remain production operations work.
+
+Dependency audit: backend production dependencies audit clean after compatible
+lockfile updates. Frontend has two moderate React Router v6 advisories; its
+upstream fix is v7.18+, which needs a dedicated route-compatibility migration.
+
+Scale refinement: player notifications are owner-only, cursor-paginated with a
+25-item default/50-item maximum, explicitly serialized, and append older pages
+without replacing realtime notifications. Other legacy/social/admin list reads
+remain for the API-pagination audit.
+
+Frontend delivery refinement: Vite now emits cacheable framework/state/realtime
+and icon vendor chunks; the largest build chunk dropped from 508 kB to 261 kB
+without changing route ownership. Further browser/component coverage remains.
+
+Security hardening refinement: auth/signup/email recovery/verification,
+password-change, and refresh limits use shared atomic Redis counters with
+hash-only client correlation and fail closed when Redis protection is down.
+Staff access, Event governance, operator, and financial mutations use the same
+protection. MFA and actionable alerts remain future work.
+
+## Completed Slice: Game Manager Operational Supervision
+
+Completed locally and verified 2026-08-13. `/staff/games` now provides a
+server-scoped, read-only attention queue for unassigned, delayed,
+result-pending, and disputed Matches plus bounded operator action history for
+each assigned game. It exposes no player rosters, emails, lobby secrets,
+configuration commands, assignment controls, Event approval, or financial
+data. Active Game Manager assignment and `gameScopes` remain the authority.
+
+Backend competition policy passed 82/82; frontend passed 68/68, full lint, and
+the 533-module production build. A real seeded Game Manager loaded the assigned
+BGMI workspace on desktop and 390px mobile; both new sections rendered without
+horizontal overflow or console warnings/errors. Temporary processes and logs
+were removed, and ports 8080/6379 were closed.
+
+## Completed Slice: Governance Staff Profiles
+
+Completed locally and verified 2026-08-13. Platform/Super Admin Staff Directory
+rows now open a compact read-only profile with current role/scope status,
+active-role count, recent service count, and up to 50 server-filtered service
+and access records. Role suspension, revocation, reassignment, and scope edits
+remain outside the drawer on their existing explicit controls. The endpoint is
+still protected by staff-management policy and rejects malformed staff IDs.
+
+Backend competition/staff policy passed 92/92; frontend passed 70/70, full
+lint, and the 533-module build. A real Platform Admin opened a multi-role staff
+profile on desktop and 390px mobile with no horizontal overflow or console
+warnings/errors. Its temporary password was restored and ports/logs cleaned.
+
+## Completed Slice: Platform Security Attention
+
+Completed locally and verified 2026-08-13. Platform/Super Admin now has a
+read-only Security Attention workspace backed by durable, 90-day retained
+signals: blocked public-signup privilege-field injection, refresh-token replay,
+and session fingerprint mismatch. Suspicious refresh events revoke the session
+as before and additionally persist hash-only evidence. The queue is cursor
+bounded (25 default, 50 maximum), exposes only type/severity/time, blocked
+field names, and short correlation prefixes; it never returns credentials,
+tokens, raw IP addresses, full hashes, or player records. No ban, session
+revoke, delete, or financial action is exposed from this UI.
+
+Backend policy passed 97/97; frontend passed 72/72, lint, and a 535-module
+production build. A real Platform Admin saw high/medium seeded signals on
+desktop and 390px mobile with no overflow or console warnings/errors.
+Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
 
 ## Latest Small Fix: Account Email Presentation
 
@@ -130,9 +249,19 @@ only after this boundary is verified.
 
 ## Work Immediately After This Slice
 
-1. Deliberate paid-entry enablement only after external provider gates turn green.
-2. Event registration/rounds MVP, remaining staff workflows, then production
-   hardening and final audit.
+1. In progress: Event placement reward tables now have Event Manager draft UI,
+   server validation, Platform-Admin review disclosure, and a governed release
+   view. Replica-set financial proof covers tied-place allocation, one pending
+   ledger entry per winner, approver/recipient denial, concurrent idempotent
+   release, and exact `withdrawable` movement. Focused frontend Event tests,
+   lint, and the 548-module production build pass. Finish browser/API proof and
+   final financial audit before using it.
+   Local browser prerequisite observed 2026-08-13: frontend smoke loads clean,
+   but backend startup correctly fails closed until the configured Redis service
+   is reachable. Start Redis before the backend for the multi-role reward gate.
+2. Deploy and monitor the continuous Event worker (`npm run worker:events`).
+3. Continue production hardening and final audit.
+4. Enable paid entry only after external provider gates turn green.
 
 ## Fast Verification Protocol
 

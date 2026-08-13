@@ -48,6 +48,13 @@ export const fetchAccessActivity = createApiThunk("accessControl/activity", {
   errorMessage: "Unable to load staff history.",
   toast: { error: true },
 });
+export const fetchStaffProfileActivity = createApiThunk("accessControl/profileActivity", {
+  path: "/api/access-control/activity",
+  getParams: (userId) => ({ limit: 50, userId }),
+  selectData: field("activity"),
+  errorMessage: "Unable to load this staff profile history.",
+  toast: { error: true },
+});
 
 const mutation = (type, method, path, dataField, errorMessage, getBody) =>
   createApiThunk(type, {
@@ -93,6 +100,7 @@ const thunks = [
   fetchAccessPolicy, fetchScopeGames, findAccessCandidate,
   fetchAccessAssignments, fetchStaffRecommendations, fetchAccessReports,
   fetchAccessActivity, createAccessAssignment, createStaffRecommendation,
+  fetchStaffProfileActivity,
   reviewStaffRecommendation, withdrawStaffRecommendation,
   changeAccessAssignmentStatus, changeAccessAssignmentScopes,
 ];
@@ -107,6 +115,7 @@ const accessControlSlice = createSlice({
   initialState: {
     roles: [], manageableRoles: [], recommendableRoles: [], scopeGames: [],
     candidate: null, assignments: [], recommendations: [], reports: [], activity: [],
+    profileActivity: [], profileActivityStatus: "idle",
     pendingRequests: 0, isLoading: false, error: null,
   },
   reducers: {
@@ -125,6 +134,18 @@ const accessControlSlice = createSlice({
       .addCase(fetchStaffRecommendations.fulfilled, (state, action) => { state.recommendations = action.payload || []; })
       .addCase(fetchAccessReports.fulfilled, (state, action) => { state.reports = action.payload || []; })
       .addCase(fetchAccessActivity.fulfilled, (state, action) => { state.activity = action.payload || []; });
+    builder
+      .addCase(fetchStaffProfileActivity.pending, (state) => {
+        state.profileActivity = [];
+        state.profileActivityStatus = "loading";
+      })
+      .addCase(fetchStaffProfileActivity.fulfilled, (state, action) => {
+        state.profileActivity = action.payload || [];
+        state.profileActivityStatus = "succeeded";
+      })
+      .addCase(fetchStaffProfileActivity.rejected, (state) => {
+        state.profileActivityStatus = "failed";
+      });
 
     [createAccessAssignment, changeAccessAssignmentScopes]
       .forEach((thunk) => builder.addCase(thunk.fulfilled, (state, action) => {

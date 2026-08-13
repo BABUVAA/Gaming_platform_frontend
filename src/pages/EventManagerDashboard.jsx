@@ -22,11 +22,20 @@ const initialTemplate = {
 };
 
 const initialRun = {
+  admissionPolicy: "open",
+  registrationCapacity: "16",
   registrationClosesAt: "",
   registrationOpensAt: "",
   startsAt: "",
   templateId: "",
   title: "",
+  waitlistEnabled: false,
+  participantsPerMatch: "2",
+  advanceCount: "1",
+  seedingPolicy: "registration_order",
+  batchSpacingMinutes: "10",
+  checkInMinutesBefore: "15",
+  rewardRows: [],
 };
 
 const editableStatuses = new Set(["draft", "changes_requested"]);
@@ -65,6 +74,10 @@ const EventManagerDashboard = () => {
 
   const selectedGame = games.find((game) => game._id === template.gameId);
   const approvedTemplates = templates.filter((item) => item.status === "active");
+  const selectedRunTemplate = approvedTemplates.find(
+    (item) => item._id === run.templateId,
+  );
+  const teamExecutionUnsupported = selectedRunTemplate?.teamSize > 1;
 
   const updateTemplate = (field, value) => {
     // Changing games invalidates capabilities selected from the previous game.
@@ -96,9 +109,35 @@ const EventManagerDashboard = () => {
 
   const saveRun = async (event) => {
     event.preventDefault();
+    const payload = {
+      admissionPolicy: run.admissionPolicy,
+      executionPlan: {
+        advanceCount: Number(run.advanceCount),
+        batchSpacingMinutes: Number(run.batchSpacingMinutes),
+        checkInMinutesBefore: Number(run.checkInMinutesBefore),
+        format: "single_elimination",
+        participantsPerMatch: Number(run.participantsPerMatch),
+        seedingPolicy: run.seedingPolicy,
+      },
+      registrationCapacity: Number(run.registrationCapacity),
+      rewardTerms: {
+        currency: "INR",
+        placements: run.rewardRows.map((row) => ({
+          place: Number(row.place),
+          // The UI accepts rupees, while the money boundary accepts paise.
+          amountMinor: Math.round(Number(row.amountRupees) * 100),
+        })),
+      },
+      registrationClosesAt: run.registrationClosesAt,
+      registrationOpensAt: run.registrationOpensAt,
+      startsAt: run.startsAt,
+      templateId: run.templateId,
+      title: run.title,
+      waitlistEnabled: run.waitlistEnabled,
+    };
     const action = editingRunId
-      ? updateManagedEventRun({ changes: run, runId: editingRunId })
-      : createManagedEventRun(run);
+      ? updateManagedEventRun({ changes: payload, runId: editingRunId })
+      : createManagedEventRun(payload);
 
     try {
       await dispatch(action).unwrap();
@@ -126,14 +165,52 @@ const EventManagerDashboard = () => {
   const editRun = (item) => {
     setEditingRunId(item._id);
     setRun({
+      admissionPolicy: item.admissionPolicy || "open",
+      registrationCapacity: String(item.registrationCapacity || 16),
       registrationClosesAt: toDateTimeLocal(item.registrationClosesAt),
       registrationOpensAt: toDateTimeLocal(item.registrationOpensAt),
       startsAt: toDateTimeLocal(item.startsAt),
       templateId: getReferenceId(item.template),
       title: item.title || "",
+      waitlistEnabled: item.waitlistEnabled === true,
+      participantsPerMatch: String(
+        item.executionPlan?.participantsPerMatch || 2,
+      ),
+      advanceCount: String(item.executionPlan?.advanceCount || 1),
+      batchSpacingMinutes: String(
+        item.executionPlan?.batchSpacingMinutes ?? 10,
+      ),
+      checkInMinutesBefore: String(
+        item.executionPlan?.checkInMinutesBefore ?? 15,
+      ),
+      seedingPolicy:
+        item.executionPlan?.seedingPolicy || "registration_order",
+      rewardRows: (item.rewardTerms?.placements || []).map((item) => ({
+        place: String(item.place),
+        amountRupees: String(item.amountMinor / 100),
+      })),
     });
     window.scrollTo({ behavior: "smooth", top: 0 });
   };
+
+  const updateRewardRow = (index, field, value) => {
+    setRun((current) => ({
+      ...current,
+      rewardRows: current.rewardRows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row,
+      ),
+    }));
+  };
+
+  const addRewardRow = () => setRun((current) => ({
+    ...current,
+    rewardRows: [...current.rewardRows, { place: String(current.rewardRows.length + 1), amountRupees: "" }],
+  }));
+
+  const removeRewardRow = (index) => setRun((current) => ({
+    ...current,
+    rewardRows: current.rewardRows.filter((_, rowIndex) => rowIndex !== index),
+  }));
 
   const submitForReview = async (kind, id) => {
     const submissionKey = [kind, id].join(":");
@@ -318,6 +395,12 @@ const EventManagerDashboard = () => {
                 </option>
               ))}
             </select>
+            {teamExecutionUnsupported ? (
+              <p className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">
+                Team Event execution is not available yet. Choose an approved
+                solo template for this first-stage workflow.
+              </p>
+            ) : null}
             {[
               ["registrationOpensAt", "Registration opens"],
               ["registrationClosesAt", "Registration closes"],
@@ -336,8 +419,152 @@ const EventManagerDashboard = () => {
                 />
               </label>
             ))}
+            <label className="text-sm text-slate-300">
+              Admission policy
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) =>
+                  setRun({
+                    ...run,
+                    admissionPolicy: event.target.value,
+                    waitlistEnabled:
+                      event.target.value === "limited_seats"
+                        ? run.waitlistEnabled
+                        : false,
+                  })
+                }
+                value={run.admissionPolicy}
+              >
+                <option value="open">Open registration</option>
+                <option value="invitation_only">Invitation only</option>
+                <option value="limited_seats">Limited seats</option>
+              </select>
+            </label>
+            <label className="text-sm text-slate-300">
+              Registration capacity
+              <input
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                min="1"
+                onChange={(event) =>
+                  setRun({ ...run, registrationCapacity: event.target.value })
+                }
+                required
+                type="number"
+                value={run.registrationCapacity}
+              />
+            </label>
+            {run.admissionPolicy === "limited_seats" ? (
+              <label className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-sm text-slate-200">
+                <input
+                  checked={run.waitlistEnabled}
+                  onChange={(event) =>
+                    setRun({ ...run, waitlistEnabled: event.target.checked })
+                  }
+                  type="checkbox"
+                />
+                Allow waitlist after every seat is filled
+              </label>
+            ) : null}
+            <fieldset className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+              <legend className="px-2 text-sm font-bold text-white">
+                First-stage plan
+              </legend>
+              <p className="mb-3 text-xs leading-5 text-slate-500">
+                Solo Event registrations are seeded in registration order when
+                Platform Admin closes registration.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-sm text-slate-300">
+                  Players per match
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                    max="2"
+                    min="2"
+                    onChange={(event) =>
+                      setRun({
+                        ...run,
+                        participantsPerMatch: event.target.value,
+                      })
+                    }
+                    required
+                    type="number"
+                    value={run.participantsPerMatch}
+                  />
+                </label>
+                <label className="text-sm text-slate-300">
+                  Advance per batch
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                    max="1"
+                    min="1"
+                    onChange={(event) =>
+                      setRun({
+                        ...run,
+                        advanceCount: event.target.value,
+                      })
+                    }
+                    required
+                    type="number"
+                    value={run.advanceCount}
+                  />
+                </label>
+                <label className="text-sm text-slate-300">
+                  Minutes between batches
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                    max="1440"
+                    min="0"
+                    onChange={(event) =>
+                      setRun({
+                        ...run,
+                        batchSpacingMinutes: event.target.value,
+                      })
+                    }
+                    required
+                    type="number"
+                    value={run.batchSpacingMinutes}
+                  />
+                </label>
+                <label className="text-sm text-slate-300">
+                  Check-in opens before (minutes)
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                    max="1440"
+                    min="0"
+                    onChange={(event) =>
+                      setRun({
+                        ...run,
+                        checkInMinutesBefore: event.target.value,
+                      })
+                    }
+                    required
+                    type="number"
+                    value={run.checkInMinutesBefore}
+                  />
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="rounded-2xl border border-emerald-300/20 bg-emerald-300/5 p-4">
+              <legend className="px-2 text-sm font-bold text-white">Placement rewards</legend>
+              <p className="mb-3 text-xs leading-5 text-slate-400">
+                Optional fixed rewards in rupees. A tied standing gives every player at that place the same reward. Platform Admin reviews this table before it is locked.
+              </p>
+              <div className="space-y-2">
+                {run.rewardRows.map((row, index) => (
+                  <div className="grid grid-cols-[1fr_1fr_auto] gap-2" key={`${index}-${row.place}`}>
+                    <input aria-label={`Reward place ${index + 1}`} className="rounded-xl border border-slate-700 bg-slate-900 p-3" min="1" onChange={(event) => updateRewardRow(index, "place", event.target.value)} placeholder="Place" required type="number" value={row.place} />
+                    <input aria-label={`Reward amount ${index + 1}`} className="rounded-xl border border-slate-700 bg-slate-900 p-3" min="0.01" onChange={(event) => updateRewardRow(index, "amountRupees", event.target.value)} placeholder="Rupees" required step="0.01" type="number" value={row.amountRupees} />
+                    <button className="rounded-xl border border-rose-400/30 px-3 text-sm font-bold text-rose-200" onClick={() => removeRewardRow(index)} type="button">Remove</button>
+                  </div>
+                ))}
+              </div>
+              <button className="mt-3 rounded-xl border border-emerald-300/30 px-3 py-2 text-sm font-bold text-emerald-100" onClick={addRewardRow} type="button">Add placement reward</button>
+            </fieldset>
             <div className="flex gap-2">
-              <button className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950">
+              <button
+                className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950 disabled:opacity-50"
+                disabled={teamExecutionUnsupported}
+              >
                 {editingRunId ? "Save changes" : "Save draft"}
               </button>
               {editingRunId && (
@@ -426,6 +653,13 @@ const EventManagerDashboard = () => {
                   <p className="mt-1 text-sm text-slate-400">
                     {new Date(item.startsAt).toLocaleString()} / revision {item.revision || 1}
                   </p>
+                  {item.executionPlan ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Stage 1 / {item.executionPlan.participantsPerMatch} players per match
+                      / top {item.executionPlan.advanceCount} advance /
+                      registration order
+                    </p>
+                  ) : null}
                 </div>
                 <span className="rounded-full bg-slate-800 px-3 py-1 text-xs capitalize text-cyan-200">
                   {formatStatus(item.status)}

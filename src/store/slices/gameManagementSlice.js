@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import createApiThunk from "../thunks/createApiThunk";
+import createApiThunk from "../thunks/createApiThunk.js";
 
 // Game Manager data stays separate from the admin catalog. This endpoint is
 // read-only operational visibility, not a path to change game configuration.

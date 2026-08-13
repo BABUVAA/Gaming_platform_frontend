@@ -14,6 +14,8 @@ import {
   reviewEventRun,
   reviewEventTemplate,
 } from "../../store/slices/eventReviewSlice";
+import EventInvitationManagement from "./EventInvitationManagement.jsx";
+import EventStageManagement from "./EventStageManagement.jsx";
 
 const staffSummaryShape = PropTypes.shape({
   profile: PropTypes.shape({ username: PropTypes.string }),
@@ -24,6 +26,10 @@ const eventRecordShape = PropTypes.shape({
   createdBy: staffSummaryShape,
   game: PropTypes.shape({ name: PropTypes.string }),
   mode: PropTypes.string,
+  admissionPolicy: PropTypes.string,
+  registrationCapacity: PropTypes.number,
+  registrationClosesAt: PropTypes.string,
+  registrationOpensAt: PropTypes.string,
   revision: PropTypes.number,
   startsAt: PropTypes.string,
   submittedAt: PropTypes.string,
@@ -31,6 +37,29 @@ const eventRecordShape = PropTypes.shape({
   teamSize: PropTypes.number,
   template: PropTypes.shape({ title: PropTypes.string }),
   title: PropTypes.string,
+  waitlistEnabled: PropTypes.bool,
+  executionPlan: PropTypes.shape({
+    advanceCount: PropTypes.number,
+    batchSpacingMinutes: PropTypes.number,
+    checkInMinutesBefore: PropTypes.number,
+    format: PropTypes.string,
+    participantsPerMatch: PropTypes.number,
+    seedingPolicy: PropTypes.string,
+  }),
+  formatSnapshot: PropTypes.shape({
+    gameKey: PropTypes.string,
+    map: PropTypes.string,
+    mode: PropTypes.string,
+    teamSize: PropTypes.number,
+    templateRevision: PropTypes.number,
+  }),
+  rewardTerms: PropTypes.shape({
+    currency: PropTypes.string,
+    placements: PropTypes.arrayOf(PropTypes.shape({
+      amountMinor: PropTypes.number,
+      place: PropTypes.number,
+    })),
+  }),
 });
 
 const formatDate = (value) => {
@@ -62,6 +91,28 @@ const ReviewCard = ({ item, kind, onChoose, selected }) => {
           <p className="mt-1 text-sm text-slate-400">
             {gameName} {isRun ? `/ ${formatDate(item.startsAt)}` : `/ ${item.mode} / ${item.teamSize} player team`}
           </p>
+          {isRun ? (
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              Registration {formatDate(item.registrationOpensAt)} to {formatDate(item.registrationClosesAt)} / {item.admissionPolicy?.replaceAll("_", " ") || "admission not set"} / {item.registrationCapacity || 0} seats / waitlist {item.waitlistEnabled ? "on" : "off"}
+            </p>
+          ) : null}
+          {isRun && item.executionPlan ? (
+            <p className="mt-2 text-xs leading-5 text-cyan-100/70">
+              {item.executionPlan.format?.replaceAll("_", " ")} / {item.executionPlan.participantsPerMatch} players per match / top {item.executionPlan.advanceCount} advance / {item.executionPlan.batchSpacingMinutes} minute spacing / check-in {item.executionPlan.checkInMinutesBefore} minutes before / {item.executionPlan.seedingPolicy?.replaceAll("_", " ")}
+            </p>
+          ) : null}
+          {isRun && item.formatSnapshot ? (
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              Locked format / {item.formatSnapshot.gameKey} / {item.formatSnapshot.mode} / {item.formatSnapshot.map || "no map"} / {item.formatSnapshot.teamSize}-player entry / template revision {item.formatSnapshot.templateRevision}
+            </p>
+          ) : null}
+          {isRun && item.rewardTerms?.placements?.length ? (
+            <p className="mt-2 text-xs leading-5 text-emerald-100/80">
+              Placement rewards: {item.rewardTerms.placements.map((reward) => `#${reward.place} INR ${(reward.amountMinor / 100).toFixed(2)}`).join(" / ")}
+            </p>
+          ) : isRun ? (
+            <p className="mt-2 text-xs text-slate-500">No placement rewards proposed.</p>
+          ) : null}
         </div>
         <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-200">
           Review ready
@@ -156,6 +207,8 @@ const EventReviewQueue = () => {
         </div>
         <ReviewPanel decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} />
       </div>
+      <EventInvitationManagement />
+      <EventStageManagement />
     </section>
   );
 };
@@ -175,7 +228,7 @@ QueueGroup.propTypes = {
   items: PropTypes.arrayOf(eventRecordShape).isRequired,
   kind: PropTypes.oneOf(["template", "run"]).isRequired,
   onChoose: PropTypes.func.isRequired,
-  selected: PropTypes.shape({ id: PropTypes.string }).isRequired,
+  selected: PropTypes.shape({ id: PropTypes.string }),
   title: PropTypes.string.isRequired,
 };
 

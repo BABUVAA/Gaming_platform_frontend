@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FiActivity, FiAlertTriangle, FiRadio, FiRefreshCw, FiUsers } from "react-icons/fi";
+import { FiActivity, FiAlertTriangle, FiClock, FiRadio, FiRefreshCw, FiUsers } from "react-icons/fi";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -11,6 +11,11 @@ const formatSchedule = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Schedule pending";
   return new Intl.DateTimeFormat("en-IN", { day: "numeric", hour: "numeric", minute: "2-digit", month: "short" }).format(date);
+};
+
+const formatAction = (entry) => {
+  if (entry.command) return entry.command.replaceAll("_", " ");
+  return entry.action?.replaceAll("_", " ").toLowerCase() || "operation updated";
 };
 
 const Metric = ({ label, value, warning = false }) => (
@@ -89,10 +94,47 @@ const GameManagerDashboard = () => {
               </div>
 
               <div className="mt-6 border-t border-slate-800 pt-5">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Attention queue</p>
+                <div className="mt-3 space-y-2">
+                  {(item.attention || []).map((match) => (
+                    <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 px-3 py-3" key={match._id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-slate-100">{match.title}</p>
+                          <p className="mt-1 text-xs text-amber-200">{match.reason}</p>
+                        </div>
+                        <span className="shrink-0 text-xs font-bold capitalize text-slate-400">{match.status.replaceAll("_", " ")}</span>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">
+                        {formatSchedule(match.scheduledFor)} / {match.assignedOperator?.username || "Unassigned"}
+                      </p>
+                    </div>
+                  ))}
+                  {(item.attention || []).length === 0 && <p className="text-sm text-slate-500">No delayed or disputed work needs attention.</p>}
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-slate-800 pt-5">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Operator workload</p>
                 <div className="mt-3 space-y-2">
                   {item.operators.map(({ activeMatches, operator }) => <div className="flex items-center justify-between rounded-xl bg-slate-950/70 px-3 py-3" key={operator._id}><span className="inline-flex items-center gap-2 text-sm font-bold text-slate-200"><FiUsers className="text-cyan-300" />{operator.username}</span><span className="text-sm text-slate-400">{activeMatches} active</span></div>)}
                   {item.operators.length === 0 && <p className="text-sm text-slate-500">No assigned operator workload yet.</p>}
+                </div>
+              </div>
+
+              <div className="mt-6 border-t border-slate-800 pt-5">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Operational history</p>
+                <div className="mt-3 space-y-2">
+                  {(item.recentActivity || []).map((entry) => (
+                    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 px-3 py-3" key={entry._id}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold capitalize text-slate-200">{formatAction(entry)}</p>
+                        <p className="mt-1 truncate text-xs text-slate-500">{entry.operator?.username || "System"}{entry.toStatus ? ` / ${entry.toStatus.replaceAll("_", " ")}` : ""}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-slate-500"><FiClock />{formatSchedule(entry.createdAt)}</span>
+                    </div>
+                  ))}
+                  {(item.recentActivity || []).length === 0 && <p className="text-sm text-slate-500">No recent operator actions for this game.</p>}
                 </div>
               </div>
 

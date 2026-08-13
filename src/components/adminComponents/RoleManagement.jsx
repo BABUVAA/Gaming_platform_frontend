@@ -13,6 +13,7 @@ import {
   fetchAccessReports,
   fetchScopeGames,
   fetchStaffRecommendations,
+  fetchStaffProfileActivity,
   findAccessCandidate,
   reviewStaffRecommendation,
   withdrawStaffRecommendation,
@@ -59,6 +60,7 @@ const RoleManagement = ({ showStaffingActions = true }) => {
   const [reviewNotes, setReviewNotes] = useState({});
   const [directoryQuery, setDirectoryQuery] = useState("");
   const [directoryRole, setDirectoryRole] = useState("all");
+  const [profileGroup, setProfileGroup] = useState(null);
 
   const loadWorkspace = () => {
     dispatch(fetchAccessPolicy());
@@ -106,6 +108,11 @@ const RoleManagement = ({ showStaffingActions = true }) => {
         return group.assignments.length > 0 && matchesPerson;
       });
   }, [directoryQuery, directoryRole, groupedAssignments]);
+
+  const openStaffProfile = (group) => {
+    setProfileGroup(group);
+    dispatch(fetchStaffProfileActivity(group.user?._id));
+  };
 
   const searchCandidate = async (event) => {
     event.preventDefault();
@@ -229,10 +236,19 @@ const RoleManagement = ({ showStaffingActions = true }) => {
           />
         )}
         {showStaffingActions && tab === "hiring" && <HiringPanel onNoteChange={(id, note) => setReviewNotes((current) => ({ ...current, [id]: note }))} onReview={review} onWithdraw={withdraw} recommendations={state.recommendations} reviewNotes={reviewNotes} />}
-        {tab === "directory" && <DirectoryPanel directoryQuery={directoryQuery} directoryRole={directoryRole} groups={filteredDirectoryGroups} onQueryChange={setDirectoryQuery} onReassign={reassignRole} onRoleChange={setDirectoryRole} onScopeChange={changeScopes} onStatusChange={changeStatus} roles={state.roles} scopeGames={state.scopeGames} />}
+        {tab === "directory" && <DirectoryPanel directoryQuery={directoryQuery} directoryRole={directoryRole} groups={filteredDirectoryGroups} onOpenProfile={openStaffProfile} onQueryChange={setDirectoryQuery} onReassign={reassignRole} onRoleChange={setDirectoryRole} onScopeChange={changeScopes} onStatusChange={changeStatus} roles={state.roles} scopeGames={state.scopeGames} />}
         {tab === "history" && <HistoryPanel activity={state.activity} category={historyCategory} onCategoryChange={filterHistory} reports={state.reports} />}
         {tab === "policy" && <PolicyPanel manageableRoles={state.manageableRoles} recommendableRoles={state.recommendableRoles} roles={state.roles} />}
       </div>
+      {profileGroup && (
+        <StaffProfileDrawer
+          activity={state.profileActivity}
+          assignments={profileGroup.assignments}
+          onClose={() => setProfileGroup(null)}
+          status={state.profileActivityStatus}
+          user={profileGroup.user}
+        />
+      )}
     </section>
   );
 };
@@ -317,7 +333,7 @@ GameChoices.propTypes = { games: PropTypes.array.isRequired, onToggle: PropTypes
 
 const HiringPanel = ({ onNoteChange, onReview, onWithdraw, recommendations, reviewNotes }) => <div className="space-y-4"><SectionHeading title="Hiring queue" text="Recommendations stay powerless until a different authorized reviewer approves them." />{recommendations.map((item) => <article className="rounded-2xl border border-slate-800 bg-slate-950/55 p-5" key={item._id}><div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><p className="text-lg font-black text-white">{personName(item.candidate)}</p><StatusPill status={item.status} text={titleCase(item.status)} /></div><p className="mt-1 text-sm text-slate-400">{item.candidate?.email}</p><p className="mt-3 text-sm text-cyan-100">Requested role: {titleCase(item.role)}</p><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">{item.reason}</p><p className="mt-3 text-xs text-slate-500">Recommended by {personName(item.recommendedBy)} on {formatDate(item.createdAt)} · expires {formatDate(item.expiresAt)}</p>{item.reviewedBy && <p className="mt-2 text-xs text-slate-400">Reviewed by {personName(item.reviewedBy)}: {item.reviewNote || "No note"}</p>}</div>{item.status === "pending" && <div className="w-full max-w-md space-y-2">{item.canReview && <textarea className="min-h-20 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-white" onChange={(event) => onNoteChange(item._id, event.target.value)} placeholder="Review note (required when rejecting)" value={reviewNotes[item._id] || ""} /> }<div className="flex flex-wrap gap-2">{item.canReview && <><button className="rounded-lg bg-emerald-300 px-3 py-2 text-sm font-black text-slate-950" onClick={() => onReview(item._id, "approved")} type="button">Approve</button><button className="rounded-lg border border-rose-400/40 px-3 py-2 text-sm font-bold text-rose-100" disabled={(reviewNotes[item._id] || "").trim().length < 10} onClick={() => onReview(item._id, "rejected")} type="button">Reject</button></>}{item.canWithdraw && <button className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300" onClick={() => onWithdraw(item._id)} type="button">Withdraw</button>}</div></div>}</div></article>)}{recommendations.length === 0 && <Empty text="No hiring recommendations are visible to your current roles." />}</div>;
 
-const DirectoryPanel = ({ directoryQuery, directoryRole, groups, onQueryChange, onReassign, onRoleChange, onScopeChange, onStatusChange, roles, scopeGames }) => {
+const DirectoryPanel = ({ directoryQuery, directoryRole, groups, onOpenProfile, onQueryChange, onReassign, onRoleChange, onScopeChange, onStatusChange, roles, scopeGames }) => {
   const visibleRoleCount = groups.reduce(
     (total, group) => total + group.assignments.length,
     0,
@@ -366,6 +382,7 @@ const DirectoryPanel = ({ directoryQuery, directoryRole, groups, onQueryChange, 
             <AssignmentRow
               assignment={assignment}
               key={assignment._id}
+              onOpenProfile={() => onOpenProfile(group)}
               onScopeChange={onScopeChange}
               onStatusChange={onStatusChange}
               onReassign={onReassign}
@@ -381,7 +398,7 @@ const DirectoryPanel = ({ directoryQuery, directoryRole, groups, onQueryChange, 
   );
 };
 
-const AssignmentRow = ({ assignment, onReassign, onScopeChange, onStatusChange, role, scopeGames, user }) => {
+const AssignmentRow = ({ assignment, onOpenProfile, onReassign, onScopeChange, onStatusChange, role, scopeGames, user }) => {
   const [editing, setEditing] = useState(false);
   const [gameIds, setGameIds] = useState(
     () => assignment.gameScopes?.map((game) => game._id) || [],
@@ -411,6 +428,9 @@ const AssignmentRow = ({ assignment, onReassign, onScopeChange, onStatusChange, 
         </div>
 
         <div className="flex flex-wrap gap-2 lg:justify-end">
+          <button className="rounded-lg border border-slate-600 px-2.5 py-1.5 text-xs font-bold text-slate-200" onClick={onOpenProfile} type="button">
+            Profile
+          </button>
           {role?.scope === "game" && assignment.status !== "revoked" && (
             <button className="rounded-lg border border-sky-400/40 px-2.5 py-1.5 text-xs font-bold text-sky-100" onClick={() => setEditing((value) => !value)} type="button">
               Scope
@@ -457,7 +477,27 @@ const AssignmentRow = ({ assignment, onReassign, onScopeChange, onStatusChange, 
     </div>
   );
 };
-AssignmentRow.propTypes = { assignment: PropTypes.object.isRequired, onReassign: PropTypes.func.isRequired, onScopeChange: PropTypes.func.isRequired, onStatusChange: PropTypes.func.isRequired, role: PropTypes.object, scopeGames: PropTypes.array.isRequired, user: PropTypes.object.isRequired };
+AssignmentRow.propTypes = { assignment: PropTypes.object.isRequired, onOpenProfile: PropTypes.func.isRequired, onReassign: PropTypes.func.isRequired, onScopeChange: PropTypes.func.isRequired, onStatusChange: PropTypes.func.isRequired, role: PropTypes.object, scopeGames: PropTypes.array.isRequired, user: PropTypes.object.isRequired };
+
+const StaffProfileDrawer = ({ activity, assignments, onClose, status, user }) => {
+  const activeCount = assignments.filter((item) => item.status === "active").length;
+  const serviceCount = activity.filter((item) => item.category === "service").length;
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/75" role="presentation">
+      <button aria-label="Close staff profile" className="absolute inset-0 cursor-default" onClick={onClose} type="button" />
+      <aside aria-label="Staff profile" className="relative h-full w-full max-w-lg overflow-y-auto border-l border-slate-700 bg-[#07111f] p-5 shadow-2xl sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Staff profile</p><h2 className="mt-2 truncate text-2xl font-black text-white">{personName(user)}</h2><p className="mt-1 truncate text-sm text-slate-400">{user?.email}</p></div>
+          <button className="rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200" onClick={onClose} type="button">Close</button>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4"><p className="text-xs text-slate-500">Active roles</p><p className="mt-2 text-2xl font-black text-white">{activeCount}</p></div><div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4"><p className="text-xs text-slate-500">Recent service actions</p><p className="mt-2 text-2xl font-black text-white">{serviceCount}</p></div></div>
+        <div className="mt-6"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Role assignments</p><div className="mt-3 space-y-2">{assignments.map((item) => <div className="rounded-xl border border-slate-800 p-3" key={item._id}><div className="flex items-center justify-between gap-3"><p className="text-sm font-bold text-white">{titleCase(item.role)}</p><StatusPill status={item.status} text={titleCase(item.status)} /></div><p className="mt-2 text-xs text-slate-500">{item.gameScopes?.map((game) => game.name).join(", ") || "Platform scope"}</p></div>)}</div></div>
+        <div className="mt-6"><p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Recent service and access history</p><div className="mt-3 space-y-2">{status === "loading" && <p className="text-sm text-slate-500">Loading profile history...</p>}{status !== "loading" && activity.map((item) => <div className="rounded-xl border border-slate-800 p-3" key={item._id}><p className="text-sm text-slate-200">{actionLabels[item.action] || titleCase(item.action)}</p><p className="mt-1 text-xs text-slate-500">{titleCase(item.role)} / {formatDate(item.createdAt)}</p></div>)}{status !== "loading" && activity.length === 0 && <p className="text-sm text-slate-500">No staff history is recorded yet.</p>}</div></div>
+      </aside>
+    </div>
+  );
+};
+StaffProfileDrawer.propTypes = { activity: PropTypes.array.isRequired, assignments: PropTypes.array.isRequired, onClose: PropTypes.func.isRequired, status: PropTypes.string.isRequired, user: PropTypes.object.isRequired };
 
 const HistoryPanel = ({ activity, category, onCategoryChange, reports }) => <div><div className="grid gap-3 md:grid-cols-3">{reports.map((report) => <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4" key={report.role}><p className="text-sm font-bold text-cyan-100">{titleCase(report.role)}</p><p className="mt-2 text-2xl font-black text-white">{report.activeStaff}</p><p className="text-xs text-slate-500">active · {report.serviceActionsLast30Days} service actions in 30 days</p></div>)}</div><div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><SectionHeading title="Who changed what" text="Every row identifies the actor, action, affected person, role, and time." /><select className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" onChange={(event) => onCategoryChange(event.target.value)} value={category}><option value="">All history</option><option value="access">Role history</option><option value="service">Service history</option></select></div><div className="mt-4 space-y-3">{activity.map((item) => <article className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950/55 p-4 md:grid-cols-[1fr_auto]" key={item._id}><div><p className="text-sm text-slate-200"><strong className="text-white">{personName(item.actor)}</strong> {actionLabels[item.action] || titleCase(item.action)} <strong className="text-white">{personName(item.targetUser)}</strong></p><div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-cyan-300/10 px-2 py-1 text-cyan-100">{titleCase(item.role)}</span><span className="rounded-full bg-slate-800 px-2 py-1 text-slate-300">{titleCase(item.category)}</span>{item.metadata?.reviewNote && <span className="text-slate-400">Note: {item.metadata.reviewNote}</span>}</div></div><time className="text-xs text-slate-500">{formatDate(item.createdAt)}</time></article>)}{activity.length === 0 && <Empty text="No history matches this filter." />}</div></div>;
 
@@ -472,7 +512,7 @@ Empty.propTypes = { text: PropTypes.string.isRequired };
 
 PeoplePanel.propTypes = { candidate: PropTypes.object, canAssign: PropTypes.bool.isRequired, canRecommend: PropTypes.bool.isRequired, email: PropTypes.string.isRequired, form: PropTypes.object.isRequired, isLoading: PropTypes.bool.isRequired, needsGames: PropTypes.bool.isRequired, onEmailChange: PropTypes.func.isRequired, onModeChange: PropTypes.func.isRequired, onReasonChange: PropTypes.func.isRequired, onRoleSelect: PropTypes.func.isRequired, onSearch: PropTypes.func.isRequired, onSubmit: PropTypes.func.isRequired, onToggleGame: PropTypes.func.isRequired, roles: PropTypes.array.isRequired, scopeGames: PropTypes.array.isRequired };
 HiringPanel.propTypes = { onNoteChange: PropTypes.func.isRequired, onReview: PropTypes.func.isRequired, onWithdraw: PropTypes.func.isRequired, recommendations: PropTypes.array.isRequired, reviewNotes: PropTypes.object.isRequired };
-DirectoryPanel.propTypes = { directoryQuery: PropTypes.string.isRequired, directoryRole: PropTypes.string.isRequired, groups: PropTypes.array.isRequired, onQueryChange: PropTypes.func.isRequired, onReassign: PropTypes.func.isRequired, onRoleChange: PropTypes.func.isRequired, onScopeChange: PropTypes.func.isRequired, onStatusChange: PropTypes.func.isRequired, roles: PropTypes.array.isRequired, scopeGames: PropTypes.array.isRequired };
+DirectoryPanel.propTypes = { directoryQuery: PropTypes.string.isRequired, directoryRole: PropTypes.string.isRequired, groups: PropTypes.array.isRequired, onOpenProfile: PropTypes.func.isRequired, onQueryChange: PropTypes.func.isRequired, onReassign: PropTypes.func.isRequired, onRoleChange: PropTypes.func.isRequired, onScopeChange: PropTypes.func.isRequired, onStatusChange: PropTypes.func.isRequired, roles: PropTypes.array.isRequired, scopeGames: PropTypes.array.isRequired };
 HistoryPanel.propTypes = { activity: PropTypes.array.isRequired, category: PropTypes.string.isRequired, onCategoryChange: PropTypes.func.isRequired, reports: PropTypes.array.isRequired };
 PolicyPanel.propTypes = { manageableRoles: PropTypes.array.isRequired, recommendableRoles: PropTypes.array.isRequired, roles: PropTypes.array.isRequired };
 RoleManagement.propTypes = { showStaffingActions: PropTypes.bool };

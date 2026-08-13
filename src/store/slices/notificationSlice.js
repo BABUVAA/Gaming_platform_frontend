@@ -7,6 +7,9 @@ import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 const initialState = {
   items: [],
   loading: false,
+  loadingMore: false,
+  hasMore: false,
+  nextCursor: null,
   error: null,
 };
 
@@ -32,12 +35,14 @@ const dedupeNotifications = (notifications = []) => {
 // ✅ Fetch user notifications
 export const fetchNotifications = createAsyncThunk(
   "notifications/fetch",
-  async (_, thunkAPI) => {
+  async ({ cursor = null } = {}, thunkAPI) => {
     try {
       const response = await api.get("/api/notifications", {
         withCredentials: true,
+        params: { limit: 25, ...(cursor ? { cursor } : {}) },
       });
-      return response.data?.data || response.data || [];
+      const data = response.data?.data || {};
+      return { items: Array.isArray(data.items) ? data.items : [], page: data.page || {}, cursor };
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
@@ -57,10 +62,11 @@ export const fetchNotifications = createAsyncThunk(
     }
   },
   {
-    condition: (_, { getState }) => {
+    condition: ({ cursor = null } = {}, { getState }) => {
       // Dashboard effects may mount twice in development Strict Mode. Refuse
       // only an overlapping fetch while allowing later manual refreshes.
-      return getState().notifications.loading !== true;
+      const state = getState().notifications;
+      return cursor ? state.loadingMore !== true : state.loading !== true;
     },
   },
 );
@@ -134,15 +140,21 @@ const notificationSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch notifications
-      .addCase(fetchNotifications.pending, (state) => {
-        state.loading = true;
+      .addCase(fetchNotifications.pending, (state, action) => {
+        if (action.meta.arg?.cursor) state.loadingMore = true;
+        else state.loading = true;
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = dedupeNotifications(action.payload);
+        state.loadingMore = false;
+        const { items, page, cursor } = action.payload;
+        state.items = dedupeNotifications(cursor ? [...state.items, ...items] : items);
+        state.hasMore = page.hasMore === true;
+        state.nextCursor = page.nextCursor || null;
       })
       .addCase(fetchNotifications.rejected, (state) => {
         state.loading = false;
+        state.loadingMore = false;
       })
 
       // Mark as read

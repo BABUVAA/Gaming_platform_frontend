@@ -28,6 +28,22 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          // Keep long-lived framework code separate from route chunks. This
+          // reduces the initial cache miss without changing route ownership.
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (id.includes("react-dom") || id.includes("/react/") || id.includes("react-router")) return "vendor-react";
+            if (id.includes("@reduxjs") || id.includes("react-redux") || id.includes("redux-persist")) return "vendor-state";
+            if (id.includes("socket.io")) return "vendor-realtime";
+            if (id.includes("react-icons")) return "vendor-icons";
+            return "vendor";
+          },
+        },
+      },
+    },
     server: {
       proxy: {
         "/api": backendProxy,

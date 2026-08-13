@@ -36,3 +36,4 @@ export { default as EventReviewQueue } from "./adminComponents/EventReviewQueue.
 export { default as QuickMatchOfferingManagement } from "./adminComponents/QuickMatchOfferingManagement.jsx";
 export { default as PrizeReleaseReview } from "./adminComponents/PrizeReleaseReview.jsx";
 export { default as WithdrawalReview } from "./adminComponents/WithdrawalReview.jsx";
+export { default as SecurityAttention } from "./adminComponents/SecurityAttention.jsx";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
-import { EventReviewQueue, GameCatalog, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement, WithdrawalReview } from "../components";
+import { EventReviewQueue, GameCatalog, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
 
 const ADMIN_AREAS = [
   {
@@ -15,6 +15,12 @@ const ADMIN_AREAS = [
     icon: FiGrid,
     id: "games",
     label: "Game control",
+  },
+  {
+    description: "Authentication replay, fingerprint, and privilege-abuse signals.",
+    icon: FiShield,
+    id: "security",
+    label: "Security Attention",
   },
   {
     description: "Event templates, schedules, and approval decisions.",
@@ -84,6 +90,8 @@ const AdminDashboard = () => {
               <EventReviewQueue />
             ) : activeSection === "quick-matches" ? (
               <QuickMatchOfferingManagement />
+            ) : activeSection === "security" ? (
+              <SecurityAttention />
             ) : activeSection === "prize-releases" ? (
               <PrizeReleaseReview />
             ) : (

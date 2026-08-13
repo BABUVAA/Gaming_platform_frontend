@@ -87,6 +87,13 @@ const staffUtilityNavigation = [
     match: [ROUTES.TOURNAMENT, "/dashboard/tournaments", "/tournamentDetails"],
   },
   {
+    label: "Events",
+    description: "View scheduled Event availability",
+    to: ROUTES.EVENTS,
+    icon: FaTrophy,
+    match: [ROUTES.EVENTS],
+  },
+  {
     label: "Matches",
     description: "View safe match information",
     to: ROUTES.MATCHES,
@@ -141,6 +148,13 @@ const playerNavigation = [
       "/dashboard/tournaments",
       "/tournamentDetails",
     ],
+  },
+  {
+    label: "Events",
+    description: "Register for scheduled competitions",
+    to: ROUTES.EVENTS,
+    icon: FaTrophy,
+    match: [ROUTES.EVENTS],
   },
   {
     label: "Clans",

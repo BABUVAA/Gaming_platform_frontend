@@ -17,6 +17,7 @@ export const ROUTES = {
   OPERATIONS_LEGACY: "/dashboard/operations",
   GAME: "/dashboard/game",
   TOURNAMENT: "/dashboard/tournament",
+  EVENTS: "/dashboard/events",
   MATCHES: "/dashboard/matches",
   CHATS: "/dashboard/chats",
   CLAN: "/dashboard/clan",
@@ -40,6 +41,7 @@ export const ROUTES = {
 export const DASHBOARD_ROUTE_SEGMENTS = {
   GAME: "game",
   TOURNAMENT: "tournament",
+  EVENTS: "events",
   MATCHES: "matches",
   MATCH_ROOM: "matches/:id",
   TOURNAMENT_GAME: "tournament/:game",
