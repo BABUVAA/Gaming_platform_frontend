@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -43,14 +43,18 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   local process contention without reporting a failure.
 - Frontend aggregate: 72/72 passed; full lint and 535-module production build
   passed on 2026-08-13.
+- Production dependency audit 2026-08-14: both frontend and backend
+  `npm audit --omit=dev --json` reports contain zero production dependency
+  vulnerabilities. Deployment and external-provider gates remain separate.
 - Owner-only immutable wallet history and independent reviewed prize release
   are complete.
 - Paid entry and withdrawal requests remain intentionally blocked in normal
   runtime. Internal Solo/Team money flows are fully proven; external PhonePe
   and payout adapter/worker/sandbox gates remain red.
 - Current worktrees contain the intentional completed vertical-slice changes
-  recorded below. Browser fixtures, sessions, temporary credentials, and local
-  Event records were removed after verification; ports 8080 and 6379 are closed.
+  recorded below. Local frontend, backend, MongoDB, and Redis are currently
+  running for the Event-reward browser gate; `/readyz` reports both dependencies
+  ready. Do not treat local processes as production deployment evidence.
 
 ## Completed Slice: Staff Read-Only Player Visibility
 
@@ -171,9 +175,10 @@ structured completion/error logs omit request bodies, credentials, identifiers,
 and raw network addresses. Centralized log collection, metrics/alerts, SLOs,
 and incident drills remain production operations work.
 
-Dependency audit: backend production dependencies audit clean after compatible
-lockfile updates. Frontend has two moderate React Router v6 advisories; its
-upstream fix is v7.18+, which needs a dedicated route-compatibility migration.
+Dependency audit: backend and frontend production dependencies audit clean.
+Frontend now uses React Router v7.18.2 and `npm audit --omit=dev --json`
+reports zero production vulnerabilities; the earlier v6 advisory note is
+retired.
 
 Scale refinement: player notifications are owner-only, cursor-paginated with a
 25-item default/50-item maximum, explicitly serialized, and append older pages
@@ -189,6 +194,21 @@ password-change, and refresh limits use shared atomic Redis counters with
 hash-only client correlation and fail closed when Redis protection is down.
 Staff access, Event governance, operator, and financial mutations use the same
 protection. MFA and actionable alerts remain future work.
+
+Recent-authentication refinement: Account Settings lets a signed-in user
+confirm their current password for a 15-minute sensitive-action window. The
+timestamp lives only in the active Redis session. Platform/Super Admin
+mutations and player payment mutations fail closed with
+`RECENT_AUTHENTICATION_REQUIRED` when it expires; a refresh token never
+extends the window. Backend auth policy/session checks pass 38/38; frontend
+state tests pass 74/74 with lint clean and the 548-module production build
+passes.
+
+Pagination audit refinement: unused unbounded legacy admin list clients for
+users, transactions, and Tournament records are retired on both sides. Their
+old backend paths return stable `410 ADMIN_LIST_ROUTE_RETIRED`; use the
+bounded governance workspaces instead. The focused retirement tests and full
+frontend state suite pass.
 
 ## Completed Slice: Game Manager Operational Supervision
 
@@ -256,10 +276,33 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    release, and exact `withdrawable` movement. Focused frontend Event tests,
    lint, and the 548-module production build pass. Finish browser/API proof and
    final financial audit before using it.
-   Local browser prerequisite observed 2026-08-13: frontend smoke loads clean,
-   but backend startup correctly fails closed until the configured Redis service
-   is reachable. Start Redis before the backend for the multi-role reward gate.
+   Local browser status 2026-08-14: the public shell is console-clean and
+   `/readyz` is green. A real active Event Manager loaded the scoped BGMI Event
+   workspace and placement-reward controls with no console errors. Platform
+   Admin review and independent release still require a deliberately created
+   test Event; do not use or transmit account credentials.
+   Code-level financial audit fixed original-approver release availability in
+   the safe read model and a closure-clock recovery-job delay; the focused
+   placement-reward replica test passes after both corrections.
+   Live Event Manager proof created and submitted a temporary BGMI Event with
+   distinct registration/open/close/start dates and #1/#2/#3 rewards of
+   INR 50/25/10; database evidence matched 5000/2500/1000 minor units. The
+   temporary in-review Run and its review record were removed. The admin queue
+   now visibly requires an independent reviewer for creator/last-submitter
+   proposals and blocks both selection and decision transport; focused tests
+   and lint pass. The remaining reward gate is an independent-admin browser
+   review and release, which needs a separate governance identity.
 2. Deploy and monitor the continuous Event worker (`npm run worker:events`).
+   Backend `render.yaml` now declares it as a separate Render worker beside the
+   `/readyz`-checked API. Configure its same MongoDB/Redis secrets and prove
+   supervision/restart behaviour before counting this as deployed.
+   Backend startup now runs an executable production configuration validator:
+   the web process requires datastore, origin, session, email, and Resend
+   settings; the worker requires its shared datastores. Missing/placeholder
+   settings and any paid-entry enablement fail closed without logging secrets.
+   `PRODUCTION_RUNBOOK.md` records deploy verification and rollback steps.
+   Focused production-validator/Render-blueprint tests pass, preserving the
+   `/readyz` API check, separate Event worker, and paid-entry false default.
 3. Continue production hardening and final audit.
 4. Enable paid entry only after external provider gates turn green.
 

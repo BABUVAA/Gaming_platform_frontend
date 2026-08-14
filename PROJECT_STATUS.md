@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -95,15 +95,66 @@ product domains or spending critical-path time on visual polish:
      movement. Focused frontend Event tests, lint, and the 548-module build
      pass. Browser/API proof and a final financial audit remain before
      completion.
-     Local runtime note 2026-08-13: the frontend public smoke was console-clean;
-     the backend refused startup when Redis at its configured local address was
-     unavailable. This is the expected fail-closed rate-limit/security behavior.
-   - Remaining: Event reward browser verification/final audit and production worker
-     deployment evidence.
+     Local runtime note 2026-08-14: `/readyz` proved MongoDB and Redis ready
+     after Redis was restored. The public frontend shell renders console-clean.
+     The authenticated Event Manager browser gate passed on 2026-08-14:
+     assigned BGMI scope, approved-template selection, supported first-stage
+     controls, and the placement-reward section rendered with no console
+     warnings or errors. No Event data was created or changed. Platform Admin
+     reward review and independent release remain pending.
+     Final code-level financial audit 2026-08-14 fixed the release read model:
+     an Event's original approving administrator now receives
+     `EVENT_PRIZE_INDEPENDENT_REVIEW_REQUIRED` and `canRelease:false` before a
+     command is attempted. The audit also fixed recovery-created first-stage
+     jobs to use the authoritative Event closure clock rather than wall-clock
+     schema defaults. The focused placement-reward replica test passes.
+     Production dependency audit 2026-08-14: `npm audit --omit=dev --json`
+     reported zero production dependency vulnerabilities for both frontend and
+     backend lockfiles. This does not replace deployment, runtime, or provider
+     security validation.
+     Live Event Manager proof created and submitted a temporary BGMI schedule
+     using distinct registration/open/close/start dates and #1/#2/#3 rewards
+     of INR 50/25/10; persisted evidence was 5000/2500/1000 minor units. The
+     temporary Run and review evidence were then removed. The admin queue now
+     visibly requires an independent reviewer for creator/last-submitter
+     proposals and blocks selection plus decision transport before the server
+     policy is reached. Focused Event frontend tests and lint pass.
+   - Remaining: Event reward authenticated browser verification/final audit and
+     production worker deployment evidence. `render.yaml` now declares the
+     separate `egaming-event-worker`; setting its required Render environment
+     values and proving supervision/restart behaviour remains an external gate.
 4. **85% -> 93%: finish role-specific staff workflows.**
    - Complete Platform Admin Event review, Event Manager handoff, Game Manager
      health/escalation, Match Operator workload/handoff, staff profiles, and
-     security-event review with responsive browser checks.
+   security-event review with responsive browser checks.
+
+Operational baseline refinement 2026-08-14: backend web and Event-worker
+startup now execute a fail-closed production configuration validator. It never
+prints secrets, rejects missing/placeholder mandatory values, and rejects any
+attempt to enable paid entry. `PRODUCTION_RUNBOOK.md` documents Render
+deployment checks and a paired web/worker rollback. This is repository-level
+evidence only; target-environment deployment, worker supervision, readiness,
+and restart proof remain external gates. Focused tests lock the `/readyz`
+health check, separate Event worker command, and paid-entry false default.
+
+Recent-authentication refinement 2026-08-14: Account Settings has a
+password-confirmation control that calls the authenticated, rate-limited
+`POST /api/auth/reauthenticate` route. The server stores only a timestamp in
+the active Redis session; it never stores or returns the password. Platform/
+Super Admin mutations and player payment mutations now require that timestamp
+to be fresh for 15 minutes, returning stable
+`RECENT_AUTHENTICATION_REQUIRED` otherwise. Login creates the initial proof;
+refresh does not extend it. Backend auth policy/session checks pass 38/38 and
+frontend state tests pass 74/74 with lint clean and the 548-module production
+build passes.
+
+Pagination audit refinement 2026-08-14: retired the unused, unbounded
+Platform Admin user, transaction, and legacy Tournament list routes. Their
+backend paths now return stable `410 ADMIN_LIST_ROUTE_RETIRED`; their
+unmounted frontend components, exports, and Redux transports are removed.
+Bounded Role Management, Withdrawal Review, Prize Review, and other active
+governance workspaces remain the supported routes. Backend auth checks pass
+38/38; frontend state tests pass 74/74 with lint clean.
 5. **93% -> 100%: production operations and final system audit.**
    - Distributed rate limits, pagination of remaining unbounded reads,
      structured logs/metrics/alerts, background-job operations, accessibility,
@@ -407,13 +458,11 @@ ID only; they deliberately omit bodies, tokens, email addresses, IP addresses,
 and raw identifiers. Production log collection, metrics, alerts, SLOs, and
 incident drills remain external operations gates.
 
-Dependency audit refinement 2026-08-13: semver-compatible lockfile updates
-leave the backend production dependency audit at zero vulnerabilities. The
-frontend production audit has two moderate React Router v6 advisories whose
-upstream remediation requires React Router v7.18+; the attempted upgrade did
-not alter the lockfile before its local registry timeout. Treat that major
-route-library migration as an explicit verified compatibility slice rather
-than silently forcing it during financial/Event work.
+Dependency audit refinement 2026-08-14: backend and frontend production
+dependency audits both report zero vulnerabilities. Frontend is now locked to
+React Router v7.18.2, so the earlier React Router v6 advisory/migration note is
+retired. This audit does not replace browser, authorization, deployment, or
+provider verification.
 
 Current stages/rounds implementation contract:
 

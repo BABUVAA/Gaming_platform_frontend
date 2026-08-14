@@ -8,6 +8,7 @@ import {
   authAction,
   login,
   logout,
+  reauthenticate,
   register,
   SESSION_STATUS,
   verifySession,
@@ -158,6 +159,10 @@ export const useAuthStore = () => {
     return dispatch(logout());
   }, [dispatch]);
 
+  const confirmSensitiveAction = useCallback((currentPassword) => (
+    dispatch(reauthenticate({ currentPassword }))
+  ), [dispatch]);
+
   const clearAuthError = useCallback(() => {
     // Components can clear a displayed authentication error without importing
     // the slice action directly.
@@ -177,6 +182,7 @@ export const useAuthStore = () => {
     signIn,
     signUp,
     signOut,
+    confirmSensitiveAction,
     clearAuthError,
   };
 };

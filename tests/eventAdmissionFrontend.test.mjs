@@ -251,6 +251,10 @@ test("Event governance UI discloses admission terms and avoids an unbounded play
   assert.match(invitationSource, /Search eligible players/);
   assert.match(invitationSource, /bounded to 20/);
   assert.doesNotMatch(invitationSource, /findUsers|\/api\/admin\/findUsers/);
+  assert.match(reviewSource, /Independent review required/);
+  assert.match(reviewSource, /Another admin reviews/);
+  assert.match(reviewSource, /currentUser\?\._id \|\| currentUser\?\.id/);
+  assert.match(reviewSource, /if \(!selected \|\| !canReview\(selected\.item\)\) return/);
   assert.match(
     navigationSource,
     /const playerNavigation[\s\S]*label: "Events"[\s\S]*to: ROUTES\.EVENTS/,

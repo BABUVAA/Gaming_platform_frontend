@@ -109,6 +109,7 @@ const EventManagerDashboard = () => {
 
   const saveRun = async (event) => {
     event.preventDefault();
+    const submittedDates = new FormData(event.currentTarget);
     const payload = {
       admissionPolicy: run.admissionPolicy,
       executionPlan: {
@@ -128,9 +129,12 @@ const EventManagerDashboard = () => {
           amountMinor: Math.round(Number(row.amountRupees) * 100),
         })),
       },
-      registrationClosesAt: run.registrationClosesAt,
-      registrationOpensAt: run.registrationOpensAt,
-      startsAt: run.startsAt,
+      // Read the date controls at submit time as well as preserving them in
+      // state. This prevents a rapid native date entry from losing a field
+      // before React schedules its controlled-state update.
+      registrationClosesAt: submittedDates.get("registrationClosesAt") || run.registrationClosesAt,
+      registrationOpensAt: submittedDates.get("registrationOpensAt") || run.registrationOpensAt,
+      startsAt: submittedDates.get("startsAt") || run.startsAt,
       templateId: run.templateId,
       title: run.title,
       waitlistEnabled: run.waitlistEnabled,
@@ -376,14 +380,14 @@ const EventManagerDashboard = () => {
           <div className="mt-4 grid gap-3">
             <input
               className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) => setRun({ ...run, title: event.target.value })}
+              onChange={(event) => setRun((current) => ({ ...current, title: event.target.value }))}
               placeholder="Schedule title (defaults to template title)"
               value={run.title}
             />
             <select
               className="rounded-xl border border-slate-700 bg-slate-900 p-3"
               onChange={(event) =>
-                setRun({ ...run, templateId: event.target.value })
+                setRun((current) => ({ ...current, templateId: event.target.value }))
               }
               required
               value={run.templateId}
@@ -410,8 +414,9 @@ const EventManagerDashboard = () => {
                 {label}
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
-                  onChange={(event) =>
-                    setRun({ ...run, [key]: event.target.value })
+                  name={key}
+                  onInput={(event) =>
+                    setRun((current) => ({ ...current, [key]: event.target.value }))
                   }
                   required
                   type="datetime-local"
@@ -424,14 +429,14 @@ const EventManagerDashboard = () => {
               <select
                 className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
                 onChange={(event) =>
-                  setRun({
-                    ...run,
+                  setRun((current) => ({
+                    ...current,
                     admissionPolicy: event.target.value,
                     waitlistEnabled:
                       event.target.value === "limited_seats"
-                        ? run.waitlistEnabled
+                        ? current.waitlistEnabled
                         : false,
-                  })
+                  }))
                 }
                 value={run.admissionPolicy}
               >
@@ -446,7 +451,7 @@ const EventManagerDashboard = () => {
                 className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
                 min="1"
                 onChange={(event) =>
-                  setRun({ ...run, registrationCapacity: event.target.value })
+                  setRun((current) => ({ ...current, registrationCapacity: event.target.value }))
                 }
                 required
                 type="number"
@@ -458,7 +463,7 @@ const EventManagerDashboard = () => {
                 <input
                   checked={run.waitlistEnabled}
                   onChange={(event) =>
-                    setRun({ ...run, waitlistEnabled: event.target.checked })
+                  setRun((current) => ({ ...current, waitlistEnabled: event.target.checked }))
                   }
                   type="checkbox"
                 />
@@ -481,10 +486,10 @@ const EventManagerDashboard = () => {
                     max="2"
                     min="2"
                     onChange={(event) =>
-                      setRun({
-                        ...run,
+                      setRun((current) => ({
+                        ...current,
                         participantsPerMatch: event.target.value,
-                      })
+                      }))
                     }
                     required
                     type="number"
@@ -498,10 +503,10 @@ const EventManagerDashboard = () => {
                     max="1"
                     min="1"
                     onChange={(event) =>
-                      setRun({
-                        ...run,
+                      setRun((current) => ({
+                        ...current,
                         advanceCount: event.target.value,
-                      })
+                      }))
                     }
                     required
                     type="number"
@@ -515,10 +520,10 @@ const EventManagerDashboard = () => {
                     max="1440"
                     min="0"
                     onChange={(event) =>
-                      setRun({
-                        ...run,
+                      setRun((current) => ({
+                        ...current,
                         batchSpacingMinutes: event.target.value,
-                      })
+                      }))
                     }
                     required
                     type="number"
@@ -532,10 +537,10 @@ const EventManagerDashboard = () => {
                     max="1440"
                     min="0"
                     onChange={(event) =>
-                      setRun({
-                        ...run,
+                      setRun((current) => ({
+                        ...current,
                         checkInMinutesBefore: event.target.value,
-                      })
+                      }))
                     }
                     required
                     type="number"

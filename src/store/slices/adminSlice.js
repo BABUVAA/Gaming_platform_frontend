@@ -20,21 +20,6 @@ const selectReviewedVerification = (response) => {
 
 // Read operations stay silent when successful so normal dashboard loading does
 // not generate noisy notifications. Their failures still surface consistently.
-export const findUsers = createApiThunk("admin/findUsers", {
-  path: "/api/admin/findUsers",
-  selectData: selectNestedArrayData,
-  errorMessage: "Failed to fetch users",
-  toast: { error: true },
-});
-
-export const findTransactions = createApiThunk("admin/findTransactions", {
-  method: "post",
-  path: "/api/admin/findTransactions",
-  selectData: selectNestedArrayData,
-  errorMessage: "Failed to fetch transactions",
-  toast: { error: true },
-});
-
 export const findVerificationRequests = createApiThunk(
   "admin/findVerificationRequests",
   {
@@ -192,8 +177,6 @@ export const updateStaffAssignmentScopes = createApiThunk(
 // These requests share loading and error behavior while keeping their
 // successful state updates explicit in extraReducers below.
 const adminThunks = [
-  findUsers,
-  findTransactions,
   findVerificationRequests,
   reviewVerificationRequest,
   fetchStaffRoles,
@@ -211,8 +194,6 @@ const adminThunks = [
 ];
 
 const adminRequestKeyByPrefix = Object.freeze({
-  [findUsers.typePrefix]: "users",
-  [findTransactions.typePrefix]: "transactions",
   [findVerificationRequests.typePrefix]: "verificationRequests",
   [reviewVerificationRequest.typePrefix]: "verificationReview",
   [fetchStaffRoles.typePrefix]: "staffRoles",
@@ -252,8 +233,6 @@ const finishAdminRequest = (state) => {
 const adminSlice = createSlice({
   name: "admin",
   initialState: {
-    users: [],
-    transactions: [],
     verificationRequests: [],
     staffRoles: [],
     staffCandidates: [],
@@ -267,8 +246,6 @@ const adminSlice = createSlice({
     // Each resource accepts only the newest request so rapid filters cannot
     // be overwritten by a slower response from an older query.
     latestRequestIds: {
-      users: null,
-      transactions: null,
       verificationRequests: null,
       verificationReview: null,
       staffRoles: null,
@@ -287,18 +264,6 @@ const adminSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(findUsers.fulfilled, (state, action) => {
-        if (!isLatestAdminRequest(state, "users", action)) return;
-
-        state.users = action.payload;
-        state.latestRequestIds.users = null;
-      })
-      .addCase(findTransactions.fulfilled, (state, action) => {
-        if (!isLatestAdminRequest(state, "transactions", action)) return;
-
-        state.transactions = action.payload;
-        state.latestRequestIds.transactions = null;
-      })
       .addCase(findVerificationRequests.fulfilled, (state, action) => {
         if (
           !isLatestAdminRequest(state, "verificationRequests", action)
