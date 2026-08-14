@@ -137,6 +137,13 @@ evidence only; target-environment deployment, worker supervision, readiness,
 and restart proof remain external gates. Focused tests lock the `/readyz`
 health check, separate Event worker command, and paid-entry false default.
 
+Live deployment verification 2026-08-14: the deployed Render API
+`https://gaming-platform-backend.onrender.com/readyz` returned 200 with both
+MongoDB and Redis ready. The Vercel frontend returned 200, its production
+bundle references that backend origin, and a credentialed CORS preflight from
+the Vercel origin returned 204 with the exact allowed origin and credentials.
+The separately supervised Event-worker startup/restart proof remains pending.
+
 Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited
 `POST /api/auth/reauthenticate` route. The server stores only a timestamp in

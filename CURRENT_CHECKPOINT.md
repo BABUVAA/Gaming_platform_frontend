@@ -296,6 +296,10 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    Backend `render.yaml` now declares it as a separate Render worker beside the
    `/readyz`-checked API. Configure its same MongoDB/Redis secrets and prove
    supervision/restart behaviour before counting this as deployed.
+   Live API/frontend check 2026-08-14: deployed `/readyz` returned 200 with
+   MongoDB and Redis ready; Vercel frontend returned 200, uses this backend
+   origin, and passed credentialed CORS preflight. Worker restart evidence is
+   still required.
    Backend startup now runs an executable production configuration validator:
    the web process requires datastore, origin, session, email, and Resend
    settings; the worker requires its shared datastores. Missing/placeholder
