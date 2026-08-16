@@ -226,13 +226,15 @@ money remains fail-closed, and manual wallet credit is never a substitute.
 The backend aggregate passed 310/310; frontend state passed 84/84 with full
 lint and the 554-module production build green.
 
-Deployment evidence 2026-08-16: backend commit `e0fe6fd` is live on Render;
-`/readyz` returned 200 with MongoDB and Redis ready. Frontend commit `dc2e299`
+Deployment evidence 2026-08-16: Vercel/Render is the public testing/staging
+platform, not a live-money launch. Backend commit `7cf9442` is live on Render;
+`/readyz` returned 200 with MongoDB and Redis ready. Frontend commit `cb98193`
 is READY on Vercel. Render is configured for explicit sandbox money mode with
 test deposits and paid entries enabled, while withdrawal requests are false.
-A post-deploy checkout command returned 200. Checkout completion and the
-exactly-once governance reconciliation proof remain pending; this is not
-live-money release evidence.
+PhonePe return navigation is now independent from the multi-origin CORS list:
+the deployed service uses the public Vercel Wallet HTTPS URL, while local
+development may use localhost. Checkout completion and exactly-once governance
+reconciliation proof remain pending; this is not live-money release evidence.
 
 Operator scale refinement 2026-08-16: assigned and unassigned Match Operator
 queues now have separate typed opaque cursors, bounded 25/50-item pages, stable

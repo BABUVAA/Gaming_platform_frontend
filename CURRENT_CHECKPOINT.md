@@ -47,10 +47,11 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Latest complete backend release aggregate passed 310/310 on 2026-08-16.
   Frontend state passed 84/84; full lint and the 554-module production build
   passed on 2026-08-16.
-- Latest deployment checkpoint 2026-08-16: backend commit `e0fe6fd` is live on
-  Render and `/readyz` returns 200 with MongoDB and Redis ready; frontend commit
-  `dc2e299` is READY on Vercel and the production alias returns 200. The fresh
-  Render runtime scan contains no new application errors.
+- Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
+  public **testing/staging platform**, not a live-money launch. Backend commit
+  `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis
+  ready; frontend commit `cb98193` is READY on Vercel. The fresh Render runtime
+  scan contains no new application errors.
 - PhonePe now uses the official scoped Node SDK for checkout, status, and
   callback validation. Real sandbox probes created a minimal INR 1.00 pending
   checkout and verified its status without completing payment or writing local
@@ -58,11 +59,12 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   reconciliation job before provider I/O. Callback username/password remain
   unconfigured, and Render currently has only the API service: the declared
   Event and payment workers still need provisioning and restart proof.
-- The deployed test environment is now explicitly configured with sandbox
-  money mode, PhonePe deposits enabled, and paid Quick Match entry enabled.
-  Withdrawal requests remain explicitly false. A provider checkout request
-  returned 200 after deployment; completion/exactly-once ledger credit still
-  needs the sandbox checkout result and governance reconciliation evidence.
+- The deployed test environment is explicitly configured with sandbox money
+  mode, PhonePe deposits enabled, and paid Quick Match entry enabled. PhonePe
+  returns to the public Vercel Wallet through the dedicated HTTPS
+  `PHONEPE_REDIRECT_URL`; localhost remains a separate developer redirect.
+  Withdrawal requests remain explicitly false. Checkout completion and
+  exactly-once governance reconciliation evidence are still required.
 - The existing Render API service now uses `npm ci`, validated `npm start`, and
   `/readyz`. A dedicated email-token signing secret was added without exposing
   its value; any verification/reset link issued before that one-time separation
