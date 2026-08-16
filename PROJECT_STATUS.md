@@ -182,6 +182,25 @@ the owner and a fresh browser check confirmed the redeployed frontend works
 without console errors. The separately supervised
 Event-worker startup/restart proof remains pending.
 
+Deployment and PhonePe checkpoint 2026-08-16: backend commit `4e778e2` is
+live on Render with `/healthz` and `/readyz` returning 200; frontend commit
+`719ed65` is READY on Vercel and the production alias returns 200. Immediate
+Render/Vercel error scans were clean. The complete release gates passed 302
+backend tests and 80 frontend tests plus lint and the 551-module build.
+PhonePe checkout, order status, and callback verification now share the current
+official scoped Node SDK and one client-credential contract. A real INR 1.00
+sandbox checkout/status probe returned `PENDING` without completing payment or
+touching a wallet. New deposit requests atomically commit their pending
+Transaction and reconciliation job before provider I/O; timeout and rollback
+replica tests prove zero premature wallet/ledger writes. The merchant callback
+username/password are not configured, so signed callback proof remains open.
+The connected Render workspace currently lists only the legacy-configured API
+web service (`yarn install`, `node index.js`, no configured health path).
+`render.yaml` now declares separate Event and payment-reconciliation workers,
+but both still require target-environment provisioning, shared cloud datastore
+secrets, supervision, and restart evidence. `PAID_QUICK_MATCH_ENTRY_ENABLED`
+remains false/unset and must not change during sandbox certification.
+
 Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited
 `POST /api/auth/reauthenticate` route. The server stores only a timestamp in
