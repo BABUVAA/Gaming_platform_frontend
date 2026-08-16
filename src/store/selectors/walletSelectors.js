@@ -5,6 +5,7 @@ import { getStoredErrorMessage } from "../../api/apiError";
 // fixing deep state access across every payment-related component.
 export const selectPaymentState = (state) => state.payment;
 export const selectWallet = (state) => state.payment.wallet;
+export const selectPaymentCapabilities = (state) => state.payment.capabilities;
 export const selectWalletTransactions = (state) => state.payment.transactions;
 export const selectWalletLedger = (state) => state.payment.ledger;
 export const selectWalletLedgerEntries = (state) =>

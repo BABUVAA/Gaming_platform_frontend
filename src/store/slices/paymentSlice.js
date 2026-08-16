@@ -76,6 +76,24 @@ export const fetchWalletBalance = createAsyncThunk(
   }
 );
 
+export const fetchPaymentCapabilities = createAsyncThunk(
+  "payment/fetchPaymentCapabilities",
+  async (_, thunkAPI) => {
+    try {
+      const response = await api.get("/api/payment/capabilities", {
+        withCredentials: true,
+      });
+      return response.data?.data || response.data;
+    } catch (error) {
+      return rejectPaymentError(
+        thunkAPI,
+        error,
+        "Unable to load payment availability.",
+      );
+    }
+  },
+);
+
 export const fetchWalletLedger = createAsyncThunk(
   "payment/fetchWalletLedger",
   async ({ cursor = null } = {}, thunkAPI) => {
@@ -157,6 +175,10 @@ const finishPaymentRequest = (state) => {
 };
 
 const initialState = {
+  capabilities: {
+    depositAvailable: null,
+    status: "idle",
+  },
   wallet: {
     availableMinor: 0,
     currency: "INR",
@@ -211,6 +233,19 @@ const paymentSlice = createSlice({
         state.wallet.withdrawableMinor = action.payload?.withdrawableMinor || 0;
         state.wallet.withdrawalPendingMinor =
           action.payload?.withdrawalPendingMinor || 0;
+      })
+      .addCase(fetchPaymentCapabilities.pending, (state) => {
+        state.capabilities.status = "loading";
+      })
+      .addCase(fetchPaymentCapabilities.fulfilled, (state, action) => {
+        state.capabilities.depositAvailable =
+          action.payload?.deposits?.available === true;
+        state.capabilities.status = "succeeded";
+      })
+      .addCase(fetchPaymentCapabilities.rejected, (state, action) => {
+        if (action.meta.aborted) return;
+        state.capabilities.depositAvailable = false;
+        state.capabilities.status = "failed";
       })
       .addCase(fetchWalletLedger.pending, (state, action) => {
         const isNextPage = Boolean(action.meta.arg?.cursor);

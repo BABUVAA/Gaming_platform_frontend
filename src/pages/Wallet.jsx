@@ -11,6 +11,7 @@ import { Button } from "../components";
 import {
   fetchWalletLedger,
   fetchWalletBalance,
+  fetchPaymentCapabilities,
   initiatePhonePeOrder,
 } from "../store/slices/paymentSlice";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../store/slices/withdrawalSlice.js";
 import {
   selectPaymentLoading,
+  selectPaymentCapabilities,
   selectWallet,
   selectWalletLedgerEntries,
   selectWalletLedgerError,
@@ -94,6 +96,7 @@ const Wallet = () => {
   const dispatch = useDispatch();
   const wallet = useSelector(selectWallet);
   const isLoading = useSelector(selectPaymentLoading);
+  const paymentCapabilities = useSelector(selectPaymentCapabilities);
   const ledgerEntries = useSelector(selectWalletLedgerEntries);
   const ledgerError = useSelector(selectWalletLedgerError);
   const ledgerIsLoading = useSelector(selectWalletLedgerLoading);
@@ -122,9 +125,11 @@ const Wallet = () => {
   useEffect(() => {
     const walletRequest = dispatch(fetchWalletBalance());
     const ledgerRequest = dispatch(fetchWalletLedger());
+    const capabilityRequest = dispatch(fetchPaymentCapabilities());
     return () => {
       walletRequest.abort();
       ledgerRequest.abort();
+      capabilityRequest.abort();
     };
   }, [dispatch]);
 
@@ -338,8 +343,11 @@ const Wallet = () => {
           <>
             <ActionPanel
               title="Add funds"
-              copy="Top up your real wallet before joining paid brackets and tournaments."
-              actionLabel="Add Money"
+              copy={paymentCapabilities.depositAvailable
+                ? "Top up your real wallet before joining paid brackets and tournaments."
+                : "Deposits are temporarily unavailable while payment reconciliation is being certified."}
+              actionLabel={paymentCapabilities.depositAvailable ? "Add Money" : "Unavailable"}
+              disabled={paymentCapabilities.depositAvailable !== true}
               onClick={() => {
                 setAmount("");
                 setIsAddModalOpen(true);

@@ -5,6 +5,7 @@ import api from "../src/api/axios-api.js";
 import paymentSlice, {
   fetchWalletLedger,
   fetchWalletBalance,
+  fetchPaymentCapabilities,
   initiatePhonePeOrder,
   WALLET_LEDGER_PAGE_LIMIT,
 } from "../src/store/slices/paymentSlice.js";
@@ -60,6 +61,34 @@ test("player wallet top-up sends only the canonical minor-unit amount", async ()
     assert.equal(action.type, initiatePhonePeOrder.fulfilled.type);
     assert.equal(observedConfig.url, "/api/payment/order");
     assert.deepEqual(JSON.parse(observedConfig.data), { amountMinor: 1250 });
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("payment capability read stores the server-owned deposit release state", async () => {
+  const originalAdapter = api.defaults.adapter;
+  let observedConfig;
+  api.defaults.adapter = async (config) => {
+    observedConfig = config;
+    return {
+      config,
+      data: { data: { deposits: { available: false, currency: "INR" } } },
+      headers: {},
+      status: 200,
+      statusText: "OK",
+    };
+  };
+
+  try {
+    const store = configureStore({ reducer: { payment: paymentSlice.reducer } });
+    const action = await store.dispatch(fetchPaymentCapabilities());
+    assert.equal(action.type, fetchPaymentCapabilities.fulfilled.type);
+    assert.equal(observedConfig.url, "/api/payment/capabilities");
+    assert.deepEqual(store.getState().payment.capabilities, {
+      depositAvailable: false,
+      status: "succeeded",
+    });
   } finally {
     api.defaults.adapter = originalAdapter;
   }
