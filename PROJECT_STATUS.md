@@ -758,6 +758,15 @@ prove the completion criteria.
 
 ### Documentation Drift Found
 
+- API discovery is now machine-checkable. The backend owns
+  `docs/openapi.json` (OpenAPI 3.1) and `docs/API_REFERENCE.md`; the generator
+  inventories all 180 mounted HTTP method/path pairs and labels their access
+  boundary. `npm run docs:api` regenerates the specification and
+  `npm run docs:api:check` fails for missing/extra paths, duplicate operation
+  IDs, or missing shared contracts. Domain request/response schemas should be
+  refined alongside their controllers; the route inventory prevents silent
+  endpoint omission but is not a substitute for domain integration tests.
+
 - `GET /api/staff/games` and `GET /api/staff/games/activity` still exist as
   Game Manager catalog/activity reads. Only the former manager PATCH route is
   retired; the operational summary endpoint does not yet replace both reads.

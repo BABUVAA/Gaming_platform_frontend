@@ -102,6 +102,13 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   live-money modes remain blocked. Internal Solo/Team money flows are proven;
   payout adapter/worker/callback/live-certification gates remain red.
 - Both worktrees are committed and pushed at the deployment revisions above.
+- API documentation refinement 2026-08-16: the backend now generates an
+  OpenAPI 3.1 specification for all 180 mounted HTTP operations and includes a
+  human-readable guide covering cookies, envelopes, roles/scopes, opaque
+  pagination, INR minor units, authentication, Quick Match, Event, PhonePe,
+  prize and withdrawal flows. `npm run docs:api:check` compares the generated
+  paths with the mounted router inventory. This documents current contracts;
+  it does not turn outstanding worker/provider/live-money gates green.
 
 ## Completed Slice: Staff Read-Only Player Visibility
 
