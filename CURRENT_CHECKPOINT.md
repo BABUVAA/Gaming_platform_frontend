@@ -48,9 +48,9 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   PhonePe provider/reconciliation update. Frontend state passed 80/80; full
   lint and the 551-module production
   build passed on 2026-08-16.
-- Production deployment checkpoint 2026-08-16: backend commit `2f588ef` is
+- Production deployment checkpoint 2026-08-16: backend commit `12e6696` is
   live on Render and `/healthz` plus `/readyz` return 200; frontend commit
-  `719ed65` is READY on Vercel and the production alias returns 200. Render and
+  `2545a89` is READY on Vercel and the production alias returns 200. Render and
   Vercel error scans were clean immediately after deployment.
 - PhonePe now uses the official scoped Node SDK for checkout, status, and
   callback validation. Real sandbox probes created a minimal INR 1.00 pending
@@ -64,6 +64,15 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   `false`; disabled requests return 503 before Transaction, reconciliation-job,
   wallet, or ledger writes. Enable it only for the controlled certification
   window after the payment worker and signed callback path are operational.
+- The player Wallet now reads `/api/payment/capabilities` through Redux and
+  disables Add Money with an explicit unavailable state while that server gate
+  is closed. Frontend state is 81/81 and the 551-module build is green; affected
+  backend payment/route policy checks are 11/11 after the last full 303/303 run.
+- The existing Render API service now uses `npm ci`, validated `npm start`, and
+  `/readyz`. A dedicated email-token signing secret was added without exposing
+  its value; any verification/reset link issued before that one-time separation
+  should be reissued. Render requires a Starter worker at $7/month, so the Event
+  and payment workers remain uncreated pending the explicit $14/month spend.
 - Verification-request history is now bounded for both players and Platform
   Admins: 25-item opaque cursor pages, Redux-owned player state, deduplicated
   load-more UI, and indexed backend ordering. Focused pagination checks pass;
@@ -371,9 +380,10 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    but the connected Render workspace still lists only the existing API web
    service. Provision both `egaming-event-worker` and
    `egaming-payment-worker` from `render.yaml`, copy the authoritative cloud
-   MongoDB/Redis values, and prove supervised restart. The existing API service
-   also still uses legacy `yarn install` / `node index.js` settings rather than
-   the blueprint's `npm ci` / `npm start` / `/readyz` configuration.
+   MongoDB/Redis values, and prove supervised restart. The API service has now
+   been aligned to the blueprint's `npm ci` / validated `npm start` / `/readyz`
+   configuration. Each Render Background Worker starts at $7/month; creating
+   both is an explicit $14/month billing decision and has not been performed.
    PhonePe sandbox checkout and status calls are green. Configure the merchant
    callback URL plus callback username/password, then prove one signed callback
    or worker reconciliation credits one ledger deposit exactly once. Do not
