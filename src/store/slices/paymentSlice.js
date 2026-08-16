@@ -177,7 +177,10 @@ const finishPaymentRequest = (state) => {
 const initialState = {
   capabilities: {
     depositAvailable: null,
+    moneyMode: "disabled",
     status: "idle",
+    testMoney: false,
+    withdrawalsAvailable: false,
   },
   wallet: {
     availableMinor: 0,
@@ -240,6 +243,10 @@ const paymentSlice = createSlice({
       .addCase(fetchPaymentCapabilities.fulfilled, (state, action) => {
         state.capabilities.depositAvailable =
           action.payload?.deposits?.available === true;
+        state.capabilities.moneyMode = action.payload?.moneyMode || "disabled";
+        state.capabilities.testMoney = action.payload?.testMoney === true;
+        state.capabilities.withdrawalsAvailable =
+          action.payload?.withdrawalsAvailable === true;
         state.capabilities.status = "succeeded";
       })
       .addCase(fetchPaymentCapabilities.rejected, (state, action) => {

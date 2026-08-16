@@ -99,6 +99,11 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
         </dl>
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-300">
+          {offering.testMoney ? (
+            <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-amber-100">
+              PhonePe sandbox / test money
+            </span>
+          ) : null}
           {[offering.mode, offering.map, offering.region]
             .filter(Boolean)
             .map((fact, index) => (
@@ -225,6 +230,7 @@ QuickMatchCard.propTypes = {
     region: PropTypes.string.isRequired,
     schedulePolicy: PropTypes.oneOf(["on_demand", "scheduled"]).isRequired,
     teamSize: PropTypes.number.isRequired,
+    testMoney: PropTypes.bool,
     title: PropTypes.string.isRequired,
   }).isRequired,
   showDetails: PropTypes.bool,

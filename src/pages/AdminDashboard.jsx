@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
-import { EventReviewQueue, GameCatalog, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
+import { EventReviewQueue, GameCatalog, PaymentReconciliationReview, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
 
 const ADMIN_AREAS = [
   {
@@ -15,6 +15,12 @@ const ADMIN_AREAS = [
     icon: FiGrid,
     id: "games",
     label: "Game control",
+  },
+  {
+    description: "Manually verify PhonePe sandbox deposits against provider status.",
+    icon: FiDollarSign,
+    id: "payment-reconciliation",
+    label: "Sandbox Payments",
   },
   {
     description: "Authentication replay, fingerprint, and privilege-abuse signals.",
@@ -94,6 +100,8 @@ const AdminDashboard = () => {
               <SecurityAttention />
             ) : activeSection === "prize-releases" ? (
               <PrizeReleaseReview />
+            ) : activeSection === "payment-reconciliation" ? (
+              <PaymentReconciliationReview />
             ) : (
               <WithdrawalReview />
             )}

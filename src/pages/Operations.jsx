@@ -18,6 +18,7 @@ import useSocket from "../context/useSocket";
 import {
   claimOperatorMatch,
   executeOperatorMatchCommand,
+  fetchMoreOperatorMatches,
   fetchOperatorWorkspace,
   publishOperatorLobby,
 } from "../store/slices/operatorOperationsSlice";
@@ -25,6 +26,8 @@ import {
   selectOperatorActiveAction,
   selectOperatorDashboard,
   selectOperatorMatches,
+  selectOperatorMatchPages,
+  selectOperatorMatchPageStatus,
   selectOperatorWorkspaceError,
   selectOperatorWorkspaceStatus,
   selectUnassignedOperatorMatches,
@@ -140,6 +143,8 @@ const Operations = () => {
   const workspaceStatus = useSelector(selectOperatorWorkspaceStatus);
   const error = useSelector(selectOperatorWorkspaceError);
   const activeAction = useSelector(selectOperatorActiveAction);
+  const matchPages = useSelector(selectOperatorMatchPages);
+  const matchPageStatus = useSelector(selectOperatorMatchPageStatus);
   const [lobbyDrafts, setLobbyDrafts] = useState({});
   const [resultDrafts, setResultDrafts] = useState({});
   const [activeFilter, setActiveFilter] = useState("all");
@@ -206,6 +211,12 @@ const Operations = () => {
     if (claimOperatorMatch.fulfilled.match(action)) {
       dispatch(fetchOperatorWorkspace());
     }
+  };
+
+  const loadMoreMatches = (kind) => {
+    const cursor = matchPages[kind]?.nextCursor;
+    if (!cursor || matchPageStatus[kind] === "loading") return;
+    dispatch(fetchMoreOperatorMatches({ cursor, kind }));
   };
 
   const executeCommand = async (matchId, command, body) => {
@@ -380,6 +391,16 @@ const Operations = () => {
           ) : (
             <AssignmentEmptyState />
           )}
+          {matchPages.unassigned.hasMore ? (
+            <button
+              className="mt-5 rounded-xl border border-amber-300/30 px-5 py-3 text-sm font-black text-amber-100 disabled:opacity-50"
+              disabled={matchPageStatus.unassigned === "loading"}
+              onClick={() => loadMoreMatches("unassigned")}
+              type="button"
+            >
+              {matchPageStatus.unassigned === "loading" ? "Loading..." : "Load more available matches"}
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -447,6 +468,16 @@ const Operations = () => {
                   : "Choose another filter to see your assigned matches."}
               </p>
             </div>
+          ) : null}
+          {matchPages.assigned.hasMore ? (
+            <button
+              className="rounded-xl border border-cyan-300/30 px-5 py-3 text-sm font-black text-cyan-100 disabled:opacity-50"
+              disabled={matchPageStatus.assigned === "loading"}
+              onClick={() => loadMoreMatches("assigned")}
+              type="button"
+            >
+              {matchPageStatus.assigned === "loading" ? "Loading..." : "Load more assigned matches"}
+            </button>
           ) : null}
         </div>
       </section>

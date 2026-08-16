@@ -33,6 +33,7 @@ import eventStageSlice from "./slices/eventStageSlice.js";
 import eventStageAdjustmentSlice from "./slices/eventStageAdjustmentSlice.js";
 import securityAttentionSlice from "./slices/securityAttentionSlice.js";
 import verificationRequestSlice from "./slices/verificationRequestSlice.js";
+import paymentReconciliationReviewSlice from "./slices/paymentReconciliationReviewSlice.js";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -62,6 +63,7 @@ const combinedReducer = combineReducers({
   eventStageAdjustments: eventStageAdjustmentSlice.reducer,
   securityAttention: securityAttentionSlice.reducer,
   verificationRequests: verificationRequestSlice,
+  paymentReconciliationReview: paymentReconciliationReviewSlice.reducer,
   loading: loadingSlice.reducer,
   matchmaking: matchmakingSlice.reducer,
   matchActivity: matchActivitySlice.reducer,
@@ -100,6 +102,7 @@ const privateSliceKeys = [
   "eventStageAdjustments",
   "securityAttention",
   "verificationRequests",
+  "paymentReconciliationReview",
 ];
 
 const clearPrivateSlices = (state) => {

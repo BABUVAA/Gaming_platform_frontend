@@ -278,6 +278,17 @@ const Wallet = () => {
 
   return (
     <div className="space-y-6">
+      {paymentCapabilities.testMoney ? (
+        <section className="rounded-3xl border border-amber-300/40 bg-amber-300/10 p-5 text-amber-50">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
+            PhonePe sandbox - test money only
+          </p>
+          <p className="mt-2 text-sm leading-6">
+            Deposits, entry fees, prizes, and wallet balances on this deployment
+            are test values. They cannot be withdrawn or exchanged for real money.
+          </p>
+        </section>
+      ) : null}
       <section className="rounded-3xl border border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/80">
           Wallet Command
@@ -285,11 +296,14 @@ const Wallet = () => {
         <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-black text-white md:text-5xl">
-              Manage deposits, platform balance, and settlement history.
+              {paymentCapabilities.testMoney
+                ? "Test deposits, tournament funds, and settlement history."
+                : "Manage deposits, platform balance, and settlement history."}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-              This is your cash and competition ledger. Keep real funds topped
-              up, review platform credits, and watch the status of every wallet move.
+              {paymentCapabilities.testMoney
+                ? "This wallet is connected to PhonePe sandbox. Use its test balance to exercise paid entries, holds, prizes, and reviews without real cash-out."
+                : "This is your cash and competition ledger. Keep real funds topped up, review platform credits, and watch the status of every wallet move."}
             </p>
           </div>
 
@@ -344,7 +358,9 @@ const Wallet = () => {
             <ActionPanel
               title="Add funds"
               copy={paymentCapabilities.depositAvailable
-                ? "Top up your real wallet before joining paid brackets and tournaments."
+                ? paymentCapabilities.testMoney
+                  ? "Add PhonePe sandbox funds for paid tournament testing. No real money is charged or paid out."
+                  : "Top up your real wallet before joining paid brackets and tournaments."
                 : "Deposits are temporarily unavailable while payment reconciliation is being certified."}
               actionLabel={paymentCapabilities.depositAvailable ? "Add Money" : "Unavailable"}
               disabled={paymentCapabilities.depositAvailable !== true}
@@ -370,6 +386,9 @@ const Wallet = () => {
           </p>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
             <li>Deposits redirect you to the payment provider securely.</li>
+            {paymentCapabilities.testMoney ? (
+              <li>Every displayed balance is sandbox test money and cash-out is disabled.</li>
+            ) : null}
             <li>Paid entries move funds into Entry held until final settlement.</li>
             <li>Prizes remain pending through result and dispute review.</li>
             <li>Withdrawals move to pending and require governance review before provider processing.</li>

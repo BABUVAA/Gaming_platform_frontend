@@ -5,6 +5,7 @@ import api from "../src/api/axios-api.js";
 import operatorOperationsSlice, {
   claimOperatorMatch,
   executeOperatorMatchCommand,
+  fetchMoreOperatorMatches,
   fetchOperatorWorkspace,
   publishOperatorLobby,
 } from "../src/store/slices/operatorOperationsSlice.js";
@@ -29,7 +30,10 @@ test("operator workspace loads dashboard and both scoped match queues", async ()
     requestedPaths.push(config.url);
     const payload = config.url.endsWith("/dashboard")
       ? { totalAssignedMatches: 1 }
-      : [{ _id: config.url.endsWith("/unassigned") ? "open-1" : "match-1" }];
+      : {
+          items: [{ _id: config.url.endsWith("/unassigned") ? "open-1" : "match-1" }],
+          page: { hasMore: true, limit: 25, nextCursor: config.url.endsWith("/unassigned") ? "open-cursor" : "match-cursor" },
+        };
     return response(config, { data: payload });
   };
 
@@ -45,6 +49,50 @@ test("operator workspace loads dashboard and both scoped match queues", async ()
     ]);
     assert.equal(store.getState().operatorOperations.matches[0]._id, "match-1");
     assert.equal(store.getState().operatorOperations.unassigned[0]._id, "open-1");
+    assert.equal(store.getState().operatorOperations.pages.assigned.nextCursor, "match-cursor");
+    assert.equal(store.getState().operatorOperations.pages.unassigned.nextCursor, "open-cursor");
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("operator match pages forward only server cursors and append without duplicates", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    return response(config, {
+      data: {
+        items: [{ _id: "match-1" }, { _id: "match-2" }],
+        page: { hasMore: false, limit: 25, nextCursor: null },
+      },
+    });
+  };
+
+  try {
+    const store = createStore();
+    store.dispatch({
+      type: fetchOperatorWorkspace.fulfilled.type,
+      payload: {
+        dashboard: {},
+        assignedPage: {
+          items: [{ _id: "match-1" }],
+          page: { hasMore: true, limit: 25, nextCursor: "match-cursor" },
+        },
+        unassignedPage: { items: [], page: { hasMore: false, limit: 25, nextCursor: null } },
+      },
+    });
+    const action = await store.dispatch(fetchMoreOperatorMatches({
+      cursor: "match-cursor",
+      kind: "assigned",
+    }));
+    assert.equal(action.type, fetchMoreOperatorMatches.fulfilled.type);
+    assert.equal(requests[0].url, "/api/operator/matches");
+    assert.deepEqual(requests[0].params, { cursor: "match-cursor", limit: 25 });
+    assert.deepEqual(
+      store.getState().operatorOperations.matches.map((match) => match._id),
+      ["match-1", "match-2"],
+    );
   } finally {
     api.defaults.adapter = originalAdapter;
   }

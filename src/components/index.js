@@ -35,3 +35,4 @@ export { default as QuickMatchOfferingManagement } from "./adminComponents/Quick
 export { default as PrizeReleaseReview } from "./adminComponents/PrizeReleaseReview.jsx";
 export { default as WithdrawalReview } from "./adminComponents/WithdrawalReview.jsx";
 export { default as SecurityAttention } from "./adminComponents/SecurityAttention.jsx";
+export { default as PaymentReconciliationReview } from "./adminComponents/PaymentReconciliationReview.jsx";

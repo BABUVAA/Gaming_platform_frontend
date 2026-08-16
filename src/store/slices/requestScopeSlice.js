@@ -9,6 +9,7 @@ const privateActionPrefixes = [
   "notifications/",
   "operatorOperations/",
   "payment/",
+  "paymentReconciliationReview/",
   "player/",
   "social/",
   "users/",

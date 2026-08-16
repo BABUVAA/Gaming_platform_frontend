@@ -12,4 +12,8 @@ export const selectOperatorWorkspaceError = (state) =>
   );
 export const selectOperatorActiveAction = (state) =>
   state.operatorOperations.activeAction;
+export const selectOperatorMatchPages = (state) =>
+  state.operatorOperations.pages;
+export const selectOperatorMatchPageStatus = (state) =>
+  state.operatorOperations.pageStatus;
 import { getStoredErrorMessage } from "../../api/apiError.js";

@@ -220,6 +220,24 @@ wallet credits cannot replace authenticated, idempotent provider reconciliation.
 Both workers, supervised restart evidence, and one exactly-once sandbox deposit
 remain mandatory launch gates.
 
+Sandbox-money testing refinement 2026-08-16: development/testing may now enable
+PhonePe deposits and paid Quick Matches only when the server is explicitly in
+`PLATFORM_MONEY_MODE=sandbox`, the PhonePe environment is sandbox/uat, and each
+feature flag is exactly true. Wallet and competition UI label all resulting
+balances as test money; withdrawals remain unavailable. Platform Admin owns a
+bounded manual reconciliation queue. Its verify command accepts only the job
+identity and asks PhonePe for authoritative status; settlement additionally
+requires the provider order ID and minor-unit amount to exactly match the
+stored Transaction. Mismatch or retry creates zero additional credit. Live
+money remains fail-closed, and manual wallet credit is never a substitute.
+The backend aggregate passed 310/310; frontend state passed 84/84 with full
+lint and the 554-module production build green.
+
+Operator scale refinement 2026-08-16: assigned and unassigned Match Operator
+queues now have separate typed opaque cursors, bounded 25/50-item pages, stable
+indexed ordering, Redux stale-request protection and append de-duplication, and
+load-more UI. This removes the previous unbounded operator queue read.
+
 Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited
 `POST /api/auth/reauthenticate` route. The server stores only a timestamp in
@@ -725,12 +743,12 @@ prove the completion criteria.
 | Closed | Event approval | Event Templates and Runs use submitted revisions, reviewer notes, return/reject states, independent reviewer checks, bounded queue/history reads, append-only review evidence, and a Platform Admin Redux review queue. | Verified by Event governance policy tests and frontend route/build checks on 2026-08-08. |
 | Closed | Event admission | Scheduled/open Event Runs enforce verified-player windows, open/invitation/limited-seat policy, transactional capacity and FIFO waitlists, safe cancellation/promotion, invitation governance, bounded reads, and staff participation denial. | Verified by 13 replica-set Event tests, full aggregates, independent audit, and desktop/mobile player/staff/governance browser/API checks on 2026-08-13. |
 | P0 | Competition data | Game-backed offering administration, player discovery, free and transactionally held paid queueing, canonical Team creation, Room/Match handoff, protected player Match reads, and the complete operator/result/dispute lifecycle avoid legacy Tournament records and hardcoded game enums. Paid discovery, legacy host/detail aliases, and old stored competition records remain. | Finish the paid-entry release gates, then migrate remaining host/data paths with rollback evidence before retiring aliases. |
-| P0 | Payment safety | Callbacks fail closed unless PhonePe SDK signature credentials are configured, capture the signed raw body, enqueue a durable reconciliation record, and merchant transaction IDs are unique. The standalone `worker:payments` claims/retries/verifies jobs and settles idempotently. Withdrawal explicitly returns not-implemented. The immutable integer/decimal ledger, worker deployment/sandbox evidence, and reviewed payout lifecycle remain incomplete, so deposits must not be treated as production-ready. | Deploy and monitor the worker, complete provider sandbox callback/retry verification, introduce the immutable minor-unit ledger, and implement the reviewed withdrawal lifecycle. |
+| P0 | Payment safety | Immutable integer-minor-unit ledger settlement, durable reconciliation, reviewed prize/withdrawal lifecycles, and explicit sandbox test-money mode are implemented. Platform Admin can manually request authoritative PhonePe status; exact order/amount evidence credits once and mismatch credits zero. Withdrawals and live-money mode remain blocked. | Complete deployed sandbox deposit/callback/retry evidence, provision and monitor reconciliation plus Event workers, integrate and certify a payout provider, then separately approve live-money release. |
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
 | P1 | Transactional account email | Resend-backed verification and password recovery are implemented behind a server service. Local environment-only credentials, live authorized-recipient delivery, database transaction tests, and an isolated real-route browser workflow are verified. A dedicated sender domain and operational delivery evidence remain open. | Verify a dedicated account-email domain for broader delivery, then certify staging delivery, failure, and bounce monitoring without storing secrets in the repository. |
 | P1 | Distributed security | Authentication, signup, verification, recovery, password-change, refresh, staff-assignment, Event-governance, operator, and player-financial mutations use atomic Redis counters keyed by hashed client/actor correlation and fail closed if protection storage is unavailable. MFA/recent-auth controls and mutation-specific operational alerts remain. | Add actionable alerts and MFA or recent-auth for sensitive governance and financial actions. |
 | P1 | Frontend boundaries | Multiple feature pages call the Axios client directly despite the documented Redux boundary. Identity verification and recovery now use Redux thunks, but other domains remain. | Migrate one domain at a time to shared thunks/selectors and add component/integration tests. |
-| P1 | API scale | Event execution, wallet history, security attention, staff profiles, and player notifications now use bounded stable reads; the notification header can request older cursor pages without replacing live items. Other operator, social, and administrative list reads plus compatibility endpoints remain. | Cursor pagination with bounded limits and stable sorting for every remaining list; record endpoint deprecation dates and remove aliases after client migration. |
+| P1 | API scale | Event execution, wallet history, security attention, staff profiles, player notifications, and assigned/unassigned operator Match queues use bounded stable reads with append de-duplication. Other social and compatibility list reads remain. | Cursor pagination with bounded limits and stable sorting for every remaining list; record endpoint deprecation dates and remove aliases after client migration. |
 | P1 | Financial model | Wallet embeds transaction summaries while Transaction is also stored separately, and money uses JavaScript Number values. The two representations can drift and arrays can grow without bound. | Adopt an immutable ledger as source of truth, minor-unit/decimal amounts, paginated projections, and reconciliation jobs. |
 | P2 | Operations | Logging is console-based; no structured request tracing, metrics, alerting, job queue, backup verification, or disaster-recovery evidence was found. | Define SLOs, correlation IDs, redaction, metrics/alerts, durable jobs, backup restore drills, and failure runbooks. |
 | P2 | Frontend quality | Frontend lint is clean. Route-level lazy loading is retained and stable vendor chunks now split React/router, state, realtime, and icons; the largest emitted JavaScript chunk fell from 508 kB to 261 kB. Automated component/browser coverage and further route-specific splitting remain. | Add tests for critical flows and continue splitting only when measured route load evidence justifies it. |

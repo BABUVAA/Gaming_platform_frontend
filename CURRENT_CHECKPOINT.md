@@ -29,8 +29,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Redux Toolkit owns feature data; do not introduce component-level API calls
   where a Redux boundary exists.
 - Money uses integer INR minor units, an append-only balanced ledger,
-  idempotency keys, and MongoDB transactions. Paid discovery remains disabled
-  until every documented release gate passes.
+  idempotency keys, and MongoDB transactions. Controlled development may use
+  explicit `sandbox` money mode with PhonePe test credentials; every balance is
+  labelled test money, withdrawals remain disabled, and live-money mode stays
+  fail-closed until every documented release gate passes.
 - New Quick Matches use Game-backed `QuickMatchOffering`, Match, and Room data;
   do not revive legacy Tournament/TournamentType dependencies.
 - Scalable Events use reviewed stage definitions: bounded room size, explicit
@@ -42,12 +44,9 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Planning estimate: approximately 80% of the complete roadmap, 92% of the
   core playable platform, and 45% ready for unrestricted real-money traffic.
   These are planning estimates, not completion evidence.
-- Latest affected backend gates: competition policy 103/103 and competition
-  replica-set integration 79/79 passed on 2026-08-16.
-- Full backend release aggregate passed 303/303 on 2026-08-16 after the
-  PhonePe provider/reconciliation update. Frontend state passed 80/80; full
-  lint and the 551-module production
-  build passed on 2026-08-16.
+- Latest complete backend release aggregate passed 310/310 on 2026-08-16.
+  Frontend state passed 84/84; full lint and the 554-module production build
+  passed on 2026-08-16.
 - Production deployment checkpoint 2026-08-16: backend commit `12e6696` is
   live on Render and `/healthz` plus `/readyz` return 200; frontend commit
   `2545a89` is READY on Vercel and the production alias returns 200. Render and
@@ -74,11 +73,21 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   should be reissued. Render requires a Starter worker at $7/month, so the Event
   and payment workers remain uncreated pending the explicit $14/month spend.
 - Product decision 2026-08-16: defer both paid Render Background Workers until
-  final launch preparation. Platform Admin may use the existing audited manual
-  Event close/retry/advancement controls during development. PhonePe deposits
-  remain disabled; wallet balances must never be manually credited as a
-  substitute for signed callback or worker reconciliation. Worker provisioning,
-  restart proof, and deposit certification are the last launch gates.
+  final launch preparation. Platform Admin may use audited manual Event and
+  sandbox-payment controls during development. Explicit sandbox money mode can
+  enable PhonePe test deposits and paid Quick Matches; a governance action asks
+  PhonePe for authoritative status and credits only an exact order/amount match.
+  Manual balance credits remain forbidden. Withdrawals and all live-money
+  operation remain disabled; worker provisioning, callbacks, restart proof,
+  payout integration, and live certification stay launch gates.
+- Sandbox-money testing refinement: the API exposes the current money mode and
+  test-money flag; Wallet and paid cards label sandbox funds. Platform Admin has
+  a bounded reconciliation queue and can trigger provider-status verification
+  using only the job identity. The browser cannot supply amount, outcome, user,
+  or wallet data. Provider evidence mismatch creates zero credit.
+- Operator scale refinement: assigned and unassigned Match queues use distinct
+  bounded opaque cursors, stable indexed ordering, Redux append de-duplication,
+  stale-response guards, and load-more controls.
 - Verification-request history is now bounded for both players and Platform
   Admins: 25-item opaque cursor pages, Redux-owned player state, deduplicated
   load-more UI, and indexed backend ordering. Focused pagination checks pass;

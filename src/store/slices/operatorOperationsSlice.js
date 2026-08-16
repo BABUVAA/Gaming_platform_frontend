@@ -2,6 +2,25 @@ import { createSlice } from "@reduxjs/toolkit";
 import createApiThunk from "../thunks/createApiThunk.js";
 
 const selectEnvelopeData = (response) => response.data?.data;
+const OPERATOR_MATCH_PAGE_LIMIT = 25;
+const emptyPage = () => ({
+  hasMore: false,
+  limit: OPERATOR_MATCH_PAGE_LIMIT,
+  nextCursor: null,
+});
+const normalizeMatchPage = (response) => {
+  const data = selectEnvelopeData(response);
+  return Array.isArray(data)
+    ? { items: data, page: emptyPage() }
+    : {
+        items: Array.isArray(data?.items) ? data.items : [],
+        page: {
+          hasMore: Boolean(data?.page?.hasMore),
+          limit: data?.page?.limit || OPERATOR_MATCH_PAGE_LIMIT,
+          nextCursor: data?.page?.nextCursor || null,
+        },
+      };
+};
 
 export const fetchOperatorWorkspace = createApiThunk(
   "operatorOperations/fetchWorkspace",
@@ -9,19 +28,52 @@ export const fetchOperatorWorkspace = createApiThunk(
     request: async ({ api, signal }) => {
       const [dashboard, matches, unassigned] = await Promise.all([
         api.get("/api/operator/dashboard", { signal }),
-        api.get("/api/operator/matches", { signal }),
-        api.get("/api/operator/matches/unassigned", { signal }),
+        api.get("/api/operator/matches", {
+          params: { limit: OPERATOR_MATCH_PAGE_LIMIT },
+          signal,
+        }),
+        api.get("/api/operator/matches/unassigned", {
+          params: { limit: OPERATOR_MATCH_PAGE_LIMIT },
+          signal,
+        }),
       ]);
 
       return { dashboard, matches, unassigned };
     },
     selectData: ({ dashboard, matches, unassigned }) => ({
       dashboard: selectEnvelopeData(dashboard) || null,
-      matches: selectEnvelopeData(matches) || [],
-      unassigned: selectEnvelopeData(unassigned) || [],
+      assignedPage: normalizeMatchPage(matches),
+      unassignedPage: normalizeMatchPage(unassigned),
     }),
     errorMessage: "Unable to load operator activity.",
     toast: { error: true },
+  },
+);
+
+export const fetchMoreOperatorMatches = createApiThunk(
+  "operatorOperations/fetchMoreMatches",
+  {
+    path: ({ arg }) =>
+      arg.kind === "unassigned"
+        ? "/api/operator/matches/unassigned"
+        : "/api/operator/matches",
+    getParams: ({ cursor }) => ({
+      cursor,
+      limit: OPERATOR_MATCH_PAGE_LIMIT,
+    }),
+    selectData: (response) => normalizeMatchPage(response),
+    errorMessage: "Unable to load more operator matches.",
+  },
+  {
+    condition: ({ cursor, kind }, { getState }) => {
+      const state = getState().operatorOperations;
+      return Boolean(
+        cursor &&
+        ["assigned", "unassigned"].includes(kind) &&
+        state.pageStatus[kind] !== "loading" &&
+        state.pages[kind].nextCursor === cursor,
+      );
+    },
   },
 );
 
@@ -89,6 +141,10 @@ const operatorOperationsSlice = createSlice({
     dashboard: null,
     error: null,
     matches: [],
+    pageError: { assigned: null, unassigned: null },
+    pageRequestId: { assigned: null, unassigned: null },
+    pages: { assigned: emptyPage(), unassigned: emptyPage() },
+    pageStatus: { assigned: "idle", unassigned: "idle" },
     status: "idle",
     unassigned: [],
   },
@@ -97,12 +153,15 @@ const operatorOperationsSlice = createSlice({
     builder
       .addCase(fetchOperatorWorkspace.pending, (state) => {
         state.error = null;
+        state.pageRequestId = { assigned: null, unassigned: null };
         state.status = "loading";
       })
       .addCase(fetchOperatorWorkspace.fulfilled, (state, action) => {
         state.dashboard = action.payload.dashboard;
-        state.matches = action.payload.matches;
-        state.unassigned = action.payload.unassigned;
+        state.matches = action.payload.assignedPage.items;
+        state.pages.assigned = action.payload.assignedPage.page;
+        state.unassigned = action.payload.unassignedPage.items;
+        state.pages.unassigned = action.payload.unassignedPage.page;
         state.status = "succeeded";
       })
       .addCase(fetchOperatorWorkspace.rejected, (state, action) => {
@@ -110,6 +169,34 @@ const operatorOperationsSlice = createSlice({
           ? null
           : action.payload || action.error.message;
         state.status = action.meta.aborted ? "idle" : "failed";
+      })
+      .addCase(fetchMoreOperatorMatches.pending, (state, action) => {
+        const { kind } = action.meta.arg;
+        state.pageError[kind] = null;
+        state.pageRequestId[kind] = action.meta.requestId;
+        state.pageStatus[kind] = "loading";
+      })
+      .addCase(fetchMoreOperatorMatches.fulfilled, (state, action) => {
+        const { kind } = action.meta.arg;
+        if (state.pageRequestId[kind] !== action.meta.requestId) return;
+        const target = kind === "assigned" ? state.matches : state.unassigned;
+        const ids = new Set(target.map((match) => match._id));
+        action.payload.items.forEach((match) => {
+          if (!ids.has(match._id)) target.push(match);
+        });
+        state.pages[kind] = action.payload.page;
+        state.pageRequestId[kind] = null;
+        state.pageStatus[kind] = "succeeded";
+      })
+      .addCase(fetchMoreOperatorMatches.rejected, (state, action) => {
+        if (action.meta.condition) return;
+        const { kind } = action.meta.arg;
+        if (state.pageRequestId[kind] !== action.meta.requestId) return;
+        state.pageRequestId[kind] = null;
+        state.pageStatus[kind] = action.meta.aborted ? "idle" : "failed";
+        state.pageError[kind] = action.meta.aborted
+          ? null
+          : action.payload || action.error;
       });
 
     [

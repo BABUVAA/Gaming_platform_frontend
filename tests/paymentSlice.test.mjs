@@ -73,7 +73,12 @@ test("payment capability read stores the server-owned deposit release state", as
     observedConfig = config;
     return {
       config,
-      data: { data: { deposits: { available: false, currency: "INR" } } },
+      data: { data: {
+        deposits: { available: true, currency: "INR" },
+        moneyMode: "sandbox",
+        testMoney: true,
+        withdrawalsAvailable: false,
+      } },
       headers: {},
       status: 200,
       statusText: "OK",
@@ -86,8 +91,11 @@ test("payment capability read stores the server-owned deposit release state", as
     assert.equal(action.type, fetchPaymentCapabilities.fulfilled.type);
     assert.equal(observedConfig.url, "/api/payment/capabilities");
     assert.deepEqual(store.getState().payment.capabilities, {
-      depositAvailable: false,
+      depositAvailable: true,
+      moneyMode: "sandbox",
       status: "succeeded",
+      testMoney: true,
+      withdrawalsAvailable: false,
     });
   } finally {
     api.defaults.adapter = originalAdapter;
