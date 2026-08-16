@@ -5,6 +5,7 @@ import { FaBolt, FaClock, FaLink, FaShieldAlt } from "react-icons/fa";
 import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
 import { fetchPlayerProfile } from "../store/slices/playerSlice";
+import { fetchMyVerificationRequests } from "../store/slices/verificationRequestSlice";
 import { showToast, types } from "../store/slices/toastSlice";
 import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
@@ -35,7 +36,9 @@ const GameAccounts = () => {
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
   const [linkedAccounts, setLinkedAccounts] = useState([]);
-  const [verificationRequests, setVerificationRequests] = useState([]);
+  const verificationRequests = useSelector((store) => store.verificationRequests?.items || []);
+  const verificationPage = useSelector((store) => store.verificationRequests?.page);
+  const verificationStatus = useSelector((store) => store.verificationRequests?.status);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
@@ -47,13 +50,12 @@ const GameAccounts = () => {
     // dispatch dependency changes, not after every component render.
     setIsLoading(true);
     try {
-      const [accountsResponse, requestsResponse] = await Promise.all([
+      const [accountsResponse] = await Promise.all([
         api.get("/api/users/game-accounts"),
-        api.get("/api/users/verification-requests"),
+        dispatch(fetchMyVerificationRequests()).unwrap(),
       ]);
 
       setLinkedAccounts(accountsResponse.data?.data || []);
-      setVerificationRequests(requestsResponse.data?.data || []);
     } catch (error) {
       dispatch(
         showToast({
@@ -385,6 +387,16 @@ const GameAccounts = () => {
                     </article>
                   ))
                 )}
+                {verificationPage?.hasMore ? (
+                  <button
+                    type="button"
+                    disabled={verificationStatus === "loading_more"}
+                    onClick={() => dispatch(fetchMyVerificationRequests({ cursor: verificationPage.nextCursor, limit: verificationPage.limit }))}
+                    className="w-full rounded-xl border border-cyan-400/30 px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {verificationStatus === "loading_more" ? "Loading..." : "Load more history"}
+                  </button>
+                ) : null}
               </div>
             </section>
           </div>

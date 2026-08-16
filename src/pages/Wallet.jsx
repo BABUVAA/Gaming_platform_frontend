@@ -144,8 +144,9 @@ const Wallet = () => {
   };
 
   const validateAmount = (value, { maxAmount } = {}) => {
+    const amountText = String(value ?? "").trim();
     const parsedValue = Number(value);
-    if (!parsedValue || parsedValue <= 0) {
+    if (!/^\d+(\.\d{1,2})?$/.test(amountText) || !parsedValue || parsedValue <= 0) {
       dispatch(
         showToast({
           message: "Enter a valid wallet amount.",
@@ -180,9 +181,7 @@ const Wallet = () => {
     try {
       const response = await dispatch(
         initiatePhonePeOrder({
-          amount: value,
-          name: "Player",
-          mobile: "9999999999",
+          amountMinor: Math.round(value * 100),
         })
       ).unwrap();
 

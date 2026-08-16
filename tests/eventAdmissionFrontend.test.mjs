@@ -29,6 +29,12 @@ import eventStageSlice, {
 import eventManagementSlice, {
   createManagedEventRun,
 } from "../src/store/slices/eventManagementSlice.js";
+import eventStageAdjustmentSlice, {
+  fetchManagedStageAdjustments,
+  fetchStageAdjustmentReviewQueue,
+  proposeManagedStageAdjustment,
+  reviewStageAdjustment,
+} from "../src/store/slices/eventStageAdjustmentSlice.js";
 
 const response = (config, data) => ({
   config,
@@ -288,7 +294,10 @@ test("Event Manager proposes only the reviewed execution plan and fails closed f
     templateDraftSection,
     /disabled=\{teamExecutionUnsupported\}/,
   );
-  assert.match(runDraftSection, /disabled=\{teamExecutionUnsupported\}/);
+  assert.match(
+    runDraftSection,
+    /disabled=\{teamExecutionUnsupported \|\| Boolean\(rankedProjection\.error\)\}/,
+  );
   assert.doesNotMatch(source, /participantIds|seedingSeed|createBatch|close-registration/);
 });
 
@@ -680,4 +689,68 @@ test("Event refresh removes standings that are no longer completed and owned", (
 
   assert.equal(next.standingsById[runId], undefined);
   assert.equal(next.standingsStatusById[runId], undefined);
+});
+
+test("future-round changes use scoped proposal and independent governance routes", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    if (config.method === "get") {
+      return response(config, { data: { adjustments: [] } });
+    }
+    return response(config, {
+      data: {
+        adjustment: {
+          id: "adjustment-1",
+          stageNumber: 2,
+          status: config.method === "post" ? "in_review" : "approved",
+        },
+      },
+    });
+  };
+
+  try {
+    const store = configureStore({ reducer: { eventStageAdjustments: eventStageAdjustmentSlice.reducer } });
+    const definition = {
+      advanceCount: 10,
+      batchSpacingMinutes: 2,
+      checkInMinutesBefore: 15,
+      participantsPerMatch: 100,
+      qualificationRule: "top_n",
+      stageDelayMinutes: 20,
+    };
+    await store.dispatch(fetchManagedStageAdjustments("run-1"));
+    await store.dispatch(proposeManagedStageAdjustment({ definition, runId: "run-1", stageNumber: 2 }));
+    await store.dispatch(fetchStageAdjustmentReviewQueue());
+    await store.dispatch(reviewStageAdjustment({ action: "approved", adjustmentId: "adjustment-1", note: "" }));
+
+    assert.deepEqual(requests.map(({ method, url }) => [method, url]), [
+      ["get", "/api/staff/events/runs/run-1/stage-adjustments"],
+      ["post", "/api/staff/events/runs/run-1/stage-adjustments"],
+      ["get", "/api/admin/events/stage-adjustments"],
+      ["patch", "/api/admin/events/stage-adjustments/adjustment-1/review"],
+    ]);
+    assert.deepEqual(decodeBody(requests[1]), { definition, stageNumber: 2 });
+    assert.deepEqual(decodeBody(requests[3]), { action: "approved", note: "" });
+    assert.doesNotMatch(JSON.stringify(decodeBody(requests[1])), /playerIds|rankingIds|seedingSeed|status/);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("ranked Event UI exposes eliminated-round filters without client-owned outcomes", async () => {
+  const [manager, operator, stage] = await Promise.all([
+    readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/Operations.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/adminComponents/EventStageManagement.jsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(manager, /RankedStagePlanEditor/);
+  assert.match(operator, /record_result/);
+  assert.match(stage, /Eliminated round/);
+  assert.match(stage, /eliminatedInStage/);
+  assert.doesNotMatch(`${manager}\n${stage}`, /seedingSeed|setWinner|eliminatePlayer/);
+  assert.match(manager, /Operations handoff/);
+  assert.match(manager, /awaiting operator/);
+  assert.match(manager, /result attention/);
 });

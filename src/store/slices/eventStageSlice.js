@@ -86,9 +86,11 @@ export const fetchAdminEventStandings = createApiThunk(
   "eventStage/fetchStandings",
   {
     path: ({ arg }) => `/api/admin/events/runs/${arg.runId}/standings`,
-    getParams: ({ cursor }) => ({
+    getParams: ({ cursor, eliminatedInStage, result }) => ({
       limit: 25,
       ...(cursor ? { cursor } : {}),
+      ...(eliminatedInStage ? { eliminatedInStage } : {}),
+      ...(result ? { result } : {}),
     }),
     selectData: (response) => response.data?.data,
     errorMessage: "Unable to load Event standings.",
@@ -325,12 +327,13 @@ const eventStageSlice = createSlice({
         state.standingsStatusByRunId[runId] = "loading";
       })
       .addCase(fetchAdminEventStandings.fulfilled, (state, action) => {
-        const { cursor, runId } = action.meta.arg;
+        const { cursor, eliminatedInStage, result, runId } = action.meta.arg;
         if (state.standingsRequestByRunId[runId] !== action.meta.requestId)
           return;
         const current = state.standingsByRunId[runId];
         state.standingsByRunId[runId] = {
           ...action.payload,
+          filter: { eliminatedInStage: eliminatedInStage || "", result: result || "" },
           standings: cursor
             ? appendUniqueStandings(current?.standings, action.payload.standings)
             : action.payload.standings,

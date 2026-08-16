@@ -38,7 +38,7 @@ test("revoking a role keeps it in Staff Directory state", () => {
   ];
   let state = accessControlSlice.reducer(
     undefined,
-    fetchAccessAssignments.fulfilled(assignments, "load-1"),
+    fetchAccessAssignments.fulfilled({ assignments, page: { hasMore: true, limit: 25, nextCursor: "next" } }, "load-1"),
   );
 
   state = accessControlSlice.reducer(
@@ -60,7 +60,7 @@ test("suspending a role keeps it visible for restoration", () => {
   const assignment = { _id: "role-1", role: "match_operator", status: "active" };
   let state = accessControlSlice.reducer(
     undefined,
-    fetchAccessAssignments.fulfilled([assignment], "load-1"),
+    fetchAccessAssignments.fulfilled({ assignments: [assignment], page: { hasMore: false, limit: 25, nextCursor: null } }, "load-1"),
   );
 
   state = accessControlSlice.reducer(
@@ -74,4 +74,25 @@ test("suspending a role keeps it visible for restoration", () => {
 
   assert.equal(state.assignments.length, 1);
   assert.equal(state.assignments[0].status, "suspended");
+});
+
+test("assignment pages append by opaque cursor without duplicate role rows", () => {
+  let state = accessControlSlice.reducer(
+    undefined,
+    fetchAccessAssignments.fulfilled(
+      { assignments: [{ _id: "role-1" }], page: { hasMore: true, limit: 25, nextCursor: "next" } },
+      "first",
+      {},
+    ),
+  );
+  state = accessControlSlice.reducer(
+    state,
+    fetchAccessAssignments.fulfilled(
+      { assignments: [{ _id: "role-1" }, { _id: "role-2" }], page: { hasMore: false, limit: 25, nextCursor: null } },
+      "more",
+      { cursor: "next" },
+    ),
+  );
+  assert.deepEqual(state.assignments.map((item) => item._id), ["role-1", "role-2"]);
+  assert.equal(state.assignmentPage.hasMore, false);
 });

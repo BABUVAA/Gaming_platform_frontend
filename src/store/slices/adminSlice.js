@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
-import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
-import createApiThunk from "../thunks/createApiThunk";
+import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers.js";
+import createApiThunk from "../thunks/createApiThunk.js";
 
 const selectNestedArrayData = (response) => {
   const data = response.data?.data;
@@ -8,6 +8,11 @@ const selectNestedArrayData = (response) => {
     throw new Error("Admin list response must contain an array.");
   }
   return data;
+};
+
+const selectVerificationPage = (response) => {
+  const items = selectNestedArrayData(response);
+  return { items, page: response.data?.page || { limit: 25, hasMore: false, nextCursor: null } };
 };
 
 const selectReviewedVerification = (response) => {
@@ -26,8 +31,12 @@ export const findVerificationRequests = createApiThunk(
     path: "/api/admin/verification-requests",
     // The thunk argument becomes an explicit query parameter only for this
     // endpoint; createApiThunk never sends GET arguments automatically.
-    getParams: (status = "pending") => ({ status }),
-    selectData: selectNestedArrayData,
+    getParams: (arg = {}) => {
+      const { status = "pending", cursor = null, limit = 25 } =
+        typeof arg === "string" ? { status: arg } : arg;
+      return { status, limit, ...(cursor ? { cursor } : {}) };
+    },
+    selectData: selectVerificationPage,
     errorMessage: "Failed to fetch verification requests",
     toast: { error: true },
   },
@@ -234,6 +243,7 @@ const adminSlice = createSlice({
   name: "admin",
   initialState: {
     verificationRequests: [],
+    verificationRequestPage: { limit: 25, hasMore: false, nextCursor: null },
     staffRoles: [],
     staffCandidates: [],
     staffAssignments: [],
@@ -271,7 +281,11 @@ const adminSlice = createSlice({
           return;
         }
 
-        state.verificationRequests = action.payload;
+        const isMore = Boolean(action.meta.arg?.cursor);
+        state.verificationRequests = isMore
+          ? [...state.verificationRequests, ...action.payload.items.filter((item) => !state.verificationRequests.some((current) => current._id === item._id))]
+          : action.payload.items;
+        state.verificationRequestPage = action.payload.page;
         state.latestRequestIds.verificationRequests = null;
       })
       .addCase(reviewVerificationRequest.fulfilled, (state, action) => {

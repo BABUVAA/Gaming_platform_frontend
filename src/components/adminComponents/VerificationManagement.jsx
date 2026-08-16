@@ -14,7 +14,7 @@ const STATUS_STYLES = {
 
 const VerificationManagement = () => {
   const dispatch = useDispatch();
-  const { verificationRequests = [], isLoading, error } = useSelector(
+  const { verificationRequests = [], verificationRequestPage, isLoading, error } = useSelector(
     (store) => store.admin
   );
   const [statusFilter, setStatusFilter] = useState("pending");
@@ -23,7 +23,7 @@ const VerificationManagement = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    dispatch(findVerificationRequests(statusFilter));
+    dispatch(findVerificationRequests({ status: statusFilter, limit: 25 }));
   }, [dispatch, statusFilter]);
 
   const groupedCounts = useMemo(
@@ -55,7 +55,7 @@ const VerificationManagement = () => {
 
     setSelectedRequest(null);
     setReviewNote("");
-    dispatch(findVerificationRequests(statusFilter));
+    dispatch(findVerificationRequests({ status: statusFilter, limit: 25 }));
   };
 
   return (
@@ -177,6 +177,17 @@ const VerificationManagement = () => {
           </tbody>
         </table>
       </div>
+
+      {verificationRequestPage?.hasMore ? (
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={() => dispatch(findVerificationRequests({ status: statusFilter, cursor: verificationRequestPage.nextCursor, limit: verificationRequestPage.limit }))}
+          className="mt-4 rounded-xl border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? "Loading..." : "Load more requests"}
+        </button>
+      ) : null}
 
       {selectedRequest ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

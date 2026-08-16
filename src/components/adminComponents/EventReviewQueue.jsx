@@ -17,6 +17,7 @@ import {
 } from "../../store/slices/eventReviewSlice";
 import EventInvitationManagement from "./EventInvitationManagement.jsx";
 import EventStageManagement from "./EventStageManagement.jsx";
+import StageAdjustmentReviewQueue from "./StageAdjustmentReviewQueue.jsx";
 
 const staffSummaryShape = PropTypes.shape({
   profile: PropTypes.shape({ username: PropTypes.string }),
@@ -46,6 +47,21 @@ const eventRecordShape = PropTypes.shape({
     format: PropTypes.string,
     participantsPerMatch: PropTypes.number,
     seedingPolicy: PropTypes.string,
+    stages: PropTypes.arrayOf(PropTypes.shape({
+      advanceCount: PropTypes.number,
+      batchSpacingMinutes: PropTypes.number,
+      checkInMinutesBefore: PropTypes.number,
+      number: PropTypes.number,
+      participantsPerMatch: PropTypes.number,
+      qualificationRule: PropTypes.string,
+      stageDelayMinutes: PropTypes.number,
+    })),
+    projection: PropTypes.arrayOf(PropTypes.shape({
+      batchCount: PropTypes.number,
+      number: PropTypes.number,
+      participantCount: PropTypes.number,
+      qualifiedCount: PropTypes.number,
+    })),
   }),
   formatSnapshot: PropTypes.shape({
     gameKey: PropTypes.string,
@@ -98,9 +114,20 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
             </p>
           ) : null}
           {isRun && item.executionPlan ? (
-            <p className="mt-2 text-xs leading-5 text-cyan-100/70">
-              {item.executionPlan.format?.replaceAll("_", " ")} / {item.executionPlan.participantsPerMatch} players per match / top {item.executionPlan.advanceCount} advance / {item.executionPlan.batchSpacingMinutes} minute spacing / check-in {item.executionPlan.checkInMinutesBefore} minutes before / {item.executionPlan.seedingPolicy?.replaceAll("_", " ")}
-            </p>
+            <div className="mt-2 rounded-xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-xs leading-5 text-cyan-100/80">
+              <p className="font-black capitalize">{item.executionPlan.format?.replaceAll("_", " ")}</p>
+              {item.executionPlan.format === "ranked_stages" ? (
+                <div className="mt-2 space-y-1">
+                  {item.executionPlan.stages?.map((stage) => (
+                    <p key={stage.number}>
+                      Round {stage.number}: {(item.executionPlan.projection?.find((entry) => entry.number === stage.number)?.participantCount || 0).toLocaleString("en-IN")} players / {(item.executionPlan.projection?.find((entry) => entry.number === stage.number)?.batchCount || 0).toLocaleString("en-IN")} rooms / {stage.participantsPerMatch} max per room / {stage.qualificationRule === "final_ranking" ? "final ranking" : `top ${stage.advanceCount} qualify`} / room spacing {stage.batchSpacingMinutes} min / check-in {stage.checkInMinutesBefore} min before / next-round delay {stage.stageDelayMinutes} min
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1">2 players per match / 1 winner advances / {item.executionPlan.batchSpacingMinutes} minute spacing / check-in {item.executionPlan.checkInMinutesBefore} minutes before / registration order</p>
+              )}
+            </div>
           ) : null}
           {isRun && item.formatSnapshot ? (
             <p className="mt-2 text-xs leading-5 text-slate-400">
@@ -216,6 +243,7 @@ const EventReviewQueue = () => {
         </div>
         <ReviewPanel canReview={selected ? canReview(selected.item) : true} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} />
       </div>
+      <StageAdjustmentReviewQueue />
       <EventInvitationManagement />
       <EventStageManagement />
     </section>

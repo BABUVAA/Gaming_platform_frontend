@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-14
+Last updated: 2026-08-16
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -24,6 +24,8 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Platform Admin owns Game configuration, offering publication, staff access,
   and Event approval. Game Manager is read-only; Event Manager proposes scoped
   drafts; Match Operator operates scoped assigned Matches.
+- Invitation-only Event cards are visible only to a player with an active
+  invitation; server discovery and registration enforce the same rule.
 - Redux Toolkit owns feature data; do not introduce component-level API calls
   where a Redux boundary exists.
 - Money uses integer INR minor units, an append-only balanced ledger,
@@ -31,18 +33,26 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   until every documented release gate passes.
 - New Quick Matches use Game-backed `QuickMatchOffering`, Match, and Room data;
   do not revive legacy Tournament/TournamentType dependencies.
+- Scalable Events use reviewed stage definitions: bounded room size, explicit
+  qualification rule, immutable ranked batch outcome, and restart-safe paged
+  generation. Do not infer advancement from a fixed knockout bracket.
 
 ## Current Verified State
 
-- Planning estimate: approximately 76% of the complete roadmap, 88% of the
-  core playable platform, and 42% ready for unrestricted real-money traffic.
+- Planning estimate: approximately 80% of the complete roadmap, 92% of the
+  core playable platform, and 45% ready for unrestricted real-money traffic.
   These are planning estimates, not completion evidence.
-- Latest affected backend gates: competition policy 97/97, competition
-  integration 67/67 before final targeted additions, and 19 focused
-  advancement/recovery cases passed. A later full test wrapper timed out under
-  local process contention without reporting a failure.
-- Frontend aggregate: 72/72 passed; full lint and 535-module production build
-  passed on 2026-08-13.
+- Latest affected backend gates: competition policy 103/103 and competition
+  replica-set integration 79/79 passed on 2026-08-16.
+- Frontend state suite: 79/79 passed; full lint and the 551-module production
+  build passed on 2026-08-16.
+- Verification-request history is now bounded for both players and Platform
+  Admins: 25-item opaque cursor pages, Redux-owned player state, deduplicated
+  load-more UI, and indexed backend ordering. Focused pagination checks pass;
+  frontend lint and the current 546-module production build pass.
+- The active Staff Directory is also bounded: 25-item opaque assignment pages,
+  Redux append de-duplication, and a role/time database index preserve the
+  compact role rows and revoked-role reassignment workflow.
 - Production dependency audit 2026-08-14: both frontend and backend
   `npm audit --omit=dev --json` reports contain zero production dependency
   vulnerabilities. Deployment and external-provider gates remain separate.
@@ -165,6 +175,22 @@ a transactionally created outbox, unique durable notification source links,
 and the existing Event worker retry loop. Production still requires a deployed,
 supervised Event worker.
 
+## Completed Slice: Event Placement Rewards
+
+Completed locally and verified 2026-08-16. Event Manager proposals carry an
+INR minor-unit placement table; Platform Admin review freezes it before
+registration. Final tied standings allocate the configured amount to every
+player sharing a place. A different governance identity must release the
+ledger-backed pending rewards, and recipients cannot release their own reward.
+
+The runtime gate used the existing Super Admin as approver and existing
+Platform Admin as independent reviewer for a disposable INR 95.00 Event. The
+UI showed final places `1, 2, 3, 3`, then `released`, with a clean console.
+Database evidence showed `5000/2500/1000/1000` allocations, zero pending
+balances, exact withdrawable balances, four pending ledger rows, and four
+release ledger rows. The disposable Event/game/four-player fixture was then
+removed without changing either governance identity.
+
 Operational baseline refinement: backend exposes public `/healthz` liveness
 and fail-closed `/readyz` dependency readiness checks. Configure the deployed
 web service to use `/readyz`; deploy `npm run worker:events` separately with
@@ -269,18 +295,16 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
 
 ## Work Immediately After This Slice
 
-1. In progress: Event placement reward tables now have Event Manager draft UI,
+1. Completed locally 2026-08-16: Event placement reward tables have Event Manager draft UI,
    server validation, Platform-Admin review disclosure, and a governed release
    view. Replica-set financial proof covers tied-place allocation, one pending
    ledger entry per winner, approver/recipient denial, concurrent idempotent
    release, and exact `withdrawable` movement. Focused frontend Event tests,
-   lint, and the 548-module production build pass. Finish browser/API proof and
-   final financial audit before using it.
+   lint, and the 548-module production build pass. Browser/API proof and the
+   final financial audit now pass.
    Local browser status 2026-08-14: the public shell is console-clean and
    `/readyz` is green. A real active Event Manager loaded the scoped BGMI Event
-   workspace and placement-reward controls with no console errors. Platform
-   Admin review and independent release still require a deliberately created
-   test Event; do not use or transmit account credentials.
+   workspace and placement-reward controls with no console errors.
    Code-level financial audit fixed original-approver release availability in
    the safe read model and a closure-clock recovery-job delay; the focused
    placement-reward replica test passes after both corrections.
@@ -290,9 +314,23 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    temporary in-review Run and its review record were removed. The admin queue
    now visibly requires an independent reviewer for creator/last-submitter
    proposals and blocks both selection and decision transport; focused tests
-   and lint pass. The remaining reward gate is an independent-admin browser
-   review and release, which needs a separate governance identity.
-2. Deploy and monitor the continuous Event worker (`npm run worker:events`).
+   and lint pass. Independent-admin release is now verified with the existing
+   governance identities and exact ledger evidence.
+2. Completed locally 2026-08-16: scalable ranked Event stages now support
+   arbitrarily large reviewed rosters without a product-level capacity cap.
+   Every round owns its bounded 2-100 player room size, top-N rule, timings,
+   and deterministic projection; paged workers generate immutable batches and
+   advance only verified ordered results. Event Managers may propose changes
+   to an ungenerated future round, while Platform/Super Admin independently
+   approves the exact immutable definition. Match Operators record the full
+   room order. Final standings retain champion and eliminated players, with
+   eliminated round, room, time, placement, and source evidence; governance UI
+   filters by outcome and elimination round. Focused 1,001-player and complete
+   multi-round journeys pass, as do the 103 policy and 79 replica-set
+   competition aggregates. Frontend passed 79 state tests, full lint, and the
+   551-module build. Desktop governance and Event Manager controls plus 390px
+   responsive layout rendered with zero console warnings/errors.
+3. Deploy and monitor the continuous Event worker (`npm run worker:events`).
    Backend `render.yaml` now declares it as a separate Render worker beside the
    `/readyz`-checked API. Configure its same MongoDB/Redis secrets and prove
    supervision/restart behaviour before counting this as deployed.
@@ -300,6 +338,10 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    MongoDB and Redis ready; Vercel frontend returned 200, uses this backend
    origin, and passed credentialed CORS preflight. Worker restart evidence is
    still required.
+   A Vercel blank-page regression from circular custom Vite vendor chunks was
+   fixed by removing the manual chunk groups; the rebuilt deployment was
+   confirmed working by the owner and a fresh browser check with no console
+   errors.
    Backend startup now runs an executable production configuration validator:
    the web process requires datastore, origin, session, email, and Resend
    settings; the worker requires its shared datastores. Missing/placeholder
@@ -307,8 +349,8 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    `PRODUCTION_RUNBOOK.md` records deploy verification and rollback steps.
    Focused production-validator/Render-blueprint tests pass, preserving the
    `/readyz` API check, separate Event worker, and paid-entry false default.
-3. Continue production hardening and final audit.
-4. Enable paid entry only after external provider gates turn green.
+4. Continue production hardening and final audit.
+5. Enable paid entry only after external provider gates turn green.
 
 ## Fast Verification Protocol
 

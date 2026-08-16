@@ -107,6 +107,12 @@ const emptyLobby = {
   instructions: "",
 };
 
+const getParticipantId = (participant) =>
+  String(participant?.user?._id || participant?.user || "");
+
+const getParticipantName = (participant) =>
+  participant?.user?.profile?.username || participant?.displayName || "Player";
+
 const formatDateTime = (value) => {
   if (!value) return "Schedule pending";
   const date = new Date(value);
@@ -135,6 +141,7 @@ const Operations = () => {
   const error = useSelector(selectOperatorWorkspaceError);
   const activeAction = useSelector(selectOperatorActiveAction);
   const [lobbyDrafts, setLobbyDrafts] = useState({});
+  const [resultDrafts, setResultDrafts] = useState({});
   const [activeFilter, setActiveFilter] = useState("all");
   const [expandedMatchId, setExpandedMatchId] = useState("");
 
@@ -159,6 +166,17 @@ const Operations = () => {
 
   useEffect(() => {
     syncLobbyDrafts(matches);
+    setResultDrafts((current) => Object.fromEntries(matches.map((match) => {
+      const existing = current[match._id];
+      const serverRanking = (match.resultSummary?.rankingIds || []).map((entry) => String(entry?._id || entry));
+      return [match._id, existing || {
+        proofNote: match.resultSummary?.proofNote || "",
+        rankingIds: serverRanking.length
+          ? serverRanking
+          : (match.participants || []).map(getParticipantId).filter(Boolean),
+        score: match.resultSummary?.finalScore || "",
+      }];
+    })));
   }, [matches, syncLobbyDrafts]);
 
   const orderedMatches = useMemo(
@@ -190,13 +208,29 @@ const Operations = () => {
     }
   };
 
-  const executeCommand = async (matchId, command) => {
+  const executeCommand = async (matchId, command, body) => {
     const action = await dispatch(
-      executeOperatorMatchCommand({ matchId, command }),
+      executeOperatorMatchCommand({ matchId, command, body }),
     );
     if (executeOperatorMatchCommand.fulfilled.match(action)) {
       dispatch(fetchOperatorWorkspace());
     }
+  };
+
+  const updateResultDraft = (matchId, changes) => {
+    setResultDrafts((current) => ({
+      ...current,
+      [matchId]: { ...current[matchId], ...changes },
+    }));
+  };
+
+  const moveRankedPlayer = (matchId, playerId, direction) => {
+    const rankingIds = [...(resultDrafts[matchId]?.rankingIds || [])];
+    const currentIndex = rankingIds.indexOf(playerId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= rankingIds.length) return;
+    [rankingIds[currentIndex], rankingIds[nextIndex]] = [rankingIds[nextIndex], rankingIds[currentIndex]];
+    updateResultDraft(matchId, { rankingIds });
   };
 
   const updateLobbyDraft = (matchId, field, value) => {
@@ -385,6 +419,7 @@ const Operations = () => {
               key={match._id}
               lobbyDraft={lobbyDrafts[match._id] || emptyLobby}
               match={match}
+              resultDraft={resultDrafts[match._id] || { proofNote: "", rankingIds: [], score: "" }}
               onPublishLobby={publishLobby}
               onToggle={() =>
                 setExpandedMatchId((current) =>
@@ -392,6 +427,8 @@ const Operations = () => {
                 )
               }
               onUpdateLobbyDraft={updateLobbyDraft}
+              onUpdateResultDraft={updateResultDraft}
+              onMoveRankedPlayer={moveRankedPlayer}
               onExecuteCommand={executeCommand}
             />
           ))}
@@ -523,9 +560,12 @@ const AssignedMatchCard = ({
   expanded,
   lobbyDraft,
   match,
+  resultDraft,
+  onMoveRankedPlayer,
   onPublishLobby,
   onToggle,
   onUpdateLobbyDraft,
+  onUpdateResultDraft,
   onExecuteCommand,
 }) => {
   const checkedInCount = (match.participants || []).filter(
@@ -540,6 +580,7 @@ const AssignedMatchCard = ({
   );
   const isCommandBusy = activeAction === `${match._id}:command`;
   const isLobbyBusy = activeAction === `${match._id}:lobby`;
+  const rankedEvent = match.eventBatch?.format === "ranked_stages";
 
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/65">
@@ -678,12 +719,78 @@ const AssignedMatchCard = ({
             )}
           </div>
 
+          {rankedEvent && match.status === "live" ? (
+            <RankedResultEditor
+              isBusy={isCommandBusy}
+              match={match}
+              onMove={onMoveRankedPlayer}
+              onSubmit={(body) => onExecuteCommand(match._id, "record_result", body)}
+              onUpdate={onUpdateResultDraft}
+              resultDraft={resultDraft}
+            />
+          ) : null}
+
           {match.resultSummary?.submittedBy || match.status === "disputed" ? (
             <ResultEvidence match={match} />
           ) : null}
         </div>
       ) : null}
     </article>
+  );
+};
+
+const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultDraft }) => {
+  const participantById = new Map(
+    (match.participants || []).map((participant) => [getParticipantId(participant), participant]),
+  );
+  const rankingIds = resultDraft.rankingIds || [];
+  const canSubmit =
+    resultDraft.score.trim().length > 0 &&
+    rankingIds.length === participantById.size &&
+    new Set(rankingIds).size === participantById.size;
+
+  return (
+    <section className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/5 p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Ranked room result</p>
+          <h4 className="mt-1 font-black text-white">Order every player from first to last</h4>
+          <p className="mt-1 text-xs text-slate-400">
+            Top {match.eventBatch?.stage?.advanceCount || 0} will qualify after verification and the dispute window.
+          </p>
+        </div>
+        <span className="rounded-full border border-emerald-300/20 px-3 py-1 text-xs font-bold text-emerald-100">
+          {rankingIds.length}/{participantById.size} ranked
+        </span>
+      </div>
+
+      <div className="mt-4 max-h-80 space-y-2 overflow-y-auto pr-1">
+        {rankingIds.map((playerId, index) => (
+          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2" key={playerId}>
+            <span className="text-center text-sm font-black text-emerald-200">#{index + 1}</span>
+            <span className="truncate text-sm font-bold text-white">{getParticipantName(participantById.get(playerId))}</span>
+            <div className="flex gap-1">
+              <button aria-label={`Move ${playerId} up`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === 0} onClick={() => onMove(match._id, playerId, -1)} type="button">Up</button>
+              <button aria-label={`Move ${playerId} down`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === rankingIds.length - 1} onClick={() => onMove(match._id, playerId, 1)} type="button">Down</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+          Result summary
+          <input className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm normal-case tracking-normal text-white" maxLength={200} onChange={(event) => onUpdate(match._id, { score: event.target.value })} placeholder="Example: Room 12 final ranking" value={resultDraft.score} />
+        </label>
+        <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+          Evidence note
+          <input className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm normal-case tracking-normal text-white" maxLength={1000} onChange={(event) => onUpdate(match._id, { proofNote: event.target.value })} placeholder="Observed scoreboard or evidence" value={resultDraft.proofNote} />
+        </label>
+      </div>
+      <button className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={isBusy || !canSubmit} onClick={() => onSubmit({ proofNote: resultDraft.proofNote, rankingIds, score: resultDraft.score })} type="button">
+        {isBusy ? "Saving ranking..." : "Save ranked result"}
+      </button>
+    </section>
   );
 };
 
@@ -722,9 +829,21 @@ const ResultEvidence = ({ match }) => {
       </div>
       {result.proofNote ? (
         <p className="mt-3 rounded-xl bg-slate-950/50 px-3 py-3 text-sm leading-6 text-slate-300">
-          <span className="font-black text-white">Player evidence:</span>{" "}
+          <span className="font-black text-white">Result evidence:</span>{" "}
           {result.proofNote}
         </p>
+      ) : null}
+      {result.rankingIds?.length ? (
+        <div className="mt-3 rounded-xl border border-orange-300/15 bg-slate-950/50 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-200">Verified room order</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {result.rankingIds.map((entry, index) => {
+              const playerId = String(entry?._id || entry);
+              const participant = match.participants?.find((item) => getParticipantId(item) === playerId);
+              return <span className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-slate-200" key={playerId}>#{index + 1} {getParticipantName(participant)}</span>;
+            })}
+          </div>
+        </div>
       ) : null}
     </div>
   );
@@ -850,9 +969,16 @@ const matchPropType = PropTypes.shape({
     PropTypes.string,
     PropTypes.shape({
       _id: PropTypes.string,
+      format: PropTypes.string,
       eventRun: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
       ordinal: PropTypes.number,
-      stage: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+      stage: PropTypes.oneOfType([PropTypes.string, PropTypes.shape({
+        _id: PropTypes.string,
+        advanceCount: PropTypes.number,
+        number: PropTypes.number,
+        participantsPerMatch: PropTypes.number,
+        qualificationRule: PropTypes.string,
+      })]),
     }),
   ]),
   source: PropTypes.string,
@@ -886,6 +1012,7 @@ const matchPropType = PropTypes.shape({
     disputeResolutionNote: PropTypes.string,
     finalScore: PropTypes.string,
     proofNote: PropTypes.string,
+    rankingIds: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.object])),
     submittedBy: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   }),
   status: PropTypes.string,
@@ -908,10 +1035,30 @@ AssignedMatchCard.propTypes = {
     roomPassword: PropTypes.string,
   }).isRequired,
   match: matchPropType.isRequired,
+  resultDraft: PropTypes.shape({
+    proofNote: PropTypes.string.isRequired,
+    rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+    score: PropTypes.string.isRequired,
+  }).isRequired,
+  onMoveRankedPlayer: PropTypes.func.isRequired,
   onPublishLobby: PropTypes.func.isRequired,
   onToggle: PropTypes.func.isRequired,
   onUpdateLobbyDraft: PropTypes.func.isRequired,
+  onUpdateResultDraft: PropTypes.func.isRequired,
   onExecuteCommand: PropTypes.func.isRequired,
+};
+
+RankedResultEditor.propTypes = {
+  isBusy: PropTypes.bool.isRequired,
+  match: matchPropType.isRequired,
+  onMove: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  onUpdate: PropTypes.func.isRequired,
+  resultDraft: PropTypes.shape({
+    proofNote: PropTypes.string.isRequired,
+    rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+    score: PropTypes.string.isRequired,
+  }).isRequired,
 };
 
 ResultEvidence.propTypes = {

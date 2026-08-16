@@ -24,11 +24,42 @@ test("staff utility mode never starts a wallet top-up transport", async () => {
         player: () => ({ summary: { role: "staff" } }),
       },
     });
-    const action = await store.dispatch(initiatePhonePeOrder({ amount: 100 }));
+    const action = await store.dispatch(initiatePhonePeOrder({ amountMinor: 10000 }));
 
     assert.equal(action.meta.condition, true);
     assert.equal(requestCount, 0);
     assert.equal(store.getState().payment.isLoading, false);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("player wallet top-up sends only the canonical minor-unit amount", async () => {
+  const originalAdapter = api.defaults.adapter;
+  let observedConfig;
+  api.defaults.adapter = async (config) => {
+    observedConfig = config;
+    return {
+      config,
+      data: { data: { redirectUrl: "https://mercury-uat.phonepe.com/test" } },
+      headers: {},
+      status: 200,
+      statusText: "OK",
+    };
+  };
+
+  try {
+    const store = configureStore({
+      reducer: {
+        payment: paymentSlice.reducer,
+        player: () => ({ summary: { role: "player" } }),
+      },
+    });
+    const action = await store.dispatch(initiatePhonePeOrder({ amountMinor: 1250 }));
+
+    assert.equal(action.type, initiatePhonePeOrder.fulfilled.type);
+    assert.equal(observedConfig.url, "/api/payment/order");
+    assert.deepEqual(JSON.parse(observedConfig.data), { amountMinor: 1250 });
   } finally {
     api.defaults.adapter = originalAdapter;
   }

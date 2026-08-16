@@ -24,7 +24,11 @@ export const findAccessCandidate = createApiThunk("accessControl/candidate", {
 });
 export const fetchAccessAssignments = createApiThunk("accessControl/assignments", {
   path: "/api/access-control/assignments",
-  selectData: field("assignments"),
+  getParams: ({ cursor = null, limit = 25 } = {}) => ({ limit, ...(cursor ? { cursor } : {}) }),
+  selectData: (response) => ({
+    assignments: response.data?.data?.assignments || [],
+    page: response.data?.data?.page || { limit: 25, hasMore: false, nextCursor: null },
+  }),
   errorMessage: "Unable to load staff assignments.",
   toast: { error: true },
 });
@@ -114,7 +118,7 @@ const accessControlSlice = createSlice({
   name: "accessControl",
   initialState: {
     roles: [], manageableRoles: [], recommendableRoles: [], scopeGames: [],
-    candidate: null, assignments: [], recommendations: [], reports: [], activity: [],
+    candidate: null, assignments: [], assignmentPage: { limit: 25, hasMore: false, nextCursor: null }, recommendations: [], reports: [], activity: [],
     profileActivity: [], profileActivityStatus: "idle",
     pendingRequests: 0, isLoading: false, error: null,
   },
@@ -130,7 +134,13 @@ const accessControlSlice = createSlice({
       })
       .addCase(fetchScopeGames.fulfilled, (state, action) => { state.scopeGames = action.payload || []; })
       .addCase(findAccessCandidate.fulfilled, (state, action) => { state.candidate = action.payload; })
-      .addCase(fetchAccessAssignments.fulfilled, (state, action) => { state.assignments = action.payload || []; })
+      .addCase(fetchAccessAssignments.fulfilled, (state, action) => {
+        const page = action.payload || { assignments: [], page: { limit: 25, hasMore: false, nextCursor: null } };
+        state.assignments = action.meta.arg?.cursor
+          ? [...state.assignments, ...page.assignments.filter((item) => !state.assignments.some((current) => current._id === item._id))]
+          : page.assignments;
+        state.assignmentPage = page.page;
+      })
       .addCase(fetchStaffRecommendations.fulfilled, (state, action) => { state.recommendations = action.payload || []; })
       .addCase(fetchAccessReports.fulfilled, (state, action) => { state.reports = action.payload || []; })
       .addCase(fetchAccessActivity.fulfilled, (state, action) => { state.activity = action.payload || []; });

@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import RankedStagePlanEditor from "../components/eventManagement/RankedStagePlanEditor.jsx";
+import {
+  buildDefaultRankedStages,
+  projectRankedStages,
+} from "../components/eventManagement/rankedStagePlanUtils.js";
+import FutureRoundAdjustmentPanel from "../components/eventManagement/FutureRoundAdjustmentPanel.jsx";
 import {
   createManagedEventRun,
   createManagedEventTemplate,
@@ -30,11 +36,13 @@ const initialRun = {
   templateId: "",
   title: "",
   waitlistEnabled: false,
+  executionFormat: "single_elimination",
   participantsPerMatch: "2",
   advanceCount: "1",
   seedingPolicy: "registration_order",
   batchSpacingMinutes: "10",
   checkInMinutesBefore: "15",
+  stageRows: [],
   rewardRows: [],
 };
 
@@ -78,6 +86,9 @@ const EventManagerDashboard = () => {
     (item) => item._id === run.templateId,
   );
   const teamExecutionUnsupported = selectedRunTemplate?.teamSize > 1;
+  const rankedProjection = run.executionFormat === "ranked_stages"
+    ? projectRankedStages(Number(run.registrationCapacity), run.stageRows)
+    : { error: "" };
 
   const updateTemplate = (field, value) => {
     // Changing games invalidates capabilities selected from the previous game.
@@ -112,14 +123,30 @@ const EventManagerDashboard = () => {
     const submittedDates = new FormData(event.currentTarget);
     const payload = {
       admissionPolicy: run.admissionPolicy,
-      executionPlan: {
-        advanceCount: Number(run.advanceCount),
-        batchSpacingMinutes: Number(run.batchSpacingMinutes),
-        checkInMinutesBefore: Number(run.checkInMinutesBefore),
-        format: "single_elimination",
-        participantsPerMatch: Number(run.participantsPerMatch),
-        seedingPolicy: run.seedingPolicy,
-      },
+      executionPlan: run.executionFormat === "ranked_stages"
+        ? {
+            format: "ranked_stages",
+            stages: run.stageRows.map((stage, index) => ({
+              advanceCount: index === run.stageRows.length - 1
+                ? 0
+                : Number(stage.advanceCount),
+              batchSpacingMinutes: Number(stage.batchSpacingMinutes),
+              checkInMinutesBefore: Number(stage.checkInMinutesBefore),
+              participantsPerMatch: Number(stage.participantsPerMatch),
+              qualificationRule: index === run.stageRows.length - 1
+                ? "final_ranking"
+                : "top_n",
+              stageDelayMinutes: Number(stage.stageDelayMinutes),
+            })),
+          }
+        : {
+            advanceCount: Number(run.advanceCount),
+            batchSpacingMinutes: Number(run.batchSpacingMinutes),
+            checkInMinutesBefore: Number(run.checkInMinutesBefore),
+            format: "single_elimination",
+            participantsPerMatch: Number(run.participantsPerMatch),
+            seedingPolicy: run.seedingPolicy,
+          },
       registrationCapacity: Number(run.registrationCapacity),
       rewardTerms: {
         currency: "INR",
@@ -177,6 +204,7 @@ const EventManagerDashboard = () => {
       templateId: getReferenceId(item.template),
       title: item.title || "",
       waitlistEnabled: item.waitlistEnabled === true,
+      executionFormat: item.executionPlan?.format || "single_elimination",
       participantsPerMatch: String(
         item.executionPlan?.participantsPerMatch || 2,
       ),
@@ -189,6 +217,13 @@ const EventManagerDashboard = () => {
       ),
       seedingPolicy:
         item.executionPlan?.seedingPolicy || "registration_order",
+      stageRows: (item.executionPlan?.stages || []).map((stage) => ({
+        advanceCount: String(stage.advanceCount ?? 0),
+        batchSpacingMinutes: String(stage.batchSpacingMinutes ?? 0),
+        checkInMinutesBefore: String(stage.checkInMinutesBefore ?? 15),
+        participantsPerMatch: String(stage.participantsPerMatch ?? 100),
+        stageDelayMinutes: String(stage.stageDelayMinutes ?? 0),
+      })),
       rewardRows: (item.rewardTerms?.placements || []).map((item) => ({
         place: String(item.place),
         amountRupees: String(item.amountMinor / 100),
@@ -470,85 +505,76 @@ const EventManagerDashboard = () => {
                 Allow waitlist after every seat is filled
               </label>
             ) : null}
-            <fieldset className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
-              <legend className="px-2 text-sm font-bold text-white">
-                First-stage plan
-              </legend>
-              <p className="mb-3 text-xs leading-5 text-slate-500">
-                Solo Event registrations are seeded in registration order when
-                Platform Admin closes registration.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-sm text-slate-300">
-                  Players per match
-                  <input
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
-                    max="2"
-                    min="2"
-                    onChange={(event) =>
-                      setRun((current) => ({
-                        ...current,
-                        participantsPerMatch: event.target.value,
-                      }))
-                    }
-                    required
-                    type="number"
-                    value={run.participantsPerMatch}
-                  />
-                </label>
-                <label className="text-sm text-slate-300">
-                  Advance per batch
-                  <input
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
-                    max="1"
-                    min="1"
-                    onChange={(event) =>
-                      setRun((current) => ({
-                        ...current,
-                        advanceCount: event.target.value,
-                      }))
-                    }
-                    required
-                    type="number"
-                    value={run.advanceCount}
-                  />
-                </label>
-                <label className="text-sm text-slate-300">
-                  Minutes between batches
-                  <input
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
-                    max="1440"
-                    min="0"
-                    onChange={(event) =>
-                      setRun((current) => ({
-                        ...current,
-                        batchSpacingMinutes: event.target.value,
-                      }))
-                    }
-                    required
-                    type="number"
-                    value={run.batchSpacingMinutes}
-                  />
-                </label>
-                <label className="text-sm text-slate-300">
-                  Check-in opens before (minutes)
-                  <input
-                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
-                    max="1440"
-                    min="0"
-                    onChange={(event) =>
-                      setRun((current) => ({
-                        ...current,
-                        checkInMinutesBefore: event.target.value,
-                      }))
-                    }
-                    required
-                    type="number"
-                    value={run.checkInMinutesBefore}
-                  />
-                </label>
-              </div>
-            </fieldset>
+            <label className="text-sm text-slate-300">
+              Competition format
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) => {
+                  const executionFormat = event.target.value;
+                  setRun((current) => ({
+                    ...current,
+                    executionFormat,
+                    stageRows: executionFormat === "ranked_stages"
+                      ? buildDefaultRankedStages(current.registrationCapacity)
+                      : [],
+                  }));
+                }}
+                value={run.executionFormat}
+              >
+                <option value="single_elimination">Head-to-head bracket</option>
+                <option value="ranked_stages">Ranked rooms / top-N rounds</option>
+              </select>
+            </label>
+            {run.executionFormat === "ranked_stages" ? (
+              <RankedStagePlanEditor
+                capacity={run.registrationCapacity}
+                onChange={(stageRows) => setRun((current) => ({ ...current, stageRows }))}
+                stages={run.stageRows}
+              />
+            ) : (
+              <fieldset className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
+                <legend className="px-2 text-sm font-bold text-white">
+                  Head-to-head plan
+                </legend>
+                <p className="mb-3 text-xs leading-5 text-slate-500">
+                  Two-player rooms advance one winner in registration order.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-sm text-slate-300">
+                    Players per match
+                    <input className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3" disabled type="number" value="2" />
+                  </label>
+                  <label className="text-sm text-slate-300">
+                    Advance per match
+                    <input className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3" disabled type="number" value="1" />
+                  </label>
+                  <label className="text-sm text-slate-300">
+                    Minutes between matches
+                    <input
+                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                      max="1440"
+                      min="0"
+                      onChange={(event) => setRun((current) => ({ ...current, batchSpacingMinutes: event.target.value }))}
+                      required
+                      type="number"
+                      value={run.batchSpacingMinutes}
+                    />
+                  </label>
+                  <label className="text-sm text-slate-300">
+                    Check-in opens before (minutes)
+                    <input
+                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                      max="1440"
+                      min="0"
+                      onChange={(event) => setRun((current) => ({ ...current, checkInMinutesBefore: event.target.value }))}
+                      required
+                      type="number"
+                      value={run.checkInMinutesBefore}
+                    />
+                  </label>
+                </div>
+              </fieldset>
+            )}
             <fieldset className="rounded-2xl border border-emerald-300/20 bg-emerald-300/5 p-4">
               <legend className="px-2 text-sm font-bold text-white">Placement rewards</legend>
               <p className="mb-3 text-xs leading-5 text-slate-400">
@@ -568,7 +594,7 @@ const EventManagerDashboard = () => {
             <div className="flex gap-2">
               <button
                 className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950 disabled:opacity-50"
-                disabled={teamExecutionUnsupported}
+                disabled={teamExecutionUnsupported || Boolean(rankedProjection.error)}
               >
                 {editingRunId ? "Save changes" : "Save draft"}
               </button>
@@ -659,11 +685,38 @@ const EventManagerDashboard = () => {
                     {new Date(item.startsAt).toLocaleString()} / revision {item.revision || 1}
                   </p>
                   {item.executionPlan ? (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Stage 1 / {item.executionPlan.participantsPerMatch} players per match
-                      / top {item.executionPlan.advanceCount} advance /
-                      registration order
-                    </p>
+                    <div className="mt-2 space-y-1 text-xs text-slate-500">
+                      <p className="font-bold capitalize text-cyan-100/70">
+                        {formatStatus(item.executionPlan.format)}
+                      </p>
+                      {item.executionPlan.format === "ranked_stages"
+                        ? item.executionPlan.stages?.map((stage) => (
+                            <p key={stage.number}>
+                              Round {stage.number} / {stage.participantsPerMatch} per room /
+                              {stage.qualificationRule === "final_ranking"
+                                ? " final ranking"
+                                : ` top ${stage.advanceCount} qualify`}
+                            </p>
+                          ))
+                        : (
+                            <p>Two-player matches / one winner advances</p>
+                          )}
+                    </div>
+                  ) : null}
+                  {item.executionHandoff ? (
+                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-300">
+                        Operations handoff / {formatStatus(item.executionHandoff.state)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-300">
+                        <span>{item.executionHandoff.stageCount} stages</span>
+                        <span>/ {item.executionHandoff.roomCount} rooms</span>
+                        <span>/ {item.executionHandoff.awaitingOperator} awaiting operator</span>
+                        <span>/ {item.executionHandoff.inProgress} live</span>
+                        <span>/ {item.executionHandoff.resultAttention} result attention</span>
+                        <span>/ {item.executionHandoff.completed} completed</span>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
                 <span className="rounded-full bg-slate-800 px-3 py-1 text-xs capitalize text-cyan-200">
@@ -710,6 +763,7 @@ const EventManagerDashboard = () => {
           )}
         </div>
       </section>
+      <FutureRoundAdjustmentPanel runs={runs} />
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-14
+Last updated: 2026-08-16
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -24,6 +24,8 @@ to continue the project without reopening settled decisions.
 - Game Manager is read-only for assigned games and supervises operations.
 - Event Manager creates drafts inside assigned game scopes; Platform Admin
   reviews submitted Templates and Event Runs through an audited lifecycle.
+- Invitation-only Event Runs are private in player discovery: only players
+  with an active invitation may see their registration card or participate.
 - Event proposals move through `draft`, `in_review`, `changes_requested`,
   `active`/`scheduled`, or `rejected`; creators and latest submitters cannot
   review the same revision.
@@ -51,9 +53,9 @@ to continue the project without reopening settled decisions.
 
 ### Fast Completion Critical Path
 
-Planning estimate updated 2026-08-13: approximately **76% of the complete
-documented platform roadmap is implemented**, approximately 88% of the core
-playable system exists, and approximately 42% is ready for unrestricted
+Planning estimate updated 2026-08-16: approximately **80% of the complete
+documented platform roadmap is implemented**, approximately 92% of the core
+playable system exists, and approximately 45% is ready for unrestricted
 production real-money traffic. These percentages are planning estimates, not
 completion evidence; a feature moves to Completed only when its stated tests
 and exit gate pass.
@@ -81,7 +83,7 @@ product domains or spending critical-path time on visual polish:
    - Completed locally 2026-08-13: immutable verified outcomes, restart-safe
      later rounds, disputes/corrections, bounded tied standings, and durable
      sporting completion.
-   - In progress 2026-08-13: Event placement rewards. Each Run carries a
+   - Completed locally 2026-08-16: Event placement rewards. Each Run carries a
      proposed INR minor-unit reward table keyed by finishing place (for example,
      1st through 10th); Platform Admin independently approves the immutable
      table before registration. Every player sharing a standing place receives
@@ -93,15 +95,13 @@ product domains or spending critical-path time on visual polish:
      UI are in place. Replica-set proof covers tied-place allocations,
      approver/recipient denial, concurrent idempotent release, and exact wallet
      movement. Focused frontend Event tests, lint, and the 548-module build
-     pass. Browser/API proof and a final financial audit remain before
-     completion.
+     pass. Browser/API proof and the final financial audit now pass.
      Local runtime note 2026-08-14: `/readyz` proved MongoDB and Redis ready
      after Redis was restored. The public frontend shell renders console-clean.
      The authenticated Event Manager browser gate passed on 2026-08-14:
      assigned BGMI scope, approved-template selection, supported first-stage
      controls, and the placement-reward section rendered with no console
-     warnings or errors. No Event data was created or changed. Platform Admin
-     reward review and independent release remain pending.
+     warnings or errors. No Event data was created or changed.
      Final code-level financial audit 2026-08-14 fixed the release read model:
      an Event's original approving administrator now receives
      `EVENT_PRIZE_INDEPENDENT_REVIEW_REQUIRED` and `canRelease:false` before a
@@ -119,8 +119,41 @@ product domains or spending critical-path time on visual polish:
      visibly requires an independent reviewer for creator/last-submitter
      proposals and blocks selection plus decision transport before the server
      policy is reached. Focused Event frontend tests and lint pass.
-   - Remaining: Event reward authenticated browser verification/final audit and
-     production worker deployment evidence. `render.yaml` now declares the
+     Final runtime proof 2026-08-16 used the existing Super Admin as immutable
+     approver and the existing Platform Admin as independent reviewer for a
+     disposable INR 95.00 Event. The UI showed final places 1, 2, 3, 3 and the
+     released state with a clean console. Database evidence showed allocations
+     5000/2500/1000/1000 minor units, zero prize-pending balances, exact
+     withdrawable balances, four `prize_pending` entries, and four
+     `prize_release` entries. Only the disposable Event/game/player fixture was
+     removed afterward; both governance identities were preserved.
+   - Completed locally 2026-08-16: scalable ranked Event stages. A reviewed Run
+     can define up to 32 independently configured rounds with bounded 2-100
+     player rooms, explicit `top_n` or final-ranking rules, room spacing,
+     check-in timing, and next-round delay. Deterministic projection validates
+     convergence for large rosters such as 5,000, 10,000, and 100,000 players;
+     there is no product-level fixed Event capacity. Restart-safe paged workers
+     freeze the admitted roster, create each batch/Match once, consume only
+     verified full-room rankings, and generate later rounds from immutable
+     outcome evidence. Match Operators can submit the complete ordered room
+     result; Platform governance retains verification/dispute authority.
+     Event Managers may propose a changed room size, top-N, or timing for an
+     ungenerated future round. The proposal is immutable, game-scoped, blocks
+     generation while pending, and requires an independent Platform/Super
+     Admin decision; generated rounds cannot change. The review queue is
+     opaque-cursor paginated.
+     Final standings now preserve eliminated-player evidence as first-class
+     filterable data: placement, elimination round, batch/room, elimination
+     time, and immutable source outcome. Governance can filter champion versus
+     eliminated players and a specific elimination round without loading raw
+     roster/job data. Placement rewards continue to derive only from final
+     immutable standings.
+     Verification: backend competition policy 103/103 and replica-set
+     integration 79/79; focused scale/adjustment journey 4/4; frontend state
+     79/79, full lint, and 551-module production build. Desktop Platform Admin
+     and Event Manager pages plus 390x844 controls rendered without overflow or
+     console warnings/errors.
+   - Remaining: production worker deployment evidence. `render.yaml` now declares the
      separate `egaming-event-worker`; setting its required Render environment
      values and proving supervision/restart behaviour remains an external gate.
 4. **85% -> 93%: finish role-specific staff workflows.**
@@ -142,7 +175,12 @@ Live deployment verification 2026-08-14: the deployed Render API
 MongoDB and Redis ready. The Vercel frontend returned 200, its production
 bundle references that backend origin, and a credentialed CORS preflight from
 the Vercel origin returned 204 with the exact allowed origin and credentials.
-The separately supervised Event-worker startup/restart proof remains pending.
+The initial Vercel bundle exposed a blank page because an unsafe custom Vite
+vendor-chunk cycle initialized React incorrectly (`Children` was undefined).
+The custom chunk groups were removed, the production bundle was rebuilt, and
+the owner and a fresh browser check confirmed the redeployed frontend works
+without console errors. The separately supervised
+Event-worker startup/restart proof remains pending.
 
 Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited
@@ -162,6 +200,19 @@ unmounted frontend components, exports, and Redux transports are removed.
 Bounded Role Management, Withdrawal Review, Prize Review, and other active
 governance workspaces remain the supported routes. Backend auth checks pass
 38/38; frontend state tests pass 74/74 with lint clean.
+
+Verification-history pagination refinement 2026-08-14: player game-account
+verification history and the Platform Admin review queue now use 25-item
+cursor pages (maximum 50), deterministic `(createdAt, _id)` ordering, and
+supporting compound indexes. Player history is Redux-owned; both screens
+append server-cursored pages without duplicate entries. Focused transport
+checks pass, as do frontend lint and the 546-module production build.
+
+Staff-directory pagination refinement 2026-08-14: the active governance
+assignment directory now uses 25-item opaque `(updatedAt, _id)` cursor pages
+(maximum 50), a matching role/time index, and Redux append de-duplication.
+Revoked role rows remain visible for deliberate reassignment. Focused state
+checks, frontend lint, and the 546-module production build pass.
 5. **93% -> 100%: production operations and final system audit.**
    - Distributed rate limits, pagination of remaining unbounded reads,
      structured logs/metrics/alerts, background-job operations, accessibility,

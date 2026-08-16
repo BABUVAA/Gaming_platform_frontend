@@ -26,6 +26,8 @@ const EventStageManagement = () => {
   const dispatch = useDispatch();
   const [selectedRunId, setSelectedRunId] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
+  const [standingResult, setStandingResult] = useState("");
+  const [standingStage, setStandingStage] = useState("");
   const stageState = useSelector((state) => state.eventStages);
   const executionRuns = stageState.executionRuns;
   const selectedRun = executionRuns.find(
@@ -64,6 +66,8 @@ const EventStageManagement = () => {
 
   useEffect(() => {
     setCancellationReason("");
+    setStandingResult("");
+    setStandingStage("");
   }, [selectedRunId]);
 
   useEffect(() => {
@@ -74,11 +78,13 @@ const EventStageManagement = () => {
 
   useEffect(() => {
     if (!selectedRunId || !overview?.completion) return undefined;
-    const request = dispatch(
-      fetchAdminEventStandings({ runId: selectedRunId }),
-    );
+    const request = dispatch(fetchAdminEventStandings({
+      eliminatedInStage: standingStage,
+      result: standingResult,
+      runId: selectedRunId,
+    }));
     return () => request.abort();
-  }, [dispatch, overview?.completion, selectedRunId]);
+  }, [dispatch, overview?.completion, selectedRunId, standingResult, standingStage]);
 
   useEffect(() => {
     if (!selectedRunId || overview?.completion?.financialSettlement !== "pending_release") return undefined;
@@ -376,27 +382,51 @@ const EventStageManagement = () => {
               </article>
             ))}
           </div>
-          {standings?.standings?.length ? (
+          {standings ? (
             <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-black text-white">Final standings</p>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="font-black text-white">Final standings and eliminated players</p>
+                  <p className="mt-1 text-xs text-slate-500">Filter immutable results by status or eliminated round.</p>
+                </div>
                 <span className="text-xs capitalize text-slate-400">
                   {overview?.completion?.status?.replaceAll("_", " ")}
                 </span>
               </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="text-xs font-bold text-slate-400">
+                  Result
+                  <select className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-sm text-white" onChange={(event) => setStandingResult(event.target.value)} value={standingResult}>
+                    <option value="">All players</option>
+                    <option value="champion">Champion</option>
+                    <option value="eliminated">Eliminated</option>
+                  </select>
+                </label>
+                <label className="text-xs font-bold text-slate-400">
+                  Eliminated round
+                  <select className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-sm text-white" onChange={(event) => setStandingStage(event.target.value)} value={standingStage}>
+                    <option value="">All rounds</option>
+                    {(overview?.stages || []).map((stage) => <option key={stage.id} value={stage.number}>Round {stage.number}</option>)}
+                  </select>
+                </label>
+              </div>
               <div className="mt-3 space-y-2">
                 {standings.standings.map((row) => (
                   <div
-                    className="grid grid-cols-[2.5rem_1fr_auto] gap-2 rounded-xl border border-slate-800 px-3 py-2 text-sm"
+                    className="grid gap-1 rounded-xl border border-slate-800 px-3 py-2 text-sm sm:grid-cols-[2.5rem_1fr_auto] sm:gap-2"
                     key={`${row.placement}-${row.player.profileTag || row.player.displayName}`}
                   >
                     <span className="font-black text-cyan-200">#{row.placement}</span>
                     <span className="truncate font-bold text-white">
                       {row.player.displayName}
                     </span>
-                    <span className="capitalize text-slate-400">{row.result}</span>
+                    <span className="text-slate-400">
+                      <span className="capitalize">{row.result}</span>
+                      {row.eliminatedInStage ? ` / Round ${row.eliminatedInStage}` : ""}
+                    </span>
                   </div>
                 ))}
+                {standings.standings.length === 0 ? <p className="rounded-xl border border-dashed border-slate-700 p-4 text-sm text-slate-500">No players match this filter.</p> : null}
               </div>
               {standings.nextCursor ? (
                 <button
@@ -409,6 +439,8 @@ const EventStageManagement = () => {
                     dispatch(
                       fetchAdminEventStandings({
                         cursor: standings.nextCursor,
+                        eliminatedInStage: standingStage,
+                        result: standingResult,
                         runId: selectedRunId,
                       }),
                     )
