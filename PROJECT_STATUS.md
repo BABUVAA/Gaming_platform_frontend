@@ -213,6 +213,12 @@ Frontend state is 81/81 with lint and the 551-module build green; affected
 backend policy checks are 11/11 after the last full 303/303 aggregate. Render
 offers Background Workers only from Starter at $7/month, so both required
 workers represent an explicit $14/month spend and have not been created.
+Product decision 2026-08-16: worker provisioning is deferred to final launch.
+Development Events may use the existing audited Platform Admin close, retry,
+and advancement controls. PhonePe deposits remain disabled because manual
+wallet credits cannot replace authenticated, idempotent provider reconciliation.
+Both workers, supervised restart evidence, and one exactly-once sandbox deposit
+remain mandatory launch gates.
 
 Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited

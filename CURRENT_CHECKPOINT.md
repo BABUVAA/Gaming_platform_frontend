@@ -73,6 +73,12 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   its value; any verification/reset link issued before that one-time separation
   should be reissued. Render requires a Starter worker at $7/month, so the Event
   and payment workers remain uncreated pending the explicit $14/month spend.
+- Product decision 2026-08-16: defer both paid Render Background Workers until
+  final launch preparation. Platform Admin may use the existing audited manual
+  Event close/retry/advancement controls during development. PhonePe deposits
+  remain disabled; wallet balances must never be manually credited as a
+  substitute for signed callback or worker reconciliation. Worker provisioning,
+  restart proof, and deposit certification are the last launch gates.
 - Verification-request history is now bounded for both players and Platform
   Admins: 25-item opaque cursor pages, Redux-owned player state, deduplicated
   load-more UI, and indexed backend ordering. Focused pagination checks pass;
@@ -357,7 +363,9 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    competition aggregates. Frontend passed 79 state tests, full lint, and the
    551-module build. Desktop governance and Event Manager controls plus 390px
    responsive layout rendered with zero console warnings/errors.
-3. Deploy and monitor the continuous Event worker (`npm run worker:events`).
+3. During development, use the audited Platform Admin controls for manual Event
+   generation/advancement. At final launch, deploy and monitor the continuous
+   Event worker (`npm run worker:events`).
    Backend `render.yaml` now declares it as a separate Render worker beside the
    `/readyz`-checked API. Configure its same MongoDB/Redis secrets and prove
    supervision/restart behaviour before counting this as deployed.
