@@ -44,11 +44,11 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   These are planning estimates, not completion evidence.
 - Latest affected backend gates: competition policy 103/103 and competition
   replica-set integration 79/79 passed on 2026-08-16.
-- Full backend release aggregate passed 302/302 on 2026-08-16 after the
+- Full backend release aggregate passed 303/303 on 2026-08-16 after the
   PhonePe provider/reconciliation update. Frontend state passed 80/80; full
   lint and the 551-module production
   build passed on 2026-08-16.
-- Production deployment checkpoint 2026-08-16: backend commit `4e778e2` is
+- Production deployment checkpoint 2026-08-16: backend commit `2f588ef` is
   live on Render and `/healthz` plus `/readyz` return 200; frontend commit
   `719ed65` is READY on Vercel and the production alias returns 200. Render and
   Vercel error scans were clean immediately after deployment.
@@ -59,6 +59,11 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   reconciliation job before provider I/O. Callback username/password remain
   unconfigured, and Render currently has only the API service: the declared
   Event and payment workers still need provisioning and restart proof.
+- Production wallet checkout is now independently fail-closed behind exact
+  `PHONEPE_DEPOSITS_ENABLED=true`. The Render API explicitly has this set to
+  `false`; disabled requests return 503 before Transaction, reconciliation-job,
+  wallet, or ledger writes. Enable it only for the controlled certification
+  window after the payment worker and signed callback path are operational.
 - Verification-request history is now bounded for both players and Platform
   Admins: 25-item opaque cursor pages, Redux-owned player state, deduplicated
   load-more UI, and indexed backend ordering. Focused pagination checks pass;
@@ -372,7 +377,9 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    PhonePe sandbox checkout and status calls are green. Configure the merchant
    callback URL plus callback username/password, then prove one signed callback
    or worker reconciliation credits one ledger deposit exactly once. Do not
-   enable paid Quick Match entry during this work.
+   enable paid Quick Match entry during this work. The production API now also
+   has `PHONEPE_DEPOSITS_ENABLED=false`, so wallet checkout cannot create
+   unreconciled pending deposits while these operational gates remain open.
 4. Continue production hardening and final audit.
 5. Enable paid entry only after external provider gates turn green.
 

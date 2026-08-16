@@ -182,10 +182,10 @@ the owner and a fresh browser check confirmed the redeployed frontend works
 without console errors. The separately supervised
 Event-worker startup/restart proof remains pending.
 
-Deployment and PhonePe checkpoint 2026-08-16: backend commit `4e778e2` is
+Deployment and PhonePe checkpoint 2026-08-16: backend commit `2f588ef` is
 live on Render with `/healthz` and `/readyz` returning 200; frontend commit
 `719ed65` is READY on Vercel and the production alias returns 200. Immediate
-Render/Vercel error scans were clean. The complete release gates passed 302
+Render/Vercel error scans were clean. The complete release gates passed 303
 backend tests and 80 frontend tests plus lint and the 551-module build.
 PhonePe checkout, order status, and callback verification now share the current
 official scoped Node SDK and one client-credential contract. A real INR 1.00
@@ -200,6 +200,11 @@ web service (`yarn install`, `node index.js`, no configured health path).
 but both still require target-environment provisioning, shared cloud datastore
 secrets, supervision, and restart evidence. `PAID_QUICK_MATCH_ENTRY_ENABLED`
 remains false/unset and must not change during sandbox certification.
+Wallet checkout is additionally controlled by exact
+`PHONEPE_DEPOSITS_ENABLED=true`. The deployed API explicitly sets it to false,
+and the disabled command returns 503 before Transaction, reconciliation-job,
+wallet, or ledger writes. This deposit gate stays closed until the payment
+worker plus signed callback/status reconciliation are certified end to end.
 
 Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited
