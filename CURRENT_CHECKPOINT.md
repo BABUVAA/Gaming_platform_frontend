@@ -47,10 +47,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Latest complete backend release aggregate passed 310/310 on 2026-08-16.
   Frontend state passed 84/84; full lint and the 554-module production build
   passed on 2026-08-16.
-- Production deployment checkpoint 2026-08-16: backend commit `12e6696` is
-  live on Render and `/healthz` plus `/readyz` return 200; frontend commit
-  `2545a89` is READY on Vercel and the production alias returns 200. Render and
-  Vercel error scans were clean immediately after deployment.
+- Latest deployment checkpoint 2026-08-16: backend commit `e0fe6fd` is live on
+  Render and `/readyz` returns 200 with MongoDB and Redis ready; frontend commit
+  `dc2e299` is READY on Vercel and the production alias returns 200. The fresh
+  Render runtime scan contains no new application errors.
 - PhonePe now uses the official scoped Node SDK for checkout, status, and
   callback validation. Real sandbox probes created a minimal INR 1.00 pending
   checkout and verified its status without completing payment or writing local
@@ -58,15 +58,11 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   reconciliation job before provider I/O. Callback username/password remain
   unconfigured, and Render currently has only the API service: the declared
   Event and payment workers still need provisioning and restart proof.
-- Production wallet checkout is now independently fail-closed behind exact
-  `PHONEPE_DEPOSITS_ENABLED=true`. The Render API explicitly has this set to
-  `false`; disabled requests return 503 before Transaction, reconciliation-job,
-  wallet, or ledger writes. Enable it only for the controlled certification
-  window after the payment worker and signed callback path are operational.
-- The player Wallet now reads `/api/payment/capabilities` through Redux and
-  disables Add Money with an explicit unavailable state while that server gate
-  is closed. Frontend state is 81/81 and the 551-module build is green; affected
-  backend payment/route policy checks are 11/11 after the last full 303/303 run.
+- The deployed test environment is now explicitly configured with sandbox
+  money mode, PhonePe deposits enabled, and paid Quick Match entry enabled.
+  Withdrawal requests remain explicitly false. A provider checkout request
+  returned 200 after deployment; completion/exactly-once ledger credit still
+  needs the sandbox checkout result and governance reconciliation evidence.
 - The existing Render API service now uses `npm ci`, validated `npm start`, and
   `/readyz`. A dedicated email-token signing secret was added without exposing
   its value; any verification/reset link issued before that one-time separation
@@ -100,13 +96,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   vulnerabilities. Deployment and external-provider gates remain separate.
 - Owner-only immutable wallet history and independent reviewed prize release
   are complete.
-- Paid entry and withdrawal requests remain intentionally blocked in normal
-  runtime. Internal Solo/Team money flows are fully proven; external PhonePe
-  and payout adapter/worker/sandbox gates remain red.
-- Current worktrees contain the intentional completed vertical-slice changes
-  recorded below. Local frontend, backend, MongoDB, and Redis are currently
-  running for the Event-reward browser gate; `/readyz` reports both dependencies
-  ready. Do not treat local processes as production deployment evidence.
+- Paid entry is enabled only in the deployed sandbox test mode; withdrawal and
+  live-money modes remain blocked. Internal Solo/Team money flows are proven;
+  payout adapter/worker/callback/live-certification gates remain red.
+- Both worktrees are committed and pushed at the deployment revisions above.
 
 ## Completed Slice: Staff Read-Only Player Visibility
 
@@ -404,11 +397,11 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
    PhonePe sandbox checkout and status calls are green. Configure the merchant
    callback URL plus callback username/password, then prove one signed callback
    or worker reconciliation credits one ledger deposit exactly once. Do not
-   enable paid Quick Match entry during this work. The production API now also
-   has `PHONEPE_DEPOSITS_ENABLED=false`, so wallet checkout cannot create
-   unreconciled pending deposits while these operational gates remain open.
+   enable live paid Quick Match entry during this work. The deployed test API
+   now uses explicit sandbox money mode with manual governance reconciliation;
+   withdrawal and live-money operation remain blocked.
 4. Continue production hardening and final audit.
-5. Enable paid entry only after external provider gates turn green.
+5. Enable live-money operation only after external provider gates turn green.
 
 ## Fast Verification Protocol
 

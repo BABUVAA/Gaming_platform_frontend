@@ -200,24 +200,17 @@ and `/readyz`; a dedicated email-token signing secret is configured without
 printing or storing it in the repository.
 `render.yaml` now declares separate Event and payment-reconciliation workers,
 but both still require target-environment provisioning, shared cloud datastore
-secrets, supervision, and restart evidence. `PAID_QUICK_MATCH_ENTRY_ENABLED`
-remains false/unset and must not change during sandbox certification.
-Wallet checkout is additionally controlled by exact
-`PHONEPE_DEPOSITS_ENABLED=true`. The deployed API explicitly sets it to false,
-and the disabled command returns 503 before Transaction, reconciliation-job,
-wallet, or ledger writes. This deposit gate stays closed until the payment
-worker plus signed callback/status reconciliation are certified end to end.
-The Wallet consumes a safe authenticated payment-capability read through Redux
-and disables Add Money before opening checkout while the release gate is closed.
-Frontend state is 81/81 with lint and the 551-module build green; affected
-backend policy checks are 11/11 after the last full 303/303 aggregate. Render
+secrets, supervision, and restart evidence. The original fail-closed deployment
+kept deposit and paid-entry flags false; that checkpoint was superseded by the
+explicit sandbox-only testing refinement below. Live-money mode remains closed.
+Render
 offers Background Workers only from Starter at $7/month, so both required
 workers represent an explicit $14/month spend and have not been created.
 Product decision 2026-08-16: worker provisioning is deferred to final launch.
 Development Events may use the existing audited Platform Admin close, retry,
-and advancement controls. PhonePe deposits remain disabled because manual
-wallet credits cannot replace authenticated, idempotent provider reconciliation.
-Both workers, supervised restart evidence, and one exactly-once sandbox deposit
+and advancement controls. Sandbox payments may use the new audited manual
+provider-status reconciliation; manual wallet credits remain forbidden. Both
+workers, supervised restart evidence, and one exactly-once sandbox deposit
 remain mandatory launch gates.
 
 Sandbox-money testing refinement 2026-08-16: development/testing may now enable
@@ -232,6 +225,14 @@ stored Transaction. Mismatch or retry creates zero additional credit. Live
 money remains fail-closed, and manual wallet credit is never a substitute.
 The backend aggregate passed 310/310; frontend state passed 84/84 with full
 lint and the 554-module production build green.
+
+Deployment evidence 2026-08-16: backend commit `e0fe6fd` is live on Render;
+`/readyz` returned 200 with MongoDB and Redis ready. Frontend commit `dc2e299`
+is READY on Vercel. Render is configured for explicit sandbox money mode with
+test deposits and paid entries enabled, while withdrawal requests are false.
+A post-deploy checkout command returned 200. Checkout completion and the
+exactly-once governance reconciliation proof remain pending; this is not
+live-money release evidence.
 
 Operator scale refinement 2026-08-16: assigned and unassigned Match Operator
 queues now have separate typed opaque cursors, bounded 25/50-item pages, stable
