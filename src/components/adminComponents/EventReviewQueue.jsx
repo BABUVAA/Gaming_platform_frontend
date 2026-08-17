@@ -4,6 +4,7 @@ import {
   FiCheckCircle,
   FiClock,
   FiFileText,
+  FiInbox,
   FiRefreshCw,
   FiRotateCcw,
   FiXCircle,
@@ -241,28 +242,27 @@ const EventReviewQueue = () => {
 
       {activeView === "approvals" ? (
       <>
-      <header className="rounded-2xl border border-slate-800 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.13),_transparent_35%),#07111f] p-4 md:p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-[#07111f] p-3">
+        <div className="flex items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-xl bg-cyan-300/10 text-cyan-300"><FiInbox /></span>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Platform review</p>
-            <h2 className="mt-1 text-lg font-black tracking-tight text-white">Event approval queue</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Review submitted Event work. You cannot review a proposal you created or last submitted, even if you hold more than one staff role.</p>
+            <h2 className="font-black text-white">Review queue</h2>
+            <p className="text-xs text-slate-500">{reviewCount} pending</p>
           </div>
-          <button className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200 disabled:opacity-60" disabled={status === "loading"} onClick={() => dispatch(fetchEventReviewQueue())} type="button"><FiRefreshCw /> Refresh queue</button>
         </div>
-        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100"><FiClock /> {reviewCount} item{reviewCount === 1 ? "" : "s"} waiting for an independent decision</div>
+        <button aria-label="Refresh review queue" className="grid size-9 place-items-center rounded-xl border border-slate-700 text-slate-300 disabled:opacity-60" disabled={status === "loading"} onClick={() => dispatch(fetchEventReviewQueue())} title="Refresh" type="button"><FiRefreshCw /></button>
       </header>
 
       {error && <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{error}</div>}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className={selected ? "grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]" : "grid gap-5"}>
         <div className="space-y-5">
-          <QueueGroup canReview={canReview} icon={FiFileText} items={reviewTemplates} kind="template" onChoose={chooseRecord} selected={selected} title="Template proposals" />
-          <QueueGroup canReview={canReview} icon={FiClock} items={reviewRuns} kind="run" onChoose={chooseRecord} selected={selected} title="Event schedules" />
-          {status === "loading" && reviewCount === 0 && <p className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-sm text-slate-400">Loading review queue...</p>}
-          {status !== "loading" && reviewCount === 0 && <p className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-sm text-slate-400">Nothing is waiting for review. Approved and returned work stays out of this queue.</p>}
+          {reviewTemplates.length > 0 ? <QueueGroup canReview={canReview} icon={FiFileText} items={reviewTemplates} kind="template" onChoose={chooseRecord} selected={selected} title="Templates" /> : null}
+          {reviewRuns.length > 0 ? <QueueGroup canReview={canReview} icon={FiClock} items={reviewRuns} kind="run" onChoose={chooseRecord} selected={selected} title="Events" /> : null}
+          {status === "loading" && reviewCount === 0 ? <CompactQueueState label="Loading..." /> : null}
+          {status !== "loading" && reviewCount === 0 ? <CompactQueueState label="All caught up" /> : null}
         </div>
-        <ReviewPanel canReview={selected ? canReview(selected.item) : true} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} />
+        {selected ? <ReviewPanel canReview={canReview(selected.item)} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} /> : null}
       </div>
       <StageAdjustmentReviewQueue />
       </>
@@ -302,10 +302,18 @@ const QueueGroup = ({ canReview, icon: Icon, items, kind, onChoose, selected, ti
     <div className="flex items-center gap-2"><Icon className="text-cyan-300" /><h3 className="font-black text-white">{title}</h3><span className="rounded-full bg-slate-900 px-2 py-1 text-xs text-slate-400">{items.length}</span></div>
     <div className="mt-4 grid gap-3">
       {items.map((item) => <ReviewCard canReview={canReview(item)} item={item} key={item._id} kind={kind} onChoose={onChoose} selected={selected?.id === item._id} />)}
-      {items.length === 0 && <p className="text-sm text-slate-500">No submitted {kind === "run" ? "schedules" : "templates"} right now.</p>}
     </div>
   </section>
 );
+
+const CompactQueueState = ({ label }) => (
+  <div className="flex min-h-28 items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 text-sm font-bold text-slate-500">
+    <FiCheckCircle className="text-emerald-300" />
+    <span>{label}</span>
+  </div>
+);
+
+CompactQueueState.propTypes = { label: PropTypes.string.isRequired };
 
 QueueGroup.propTypes = {
   canReview: PropTypes.func.isRequired,
@@ -318,8 +326,6 @@ QueueGroup.propTypes = {
 };
 
 const ReviewPanel = ({ canReview, decision, note, onDecision, onNoteChange, selected }) => {
-  if (!selected) return <aside className="rounded-3xl border border-dashed border-slate-700 bg-slate-950/50 p-5 text-sm leading-6 text-slate-400">Choose an item from the queue to compare its setup and record an approval decision.</aside>;
-
   const { item, kind } = selected;
   return (
     <aside className="h-fit rounded-3xl border border-cyan-300/20 bg-[#07111f] p-5">

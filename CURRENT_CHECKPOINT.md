@@ -285,10 +285,13 @@ requires live-money provider certification and separately supervised workers.
   result-authority data.
 - Platform/Super Admin Event Management now separates `Approvals`,
   `Invitations`, and `Operations & Reports` instead of stacking every section.
+- The approval empty state is now action-first: one pending counter, one compact
+  status card and one round-change counter. Duplicate explanations, empty
+  messages and the inactive decision panel no longer consume the page.
 - Verification: backend competition 103/103 and competition integration 91/91;
   frontend 86/86, full lint, 555-module build; API docs 183/183.
-- Desktop/mobile visual browser verification remains pending because browser
-  control was unavailable in this session.
+- Authenticated desktop/mobile governance visual verification remains pending;
+  the local public shell rendered without console warnings or errors.
 
 Operational baseline refinement: backend exposes public `/healthz` liveness
 and fail-closed `/readyz` dependency readiness checks. Configure the deployed

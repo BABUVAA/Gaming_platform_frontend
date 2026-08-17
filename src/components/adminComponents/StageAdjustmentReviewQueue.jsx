@@ -31,17 +31,18 @@ const StageAdjustmentReviewQueue = () => {
   };
 
   return (
-    <section className="rounded-3xl border border-slate-800 bg-[#07111f] p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Round governance</p>
-          <h3 className="mt-1 font-black text-white">Future-round changes</h3>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            Review room size, qualification count, and timings before the round is generated. The submitted rule and projection are immutable evidence.
-          </p>
+    <section className="rounded-2xl border border-slate-800 bg-[#07111f] p-3 md:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-xl bg-cyan-300/10 font-black text-cyan-300">R</span>
+          <div>
+            <h3 className="font-black text-white">Round changes</h3>
+            <p className="text-xs text-slate-500">{queue.length} pending</p>
+          </div>
         </div>
         <button
-          className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50"
+          aria-label="Refresh round changes"
+          className="rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 disabled:opacity-50"
           disabled={queueStatus === "loading"}
           onClick={() => dispatch(fetchStageAdjustmentReviewQueue())}
           type="button"
@@ -100,7 +101,7 @@ const StageAdjustmentReviewQueue = () => {
             </article>
           );
         })}
-        {queueStatus !== "loading" && queue.length === 0 ? <p className="text-sm text-slate-500">No future-round changes are waiting for review.</p> : null}
+        {queueStatus !== "loading" && queue.length === 0 ? <div className="col-span-full flex min-h-16 items-center justify-center rounded-xl border border-dashed border-slate-800 text-xs font-bold text-slate-500">All caught up</div> : null}
       </div>
       {queueNextCursor ? (
         <button

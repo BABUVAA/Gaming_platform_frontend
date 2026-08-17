@@ -1168,13 +1168,17 @@ data and raw proof/dispute evidence.
 
 Platform/Super Admin `Event Management` is separated into `Approvals`,
 `Invitations`, and `Operations & Reports`, preserving existing independent
-review authority without stacking every tool on one page. Verification passed
+review authority without stacking every tool on one page. The empty approval
+workspace was further reduced to an icon-led pending counter, compact empty
+state and round-change counter. Repeated policy explanations, duplicate empty
+messages and the unused decision panel are hidden; review details appear only
+when actionable records exist or a reviewer selects one. Verification passed
 backend competition policy 103/103 and replica-set integration 91/91,
 frontend 86/86, full lint, the 555-module production build, and API
 documentation coverage for all 183 mounted operations.
-The desktop/mobile visual browser gate remains pending because browser control
-was unavailable in this session; do not treat that external visual check as
-completed evidence yet.
+The authenticated desktop/mobile admin visual gate remains pending; local
+public-shell rendering is clean, but the available browser session was not
+signed into governance after the final compact-layout edit.
 
 ## Active Work
 
