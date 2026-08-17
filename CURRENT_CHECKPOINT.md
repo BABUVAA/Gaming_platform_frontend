@@ -246,15 +246,22 @@ admission or competition writes. The player command never accepts an amount,
 staff remains read-only, recent authentication is required, and paid Event
 entry is enabled only by the explicit sandbox release flag.
 
-Persistent shared-database Event Run `6a828224467598a0c5d5f545` completed a
+Shared-database Event Run `6a828224467598a0c5d5f545` completed a
 1,000-player BGMI INR 2.00 sandbox rehearsal. Round 1 used Platform Admin for
 10 rooms of 100/top 50; Round 2 used Super Admin for 5 rooms of 100/top 20;
-the 100-player Final used the dedicated Match Operator. Retained evidence is
+the 100-player Final used the dedicated Match Operator. Completion evidence was
 1,000 registrations/captured holds/rosters/standings, 3 stages, 16 Matches,
 1,000 hold and capture ledger rows, and 10 pending plus 10 released reward
 rows. Wallet totals are INR 8,000 available, zero entry-held, zero
-prize-pending, and INR 550 withdrawable. None of these rehearsal records or
-fixture accounts were deleted.
+prize-pending, and INR 550 withdrawable.
+
+Owner-requested reset 2026-08-17: the full Event/Tournament/Quick Match runtime,
+all Matches/Rooms, registrations, competition reviews/audits, payment
+Transactions, holds, ledger rows, prizes and withdrawals are now empty. The
+reset preserved all 1,007 User/player accounts, all 1,005 Wallet identities,
+verified game accounts, Games and staff assignments; every Wallet balance and
+embedded transaction history is zero. Event Templates/Runs and Quick Match
+offerings must be created again for the next test cycle.
 
 Latest gates: backend 318/318, competition integration 89/89, frontend 84/84,
 full lint, 554-module build, and API documentation 180/180. Production still

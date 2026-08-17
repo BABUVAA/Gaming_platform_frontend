@@ -1117,16 +1117,25 @@ wrong-currency or wrong-status evidence fails closed. Paid commands remain
 default-closed outside explicit sandbox money mode and require recent
 authentication plus verified-player participation.
 
-The retained shared-database rehearsal `6a828224467598a0c5d5f545` completed
+The shared-database rehearsal `6a828224467598a0c5d5f545` completed
 1,000 verified BGMI players at INR 2.00 sandbox entry through three reviewed
 ranked rounds: 10 rooms of 100/top 50, 5 rooms of 100/top 20, and one 100-player
 final. Every round used a different persisted BGMI Match Operator: Platform
-Admin, Super Admin, then the dedicated Match Operator. Evidence retained in
-the database includes 1,000 registrations, 1,000 captured entry holds, 1,000
+Admin, Super Admin, then the dedicated Match Operator. Verification evidence
+at completion included 1,000 registrations, 1,000 captured entry holds, 1,000
 roster rows, 3 stages, 16 batches/Matches, 1,000 standings, 1,000 hold postings,
 1,000 capture postings, and 10 pending plus 10 released reward postings. Final
 fixture-wallet totals are INR 8,000 available, zero held, zero prize-pending,
-and INR 550 withdrawable. No rehearsal record was deleted.
+and INR 550 withdrawable.
+
+Owner-requested reset 2026-08-17: all shared-database Event, Tournament/Quick
+Match, Match/Room, registration, competition audit, payment Transaction,
+wallet-hold, immutable ledger, prize and withdrawal records were deleted in one
+MongoDB transaction. All 1,007 User/player accounts and 1,005 Wallet identities
+were preserved; wallet balances and embedded histories were reset to zero.
+Games, verified game accounts, staff assignments and identity/security data
+were not removed. The Event/Quick Match catalogs are now intentionally empty
+and must be recreated for the next test cycle.
 
 Verification: backend aggregate 318/318, competition integration 89/89,
 frontend state 84/84, full lint, 554-module production build, API documentation
@@ -1860,11 +1869,12 @@ BGMI rehearsal:
   Event Manager, governance review and player discovery expose the server-owned
   fee/test-money state while registration and cancellation never send money.
 - API documentation generation/check covers all 180 mounted operations.
-- Persistent Event Run `6a828224467598a0c5d5f545` completed with 1,000 paid
+- Event Run `6a828224467598a0c5d5f545` completed with 1,000 paid
   registrations, three separately operated rounds, 16 Matches, 1,000 standings,
-  exact entry ledger counts and independently released top-10 rewards. Fixture
-  accounts and all Event/financial/sporting evidence remain in the shared test
-  database by product decision.
+  exact entry ledger counts and independently released top-10 rewards. On
+  2026-08-17 the owner requested a clean competition/finance state: this Event
+  evidence and all other Event/Tournament/transaction records were deleted,
+  while all User/player accounts were preserved and Wallet projections reset.
 
 Run on 2026-08-11 for the staff read-only player-dashboard slice:
 
