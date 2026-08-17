@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-16
+Last updated: 2026-08-17
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -44,9 +44,9 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Planning estimate: approximately 80% of the complete roadmap, 92% of the
   core playable platform, and 45% ready for unrestricted real-money traffic.
   These are planning estimates, not completion evidence.
-- Latest complete backend release aggregate passed 310/310 on 2026-08-16.
+- Latest complete backend release aggregate passed 318/318 on 2026-08-17.
   Frontend state passed 84/84; full lint and the 554-module production build
-  passed on 2026-08-16.
+  passed on 2026-08-17.
 - Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
   public **testing/staging platform**, not a live-money launch. Backend commit
   `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis
@@ -234,6 +234,31 @@ Database evidence showed `5000/2500/1000/1000` allocations, zero pending
 balances, exact withdrawable balances, four pending ledger rows, and four
 release ledger rows. The disposable Event/game/four-player fixture was then
 removed without changing either governance identity.
+
+## Completed Slice: Paid Event Registration and 1,000-Player Rehearsal
+
+Completed and verified 2026-08-17. Event Runs own independently reviewed INR
+entry terms. Paid registration atomically holds the server-owned fee with a
+balanced ledger row and per-attempt evidence; cancellation releases once;
+closure captures admitted holds and releases waitlisted holds before roster
+freeze. Corrupt/missing evidence and insufficient funds produce zero partial
+admission or competition writes. The player command never accepts an amount,
+staff remains read-only, recent authentication is required, and paid Event
+entry is enabled only by the explicit sandbox release flag.
+
+Persistent shared-database Event Run `6a828224467598a0c5d5f545` completed a
+1,000-player BGMI INR 2.00 sandbox rehearsal. Round 1 used Platform Admin for
+10 rooms of 100/top 50; Round 2 used Super Admin for 5 rooms of 100/top 20;
+the 100-player Final used the dedicated Match Operator. Retained evidence is
+1,000 registrations/captured holds/rosters/standings, 3 stages, 16 Matches,
+1,000 hold and capture ledger rows, and 10 pending plus 10 released reward
+rows. Wallet totals are INR 8,000 available, zero entry-held, zero
+prize-pending, and INR 550 withdrawable. None of these rehearsal records or
+fixture accounts were deleted.
+
+Latest gates: backend 318/318, competition integration 89/89, frontend 84/84,
+full lint, 554-module build, and API documentation 180/180. Production still
+requires live-money provider certification and separately supervised workers.
 
 Operational baseline refinement: backend exposes public `/healthz` liveness
 and fail-closed `/readyz` dependency readiness checks. Configure the deployed

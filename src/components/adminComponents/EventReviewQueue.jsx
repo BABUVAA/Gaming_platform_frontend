@@ -63,6 +63,11 @@ const eventRecordShape = PropTypes.shape({
       qualifiedCount: PropTypes.number,
     })),
   }),
+  entryTerms: PropTypes.shape({
+    currency: PropTypes.string,
+    entryFeeMinor: PropTypes.number,
+    policy: PropTypes.string,
+  }),
   formatSnapshot: PropTypes.shape({
     gameKey: PropTypes.string,
     map: PropTypes.string,
@@ -111,6 +116,13 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
           {isRun ? (
             <p className="mt-2 text-xs leading-5 text-slate-500">
               Registration {formatDate(item.registrationOpensAt)} to {formatDate(item.registrationClosesAt)} / {item.admissionPolicy?.replaceAll("_", " ") || "admission not set"} / {item.registrationCapacity || 0} seats / waitlist {item.waitlistEnabled ? "on" : "off"}
+            </p>
+          ) : null}
+          {isRun ? (
+            <p className="mt-2 text-xs font-bold leading-5 text-emerald-100/80">
+              Entry: {item.entryTerms?.policy === "paid"
+                ? `INR ${(item.entryTerms.entryFeeMinor / 100).toFixed(2)} per player / held at registration`
+                : "Free"}
             </p>
           ) : null}
           {isRun && item.executionPlan ? (

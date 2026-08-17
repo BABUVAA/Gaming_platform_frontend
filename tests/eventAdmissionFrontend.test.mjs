@@ -218,8 +218,8 @@ test("Platform Admin invitation runs, candidates, list, invite, and revoke use b
   }
 });
 
-test("Event governance UI discloses admission terms and avoids an unbounded player directory", async () => {
-  const [reviewSource, invitationSource, navigationSource] = await Promise.all([
+test("Event governance and player UI disclose authoritative entry terms without accepting a fee", async () => {
+  const [reviewSource, invitationSource, navigationSource, playerSource] = await Promise.all([
     readFile(
       new URL(
         "../src/components/adminComponents/EventReviewQueue.jsx",
@@ -235,6 +235,7 @@ test("Event governance UI discloses admission terms and avoids an unbounded play
       "utf8",
     ),
     readFile(new URL("../src/utils/navigation.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/Events.jsx", import.meta.url), "utf8"),
   ]);
 
   for (const field of [
@@ -251,6 +252,8 @@ test("Event governance UI discloses admission terms and avoids an unbounded play
     "formatSnapshot",
     "templateRevision",
     "gameKey",
+    "entryTerms",
+    "entryFeeMinor",
   ]) {
     assert.match(reviewSource, new RegExp(field));
   }
@@ -265,6 +268,10 @@ test("Event governance UI discloses admission terms and avoids an unbounded play
     navigationSource,
     /const playerNavigation[\s\S]*label: "Events"[\s\S]*to: ROUTES\.EVENTS/,
   );
+  assert.match(playerSource, /test money/);
+  assert.match(playerSource, /Hold fee and register/);
+  assert.match(playerSource, /paidEntryAvailable === false/);
+  assert.doesNotMatch(playerSource, /amountMinor|entryFeeMinor[\s\S]*registerForEvent\([^)]*,/);
 });
 
 test("Event Manager proposes only the reviewed execution plan and fails closed for team Events", async () => {
@@ -280,6 +287,10 @@ test("Event Manager proposes only the reviewed execution plan and fails closed f
     "seedingPolicy",
     "batchSpacingMinutes",
     "checkInMinutesBefore",
+    "entryTerms",
+    "entryFeeMinor",
+    "entryPolicy",
+    "entryFeeRupees",
   ]) {
     assert.match(source, new RegExp(field));
   }
@@ -287,6 +298,8 @@ test("Event Manager proposes only the reviewed execution plan and fails closed f
   assert.match(source, /participantsPerMatch: "2"/);
   assert.match(source, /advanceCount: "1"/);
   assert.match(source, /Team Event execution is not available yet/);
+  assert.match(source, /toInrMinorUnits/);
+  assert.match(source, /no more than two decimal places/);
   const [templateDraftSection, runDraftSection] = source.split(
     "onSubmit={saveRun}",
   );
@@ -296,7 +309,7 @@ test("Event Manager proposes only the reviewed execution plan and fails closed f
   );
   assert.match(
     runDraftSection,
-    /disabled=\{teamExecutionUnsupported \|\| Boolean\(rankedProjection\.error\)\}/,
+    /disabled=\{teamExecutionUnsupported \|\| entryFeeInvalid \|\| Boolean\(rankedProjection\.error\)\}/,
   );
   assert.doesNotMatch(source, /participantIds|seedingSeed|createBatch|close-registration/);
 });
@@ -315,6 +328,11 @@ test("Event Manager Run draft sends the exact supported first-stage plan", async
       seedingPolicy: "registration_order",
     },
     registrationCapacity: 16,
+    entryTerms: {
+      currency: "INR",
+      entryFeeMinor: 200,
+      policy: "paid",
+    },
     rewardTerms: {
       currency: "INR",
       placements: [{ place: 1, amountMinor: 5000 }, { place: 2, amountMinor: 2500 }],
@@ -341,6 +359,11 @@ test("Event Manager Run draft sends the exact supported first-stage plan", async
     assert.equal(request.url, "/api/staff/events/runs");
     assert.deepEqual(decodeBody(request), payload);
     assert.equal("formatSnapshot" in decodeBody(request), false);
+    assert.deepEqual(decodeBody(request).entryTerms, {
+      currency: "INR",
+      entryFeeMinor: 200,
+      policy: "paid",
+    });
     assert.deepEqual(decodeBody(request).rewardTerms.placements, [{ place: 1, amountMinor: 5000 }, { place: 2, amountMinor: 2500 }]);
   } finally {
     api.defaults.adapter = originalAdapter;

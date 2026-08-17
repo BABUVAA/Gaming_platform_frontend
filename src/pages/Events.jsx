@@ -108,6 +108,16 @@ const Events = () => {
               <p className="mt-1 text-sm text-slate-500">
                 Registration closes {formatDate(event.registration.closesAt)}
               </p>
+              <p className="mt-2 text-sm font-bold text-emerald-200">
+                {event.entryTerms?.policy === "paid"
+                  ? `Entry INR ${(event.entryTerms.entryFeeMinor / 100).toFixed(2)} per player${event.entryTerms.testMoney ? " / test money" : ""}`
+                  : "Free entry"}
+              </p>
+              {event.entryTerms?.blockedCode ? (
+                <p className="mt-1 text-xs text-amber-200">
+                  Paid registration is unavailable in this environment.
+                </p>
+              ) : null}
 
               {mine ? (
                 <p className="mt-4 text-sm font-bold capitalize text-cyan-200">
@@ -176,14 +186,18 @@ const Events = () => {
               ) : !active ? (
                 <button
                   className="mt-5 rounded-xl bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950 disabled:opacity-50"
-                  disabled={busy || !event.registration.isOpen}
+                  disabled={busy || !event.registration.isOpen || event.entryTerms?.paidEntryAvailable === false}
                   onClick={() => dispatch(registerForEvent(event.id))}
                   type="button"
                 >
                   {busy
                     ? "Saving..."
-                    : event.registration.isOpen
-                      ? "Register"
+                    : event.entryTerms?.paidEntryAvailable === false
+                      ? "Paid entry unavailable"
+                      : event.registration.isOpen
+                      ? event.entryTerms?.policy === "paid"
+                        ? "Hold fee and register"
+                        : "Register"
                       : "Registration closed"}
                 </button>
               ) : null}

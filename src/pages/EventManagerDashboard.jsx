@@ -29,6 +29,8 @@ const initialTemplate = {
 
 const initialRun = {
   admissionPolicy: "open",
+  entryFeeRupees: "0",
+  entryPolicy: "free",
   registrationCapacity: "16",
   registrationClosesAt: "",
   registrationOpensAt: "",
@@ -63,6 +65,14 @@ const toDateTimeLocal = (value) => {
 
 const getReferenceId = (value) => value?._id || value || "";
 
+const toInrMinorUnits = (value) => {
+  const normalized = String(value ?? "").trim();
+  if (!/^(0|[1-9]\d*)(\.\d{1,2})?$/.test(normalized)) return null;
+  const [rupees, paise = ""] = normalized.split(".");
+  const amountMinor = Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
+  return Number.isSafeInteger(amountMinor) ? amountMinor : null;
+};
+
 const EventManagerDashboard = () => {
   const dispatch = useDispatch();
   const { games, runs, status, templates } = useSelector(
@@ -86,6 +96,10 @@ const EventManagerDashboard = () => {
     (item) => item._id === run.templateId,
   );
   const teamExecutionUnsupported = selectedRunTemplate?.teamSize > 1;
+  const entryFeeMinor = run.entryPolicy === "paid"
+    ? toInrMinorUnits(run.entryFeeRupees)
+    : 0;
+  const entryFeeInvalid = run.entryPolicy === "paid" && (!entryFeeMinor || entryFeeMinor < 1);
   const rankedProjection = run.executionFormat === "ranked_stages"
     ? projectRankedStages(Number(run.registrationCapacity), run.stageRows)
     : { error: "" };
@@ -148,6 +162,11 @@ const EventManagerDashboard = () => {
             seedingPolicy: run.seedingPolicy,
           },
       registrationCapacity: Number(run.registrationCapacity),
+      entryTerms: {
+        currency: "INR",
+        entryFeeMinor,
+        policy: run.entryPolicy,
+      },
       rewardTerms: {
         currency: "INR",
         placements: run.rewardRows.map((row) => ({
@@ -197,6 +216,8 @@ const EventManagerDashboard = () => {
     setEditingRunId(item._id);
     setRun({
       admissionPolicy: item.admissionPolicy || "open",
+      entryFeeRupees: String((item.entryTerms?.entryFeeMinor || 0) / 100),
+      entryPolicy: item.entryTerms?.policy || "free",
       registrationCapacity: String(item.registrationCapacity || 16),
       registrationClosesAt: toDateTimeLocal(item.registrationClosesAt),
       registrationOpensAt: toDateTimeLocal(item.registrationOpensAt),
@@ -493,6 +514,47 @@ const EventManagerDashboard = () => {
                 value={run.registrationCapacity}
               />
             </label>
+            <fieldset className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4">
+              <legend className="px-2 text-sm font-bold text-white">Entry terms</legend>
+              <p className="mb-3 text-xs leading-5 text-slate-400">
+                Platform Admin reviews and locks this per-player INR amount. Registration commands never accept a client-selected fee.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-sm text-slate-300">
+                  Entry policy
+                  <select
+                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                    onChange={(event) => setRun((current) => ({
+                      ...current,
+                      entryFeeRupees: event.target.value === "free" ? "0" : current.entryFeeRupees,
+                      entryPolicy: event.target.value,
+                    }))}
+                    value={run.entryPolicy}
+                  >
+                    <option value="free">Free entry</option>
+                    <option value="paid">Paid entry</option>
+                  </select>
+                </label>
+                <label className="text-sm text-slate-300">
+                  Fee per player (INR)
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3 disabled:opacity-50"
+                    disabled={run.entryPolicy === "free"}
+                    min={run.entryPolicy === "paid" ? "0.01" : "0"}
+                    onChange={(event) => setRun((current) => ({ ...current, entryFeeRupees: event.target.value }))}
+                    required
+                    step="0.01"
+                    type="number"
+                    value={run.entryFeeRupees}
+                  />
+                </label>
+              </div>
+            </fieldset>
+            {entryFeeInvalid ? (
+              <p className="text-sm text-rose-200">
+                Enter a paid entry fee with no more than two decimal places.
+              </p>
+            ) : null}
             {run.admissionPolicy === "limited_seats" ? (
               <label className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-sm text-slate-200">
                 <input
@@ -594,7 +656,7 @@ const EventManagerDashboard = () => {
             <div className="flex gap-2">
               <button
                 className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950 disabled:opacity-50"
-                disabled={teamExecutionUnsupported || Boolean(rankedProjection.error)}
+                disabled={teamExecutionUnsupported || entryFeeInvalid || Boolean(rankedProjection.error)}
               >
                 {editingRunId ? "Save changes" : "Save draft"}
               </button>
@@ -683,6 +745,11 @@ const EventManagerDashboard = () => {
                   <p className="font-semibold">{item.title}</p>
                   <p className="mt-1 text-sm text-slate-400">
                     {new Date(item.startsAt).toLocaleString()} / revision {item.revision || 1}
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-emerald-200">
+                    {item.entryTerms?.policy === "paid"
+                      ? `Paid entry / INR ${(item.entryTerms.entryFeeMinor / 100).toFixed(2)} per player`
+                      : "Free entry"}
                   </p>
                   {item.executionPlan ? (
                     <div className="mt-2 space-y-1 text-xs text-slate-500">

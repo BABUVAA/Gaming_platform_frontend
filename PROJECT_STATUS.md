@@ -1103,6 +1103,38 @@ staff-classified account and the frontend must present it as view-only.
   social, competition, and realtime suites pass at the latest recorded check.
   Frontend lint is clean and is recorded in the audit snapshot.
 
+## Completed Slice: Paid Event Registration and 1,000-Player Rehearsal
+
+Completed and verified 2026-08-17. Event Manager proposals now carry reviewed
+INR `entryTerms`; Platform/Super Admin sees the exact policy and fee before
+approval. Player registration never accepts a client amount. A paid entry
+atomically moves the reviewed fee from `available` to `entry_held`, writes one
+balanced append-only posting and durable per-attempt evidence, or writes
+nothing. Cancellation releases once; re-entry creates a new numbered attempt.
+At close, admitted holds capture to platform revenue and waitlisted holds
+release before any roster or Match is written. Missing, extra, wrong-amount,
+wrong-currency or wrong-status evidence fails closed. Paid commands remain
+default-closed outside explicit sandbox money mode and require recent
+authentication plus verified-player participation.
+
+The retained shared-database rehearsal `6a828224467598a0c5d5f545` completed
+1,000 verified BGMI players at INR 2.00 sandbox entry through three reviewed
+ranked rounds: 10 rooms of 100/top 50, 5 rooms of 100/top 20, and one 100-player
+final. Every round used a different persisted BGMI Match Operator: Platform
+Admin, Super Admin, then the dedicated Match Operator. Evidence retained in
+the database includes 1,000 registrations, 1,000 captured entry holds, 1,000
+roster rows, 3 stages, 16 batches/Matches, 1,000 standings, 1,000 hold postings,
+1,000 capture postings, and 10 pending plus 10 released reward postings. Final
+fixture-wallet totals are INR 8,000 available, zero held, zero prize-pending,
+and INR 550 withdrawable. No rehearsal record was deleted.
+
+Verification: backend aggregate 318/318, competition integration 89/89,
+frontend state 84/84, full lint, 554-module production build, API documentation
+coverage 180/180, and diff checks passed. The resumable rehearsal safely
+recovered from a deliberate driver lifecycle mismatch without re-registering
+or double-charging. Production live-money release, supervised workers and
+provider certification remain separate launch gates.
+
 ## Active Work
 
 ### 0. Transactional Account Email Activation
@@ -1814,6 +1846,25 @@ Security rule for all three dashboards:
 - Deployment monitoring, structured logs, backups, and disaster recovery.
 
 ## Latest Verification
+
+Run on 2026-08-17 for paid Event registration and the retained 1,000-player
+BGMI rehearsal:
+
+- Backend aggregate 318/318 passed, including 103 competition policy/unit,
+  89 competition replica-set integration, and seven focused paid Event cases.
+  The new cases prove default-closed zero writes, exact funded holds,
+  insufficient-funds rollback, cancellation/re-entry attempt evidence,
+  admitted capture, waitlist release, corrupt-evidence denial, and terminal
+  generation refunds.
+- Frontend state 84/84, full lint, and the 554-module production build passed.
+  Event Manager, governance review and player discovery expose the server-owned
+  fee/test-money state while registration and cancellation never send money.
+- API documentation generation/check covers all 180 mounted operations.
+- Persistent Event Run `6a828224467598a0c5d5f545` completed with 1,000 paid
+  registrations, three separately operated rounds, 16 Matches, 1,000 standings,
+  exact entry ledger counts and independently released top-10 rewards. Fixture
+  accounts and all Event/financial/sporting evidence remain in the shared test
+  database by product decision.
 
 Run on 2026-08-11 for the staff read-only player-dashboard slice:
 
