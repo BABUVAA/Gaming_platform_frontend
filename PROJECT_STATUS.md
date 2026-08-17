@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-16
+Last updated: 2026-08-17
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -24,6 +24,10 @@ to continue the project without reopening settled decisions.
 - Game Manager is read-only for assigned games and supervises operations.
 - Event Manager creates drafts inside assigned game scopes; Platform Admin
   reviews submitted Templates and Event Runs through an audited lifecycle.
+- Event Manager also has read-only, game-scoped operational visibility for its
+  Events through bounded registration and Match-room status pages. These reads
+  omit player emails, wallet data, lobby credentials, raw result evidence and
+  operator commands.
 - Invitation-only Event Runs are private in player discovery: only players
   with an active invitation may see their registration card or participate.
 - Event proposals move through `draft`, `in_review`, `changes_requested`,
@@ -1143,6 +1147,34 @@ coverage 180/180, and diff checks passed. The resumable rehearsal safely
 recovered from a deliberate driver lifecycle mismatch without re-registering
 or double-charging. Production live-money release, supervised workers and
 provider certification remain separate launch gates.
+
+## Completed Refinement: Event Management Workspaces
+
+Implemented locally and code-verified 2026-08-17. The Event Manager dashboard now uses a
+compact left sidebar with separate `Templates` and `Events` workspaces instead
+of rendering both creation flows together. Templates remain reusable approved
+game/mode/map/team-size definitions; Events remain dated registration,
+admission, entry-fee, stage and reward instances created from them. Forms use
+explicit labels and the previous oversized introduction/explanation panels are
+removed.
+
+Event cards now open a read-only operational detail view. Three new
+Event-Manager-only, assigned-game-scoped endpoints expose a bounded summary,
+25-item opaque-cursor registration pages, and 25-item opaque-cursor Match-room
+pages. Registration rows contain only username/profile tag/status/time. Match
+rows contain stage/room, counts, schedule, status, assigned operator and safe
+result summary; they omit emails, player identities, lobby credentials, wallet
+data and raw proof/dispute evidence.
+
+Platform/Super Admin `Event Management` is separated into `Approvals`,
+`Invitations`, and `Operations & Reports`, preserving existing independent
+review authority without stacking every tool on one page. Verification passed
+backend competition policy 103/103 and replica-set integration 91/91,
+frontend 86/86, full lint, the 555-module production build, and API
+documentation coverage for all 183 mounted operations.
+The desktop/mobile visual browser gate remains pending because browser control
+was unavailable in this session; do not treat that external visual check as
+completed evidence yet.
 
 ## Active Work
 

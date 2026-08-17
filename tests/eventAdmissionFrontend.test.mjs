@@ -28,6 +28,9 @@ import eventStageSlice, {
 } from "../src/store/slices/eventStageSlice.js";
 import eventManagementSlice, {
   createManagedEventRun,
+  fetchManagedEventMatches,
+  fetchManagedEventOperations,
+  fetchManagedEventRegistrations,
 } from "../src/store/slices/eventManagementSlice.js";
 import eventStageAdjustmentSlice, {
   fetchManagedStageAdjustments,
@@ -262,6 +265,11 @@ test("Event governance and player UI disclose authoritative entry terms without 
   assert.doesNotMatch(invitationSource, /findUsers|\/api\/admin\/findUsers/);
   assert.match(reviewSource, /Independent review required/);
   assert.match(reviewSource, /Another admin reviews/);
+  assert.match(reviewSource, /aria-label="Event Management sections"/);
+  assert.match(reviewSource, /label="Approvals"/);
+  assert.match(reviewSource, /label="Invitations"/);
+  assert.match(reviewSource, /label="Operations & Reports"/);
+  assert.match(reviewSource, /activeView === "approvals"/);
   assert.match(reviewSource, /currentUser\?\._id \|\| currentUser\?\.id/);
   assert.match(reviewSource, /if \(!selected \|\| !canReview\(selected\.item\)\) return/);
   assert.match(
@@ -312,6 +320,78 @@ test("Event Manager proposes only the reviewed execution plan and fails closed f
     /disabled=\{teamExecutionUnsupported \|\| entryFeeInvalid \|\| Boolean\(rankedProjection\.error\)\}/,
   );
   assert.doesNotMatch(source, /participantIds|seedingSeed|createBatch|close-registration/);
+});
+
+test("Event Manager separates reusable Templates from dated Events", async () => {
+  const [source, operationsSource] = await Promise.all([
+    readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/eventManagement/EventManagerOperations.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(source, /const \[activeTab, setActiveTab\] = useState\("templates"\)/);
+  assert.match(source, /aria-label="Event Manager sections"/);
+  assert.match(source, />Templates</);
+  assert.match(source, />Events</);
+  assert.match(source, /lg:grid-cols-\[15rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /Approve a Template/);
+  assert.match(source, /Create Events from it/);
+  assert.doesNotMatch(source, /Competition operations/);
+  assert.match(source, /activeTab === "templates"/);
+  assert.match(source, /Template name/);
+  assert.match(source, /Event name/);
+  assert.match(source, /View details/);
+  assert.match(operationsSource, /Player entries/);
+  assert.match(operationsSource, /Generated Match rooms/);
+  assert.match(operationsSource, /Load more registrations/);
+  assert.match(operationsSource, /Load more Matches/);
+  assert.doesNotMatch(operationsSource, /email|roomPassword|roomCode|wallet/);
+});
+
+test("Event Manager operational reads are scoped, bounded, and paginated", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    if (config.url.endsWith("/operations")) {
+      return response(config, { data: { run: { id: "run-1", title: "Event" }, summary: {} } });
+    }
+    if (config.url.endsWith("/registrations")) {
+      const cursor = config.params?.cursor;
+      return response(config, {
+        data: {
+          items: [{ id: cursor ? "registration-2" : "registration-1", player: { profileTag: "PLAYER", username: "Player" }, status: "registered" }],
+          page: { nextCursor: cursor ? null : "registration-cursor" },
+        },
+      });
+    }
+    return response(config, {
+      data: {
+        items: [{ batch: { id: "batch-1", ordinal: 1, participantCount: 100 }, match: { id: "match-1", status: "live" }, stage: { number: 1 } }],
+        page: { nextCursor: null },
+      },
+    });
+  };
+
+  try {
+    const store = configureStore({ reducer: { eventManagement: eventManagementSlice.reducer } });
+    await store.dispatch(fetchManagedEventOperations("run-1"));
+    await store.dispatch(fetchManagedEventRegistrations({ runId: "run-1", status: "registered" }));
+    await store.dispatch(fetchManagedEventRegistrations({ cursor: "registration-cursor", runId: "run-1", status: "registered" }));
+    await store.dispatch(fetchManagedEventMatches({ runId: "run-1" }));
+
+    assert.deepEqual(requests.map(({ method, url }) => [method, url]), [
+      ["get", "/api/staff/events/runs/run-1/operations"],
+      ["get", "/api/staff/events/runs/run-1/registrations"],
+      ["get", "/api/staff/events/runs/run-1/registrations"],
+      ["get", "/api/staff/events/runs/run-1/matches"],
+    ]);
+    assert.deepEqual(requests[1].params, { limit: 25, status: "registered" });
+    assert.deepEqual(requests[2].params, { cursor: "registration-cursor", limit: 25, status: "registered" });
+    assert.deepEqual(store.getState().eventManagement.registrationsByRunId["run-1"].items.map(({ id }) => id), ["registration-1", "registration-2"]);
+    assert.equal(store.getState().eventManagement.matchesByRunId["run-1"].items[0].match.status, "live");
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
 });
 
 test("Event Manager Run draft sends the exact supported first-stage plan", async () => {

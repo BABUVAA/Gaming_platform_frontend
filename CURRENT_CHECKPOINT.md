@@ -23,7 +23,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   may execute participation, social, game-account, profile, or money commands.
 - Platform Admin owns Game configuration, offering publication, staff access,
   and Event approval. Game Manager is read-only; Event Manager proposes scoped
-  drafts; Match Operator operates scoped assigned Matches.
+  drafts and may inspect bounded, safe registration/Match status for Events in
+  assigned games; Match Operator operates scoped assigned Matches. Event
+  Manager reads omit emails, lobby credentials, wallet data and player result
+  authority.
 - Invitation-only Event cards are visible only to a player with an active
   invitation; server discovery and registration enforce the same rule.
 - Redux Toolkit owns feature data; do not introduce component-level API calls
@@ -45,8 +48,9 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   core playable platform, and 45% ready for unrestricted real-money traffic.
   These are planning estimates, not completion evidence.
 - Latest complete backend release aggregate passed 318/318 on 2026-08-17.
-  Frontend state passed 84/84; full lint and the 554-module production build
-  passed on 2026-08-17.
+  The Event-management refinement additionally passed competition policy
+  103/103 and competition replica integration 91/91. Frontend state passed
+  86/86; full lint and the 555-module production build passed on 2026-08-17.
 - Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
   public **testing/staging platform**, not a live-money launch. Backend commit
   `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis
@@ -103,7 +107,7 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   payout adapter/worker/callback/live-certification gates remain red.
 - Both worktrees are committed and pushed at the deployment revisions above.
 - API documentation refinement 2026-08-16: the backend now generates an
-  OpenAPI 3.1 specification for all 180 mounted HTTP operations and includes a
+  OpenAPI 3.1 specification for all 183 mounted HTTP operations and includes a
   human-readable guide covering cookies, envelopes, roles/scopes, opaque
   pagination, INR minor units, authentication, Quick Match, Event, PhonePe,
   prize and withdrawal flows. `npm run docs:api:check` compares the generated
@@ -266,6 +270,25 @@ offerings must be created again for the next test cycle.
 Latest gates: backend 318/318, competition integration 89/89, frontend 84/84,
 full lint, 554-module build, and API documentation 180/180. Production still
 requires live-money provider certification and separately supervised workers.
+
+## Latest Refinement: Event Management UI and Safe Operations
+
+- Event Manager now uses a compact left sidebar with distinct `Templates` and
+  `Events` workspaces. The previous large introduction/explanation panels are
+  removed; all fields have direct labels.
+- Templates are reusable approved game/mode/map/team-size definitions. Events
+  are dated registration, access, fee, stage and reward instances created from
+  an approved Template.
+- Event cards open read-only operational details with summary counts, bounded
+  registration pages and bounded Match-room pages. Backend game-scope policy is
+  authoritative and serializers omit player email, wallet, lobby secret and
+  result-authority data.
+- Platform/Super Admin Event Management now separates `Approvals`,
+  `Invitations`, and `Operations & Reports` instead of stacking every section.
+- Verification: backend competition 103/103 and competition integration 91/91;
+  frontend 86/86, full lint, 555-module build; API docs 183/183.
+- Desktop/mobile visual browser verification remains pending because browser
+  control was unavailable in this session.
 
 Operational baseline refinement: backend exposes public `/healthz` liveness
 and fail-closed `/readyz` dependency readiness checks. Configure the deployed

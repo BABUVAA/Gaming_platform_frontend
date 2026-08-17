@@ -190,6 +190,7 @@ const EventReviewQueue = () => {
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState("");
   const [decision, setDecision] = useState("");
+  const [activeView, setActiveView] = useState("approvals");
 
   useEffect(() => {
     dispatch(fetchEventReviewQueue());
@@ -232,6 +233,14 @@ const EventReviewQueue = () => {
 
   return (
     <section className="space-y-5">
+      <nav aria-label="Event Management sections" className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 md:grid-cols-3" role="tablist">
+        <AdminEventTab active={activeView === "approvals"} count={reviewCount} label="Approvals" onClick={() => setActiveView("approvals")} />
+        <AdminEventTab active={activeView === "invitations"} label="Invitations" onClick={() => setActiveView("invitations")} />
+        <AdminEventTab active={activeView === "operations"} label="Operations & Reports" onClick={() => setActiveView("operations")} />
+      </nav>
+
+      {activeView === "approvals" ? (
+      <>
       <header className="rounded-2xl border border-slate-800 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.13),_transparent_35%),#07111f] p-4 md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -256,10 +265,36 @@ const EventReviewQueue = () => {
         <ReviewPanel canReview={selected ? canReview(selected.item) : true} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} />
       </div>
       <StageAdjustmentReviewQueue />
-      <EventInvitationManagement />
-      <EventStageManagement />
+      </>
+      ) : activeView === "invitations" ? (
+        <EventInvitationManagement />
+      ) : (
+        <EventStageManagement />
+      )}
     </section>
   );
+};
+
+const AdminEventTab = ({ active, count, label, onClick }) => (
+  <button
+    aria-selected={active}
+    className={active
+      ? "flex items-center justify-between gap-3 rounded-xl bg-cyan-300 px-4 py-3 text-left text-sm font-black text-slate-950"
+      : "flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold text-slate-400 hover:bg-slate-900"}
+    onClick={onClick}
+    role="tab"
+    type="button"
+  >
+    <span>{label}</span>
+    {typeof count === "number" ? <span className={active ? "rounded-full bg-slate-950/15 px-2 py-0.5 text-xs" : "rounded-full bg-slate-900 px-2 py-0.5 text-xs text-cyan-200"}>{count}</span> : null}
+  </button>
+);
+
+AdminEventTab.propTypes = {
+  active: PropTypes.bool.isRequired,
+  count: PropTypes.number,
+  label: PropTypes.string.isRequired,
+  onClick: PropTypes.func.isRequired,
 };
 
 const QueueGroup = ({ canReview, icon: Icon, items, kind, onChoose, selected, title }) => (

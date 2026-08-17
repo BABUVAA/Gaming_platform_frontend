@@ -26,6 +26,45 @@ export const fetchScopedEventGames = createApiThunk(
   },
 );
 
+export const fetchManagedEventOperations = createApiThunk(
+  "eventManagement/fetchOperations",
+  {
+    path: ({ arg: runId }) => `/api/staff/events/runs/${runId}/operations`,
+    selectData: (response) => response.data?.data,
+    errorMessage: "Unable to load Event operations.",
+    toast: { error: true },
+  },
+);
+
+export const fetchManagedEventRegistrations = createApiThunk(
+  "eventManagement/fetchRegistrations",
+  {
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/registrations`,
+    getParams: ({ cursor, status } = {}) => ({
+      limit: 25,
+      ...(cursor ? { cursor } : {}),
+      ...(status && status !== "all" ? { status } : {}),
+    }),
+    selectData: (response) => response.data?.data || { items: [], page: {} },
+    errorMessage: "Unable to load Event registrations.",
+    toast: { error: true },
+  },
+);
+
+export const fetchManagedEventMatches = createApiThunk(
+  "eventManagement/fetchMatches",
+  {
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/matches`,
+    getParams: ({ cursor } = {}) => ({
+      limit: 25,
+      ...(cursor ? { cursor } : {}),
+    }),
+    selectData: (response) => response.data?.data || { items: [], page: {} },
+    errorMessage: "Unable to load Event Matches.",
+    toast: { error: true },
+  },
+);
+
 export const createManagedEventTemplate = createApiThunk(
   "eventManagement/createTemplate",
   {
@@ -106,12 +145,24 @@ const replaceRecord = (records, replacement) => {
   records[index] = replacement;
 };
 
+const appendUnique = (current = [], additions = []) => {
+  const records = new Map(current.map((item) => [item.id, item]));
+  additions.forEach((item) => records.set(item.id, item));
+  return [...records.values()];
+};
+
 const eventManagementSlice = createSlice({
   name: "eventManagement",
   initialState: {
     error: null,
     games: [],
+    matchesByRunId: {},
+    operationsByRunId: {},
+    operationsErrorByRunId: {},
+    operationsRequestByRunId: {},
+    operationsStatusByRunId: {},
     pagination: {},
+    registrationsByRunId: {},
     runs: [],
     status: "idle",
     templates: [],
@@ -135,6 +186,83 @@ const eventManagementSlice = createSlice({
       })
       .addCase(fetchScopedEventGames.fulfilled, (state, action) => {
         state.games = action.payload;
+      })
+      .addCase(fetchManagedEventOperations.pending, (state, action) => {
+        const runId = action.meta.arg;
+        state.operationsErrorByRunId[runId] = null;
+        state.operationsRequestByRunId[runId] = action.meta.requestId;
+        state.operationsStatusByRunId[runId] = "loading";
+      })
+      .addCase(fetchManagedEventOperations.fulfilled, (state, action) => {
+        const runId = action.meta.arg;
+        if (state.operationsRequestByRunId[runId] !== action.meta.requestId) return;
+        state.operationsByRunId[runId] = action.payload;
+        state.operationsRequestByRunId[runId] = null;
+        state.operationsStatusByRunId[runId] = "succeeded";
+      })
+      .addCase(fetchManagedEventOperations.rejected, (state, action) => {
+        const runId = action.meta.arg;
+        if (state.operationsRequestByRunId[runId] !== action.meta.requestId) return;
+        state.operationsRequestByRunId[runId] = null;
+        state.operationsStatusByRunId[runId] = action.meta.aborted ? "idle" : "failed";
+        if (!action.meta.aborted) state.operationsErrorByRunId[runId] = action.payload?.message || action.error.message;
+      })
+      .addCase(fetchManagedEventRegistrations.pending, (state, action) => {
+        const { runId } = action.meta.arg;
+        const current = state.registrationsByRunId[runId] || {};
+        state.registrationsByRunId[runId] = { ...current, error: null, requestId: action.meta.requestId, status: "loading" };
+      })
+      .addCase(fetchManagedEventRegistrations.fulfilled, (state, action) => {
+        const { cursor, runId, status = "all" } = action.meta.arg;
+        const current = state.registrationsByRunId[runId] || {};
+        if (current.requestId !== action.meta.requestId) return;
+        state.registrationsByRunId[runId] = {
+          error: null,
+          filter: status,
+          items: cursor ? appendUnique(current.items, action.payload.items) : action.payload.items,
+          nextCursor: action.payload.page?.nextCursor || null,
+          requestId: null,
+          status: "succeeded",
+        };
+      })
+      .addCase(fetchManagedEventRegistrations.rejected, (state, action) => {
+        const { runId } = action.meta.arg;
+        const current = state.registrationsByRunId[runId] || {};
+        if (current.requestId !== action.meta.requestId) return;
+        state.registrationsByRunId[runId] = {
+          ...current,
+          error: action.meta.aborted ? null : action.payload?.message || action.error.message,
+          requestId: null,
+          status: action.meta.aborted ? "idle" : "failed",
+        };
+      })
+      .addCase(fetchManagedEventMatches.pending, (state, action) => {
+        const { runId } = action.meta.arg;
+        const current = state.matchesByRunId[runId] || {};
+        state.matchesByRunId[runId] = { ...current, error: null, requestId: action.meta.requestId, status: "loading" };
+      })
+      .addCase(fetchManagedEventMatches.fulfilled, (state, action) => {
+        const { cursor, runId } = action.meta.arg;
+        const current = state.matchesByRunId[runId] || {};
+        if (current.requestId !== action.meta.requestId) return;
+        state.matchesByRunId[runId] = {
+          error: null,
+          items: cursor ? appendUnique(current.items, action.payload.items) : action.payload.items,
+          nextCursor: action.payload.page?.nextCursor || null,
+          requestId: null,
+          status: "succeeded",
+        };
+      })
+      .addCase(fetchManagedEventMatches.rejected, (state, action) => {
+        const { runId } = action.meta.arg;
+        const current = state.matchesByRunId[runId] || {};
+        if (current.requestId !== action.meta.requestId) return;
+        state.matchesByRunId[runId] = {
+          ...current,
+          error: action.meta.aborted ? null : action.payload?.message || action.error.message,
+          requestId: null,
+          status: action.meta.aborted ? "idle" : "failed",
+        };
       })
       .addCase(createManagedEventTemplate.fulfilled, (state, action) => {
         state.templates.unshift(action.payload);

@@ -6,6 +6,7 @@ import {
   projectRankedStages,
 } from "../components/eventManagement/rankedStagePlanUtils.js";
 import FutureRoundAdjustmentPanel from "../components/eventManagement/FutureRoundAdjustmentPanel.jsx";
+import EventManagerOperations from "../components/eventManagement/EventManagerOperations.jsx";
 import {
   createManagedEventRun,
   createManagedEventTemplate,
@@ -83,6 +84,8 @@ const EventManagerDashboard = () => {
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [editingRunId, setEditingRunId] = useState(null);
   const [activeSubmission, setActiveSubmission] = useState(null);
+  const [activeTab, setActiveTab] = useState("templates");
+  const [selectedRunId, setSelectedRunId] = useState(null);
 
   useEffect(() => {
     // This endpoint returns only the games assigned to this Event Manager.
@@ -199,6 +202,7 @@ const EventManagerDashboard = () => {
   };
 
   const editTemplate = (item) => {
+    setActiveTab("templates");
     setEditingTemplateId(item._id);
     setTemplate({
       cadence: item.cadence || "one_time",
@@ -213,6 +217,7 @@ const EventManagerDashboard = () => {
   };
 
   const editRun = (item) => {
+    setActiveTab("events");
     setEditingRunId(item._id);
     setRun({
       admissionPolicy: item.admissionPolicy || "open",
@@ -297,19 +302,58 @@ const EventManagerDashboard = () => {
 
   return (
     <main className="min-h-screen bg-[#050b14] px-4 py-6 text-slate-100 sm:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-      <header className="rounded-3xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(15,23,42,0.55))] px-5 py-5 sm:px-6">
-        <p className="text-xs uppercase tracking-[0.22em] text-cyan-300">
-          Competition operations
-        </p>
-        <h1 className="mt-2 text-3xl font-black">Event Manager</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Build Event drafts for your assigned games and submit completed work
-          for independent Platform Admin review.
-        </p>
-      </header>
+      <div className="mx-auto grid max-w-7xl items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <aside className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4 lg:sticky lg:top-6">
+          <div className="border-b border-slate-800 px-2 pb-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Staff workspace</p>
+            <h1 className="mt-1 text-xl font-black text-white">Event Manager</h1>
+          </div>
+          <nav aria-label="Event Manager sections" className="mt-3 grid gap-2" role="tablist">
+          <button
+            aria-selected={activeTab === "templates"}
+            className={activeTab === "templates"
+              ? "rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left"
+              : "rounded-2xl border border-transparent px-4 py-3 text-left hover:bg-slate-900"}
+            onClick={() => setActiveTab("templates")}
+            role="tab"
+            type="button"
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="font-black text-white">Templates</span>
+              <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-cyan-200">{templates.length}</span>
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-slate-400">
+              Reusable setups
+            </span>
+          </button>
+          <button
+            aria-selected={activeTab === "events"}
+            className={activeTab === "events"
+              ? "rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left"
+              : "rounded-2xl border border-transparent px-4 py-3 text-left hover:bg-slate-900"}
+            onClick={() => setActiveTab("events")}
+            role="tab"
+            type="button"
+          >
+            <span className="flex items-center justify-between gap-3">
+              <span className="font-black text-white">Events</span>
+              <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-cyan-200">{runs.length}</span>
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-slate-400">
+              Scheduled competitions
+            </span>
+          </button>
+          </nav>
+          <div className="mt-5 border-t border-slate-800 px-2 pt-4 text-xs leading-5 text-slate-500">
+            <p><span className="font-black text-slate-300">1.</span> Approve a Template</p>
+            <p><span className="font-black text-slate-300">2.</span> Create Events from it</p>
+          </div>
+        </aside>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="min-w-0 space-y-6">
+
+      <section>
+        {activeTab === "templates" ? (
         <form
           className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5"
           onSubmit={saveTemplate}
@@ -323,86 +367,108 @@ const EventManagerDashboard = () => {
             Save the setup first. Submission is a separate review step.
           </p>
           <div className="mt-4 grid gap-3">
-            <input
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) => updateTemplate("title", event.target.value)}
-              placeholder="Event title"
-              required
-              value={template.title}
-            />
-            <textarea
-              className="min-h-24 rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) =>
-                updateTemplate("description", event.target.value)
-              }
-              placeholder="Short player-facing description"
-              value={template.description}
-            />
-            <select
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) => updateTemplate("gameId", event.target.value)}
-              required
-              value={template.gameId}
-            >
-              <option value="">Choose assigned game</option>
-              {games.map((game) => (
-                <option key={game._id} value={game._id}>
-                  {game.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              disabled={!selectedGame}
-              onChange={(event) => updateTemplate("mode", event.target.value)}
-              required
-              value={template.mode}
-            >
-              <option value="">Choose configured mode</option>
-              {selectedGame?.supportedModes.map((mode) => (
-                <option key={mode} value={mode}>
-                  {mode}
-                </option>
-              ))}
-            </select>
-            <select
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              disabled={!selectedGame || selectedGame.supportedMaps.length === 0}
-              onChange={(event) => updateTemplate("map", event.target.value)}
-              value={template.map}
-            >
-              <option value="">No map requirement</option>
-              {selectedGame?.supportedMaps.map((map) => (
-                <option key={map} value={map}>
-                  {map}
-                </option>
-              ))}
-            </select>
-            <input
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              max="100"
-              min="1"
-              onChange={(event) =>
-                updateTemplate("teamSize", event.target.value)
-              }
-              placeholder="Team size"
-              required
-              type="number"
-              value={template.teamSize}
-            />
-            <select
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) =>
-                updateTemplate("cadence", event.target.value)
-              }
-              value={template.cadence}
-            >
-              {["one_time", "daily", "weekly", "monthly"].map((cadence) => (
-                <option key={cadence} value={cadence}>
-                  {formatStatus(cadence)}
-                </option>
-              ))}
-            </select>
+            <label className="text-sm text-slate-300">
+              Template name
+              <input
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) => updateTemplate("title", event.target.value)}
+                placeholder="Example: BGMI Ranked Solo"
+                required
+                value={template.title}
+              />
+            </label>
+            <label className="text-sm text-slate-300">
+              Player-facing description
+              <textarea
+                className="mt-1 min-h-24 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) =>
+                  updateTemplate("description", event.target.value)
+                }
+                placeholder="Describe the reusable competition format"
+                value={template.description}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-slate-300">
+                Assigned game
+                <select
+                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                  onChange={(event) => updateTemplate("gameId", event.target.value)}
+                  required
+                  value={template.gameId}
+                >
+                  <option value="">Choose game</option>
+                  {games.map((game) => (
+                    <option key={game._id} value={game._id}>
+                      {game.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm text-slate-300">
+                Game mode
+                <select
+                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                  disabled={!selectedGame}
+                  onChange={(event) => updateTemplate("mode", event.target.value)}
+                  required
+                  value={template.mode}
+                >
+                  <option value="">Choose mode</option>
+                  {selectedGame?.supportedModes.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {mode}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm text-slate-300">
+                Map
+                <select
+                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                  disabled={!selectedGame || selectedGame.supportedMaps.length === 0}
+                  onChange={(event) => updateTemplate("map", event.target.value)}
+                  value={template.map}
+                >
+                  <option value="">No map requirement</option>
+                  {selectedGame?.supportedMaps.map((map) => (
+                    <option key={map} value={map}>
+                      {map}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm text-slate-300">
+                Team size
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                  max="100"
+                  min="1"
+                  onChange={(event) =>
+                    updateTemplate("teamSize", event.target.value)
+                  }
+                  required
+                  type="number"
+                  value={template.teamSize}
+                />
+              </label>
+            </div>
+            <label className="text-sm text-slate-300">
+              Intended reuse
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) =>
+                  updateTemplate("cadence", event.target.value)
+                }
+                value={template.cadence}
+              >
+                {["one_time", "daily", "weekly", "monthly"].map((cadence) => (
+                  <option key={cadence} value={cadence}>
+                    {formatStatus(cadence)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="flex gap-2">
               <button className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950">
                 {editingTemplateId ? "Save changes" : "Save draft"}
@@ -422,7 +488,7 @@ const EventManagerDashboard = () => {
             </div>
           </div>
         </form>
-
+        ) : (
         <form
           className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5"
           onSubmit={saveRun}
@@ -434,27 +500,33 @@ const EventManagerDashboard = () => {
             A schedule can only be built from an approved template.
           </p>
           <div className="mt-4 grid gap-3">
-            <input
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) => setRun((current) => ({ ...current, title: event.target.value }))}
-              placeholder="Schedule title (defaults to template title)"
-              value={run.title}
-            />
-            <select
-              className="rounded-xl border border-slate-700 bg-slate-900 p-3"
-              onChange={(event) =>
-                setRun((current) => ({ ...current, templateId: event.target.value }))
-              }
-              required
-              value={run.templateId}
-            >
-              <option value="">Choose approved template</option>
-              {approvedTemplates.map((item) => (
-                <option key={item._id} value={item._id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
+            <label className="text-sm text-slate-300">
+              Event name
+              <input
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) => setRun((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Example: BGMI Sunday Showdown"
+                value={run.title}
+              />
+            </label>
+            <label className="text-sm text-slate-300">
+              Approved Template
+              <select
+                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                onChange={(event) =>
+                  setRun((current) => ({ ...current, templateId: event.target.value }))
+                }
+                required
+                value={run.templateId}
+              >
+                <option value="">Choose approved Template</option>
+                {approvedTemplates.map((item) => (
+                  <option key={item._id} value={item._id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            </label>
             {teamExecutionUnsupported ? (
               <p className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">
                 Team Event execution is not available yet. Choose an approved
@@ -675,10 +747,17 @@ const EventManagerDashboard = () => {
             </div>
           </div>
         </form>
+        )}
+
       </section>
 
+      {activeTab === "templates" ? (
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5">
-        <h2 className="font-bold text-white">Template work</h2>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Reusable library</p>
+          <h2 className="mt-1 font-bold text-white">Your Templates</h2>
+          <p className="mt-1 text-sm text-slate-400">Approved Templates remain available for future Events. Editing a reviewed format creates another governed revision.</p>
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {templates.map((item) => (
             <article
@@ -731,9 +810,14 @@ const EventManagerDashboard = () => {
           )}
         </div>
       </section>
-
+      ) : (
+      <>
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5">
-        <h2 className="font-bold text-white">Event schedules</h2>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Scheduled competitions</p>
+          <h2 className="mt-1 font-bold text-white">Your Events</h2>
+          <p className="mt-1 text-sm text-slate-400">Each Event has its own registration window, player access, execution plan and review lifecycle.</p>
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {runs.map((item) => (
             <article
@@ -817,6 +901,13 @@ const EventManagerDashboard = () => {
                       : "Submit for review"}
                   </button>
                 )}
+                <button
+                  className="rounded-lg border border-cyan-300/30 px-3 py-2 text-sm font-bold text-cyan-100"
+                  onClick={() => setSelectedRunId(item._id)}
+                  type="button"
+                >
+                  View details
+                </button>
               </div>
             </article>
           ))}
@@ -830,7 +921,13 @@ const EventManagerDashboard = () => {
           )}
         </div>
       </section>
+      {selectedRunId ? (
+        <EventManagerOperations onClose={() => setSelectedRunId(null)} runId={selectedRunId} />
+      ) : null}
       <FutureRoundAdjustmentPanel runs={runs} />
+      </>
+      )}
+        </div>
       </div>
     </main>
   );
