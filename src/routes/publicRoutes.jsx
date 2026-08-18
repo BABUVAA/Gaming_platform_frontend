@@ -13,14 +13,6 @@ export const publicRoutes = [
   { path: ROUTES.COC, componentKey: "Coc" },
   { path: ROUTES.LOGOUT, element: <></> },
   dashboardRoute,
-  {
-    path: ROUTES.TOURNAMENT_DETAILS,
-    componentKey: "TournamentDetails",
-  },
-  {
-    path: ROUTES.TOURNAMENT_DETAILS_LEGACY,
-    componentKey: "TournamentDetails",
-  },
 ];
 
 export default publicRoutes;

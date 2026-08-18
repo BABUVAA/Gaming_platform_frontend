@@ -84,7 +84,7 @@ const staffUtilityNavigation = [
     description: "View player-facing competitions",
     to: ROUTES.TOURNAMENT,
     icon: FaTrophy,
-    match: [ROUTES.TOURNAMENT, "/dashboard/tournaments", "/tournamentDetails"],
+    match: [ROUTES.TOURNAMENT, "/dashboard/tournaments"],
   },
   {
     label: "Events",
@@ -146,7 +146,6 @@ const playerNavigation = [
     match: [
       ROUTES.TOURNAMENT,
       "/dashboard/tournaments",
-      "/tournamentDetails",
     ],
   },
   {

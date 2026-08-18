@@ -18,7 +18,6 @@ import requestScopeSlice, {
 } from "./slices/requestScopeSlice";
 import socialSlice from "./slices/socialSlice";
 import toastSlice from "./slices/toastSlice";
-import tournamentSlice from "./slices/tournamentSlice";
 import eventManagementSlice from "./slices/eventManagementSlice";
 import eventReviewSlice from "./slices/eventReviewSlice";
 import quickMatchOfferingSlice from "./slices/quickMatchOfferingSlice";
@@ -48,7 +47,6 @@ const combinedReducer = combineReducers({
   auth: authSlice.reducer,
   games: gameSlice.reducer,
   gameManagement: gameManagementSlice.reducer,
-  tournament: tournamentSlice.reducer,
   eventManagement: eventManagementSlice.reducer,
   eventReview: eventReviewSlice.reducer,
   quickMatchOfferings: quickMatchOfferingSlice.reducer,

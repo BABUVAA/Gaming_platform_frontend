@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-17
+Last updated: 2026-08-18
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -47,10 +47,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Planning estimate: approximately 80% of the complete roadmap, 92% of the
   core playable platform, and 45% ready for unrestricted real-money traffic.
   These are planning estimates, not completion evidence.
-- Latest complete backend release aggregate passed 318/318 on 2026-08-17.
-  The Event-management refinement additionally passed competition policy
-  103/103 and competition replica integration 91/91. Frontend state passed
-  86/86; full lint and the 555-module production build passed on 2026-08-17.
+- Latest backend aggregate passed on 2026-08-18. Canonical competition policy
+  passed 91/91 and competition replica integration passed 86/86. Frontend
+  state passed 86/86; full lint, route smoke, and the 552-module production
+  build passed.
 - Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
   public **testing/staging platform**, not a live-money launch. Backend commit
   `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis
@@ -106,8 +106,8 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   live-money modes remain blocked. Internal Solo/Team money flows are proven;
   payout adapter/worker/callback/live-certification gates remain red.
 - Both worktrees are committed and pushed at the deployment revisions above.
-- API documentation refinement 2026-08-16: the backend now generates an
-  OpenAPI 3.1 specification for all 183 mounted HTTP operations and includes a
+- API documentation refinement 2026-08-18: the backend now generates an
+  OpenAPI 3.1 specification for all 176 mounted HTTP operations and includes a
   human-readable guide covering cookies, envelopes, roles/scopes, opaque
   pagination, INR minor units, authentication, Quick Match, Event, PhonePe,
   prize and withdrawal flows. `npm run docs:api:check` compares the generated
@@ -165,13 +165,17 @@ dispute, settlement, independent prize release, exact Wallet/ledger evidence,
 safe serialization, and desktop/mobile UI. Backend 196/196 and frontend 44/44
 passed. External provider gates remain red, so paid entry stays disabled.
 
-## Completed Slice: Legacy Competition Migration and Rollback
+## Completed Slice: Legacy Competition Retirement
 
-Completed and verified 2026-08-11. Active client/host/detail/join paths are
-canonical; reviewed migration dry-run/apply/no-op/rollback/reapply and Redis
-recovery are covered; legacy queue POST is zero-write 410; historical reads are
-deliberately retained. Backend 206/206 and frontend 52/52 passed. Desktop/mobile
-browser and configured-environment dry-run passed with fixtures cleaned.
+Completed and verified 2026-08-18. A fail-closed retirement command first
+proved zero TournamentType, Tournament, Result, legacy Room, and legacy Match
+records in the configured database. It then removed the empty collections,
+legacy fields/indexes, and Redis keys. Backend models, routes, controllers,
+matchmaking/socket contracts, migration utilities, API documentation, and
+frontend history routes/Redux modules are removed. Match now accepts only
+Quick Match or Event sources; Room requires a QuickMatchOffering. Full backend
+tests, competition 91/91, competition replica integration 86/86, frontend
+86/86, lint, route smoke, build, and diff checks passed.
 
 ## Completed Slice: Event Registration and Admission
 

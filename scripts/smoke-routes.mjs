@@ -28,7 +28,6 @@ const playerSliceText = read("src/store/slices/playerSlice.js");
 const requiredRoutePatterns = [
   ['path: "matches"', "path: DASHBOARD_ROUTE_SEGMENTS.MATCHES"],
   ['path: "matches/:id"', "path: DASHBOARD_ROUTE_SEGMENTS.MATCH_ROOM"],
-  ['path: "tournamentDetails/:id"', "path: ROUTES.TOURNAMENT_DETAILS"],
   [
     'path: "tournaments/offering/:id"',
     "path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT_OFFERING_DETAILS",
@@ -39,7 +38,6 @@ const requiredRoutePatterns = [
 
 const requiredNavigationPatterns = [
   ['"/dashboard/matches"', "ROUTES.MATCHES"],
-  ['"/tournamentDetails"', "ROUTES.TOURNAMENT_DETAILS"],
 ];
 
 const failures = [];
@@ -65,14 +63,6 @@ if (
   !quickMatchCardText.includes("buildTournamentOfferingPath(offering._id)")
 ) {
   failures.push("Quick Match cards no longer use the canonical queue/detail boundary.");
-}
-
-if (
-  routesText.includes("tournamentDeatils") &&
-  !routesText.includes('path: "tournamentDeatils/:id"') &&
-  !routesText.includes("path: ROUTES.TOURNAMENT_DETAILS_LEGACY")
-) {
-  failures.push("Found suspicious 'tournamentDeatils' string outside expected compatibility route.");
 }
 
 // Hosting is a player capability, not a fourth role. These checks protect that

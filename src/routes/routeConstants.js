@@ -30,8 +30,6 @@ export const ROUTES = {
   REFER: "/dashboard/refer",
   COC: "/coc",
   LOGOUT: "/logout",
-  TOURNAMENT_DETAILS: "/tournamentDetails/:id",
-  TOURNAMENT_DETAILS_LEGACY: "/tournamentDeatils/:id",
   TOURNAMENT_OFFERING_DETAILS: "/dashboard/tournaments/offering/:id",
   HOST_TOURNAMENT_PROPOSAL: "/dashboard/host/tournament-proposal",
 };

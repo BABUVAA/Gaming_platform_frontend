@@ -79,8 +79,8 @@ product domains or spending critical-path time on visual polish:
 2. **65% -> 75%: finish the canonical competition migration.**
    - Completed 2026-08-11: migrate legacy host/detail/data paths to Game-backed
      `QuickMatchOffering`, Match, and Room boundaries.
-   - Completed 2026-08-11: rehearse stored-data migration and rollback; active
-     legacy writes are retired and controlled historical reads remain.
+   - Completed 2026-08-18: after migration and zero-record proof, remove the
+     legacy Tournament/TournamentType runtime, routes, collections and UI.
 3. **75% -> 85%: deliver the Event MVP end to end.**
    - Completed 2026-08-13: registration window, admission policy,
      capacity/waitlist, cancellation/promotion, and invitation governance.
@@ -352,11 +352,9 @@ Acceleration rules:
      different governance actor resolves disputes before settlement. Match
      Control now uses Redux thunks/selectors and displays submitted evidence,
      dispute deadlines, notes, and resolutions.
-   - Introduce `QuickMatchOffering` and migrate Match/Room references away
-     from `Tournament` and `TournamentType`.
-   - Remove hardcoded BGMI/CoC enums from runtime competition records; use the
-     immutable Game key or Game Object ID under server validation.
-   - Retire compatibility routes only after frontend and stored data migrate.
+   - Completed 2026-08-18: Match accepts only Quick Match or Event sources,
+     Room requires a QuickMatchOffering, and legacy competition compatibility
+     routes, models, fields, indexes and frontend modules are removed.
 
 3. Harden payments before enabling real-money production traffic.
 - Verify signed provider callbacks, enqueue status reconciliation in a
@@ -749,7 +747,7 @@ prove the completion criteria.
 | Closed | Match operations | Match Operator assignments require game scopes; operational reads and claims are scoped; post-claim mutations require ownership; readiness, result, verification, dispute, resolution, and settlement use conditional writes. Governance roles cannot execute operator commands, while dispute resolution/settlement remain governance-only. | Verified by policy tests, a full MongoDB concurrency lifecycle, Redux transport tests, and an isolated scoped-operator browser check on 2026-08-09. |
 | Closed | Event approval | Event Templates and Runs use submitted revisions, reviewer notes, return/reject states, independent reviewer checks, bounded queue/history reads, append-only review evidence, and a Platform Admin Redux review queue. | Verified by Event governance policy tests and frontend route/build checks on 2026-08-08. |
 | Closed | Event admission | Scheduled/open Event Runs enforce verified-player windows, open/invitation/limited-seat policy, transactional capacity and FIFO waitlists, safe cancellation/promotion, invitation governance, bounded reads, and staff participation denial. | Verified by 13 replica-set Event tests, full aggregates, independent audit, and desktop/mobile player/staff/governance browser/API checks on 2026-08-13. |
-| P0 | Competition data | Game-backed offering administration, player discovery, free and transactionally held paid queueing, canonical Team creation, Room/Match handoff, protected player Match reads, and the complete operator/result/dispute lifecycle avoid legacy Tournament records and hardcoded game enums. Paid discovery, legacy host/detail aliases, and old stored competition records remain. | Finish the paid-entry release gates, then migrate remaining host/data paths with rollback evidence before retiring aliases. |
+| Closed | Competition data | Game-backed Quick Matches and Events own all active competition records. Tournament/TournamentType models, routes, collections, indexes, socket contracts and frontend compatibility modules were retired after a zero-record database check. | Verified by the fail-closed retirement command, full backend/frontend gates and generated API-route coverage on 2026-08-18. |
 | P0 | Payment safety | Immutable integer-minor-unit ledger settlement, durable reconciliation, reviewed prize/withdrawal lifecycles, and explicit sandbox test-money mode are implemented. Platform Admin can manually request authoritative PhonePe status; exact order/amount evidence credits once and mismatch credits zero. Withdrawals and live-money mode remain blocked. | Complete deployed sandbox deposit/callback/retry evidence, provision and monitor reconciliation plus Event workers, integrate and certify a payout provider, then separately approve live-money release. |
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
 | P1 | Transactional account email | Resend-backed verification and password recovery are implemented behind a server service. Local environment-only credentials, live authorized-recipient delivery, database transaction tests, and an isolated real-route browser workflow are verified. A dedicated sender domain and operational delivery evidence remain open. | Verify a dedicated account-email domain for broader delivery, then certify staging delivery, failure, and bounce monitoring without storing secrets in the repository. |
@@ -764,7 +762,7 @@ prove the completion criteria.
 
 - API discovery is now machine-checkable. The backend owns
   `docs/openapi.json` (OpenAPI 3.1) and `docs/API_REFERENCE.md`; the generator
-  inventories all 180 mounted HTTP method/path pairs and labels their access
+  inventories all 176 mounted HTTP method/path pairs and labels their access
   boundary. `npm run docs:api` regenerates the specification and
   `npm run docs:api:check` fails for missing/extra paths, duplicate operation
   IDs, or missing shared contracts. Domain request/response schemas should be
@@ -935,15 +933,12 @@ staff-classified account and the frontend must present it as view-only.
   or ledger write. The proof-only harness injects capability explicitly and
   cannot enable production. Production paid entry remains disabled because
   deposit and payout provider deployment/sandbox gates are still red.
-- Legacy active competition migration is complete locally. Active frontend
-  discovery/detail/join/host paths now use canonical Game-backed
-  QuickMatchOffering APIs and Redux; Approved Hosts create audited drafts only
-  and cannot publish. The old queue mutation returns zero-write 410 while
-  historical reads remain temporarily available. A reviewed-hash migration
-  supports dry-run/apply/no-op/rollback/reapply, source/target evidence,
-  dependency-safe refusal, Redis restoration, canonical seed data, and
-  unresolved fail-closed reporting. No legacy route/model is removed while a
-  deliberate historical compatibility read remains.
+- Legacy competition retirement is complete. Active frontend and backend
+  discovery, detail, joining, hosting, Match operations and history use
+  Game-backed Quick Matches or Events. The configured database contained zero
+  old records before the one-time command dropped the empty collections and
+  stale indexes. No Tournament/TournamentType route, model, socket contract or
+  frontend compatibility module remains.
 
 - Secure cookie-based authentication with short-lived access tokens, refresh
   rotation, Redis-backed session validation, session versioning, and logout
@@ -1074,17 +1069,14 @@ staff-classified account and the frontend must present it as view-only.
   offerings reference an active Game, canonicalize its configured mode/map,
   require complete-team capacity, use integer minor-unit fee/prize fields, and
   write staff activity. Canonical free-entry offerings now own their player
-  queue, Room, and Match creation; legacy Tournament matchmaking remains only
-  for existing compatibility clients and records.
+  queue, Room, and Match creation.
 - Quick Match execution compatibility foundation: new full-room executions can
   create `Room` and `Match` records directly from an active
   `QuickMatchOffering`, using the canonical Game Object ID/key rather than
   legacy Tournament/TournamentType references or the BGMI/CoC Match enum.
-  Legacy records and routes remain readable. Separate partial unique indexes
-  protect active membership for legacy and offering queues; startup detects and
-  safely rebuilds the previous legacy index shape before HTTP traffic starts.
-  Match Operator scope queries recognize either the legacy game snapshot or
-  the new canonical game key.
+  Only canonical Quick Match and Event sources are accepted. Canonical partial
+  indexes protect active membership and Match uniqueness, and Match Operator
+  scope queries use the canonical game key.
 - Clan Team creation now resolves the active Game catalog instead of accepting
   a fixed game enum. New records store Game Object ID/key, canonical mode, and
   explicit roster size; legacy request keys remain a temporary alias and the
@@ -1175,7 +1167,8 @@ messages and the unused decision panel are hidden; review details appear only
 when actionable records exist or a reviewer selects one. Verification passed
 backend competition policy 103/103 and replica-set integration 91/91,
 frontend 86/86, full lint, the 555-module production build, and API
-documentation coverage for all 183 mounted operations.
+documentation coverage at that checkpoint. After legacy competition retirement,
+the current specification covers all 176 mounted operations.
 The authenticated desktop/mobile admin visual gate remains pending; local
 public-shell rendering is clean, but the available browser session was not
 signed into governance after the final compact-layout edit.
@@ -1433,11 +1426,10 @@ Security rules:
 - Offering money-like configuration uses minor units only. It does not grant
   authority to charge a player or settle a prize; ledger and payment controls
   remain a separate required gate.
-- Existing Tournament/TournamentType routes and records remain compatible and
-  operational until Match, Room, frontend, and stored data migrations are
-  verified with a rollback plan.
+- Tournament/TournamentType routes and records were removed only after the
+  configured database proved all legacy collections and references empty.
 
-Compatibility migration and rollback plan:
+Completed compatibility migration and retirement:
 
 1. Deploy the additive Match/Room schema and indexes first. Existing legacy
    Matchmaking reads/writes remain untouched; startup rebuilds only the named
@@ -1446,29 +1438,23 @@ Compatibility migration and rollback plan:
    execution key, an active offering, and an exactly full roster. It creates a
    full Room plus one idempotent Match without a legacy Tournament record.
 3. Completed for free entry 2026-08-09: the verified player route directs only
-   canonical offering joins to this execution boundary. Paid offerings fail
-   closed before queue state is created. Keep legacy reads and routes until
-   stored-data/client migration evidence is complete.
-4. Roll back by disabling the new queue caller; the additive fields do not
-   alter legacy records, and legacy matchmaking continues to use its original
-   Tournament/TournamentType path. Do not drop new fields or indexes until all
-   executions that reference them have aged out or been migrated.
+   canonical offering joins to this execution boundary.
+4. Completed 2026-08-18: a confirmation-gated command proved all legacy
+   collections/references empty, then removed old collections, fields, indexes
+   and Redis keys. Backend/frontend compatibility code was deleted.
 
 Validation: model, lifecycle, source-isolation, operator-scope, and index-shape
 policy tests cover this boundary. A MongoDB replica-set integration suite now
 proves concurrent joins converge on one canonical Room and one Match, retries
 are idempotent, paid offerings create no queue state, arbitrary Game-backed
-Team formats resolve, legacy Teams backfill, and canonical player Match reads
+  Team formats resolve, stored Teams backfill, and canonical player Match reads
 preserve lobby secrecy. A seventh replica-set test proves concurrent operator
 claim, readiness convergence, competing result submission, dispute timing,
 governance resolution, and settlement. The configured development migration
-dry run found no legacy Team candidates. Broader competition-data migration
-rehearsal remains required before production rollout.
+  dry run found no Team candidates. Competition retirement is complete.
 
-Next work: paid offerings remain unavailable in discovery until execution-level
-financial terms are snapshotted, withdrawal/payout review is complete, and
-multi-user browser evidence exists; the existing legacy queue stays available
-only for compatibility.
+Paid-entry availability remains controlled by its independent sandbox/live
+money release gates; no legacy competition queue exists.
 
 Player discovery and join foundation: verified players read active Game-backed
 offerings at `GET /api/player/quick-matches`. The server returns canonical
@@ -1873,7 +1859,7 @@ Security rule for all three dashboards:
   capacity.
 - Operator assignment queue, lobby publishing, result verification, disputes,
   settlement, and player match history.
-- Clear retirement plan for legacy Tournament/TournamentType data and routes.
+- Tournament/TournamentType data and route retirement completed 2026-08-18.
 
 ### Payments
 
@@ -1974,16 +1960,15 @@ Run on 2026-08-11 for paid Solo/Team proof and release control:
   worker deployment and sandbox evidence plus real payout adapter/worker/
   reconciliation certification remain red. Paid entry stays disabled.
 
-Run on 2026-08-11 for legacy competition migration:
+Run on 2026-08-18 for final legacy competition retirement:
 
-- Backend aggregate 206/206 passed: competition 75/75 and competition
-  integration 29/29. Configured local dry-run reported zero candidates,
-  zero unresolved records, complete inventory/index evidence, and no apply.
-- Frontend 52/52, full lint, route smoke, and 526-module build passed.
-- Browser/API proof passed canonical direct details, Approved Host canonical
-  draft submission, normal-player route/API denial, and true 390×844 mobile.
-  The submitted draft created zero Tournament/TournamentType records; all test
-  users, audit, draft, sessions, and browser fixtures were cleaned up.
+- The confirmation-gated retirement command reported zero TournamentType,
+  Tournament, Result, legacy Room and legacy Match records before dropping the
+  empty collections, old indexes/fields and stale Redis keys.
+- Full backend tests passed; canonical competition passed 91/91 and replica
+  integration 86/86. Frontend passed 86/86, full lint, route smoke and the
+  552-module production build. API documentation covers all 176 mounted
+  operations.
 
 Run on 2026-08-09 against the current working trees:
 
