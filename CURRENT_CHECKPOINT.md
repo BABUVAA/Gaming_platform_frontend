@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-18
+Last updated: 2026-08-20
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -113,6 +113,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   prize and withdrawal flows. `npm run docs:api:check` compares the generated
   paths with the mounted router inventory. This documents current contracts;
   it does not turn outstanding worker/provider/live-money gates green.
+- Event governance identity fix 2026-08-20: the approval queue now reads the
+  authenticated Redux `userId`. A different Super Admin receives the Review
+  action while the creator/latest submitter stays blocked; backend review
+  policy remains final. Frontend 87/87, lint and 553-module build passed.
 
 ## Completed Slice: Staff Read-Only Player Visibility
 

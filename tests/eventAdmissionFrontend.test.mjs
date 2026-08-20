@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { canReviewEventProposal } from "../src/utils/eventReviewPolicy.js";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import eventRegistrationReducer, {
@@ -270,7 +271,7 @@ test("Event governance and player UI disclose authoritative entry terms without 
   assert.match(reviewSource, /label="Invitations"/);
   assert.match(reviewSource, /label="Operations & Reports"/);
   assert.match(reviewSource, /activeView === "approvals"/);
-  assert.match(reviewSource, /currentUser\?\._id \|\| currentUser\?\.id/);
+  assert.match(reviewSource, /canReviewEventProposal\(\{ currentUser, item \}\)/);
   assert.match(reviewSource, /if \(!selected \|\| !canReview\(selected\.item\)\) return/);
   assert.match(
     navigationSource,
@@ -856,4 +857,25 @@ test("ranked Event UI exposes eliminated-round filters without client-owned outc
   assert.match(manager, /Operations handoff/);
   assert.match(manager, /awaiting operator/);
   assert.match(manager, /result attention/);
+});
+test("independent Super Admin can review a Platform Admin Event proposal", () => {
+  const item = {
+    createdBy: { _id: "platform-admin-id" },
+    submittedBy: { _id: "platform-admin-id" },
+  };
+
+  assert.equal(
+    canReviewEventProposal({
+      currentUser: { userId: "super-admin-id" },
+      item,
+    }),
+    true,
+  );
+  assert.equal(
+    canReviewEventProposal({
+      currentUser: { userId: "platform-admin-id" },
+      item,
+    }),
+    false,
+  );
 });

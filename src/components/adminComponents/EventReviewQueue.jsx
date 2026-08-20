@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { selectAuthUser } from "../../store/selectors/authSelectors.js";
+import { canReviewEventProposal } from "../../utils/eventReviewPolicy.js";
 import {
   fetchEventReviewQueue,
   reviewEventRun,
@@ -202,8 +203,7 @@ const EventReviewQueue = () => {
   const reviewCount = reviewTemplates.length + reviewRuns.length;
 
   const canReview = (item) => {
-    const actorId = String(currentUser?._id || currentUser?.id || "");
-    return actorId && String(item.createdBy?._id || "") !== actorId && String(item.submittedBy?._id || "") !== actorId;
+    return canReviewEventProposal({ currentUser, item });
   };
   const chooseRecord = (item, kind) => {
     if (!canReview(item)) return;

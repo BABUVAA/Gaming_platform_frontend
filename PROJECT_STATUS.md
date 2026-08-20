@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-17
+Last updated: 2026-08-20
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -33,6 +33,9 @@ to continue the project without reopening settled decisions.
 - Event proposals move through `draft`, `in_review`, `changes_requested`,
   `active`/`scheduled`, or `rejected`; creators and latest submitters cannot
   review the same revision.
+- Event review UI compares those identities through the authenticated Redux
+  `userId`. A different Platform/Super Admin may review; backend policy remains
+  authoritative. This fixed the previous false visual block for Super Admins.
 - Match Operator requires assigned game scope and executes only matches they
   explicitly claim or receive within that scope.
 - Staff may open the player dashboard only as a read-only utility for platform
