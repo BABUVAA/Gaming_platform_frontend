@@ -31,6 +31,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   invitation; server discovery and registration enforce the same rule.
 - Player Event registration is final. Registered and waitlisted players cannot
   cancel or re-enter; platform-owned Event recovery/refunds remain governed.
+- New Event schedules contain timing, admission, entry and reward terms only.
+  After registration closes, Event Manager proposes rounds from the final
+  registered count; independent governance approval is required before any
+  stage job, roster, batch or Match generation.
 - Redux Toolkit owns feature data; do not introduce component-level API calls
   where a Redux boundary exists.
 - Money uses integer INR minor units, an append-only balanced ledger,
@@ -393,6 +397,21 @@ Backend policy passed 97/97; frontend passed 72/72, lint, and a 535-module
 production build. A real Platform Admin saw high/medium seeded signals on
 desktop and 390px mobile with no overflow or console warnings/errors.
 Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
+
+## Latest Refinement: Post-registration Round Planning and Compete Feed
+
+- Run creation no longer sends `executionPlan`. Approval schedules registration
+  only; closure returns round setup required and leaves generation absent.
+- Event Manager owns post-close round proposals projected from the server-owned
+  registered count. Another Platform/Super Admin must approve before the
+  first-stage job is created.
+- Player `Compete` combines scheduled Events and Quick Matches. Separate
+  Tournaments/Events navigation is removed; old list paths redirect to Compete.
+  Event cards show countdown, entry/access/counts, rewards, committed status and
+  the viewer's Match link.
+- Gates: backend full aggregate 305/305 (policy 92/92, competition integration
+  87/87); frontend 89/89, lint, 554-module build and route smoke. Browser
+  visual gate remains pending.
 
 ## Latest Small Fix: Account Email Presentation
 

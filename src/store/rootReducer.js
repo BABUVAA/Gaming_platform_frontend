@@ -30,6 +30,7 @@ import eventRegistrationSlice from "./slices/eventRegistrationSlice.js";
 import eventInvitationSlice from "./slices/eventInvitationSlice.js";
 import eventStageSlice from "./slices/eventStageSlice.js";
 import eventStageAdjustmentSlice from "./slices/eventStageAdjustmentSlice.js";
+import eventRoundPlanSlice from "./slices/eventRoundPlanSlice.js";
 import securityAttentionSlice from "./slices/securityAttentionSlice.js";
 import verificationRequestSlice from "./slices/verificationRequestSlice.js";
 import paymentReconciliationReviewSlice from "./slices/paymentReconciliationReviewSlice.js";
@@ -59,6 +60,7 @@ const combinedReducer = combineReducers({
   eventInvitations: eventInvitationSlice.reducer,
   eventStages: eventStageSlice.reducer,
   eventStageAdjustments: eventStageAdjustmentSlice.reducer,
+  eventRoundPlans: eventRoundPlanSlice.reducer,
   securityAttention: securityAttentionSlice.reducer,
   verificationRequests: verificationRequestSlice,
   paymentReconciliationReview: paymentReconciliationReviewSlice.reducer,
@@ -98,6 +100,7 @@ const privateSliceKeys = [
   "eventInvitations",
   "eventStages",
   "eventStageAdjustments",
+  "eventRoundPlans",
   "securityAttention",
   "verificationRequests",
   "paymentReconciliationReview",

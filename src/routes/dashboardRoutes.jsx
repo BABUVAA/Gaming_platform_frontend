@@ -12,12 +12,12 @@ export const dashboardChildRoutes = [
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.TOURNAMENT,
-    componentKey: "Tournament",
+    element: <Navigate to={ROUTES.DASHBOARD} replace />,
     access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.EVENTS,
-    componentKey: "Events",
+    element: <Navigate to={ROUTES.DASHBOARD} replace />,
     access: "verifiedDashboardViewer",
   },
   {

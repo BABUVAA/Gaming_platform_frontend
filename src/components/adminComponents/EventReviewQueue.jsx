@@ -20,6 +20,7 @@ import {
 import EventInvitationManagement from "./EventInvitationManagement.jsx";
 import EventStageManagement from "./EventStageManagement.jsx";
 import StageAdjustmentReviewQueue from "./StageAdjustmentReviewQueue.jsx";
+import RoundPlanReviewQueue from "./RoundPlanReviewQueue.jsx";
 
 const staffSummaryShape = PropTypes.shape({
   profile: PropTypes.shape({ username: PropTypes.string }),
@@ -84,6 +85,7 @@ const eventRecordShape = PropTypes.shape({
       place: PropTypes.number,
     })),
   }),
+  roundPlanStatus: PropTypes.string,
 });
 
 const formatDate = (value) => {
@@ -127,7 +129,7 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
                 : "Free"}
             </p>
           ) : null}
-          {isRun && item.executionPlan ? (
+          {isRun && item.roundPlanStatus === "approved" && item.executionPlan ? (
             <div className="mt-2 rounded-xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-xs leading-5 text-cyan-100/80">
               <p className="font-black capitalize">{item.executionPlan.format?.replaceAll("_", " ")}</p>
               {item.executionPlan.format === "ranked_stages" ? (
@@ -264,6 +266,7 @@ const EventReviewQueue = () => {
         </div>
         {selected ? <ReviewPanel canReview={canReview(selected.item)} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} /> : null}
       </div>
+      <RoundPlanReviewQueue />
       <StageAdjustmentReviewQueue />
       </>
       ) : activeView === "invitations" ? (

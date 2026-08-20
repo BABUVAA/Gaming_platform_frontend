@@ -33,6 +33,10 @@ to continue the project without reopening settled decisions.
 - Event registration is a player commitment. Confirmed and waitlisted players
   cannot cancel or re-enter; direct cancellation receives stable 409. Only an
   audited platform-owned Event failure/cancellation may release entry funds.
+- Event Run approval covers registration timing, admission, entry terms and
+  rewards only. Round rules are proposed after registration closes from the
+  final registered-player count, then independently approved before roster,
+  batch or Match generation.
 - Event proposals move through `draft`, `in_review`, `changes_requested`,
   `active`/`scheduled`, or `rejected`; creators and latest submitters cannot
   review the same revision.
@@ -593,16 +597,16 @@ provider verification.
 
 Current stages/rounds implementation contract:
 
-- Owner and authorization: Event Manager may configure an unapproved
-  execution plan inside assigned game scope; Platform Admin independently
-  approves it; a durable platform worker closes registration and generates
-  work; Game Manager observes; Match Operator uses the existing scoped Match
-  claim/ownership commands. No client or staff request supplies participant IDs.
-- API boundary: player Event reads expose only the viewer's frozen entry and
-  safe stage/batch/Match state; Event Manager draft APIs own plan input;
-  Platform Admin review owns approval; worker/manual recovery commands are
-  privileged, idempotent, and return server projections rather than accepting
-  generated rosters.
+- Owner and authorization: Event Manager creates the Event schedule without
+  round rules. After registration closes, the Event Manager proposes the full
+  execution plan inside assigned game scope using the authoritative registered
+  count; Platform/Super Admin independently approves it. A durable platform
+  worker generates work only after that approval. No client request supplies
+  participant IDs or a roster count.
+- API boundary: player Event reads expose only the viewer's safe state. Run
+  draft APIs accept timing, admission, entry and reward terms but no plan.
+  Post-close `/api/staff/events/runs/:runId/round-plans` owns plan input and the
+  bounded `/api/admin/events/round-plans` queue owns independent approval.
 - Data boundary: a reviewed EventRun execution plan initially supports explicit
   single elimination only. Separate immutable roster entries, EventStage,
   EventBatch, and durable EventJob records own execution. Match gains an
@@ -1755,10 +1759,13 @@ Required flow:
    a draft Event Template using only approved game capabilities.
 2. Platform Admin reviews the proposal, approves it to `active`, rejects it,
    or returns it for changes. Rejection and returned drafts remain auditable.
-3. Event Manager creates a dated draft Event Run from an approved Template.
-4. Platform Admin validates timing, capacity, rules, and operational coverage,
-   then schedules the Event Run.
-5. Game Manager monitors readiness; Match Operators execute generated rooms;
+3. Event Manager creates a dated draft Event Run from an approved Template
+   with registration/admission, entry and reward terms only.
+4. Platform Admin validates those terms and schedules registration. After it
+   closes, Event Manager proposes rounds from the final player count and a
+   different governance administrator approves the exact projection.
+5. Only then are rosters and rooms generated. Game Manager monitors readiness;
+   Match Operators execute generated rooms;
    players see only approved, published registration windows.
 
 Future data model additions:
@@ -2183,3 +2190,23 @@ Use these states for every feature:
 Before beginning a new domain, add its owner, flow, API boundary, security
 rules, data model, and completion criteria here. After implementation, move it
 to Completed and record any remaining risks under Required Future Flows.
+
+## Latest Refinement: Post-registration Round Planning and Compete Feed
+
+- New Event drafts no longer accept round definitions. Initial approval covers
+  timing, admission/capacity, entry terms and placement rewards.
+- Registration closure moves the Run to `registration_closed` with round setup
+  required and creates no stage job. Event Manager then proposes a complete
+  ranked plan projected from the server-owned final registered count.
+  Self-review is denied; independent approval freezes the plan and creates the
+  first-stage job.
+- Historical Runs retain their approved plans. Every new Run created through
+  the service explicitly starts with `roundPlanStatus=not_configured`.
+- Player navigation now has one `Compete` destination. Scheduled Events and
+  Quick Matches load together; former Tournaments/Events list paths redirect
+  there. Event cards show status, access, entry, registration totals, rewards,
+  commitment, own Match link and a countdown to registration or Event start.
+- Verification: backend full aggregate 305/305, including policy 92/92 and
+  competition replica integration 87/87; frontend state 89/89, lint,
+  554-module build and route smoke pass.
+  Authenticated desktop/mobile visual verification remains pending.

@@ -30,7 +30,9 @@ test("staff navigation keeps safe reads and assigned workspaces without particip
   const paths = navigation.map((item) => item.to);
 
   assert.ok(paths.includes("/staff"));
-  assert.ok(paths.includes("/dashboard/tournament"));
+  assert.ok(paths.includes("/dashboard/game"));
+  assert.ok(!paths.includes("/dashboard/tournament"));
+  assert.ok(!paths.includes("/dashboard/events"));
   assert.ok(paths.includes("/dashboard/matches"));
   assert.ok(paths.includes("/dashboard/wallet"));
   assert.ok(paths.includes("/dashboard/profile"));
@@ -50,7 +52,8 @@ test("the player dashboard omits staff operation tabs from its utility navigatio
   const paths = navigation.map((item) => item.to);
 
   assert.ok(paths.includes("/staff"));
-  assert.ok(paths.includes("/dashboard/tournament"));
+  assert.ok(paths.includes("/dashboard/game"));
+  assert.ok(!paths.includes("/dashboard/tournament"));
   assert.ok(!paths.includes("/panelAdmin"));
   assert.ok(!paths.includes("/staff/operations"));
 });

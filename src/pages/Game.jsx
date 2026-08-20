@@ -24,6 +24,11 @@ import {
 } from "../store/selectors/quickMatchOfferingSelectors";
 import { fetchPlayerQuickMatchOfferings } from "../store/slices/quickMatchOfferingSlice";
 import {
+  fetchPlayerEvents,
+  registerForEvent,
+} from "../store/slices/eventRegistrationSlice.js";
+import EventCompetitionCard from "../components/competition/EventCompetitionCard.jsx";
+import {
   gameFilterOptions,
   getGameKey,
   getGamePresentation,
@@ -107,6 +112,7 @@ const Game = () => {
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const offerings = useSelector(selectPlayerQuickMatchOfferings);
   const tournamentsStatus = useSelector(selectPlayerQuickMatchStatus);
+  const eventState = useSelector((state) => state.eventRegistration);
   const tournaments = useMemo(
     () =>
       offerings.map((offering) => ({
@@ -125,9 +131,24 @@ const Game = () => {
   );
 
   useEffect(() => {
-    const request = dispatch(fetchPlayerQuickMatchOfferings());
-    return () => request.abort();
+    const requests = [
+      dispatch(fetchPlayerQuickMatchOfferings()),
+      dispatch(fetchPlayerEvents()),
+    ];
+    return () => requests.forEach((request) => request.abort());
   }, [dispatch]);
+
+  const visibleEvents = eventState.events.filter((event) =>
+    activeGame === "all" || getGameKey(event.game?.key) === activeGame);
+
+  const commitEventRegistration = (event) => {
+    const fee = event.entryTerms?.policy === "paid"
+      ? ` INR ${(event.entryTerms.entryFeeMinor / 100).toFixed(2)}${event.entryTerms.testMoney ? " in test money" : ""} will be held.`
+      : "";
+    if (globalThis.confirm(`Event registration is final and cannot be cancelled.${fee} Continue?`)) {
+      dispatch(registerForEvent(event.id));
+    }
+  };
 
   const filteredTournaments = tournaments
     .filter(
@@ -169,13 +190,6 @@ const Game = () => {
           >
             {isStaffUtilityMode ? "Match history" : "My matches"}
           </Link>
-          <Link
-            to={ROUTES.TOURNAMENT}
-            aria-label="View all tournaments"
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300 text-slate-950 transition hover:bg-amber-200"
-          >
-            <FaArrowRight />
-          </Link>
         </div>
       </section>
 
@@ -202,24 +216,42 @@ const Game = () => {
         <div className="grid gap-3 sm:grid-cols-3">
           {gameFilterOptions.map((filter) => {
             // Counts help players choose an active game before opening a card.
-            const eventCount =
+            const quickMatchCount =
               filter.key === "all"
                 ? tournaments.length
                 : tournaments.filter(
                     (tournament) =>
                       getGameKey(tournament.game) === filter.key,
                   ).length;
+            const scheduledEventCount = filter.key === "all"
+              ? eventState.events.length
+              : eventState.events.filter((event) => getGameKey(event.game?.key) === filter.key).length;
 
             return (
               <GameFilterCard
               key={filter.key}
                 filter={filter}
-                eventCount={eventCount}
+              eventCount={quickMatchCount + scheduledEventCount}
                 isActive={activeGame === filter.key}
                 onSelect={() => setActiveGame(filter.key)}
               />
             );
           })}
+        </div>
+      </section>
+
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Scheduled Events</p>
+            <h2 className="mt-1 text-2xl font-black text-white">Register and follow your Events</h2>
+          </div>
+          {eventState.status === "failed" ? <button className="rounded-xl border border-rose-300/30 px-3 py-2 text-sm text-rose-100" onClick={() => dispatch(fetchPlayerEvents())} type="button">Retry Events</button> : null}
+        </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {visibleEvents.map((event) => <EventCompetitionCard busy={eventState.actionById[event.id] === "loading"} event={event} key={event.id} onRegister={commitEventRegistration} staffReadOnly={isStaffUtilityMode} />)}
+          {eventState.status === "loading" ? <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">Loading Events...</p> : null}
+          {eventState.status === "succeeded" && !visibleEvents.length ? <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No scheduled Events for this game.</p> : null}
         </div>
       </section>
 
@@ -234,16 +266,9 @@ const Game = () => {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black text-white">
-                More tournaments
+                Quick matches
               </h2>
             </div>
-            <Link
-              to={ROUTES.TOURNAMENT}
-              className="hidden items-center gap-2 text-sm font-bold text-cyan-300 sm:inline-flex"
-            >
-              View all
-              <FaArrowRight />
-            </Link>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">

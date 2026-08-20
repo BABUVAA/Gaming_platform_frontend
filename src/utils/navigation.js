@@ -73,25 +73,11 @@ const staffUtilityNavigation = [
     match: [ROUTES.STAFF],
   },
   {
-    label: "Games",
-    description: "View the player-facing game catalog",
+    label: "Compete",
+    description: "View player-facing competitions",
     to: ROUTES.GAME,
     icon: FaGamepad,
     match: [ROUTES.GAME],
-  },
-  {
-    label: "Tournaments",
-    description: "View player-facing competitions",
-    to: ROUTES.TOURNAMENT,
-    icon: FaTrophy,
-    match: [ROUTES.TOURNAMENT, "/dashboard/tournaments"],
-  },
-  {
-    label: "Events",
-    description: "View scheduled Event availability",
-    to: ROUTES.EVENTS,
-    icon: FaTrophy,
-    match: [ROUTES.EVENTS],
   },
   {
     label: "Matches",
@@ -137,23 +123,6 @@ const playerNavigation = [
     to: ROUTES.DASHBOARD,
     icon: FaGamepad,
     match: [ROUTES.DASHBOARD],
-  },
-  {
-    label: "Tournaments",
-    description: "Browse and join events",
-    to: ROUTES.TOURNAMENT,
-    icon: FaTrophy,
-    match: [
-      ROUTES.TOURNAMENT,
-      "/dashboard/tournaments",
-    ],
-  },
-  {
-    label: "Events",
-    description: "Register for scheduled competitions",
-    to: ROUTES.EVENTS,
-    icon: FaTrophy,
-    match: [ROUTES.EVENTS],
   },
   {
     label: "Clans",
