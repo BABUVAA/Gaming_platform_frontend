@@ -18,6 +18,7 @@ export const ROUTES = {
   GAME: "/dashboard/game",
   TOURNAMENT: "/dashboard/tournament",
   EVENTS: "/dashboard/events",
+  EVENT_DETAILS: "/dashboard/events/:runId",
   MATCHES: "/dashboard/matches",
   CHATS: "/dashboard/chats",
   CLAN: "/dashboard/clan",
@@ -40,6 +41,7 @@ export const DASHBOARD_ROUTE_SEGMENTS = {
   GAME: "game",
   TOURNAMENT: "tournament",
   EVENTS: "events",
+  EVENT_DETAILS: "events/:runId",
   MATCHES: "matches",
   MATCH_ROOM: "matches/:id",
   TOURNAMENT_GAME: "tournament/:game",
@@ -59,6 +61,8 @@ export const DASHBOARD_ROUTE_SEGMENTS = {
 
 export const buildTournamentOfferingPath = (offeringId) =>
   `/dashboard/tournaments/offering/${offeringId}`;
+
+export const buildEventPath = (runId) => `/dashboard/events/${runId}`;
 
 
 export default ROUTES;

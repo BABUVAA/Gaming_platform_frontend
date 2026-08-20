@@ -5,6 +5,7 @@ import { canReviewEventProposal } from "../src/utils/eventReviewPolicy.js";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import eventRegistrationReducer, {
+  fetchPlayerEventDetails,
   fetchPlayerEventStandings,
   fetchPlayerEvents,
   registerForEvent,
@@ -126,6 +127,39 @@ test("staff Event registration is blocked before mutation transport", async () =
 
     assert.equal(registerAction.meta.condition, true);
     assert.equal(requestCount, 0);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("Event details use an exact read and closed registration renders no action", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  const event = { id: "run-closed", registration: { isOpen: false, mine: null }, status: "registration_closed" };
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    return response(config, { data: { event } });
+  };
+
+  try {
+    const store = configureStore({ reducer: { eventRegistration: eventRegistrationReducer } });
+    await store.dispatch(fetchPlayerEventDetails(event.id));
+    assert.deepEqual(requests.map(({ method, url }) => [method, url]), [["get", "/api/player/events/run-closed"]]);
+    assert.equal(store.getState().eventRegistration.detailsById[event.id].status, "registration_closed");
+
+    const [cardSource, detailSource, routesSource] = await Promise.all([
+      readFile(new URL("../src/components/competition/EventCompetitionCard.jsx", import.meta.url), "utf8"),
+      readFile(new URL("../src/pages/EventDetails.jsx", import.meta.url), "utf8"),
+      readFile(new URL("../src/routes/dashboardRoutes.jsx", import.meta.url), "utf8"),
+    ]);
+    assert.match(cardSource, /!committed && event\.registration\?\.isOpen/);
+    assert.doesNotMatch(cardSource, />Registration closed<\/button>/);
+    assert.match(cardSource, /View Event/);
+    assert.match(detailSource, /Rewards/);
+    assert.match(detailSource, /fetchPlayerEventStandings/);
+    assert.match(detailSource, /Load more standings/);
+    assert.match(detailSource, /!committed && event\.registration\?\.isOpen/);
+    assert.match(routesSource, /componentKey: "EventDetails"/);
   } finally {
     api.defaults.adapter = originalAdapter;
   }

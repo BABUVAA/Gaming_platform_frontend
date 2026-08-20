@@ -28,6 +28,15 @@ export const fetchPlayerEvents = createApiThunk(
   },
 );
 
+export const fetchPlayerEventDetails = createApiThunk(
+  "eventRegistration/fetchDetails",
+  {
+    path: ({ arg }) => `/api/player/events/${arg}`,
+    selectData: (response) => response.data?.data?.event,
+    errorMessage: "Unable to load this Event.",
+  },
+);
+
 export const fetchPlayerEventStandings = createApiThunk(
   "eventRegistration/fetchStandings",
   {
@@ -61,6 +70,8 @@ const finishAction = (state, action, status) => {
   if (event) {
     event.registration.mine = { ...action.payload.registration, status };
   }
+  const detail = state.detailsById[action.meta.arg];
+  if (detail) detail.registration.mine = { ...action.payload.registration, status };
   state.actionById[action.meta.arg] = "idle";
 };
 
@@ -68,6 +79,10 @@ const eventRegistrationSlice = createSlice({
   name: "eventRegistration",
   initialState: {
     actionById: {},
+    detailsById: {},
+    detailsErrorById: {},
+    detailsRequestById: {},
+    detailsStatusById: {},
     error: null,
     events: [],
     standingsById: {},
@@ -100,6 +115,26 @@ const eventRegistrationSlice = createSlice({
       .addCase(fetchPlayerEvents.rejected, (state, action) => {
         state.status = action.meta.aborted ? "idle" : "failed";
         state.error = action.payload?.message || action.error.message;
+      })
+      .addCase(fetchPlayerEventDetails.pending, (state, action) => {
+        const runId = action.meta.arg;
+        state.detailsErrorById[runId] = null;
+        state.detailsRequestById[runId] = action.meta.requestId;
+        state.detailsStatusById[runId] = "loading";
+      })
+      .addCase(fetchPlayerEventDetails.fulfilled, (state, action) => {
+        const runId = action.meta.arg;
+        if (state.detailsRequestById[runId] !== action.meta.requestId) return;
+        state.detailsById[runId] = action.payload;
+        state.detailsRequestById[runId] = null;
+        state.detailsStatusById[runId] = "succeeded";
+      })
+      .addCase(fetchPlayerEventDetails.rejected, (state, action) => {
+        const runId = action.meta.arg;
+        if (state.detailsRequestById[runId] !== action.meta.requestId) return;
+        state.detailsRequestById[runId] = null;
+        state.detailsStatusById[runId] = action.meta.aborted ? "idle" : "failed";
+        if (!action.meta.aborted) state.detailsErrorById[runId] = action.payload?.message || action.error.message;
       })
       .addCase(fetchPlayerEventStandings.pending, (state, action) => {
         const { runId } = action.meta.arg;

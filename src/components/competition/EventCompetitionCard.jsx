@@ -61,7 +61,9 @@ const EventCompetitionCard = ({ busy, event, onRegister, staffReadOnly }) => {
       {event.execution?.progression?.status && event.execution.progression.status !== "active" ? <p className="mt-2 text-sm font-black capitalize text-amber-200">Result: {event.execution.progression.status.replaceAll("_", " ")}</p> : null}
       {event.execution?.myBatch?.matchId ? <Link className="mt-4 block rounded-xl border border-cyan-300/30 px-4 py-2.5 text-center text-sm font-black text-cyan-100" to={`/dashboard/matches/${event.execution.myBatch.matchId}`}>Open my Match</Link> : null}
 
-      {!staffReadOnly && !committed ? <button className="mt-4 w-full rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50" disabled={busy || !event.registration?.isOpen || event.entryTerms?.paidEntryAvailable === false} onClick={() => onRegister(event)} type="button">{busy ? "Registering..." : event.entryTerms?.paidEntryAvailable === false ? "Paid entry unavailable" : event.registration?.isOpen ? "Register for Event" : "Registration closed"}</button> : null}
+      <Link className="mt-4 block rounded-xl border border-slate-700 px-4 py-2.5 text-center text-sm font-black text-slate-200 hover:border-cyan-300/40 hover:text-cyan-100" to={`/dashboard/events/${event.id}`}>View Event</Link>
+
+      {!staffReadOnly && !committed && event.registration?.isOpen ? <button className="mt-3 w-full rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50" disabled={busy || event.entryTerms?.paidEntryAvailable === false} onClick={() => onRegister(event)} type="button">{busy ? "Registering..." : event.entryTerms?.paidEntryAvailable === false ? "Paid entry unavailable" : "Register for Event"}</button> : null}
       {committed ? <p className="mt-4 text-xs font-bold text-slate-400">Registration committed / cancellation unavailable</p> : null}
       {staffReadOnly ? <p className="mt-4 text-xs font-bold text-cyan-200">Staff read-only view</p> : null}
     </article>

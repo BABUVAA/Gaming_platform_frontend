@@ -2210,3 +2210,22 @@ to Completed and record any remaining risks under Required Future Flows.
   competition replica integration 87/87; frontend state 89/89, lint,
   554-module build and route smoke pass.
   Authenticated desktop/mobile visual verification remains pending.
+
+## Latest Refinement: Event Detail and Standings
+
+- Compete remains the single competition-discovery feed. Every Event card now
+  opens a dedicated `/dashboard/events/:runId` view; no separate Event list or
+  navigation tab was reintroduced.
+- Registration controls render only while the server-owned registration window
+  is open. After it closes, cards and details retain timing/status evidence but
+  expose no disabled or actionable registration control.
+- The detail view shows timing and countdown, entry/access/player counts, the
+  complete placement-reward table, the viewer's registration and Match
+  progression, and bounded cursor-paginated final standings.
+- Backend `GET /api/player/events/:runId` applies the same invitation-only and
+  ownership visibility policy as discovery, returns 404 to an unauthorized
+  viewer, and avoids dependence on the 100-item discovery bound.
+- Verification: backend aggregate 305/305, Event registration replica
+  integration 14/14, API docs 181/181, frontend 90/90, full lint, and the
+  556-module production build passed. Authenticated desktop/mobile visual
+  verification remains pending.

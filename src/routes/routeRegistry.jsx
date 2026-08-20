@@ -11,6 +11,7 @@ const LazyComponents = {
   Matches: lazy(() => import("../pages/Matches.jsx")),
   MatchRoom: lazy(() => import("../pages/MatchRoom.jsx")),
   QuickMatchDetails: lazy(() => import("../pages/QuickMatchDetails.jsx")),
+  EventDetails: lazy(() => import("../pages/EventDetails.jsx")),
   HostTournamentProposal: lazy(() => import("../pages/HostTournamentProposal.jsx")),
   Profile: lazy(() => import("../pages/Profile")),
   GameAccounts: lazy(() => import("../pages/GameAccounts")),

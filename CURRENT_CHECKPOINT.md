@@ -57,6 +57,13 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   passed 91/91 and competition replica integration passed 86/86. Frontend
   state passed 86/86; full lint, route smoke, and the 552-module production
   build passed.
+- Event detail refinement 2026-08-20: Compete Event cards open a dedicated,
+  privacy-preserving detail route with rewards, personal progression and
+  paginated standings. Registration actions are absent once the server window
+  closes. Backend aggregate passed 305/305, Event registration replica checks
+  passed 14/14, API documentation covers 181/181 routes, and frontend 90/90
+  plus full lint and the 556-module build passed. Authenticated desktop/mobile
+  visual verification remains pending.
 - Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
   public **testing/staging platform**, not a live-money launch. Backend commit
   `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis
