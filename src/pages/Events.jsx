@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  cancelEventRegistration,
   fetchPlayerEventStandings,
   fetchPlayerEvents,
   registerForEvent,
@@ -47,6 +46,19 @@ const Events = () => {
     return () => requests.forEach((request) => request.abort());
   }, [dispatch, events]);
 
+  const commitRegistration = (event) => {
+    const fee = event.entryTerms?.policy === "paid"
+      ? ` INR ${(event.entryTerms.entryFeeMinor / 100).toFixed(2)}${event.entryTerms.testMoney ? " in test money" : ""} will be held.`
+      : "";
+    if (
+      globalThis.confirm(
+        `Event registration is final and cannot be cancelled.${fee} Continue?`,
+      )
+    ) {
+      dispatch(registerForEvent(event.id));
+    }
+  };
+
   return (
     <main className="space-y-6">
       <section className="rounded-3xl border border-violet-300/20 bg-violet-300/5 p-6">
@@ -81,7 +93,6 @@ const Events = () => {
           const mine = event.registration.mine;
           const busy = actionById[event.id] === "loading";
           const active = ["registered", "waitlisted"].includes(mine?.status);
-          const canCancel = active && event.registration.isOpen;
           const standingPage = standingsById[event.id];
           const progression = selectEventProgression(event, standingPage);
           return (
@@ -116,6 +127,11 @@ const Events = () => {
               {event.entryTerms?.blockedCode ? (
                 <p className="mt-1 text-xs text-amber-200">
                   Paid registration is unavailable in this environment.
+                </p>
+              ) : null}
+              {!staffReadOnly && !active ? (
+                <p className="mt-2 text-xs text-amber-200">
+                  Registration is final once confirmed.
                 </p>
               ) : null}
 
@@ -174,20 +190,15 @@ const Events = () => {
                 <p className="mt-5 text-sm font-bold text-cyan-200">
                   Read-only Event view
                 </p>
-              ) : canCancel ? (
-                <button
-                  className="mt-5 rounded-xl border border-rose-300/40 px-4 py-2 text-sm font-bold text-rose-100 disabled:opacity-50"
-                  disabled={busy}
-                  onClick={() => dispatch(cancelEventRegistration(event.id))}
-                  type="button"
-                >
-                  {busy ? "Saving..." : `Cancel ${mine.status}`}
-                </button>
+              ) : active ? (
+                <p className="mt-5 text-sm font-bold text-cyan-200">
+                  Registration committed
+                </p>
               ) : !active ? (
                 <button
                   className="mt-5 rounded-xl bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-950 disabled:opacity-50"
                   disabled={busy || !event.registration.isOpen || event.entryTerms?.paidEntryAvailable === false}
-                  onClick={() => dispatch(registerForEvent(event.id))}
+                  onClick={() => commitRegistration(event)}
                   type="button"
                 >
                   {busy

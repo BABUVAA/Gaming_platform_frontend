@@ -30,6 +30,9 @@ to continue the project without reopening settled decisions.
   operator commands.
 - Invitation-only Event Runs are private in player discovery: only players
   with an active invitation may see their registration card or participate.
+- Event registration is a player commitment. Confirmed and waitlisted players
+  cannot cancel or re-enter; direct cancellation receives stable 409. Only an
+  audited platform-owned Event failure/cancellation may release entry funds.
 - Event proposals move through `draft`, `in_review`, `changes_requested`,
   `active`/`scheduled`, or `rejected`; creators and latest submitters cannot
   review the same revision.
@@ -85,8 +88,9 @@ product domains or spending critical-path time on visual polish:
    - Completed 2026-08-18: after migration and zero-record proof, remove the
      legacy Tournament/TournamentType runtime, routes, collections and UI.
 3. **75% -> 85%: deliver the Event MVP end to end.**
-   - Completed 2026-08-13: registration window, admission policy,
-     capacity/waitlist, cancellation/promotion, and invitation governance.
+   - Completed 2026-08-13 and refined 2026-08-20: registration window,
+     admission policy, capacity/FIFO waitlist, committed registration, and
+     invitation governance.
    - Completed locally 2026-08-13: immutable verified outcomes, restart-safe
      later rounds, disputes/corrections, bounded tied standings, and durable
      sporting completion.
@@ -539,12 +543,13 @@ their responsibility without accessing governance or financial controls.
 Status: **Sporting lifecycle and durable player notifications complete locally;
 Event finance and production worker deployment remain.** Separate `EventRegistration` and platform-owned `EventInvitation`
 records now provide transactional `open`/`invitation_only`/`limited_seats`
-admission, bounded capacity, optional FIFO waitlists, cancellation/promotion,
-fair re-entry, and safe invitation consumption/restoration/revocation. Event
+admission, bounded capacity, optional FIFO waitlists, irreversible player
+registration, and safe invitation consumption/revocation. Event
 Manager draft Runs declare admission terms; Platform Admin approval validates
 and displays them, then uses bounded invitation-run discovery, verified-player
 candidate search, and cursor-paginated safe history. Player discovery,
-register/cancel, and authoritative counter refresh are Redux-owned; staff sees
+registration, committed-state display, and authoritative counter refresh are
+Redux-owned; staff sees
 read-only availability and cannot send participation commands. This vertical
 slice passed its admission gates on 2026-08-13. The first-stage handoff is also
 complete locally: a reviewed immutable format/execution plan, durable EventJob,
@@ -749,7 +754,7 @@ prove the completion criteria.
 |---|---|---|---|
 | Closed | Match operations | Match Operator assignments require game scopes; operational reads and claims are scoped; post-claim mutations require ownership; readiness, result, verification, dispute, resolution, and settlement use conditional writes. Governance roles cannot execute operator commands, while dispute resolution/settlement remain governance-only. | Verified by policy tests, a full MongoDB concurrency lifecycle, Redux transport tests, and an isolated scoped-operator browser check on 2026-08-09. |
 | Closed | Event approval | Event Templates and Runs use submitted revisions, reviewer notes, return/reject states, independent reviewer checks, bounded queue/history reads, append-only review evidence, and a Platform Admin Redux review queue. | Verified by Event governance policy tests and frontend route/build checks on 2026-08-08. |
-| Closed | Event admission | Scheduled/open Event Runs enforce verified-player windows, open/invitation/limited-seat policy, transactional capacity and FIFO waitlists, safe cancellation/promotion, invitation governance, bounded reads, and staff participation denial. | Verified by 13 replica-set Event tests, full aggregates, independent audit, and desktop/mobile player/staff/governance browser/API checks on 2026-08-13. |
+| Closed | Event admission | Scheduled/open Event Runs enforce verified-player windows, open/invitation/limited-seat policy, transactional capacity and FIFO waitlists, committed registration, invitation governance, bounded reads, and staff participation denial. Player cancellation is API-denied; platform-owned recovery remains separate. | Verified by replica-set Event tests, policy tests, full aggregates, and player/staff/governance browser/API checks; commitment policy refined 2026-08-20. |
 | Closed | Competition data | Game-backed Quick Matches and Events own all active competition records. Tournament/TournamentType models, routes, collections, indexes, socket contracts and frontend compatibility modules were retired after a zero-record database check. | Verified by the fail-closed retirement command, full backend/frontend gates and generated API-route coverage on 2026-08-18. |
 | P0 | Payment safety | Immutable integer-minor-unit ledger settlement, durable reconciliation, reviewed prize/withdrawal lifecycles, and explicit sandbox test-money mode are implemented. Platform Admin can manually request authoritative PhonePe status; exact order/amount evidence credits once and mismatch credits zero. Withdrawals and live-money mode remain blocked. | Complete deployed sandbox deposit/callback/retry evidence, provision and monitor reconciliation plus Event workers, integrate and certify a payout provider, then separately approve live-money release. |
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
@@ -1109,7 +1114,9 @@ INR `entryTerms`; Platform/Super Admin sees the exact policy and fee before
 approval. Player registration never accepts a client amount. A paid entry
 atomically moves the reviewed fee from `available` to `entry_held`, writes one
 balanced append-only posting and durable per-attempt evidence, or writes
-nothing. Cancellation releases once; re-entry creates a new numbered attempt.
+nothing. Player retries return the original committed registration and never
+create another hold or FIFO position. Platform-owned Event recovery may release
+funds under its separate audited policy.
 At close, admitted holds capture to platform revenue and waitlisted holds
 release before any roster or Match is written. Missing, extra, wrong-amount,
 wrong-currency or wrong-status evidence fails closed. Paid commands remain
@@ -1887,12 +1894,12 @@ BGMI rehearsal:
 - Backend aggregate 318/318 passed, including 103 competition policy/unit,
   89 competition replica-set integration, and seven focused paid Event cases.
   The new cases prove default-closed zero writes, exact funded holds,
-  insufficient-funds rollback, cancellation/re-entry attempt evidence,
+  insufficient-funds rollback, committed-registration retry evidence,
   admitted capture, waitlist release, corrupt-evidence denial, and terminal
   generation refunds.
 - Frontend state 84/84, full lint, and the 554-module production build passed.
   Event Manager, governance review and player discovery expose the server-owned
-  fee/test-money state while registration and cancellation never send money.
+  fee/test-money state while registration never sends a client-owned amount.
 - API documentation generation/check covers all 180 mounted operations.
 - Event Run `6a828224467598a0c5d5f545` completed with 1,000 paid
   registrations, three separately operated rounds, 16 Matches, 1,000 standings,
@@ -2067,12 +2074,13 @@ Run on 2026-08-13 for Event registration and admission:
 
 - Backend aggregate 223/223 passed, including 78 competition policy checks,
   42 competition replica-set integrations, and 13 focused Event admission
-  cases covering final-seat races, idempotent retries, FIFO promotion and fair
-  re-entry, invitation consumption/restoration/revocation, all-or-nothing
-  race rollback, approval readiness, bounded cursors, and safe serialization.
+  cases covering final-seat races, idempotent retries, FIFO ordering,
+  invitation consumption/revocation, all-or-nothing race rollback, approval
+  readiness, bounded cursors, and safe serialization. Player cancellation and
+  re-entry from that original workflow were retired on 2026-08-20.
 - Frontend 56/56, full lint, and the 530-module production build passed.
 - Independent audit found no remaining code-level must-fix. Real desktop/mobile
-  browser/API checks passed player register/cancel with authoritative counts,
+  browser/API checks passed player registration with authoritative counts,
   staff read-only visibility with no mutation controls, and Platform Admin
   bounded player search plus invite/revoke. The gate found and fixed the
   revoked-player response summary and nullable review selection warning.

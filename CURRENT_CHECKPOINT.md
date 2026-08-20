@@ -29,6 +29,8 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   authority.
 - Invitation-only Event cards are visible only to a player with an active
   invitation; server discovery and registration enforce the same rule.
+- Player Event registration is final. Registered and waitlisted players cannot
+  cancel or re-enter; platform-owned Event recovery/refunds remain governed.
 - Redux Toolkit owns feature data; do not introduce component-level API calls
   where a Redux boundary exists.
 - Money uses integer INR minor units, an append-only balanced ledger,
@@ -186,8 +188,8 @@ tests, competition 91/91, competition replica integration 86/86, frontend
 Completed and verified 2026-08-13. `EventRegistration` and platform-owned
 `EventInvitation` are separate from EventRun planning records. Open,
 invitation-only, and limited-seat admission enforce verified-player identity,
-registration windows, capacity, optional FIFO waitlists, safe cancellation and
-promotion, fair re-entry order, invitation consumption/restoration/revocation,
+registration windows, capacity, optional FIFO waitlists, committed player
+registration, immutable FIFO order, invitation consumption/revocation,
 and transactional all-or-nothing counters. Platform Admin invitation-run
 discovery, bounded verified-player search, paginated history, and safe
 serializers are Redux-owned. Approval discloses and validates admission terms.
@@ -195,7 +197,7 @@ Staff sees only read-only Event availability.
 
 The final gate passed 13 Event replica-set cases, 223 backend aggregate checks,
 56 frontend checks, lint, a 530-module build, independent audit, and real
-desktop/mobile browser/API workflows for player register/cancel, staff denial,
+desktop/mobile browser/API workflows for player registration, staff denial,
 and Platform Admin invite/revoke. The browser gate found and fixed the revoked
 player-summary response and a nullable review selection warning.
 
@@ -251,7 +253,7 @@ removed without changing either governance identity.
 
 Completed and verified 2026-08-17. Event Runs own independently reviewed INR
 entry terms. Paid registration atomically holds the server-owned fee with a
-balanced ledger row and per-attempt evidence; cancellation releases once;
+balanced ledger row and per-attempt evidence; player retry never charges twice;
 closure captures admitted holds and releases waitlisted holds before roster
 freeze. Corrupt/missing evidence and insufficient funds produce zero partial
 admission or competition writes. The player command never accepts an amount,

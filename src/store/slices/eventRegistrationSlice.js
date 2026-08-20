@@ -56,20 +56,6 @@ export const registerForEvent = createApiThunk(
   playerParticipationOnly,
 );
 
-export const cancelEventRegistration = createApiThunk(
-  "eventRegistration/cancel",
-  {
-    method: "delete",
-    path: ({ arg }) => `/api/player/events/${arg}/register`,
-    getBody: () => undefined,
-    selectData: (response) => response.data?.data,
-    errorMessage: "Unable to cancel this Event registration.",
-    onSuccess: ({ thunkAPI }) => thunkAPI.dispatch(fetchPlayerEvents()),
-    toast: { success: true, error: true },
-  },
-  playerParticipationOnly,
-);
-
 const finishAction = (state, action, status) => {
   const event = state.events.find((item) => item.id === action.meta.arg);
   if (event) {
@@ -151,15 +137,6 @@ const eventRegistrationSlice = createSlice({
         finishAction(state, action, action.payload.registration.status);
       })
       .addCase(registerForEvent.rejected, (state, action) => {
-        state.actionById[action.meta.arg] = "idle";
-      })
-      .addCase(cancelEventRegistration.pending, (state, action) => {
-        state.actionById[action.meta.arg] = "loading";
-      })
-      .addCase(cancelEventRegistration.fulfilled, (state, action) => {
-        finishAction(state, action, "cancelled");
-      })
-      .addCase(cancelEventRegistration.rejected, (state, action) => {
         state.actionById[action.meta.arg] = "idle";
       });
   },

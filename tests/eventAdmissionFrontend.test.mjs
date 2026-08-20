@@ -5,7 +5,6 @@ import { canReviewEventProposal } from "../src/utils/eventReviewPolicy.js";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import eventRegistrationReducer, {
-  cancelEventRegistration,
   fetchPlayerEventStandings,
   fetchPlayerEvents,
   registerForEvent,
@@ -51,7 +50,7 @@ const response = (config, data) => ({
 const decodeBody = (config) =>
   typeof config.data === "string" ? JSON.parse(config.data) : config.data;
 
-test("player Event discovery, registration, and cancellation use canonical routes and refresh counters", async () => {
+test("player Event discovery and committed registration use canonical routes", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
   const event = {
@@ -75,11 +74,7 @@ test("player Event discovery, registration, and cancellation use canonical route
         },
       });
     }
-    return response(config, {
-      data: {
-        registration: { id: "registration-1", status: "cancelled" },
-      },
-    });
+    throw new Error(`Unexpected ${config.method} request`);
   };
 
   try {
@@ -91,7 +86,6 @@ test("player Event discovery, registration, and cancellation use canonical route
     });
     await store.dispatch(fetchPlayerEvents());
     await store.dispatch(registerForEvent("event-run-1"));
-    await store.dispatch(cancelEventRegistration("event-run-1"));
 
     assert.deepEqual(
       requests.map(({ method, url }) => [method, url]),
@@ -99,19 +93,16 @@ test("player Event discovery, registration, and cancellation use canonical route
         ["get", "/api/player/events"],
         ["post", "/api/player/events/event-run-1/register"],
         ["get", "/api/player/events"],
-        ["delete", "/api/player/events/event-run-1/register"],
-        ["get", "/api/player/events"],
       ],
     );
     assert.deepEqual(decodeBody(requests[1]), {});
-    assert.equal(requests[3].data, undefined);
     assert.equal(store.getState().eventRegistration.status, "succeeded");
   } finally {
     api.defaults.adapter = originalAdapter;
   }
 });
 
-test("staff Event participation is cancelled before any mutation transport", async () => {
+test("staff Event registration is blocked before mutation transport", async () => {
   const originalAdapter = api.defaults.adapter;
   let requestCount = 0;
   api.defaults.adapter = async (config) => {
@@ -127,14 +118,28 @@ test("staff Event participation is cancelled before any mutation transport", asy
       },
     });
     const registerAction = await store.dispatch(registerForEvent("run-1"));
-    const cancelAction = await store.dispatch(cancelEventRegistration("run-1"));
 
     assert.equal(registerAction.meta.condition, true);
-    assert.equal(cancelAction.meta.condition, true);
     assert.equal(requestCount, 0);
   } finally {
     api.defaults.adapter = originalAdapter;
   }
+});
+
+test("player Event UI exposes no registration cancellation transport", async () => {
+  const [pageSource, sliceSource] = await Promise.all([
+    readFile(new URL("../src/pages/Events.jsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../src/store/slices/eventRegistrationSlice.js", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(pageSource, /Registration committed/);
+  assert.match(pageSource, /Event registration is final and cannot be cancelled/);
+  assert.match(pageSource, /globalThis\.confirm/);
+  assert.doesNotMatch(`${pageSource}\n${sliceSource}`, /cancelEventRegistration|Cancel \$\{mine\.status\}/);
+  assert.doesNotMatch(sliceSource, /method: "delete"/);
 });
 
 test("Platform Admin invitation runs, candidates, list, invite, and revoke use bounded contracts", async () => {
@@ -644,7 +649,8 @@ test("player and operator stage UX consumes only safe server-derived Event links
   assert.match(playerSource, /event\.cancellation/);
   assert.match(progressionSource, /ownBatch\.stageNumber/);
   assert.match(progressionSource, /to=\{`\/dashboard\/matches\/\$\{ownBatch\.matchId\}`\}/);
-  assert.match(playerSource, /const canCancel = active && event\.registration\.isOpen/);
+  assert.match(playerSource, /Registration committed/);
+  assert.doesNotMatch(playerSource, /cancelEventRegistration|Cancel registration/);
   assert.doesNotMatch(
     `${playerSource}\n${progressionSource}`,
     /participantIds|seedingSeed|rosterEntries|leaseOwner/,
