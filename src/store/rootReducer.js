@@ -34,6 +34,7 @@ import eventRoundPlanSlice from "./slices/eventRoundPlanSlice.js";
 import securityAttentionSlice from "./slices/securityAttentionSlice.js";
 import verificationRequestSlice from "./slices/verificationRequestSlice.js";
 import paymentReconciliationReviewSlice from "./slices/paymentReconciliationReviewSlice.js";
+import matchChatSlice from "./slices/matchChatSlice.js";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -67,6 +68,7 @@ const combinedReducer = combineReducers({
   loading: loadingSlice.reducer,
   matchmaking: matchmakingSlice.reducer,
   matchActivity: matchActivitySlice.reducer,
+  matchChat: matchChatSlice,
   payment: paymentSlice.reducer,
   player: playerSlice.reducer,
   clan: clanSlice.reducer,
@@ -87,6 +89,7 @@ const privateSliceKeys = [
   "social",
   "matchmaking",
   "matchActivity",
+  "matchChat",
   "eventManagement",
   "eventReview",
   "quickMatchOfferings",

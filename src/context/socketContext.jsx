@@ -229,6 +229,7 @@ export const SocketProvider = ({ children }) => {
           REALTIME_EVENT_TYPES.MATCHMAKING_QUEUE_UPDATED ||
         event.type ===
           REALTIME_EVENT_TYPES.MATCH_ASSIGNMENT_UPDATED
+        || event.type === REALTIME_EVENT_TYPES.MATCH_CHAT_MESSAGE_CREATED
       ) {
         // Socket data is only an invalidation signal. Match screens reload
         // their authorized HTTP projections instead of trusting pushed state.

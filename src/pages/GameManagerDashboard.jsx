@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FiActivity, FiAlertTriangle, FiClock, FiRadio, FiRefreshCw, FiUsers } from "react-icons/fi";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { ROUTES } from "../routes/routeConstants";
 import { fetchManagedGameOperations } from "../store/slices/gameManagementSlice";
+import GameManagerEventDetails from "../components/gameManagement/GameManagerEventDetails.jsx";
 
 const formatSchedule = (value) => {
   if (!value) return "Schedule pending";
@@ -34,6 +35,7 @@ Metric.propTypes = {
 const GameManagerDashboard = () => {
   const dispatch = useDispatch();
   const { error, operations, status } = useSelector((state) => state.gameManagement);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     // This read model contains only games inside the active assignment scope.
@@ -79,6 +81,7 @@ const GameManagerDashboard = () => {
         {status !== "loading" && operations.length === 0 && !error && <section className="rounded-3xl border border-slate-800 bg-[#07111f] p-8 text-slate-400">No active game scope is available for this assignment. Ask a Platform Admin to review the assignment.</section>}
 
         <section className="grid gap-5 xl:grid-cols-2">
+          {selectedEvent ? <GameManagerEventDetails event={selectedEvent} onClose={() => setSelectedEvent(null)} /> : null}
           {operations.map((item) => (
             <article className="rounded-3xl border border-slate-800 bg-[#07111f] p-5 md:p-6" key={item.game._id}>
               <div className="flex items-start justify-between gap-4">
@@ -91,6 +94,14 @@ const GameManagerDashboard = () => {
                 <Metric label="Live matches" value={item.metrics.liveMatches} />
                 <Metric label="Active Event runs" value={item.eventReadiness.activeRuns} />
                 <Metric label="Upcoming Event runs" value={item.eventReadiness.upcomingRuns} />
+              </div>
+
+              <div className="mt-6 border-t border-slate-800 pt-5">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Events</p>
+                <div className="mt-3 space-y-2">
+                  {(item.events || []).map((event) => <button className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 px-3 py-3 text-left hover:border-cyan-300/30" key={event.id} onClick={() => setSelectedEvent(event)} type="button"><span className="min-w-0"><strong className="block truncate text-sm text-slate-100">{event.title}</strong><small className="text-slate-500">{event.registeredCount.toLocaleString("en-IN")} registered / {formatSchedule(event.startsAt)}</small></span><span className="shrink-0 text-xs font-bold capitalize text-cyan-200">{event.status.replaceAll("_", " ")}</span></button>)}
+                  {(item.events || []).length === 0 ? <p className="text-sm text-slate-500">No Events for this game.</p> : null}
+                </div>
               </div>
 
               <div className="mt-6 border-t border-slate-800 pt-5">

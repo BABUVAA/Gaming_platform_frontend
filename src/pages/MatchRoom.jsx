@@ -19,6 +19,7 @@ import {
 import useSocket from "../context/useSocket";
 import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
+import MatchChat from "../components/competition/MatchChat.jsx";
 
 const FLOW = [
   "awaiting_operator",
@@ -463,6 +464,7 @@ const MatchRoom = () => {
           )}
         </div>
       </section>
+      {!isStaffUtilityMode && match.status !== "awaiting_operator" ? <MatchChat audience="player" matchId={String(match._id)} /> : null}
     </div>
   );
 };

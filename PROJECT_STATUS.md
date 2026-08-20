@@ -22,6 +22,10 @@ to continue the project without reopening settled decisions.
 - Platform Admin and Super Admin own game setup, publishing, staff assignment,
   and Event approval.
 - Game Manager is read-only for assigned games and supervises operations.
+- Game Manager read-only supervision includes bounded Event registration
+  identities, round/Match coverage, operator workload, and sporting standings
+  for assigned games. It excludes email, wallet, lobby credentials, private
+  evidence, chat, and every mutation command.
 - Event Manager creates drafts inside assigned game scopes; Platform Admin
   reviews submitted Templates and Event Runs through an audited lifecycle.
 - Event Manager also has read-only, game-scoped operational visibility for its
@@ -30,6 +34,10 @@ to continue the project without reopening settled decisions.
   operator commands.
 - Invitation-only Event Runs are private in player discovery: only players
   with an active invitation may see their registration card or participate.
+- Open and limited-seat Events remain spectator-visible after registration
+  closes through completion. Invitation-only Events remain private. Spectator
+  reads expose schedules, safe round/Match status and sporting standings only;
+  registration controls disappear and lobby/private evidence never leaks.
 - Event registration is a player commitment. Confirmed and waitlisted players
   cannot cancel or re-enter; direct cancellation receives stable 409. Only an
   audited platform-owned Event failure/cancellation may release entry funds.
@@ -45,6 +53,10 @@ to continue the project without reopening settled decisions.
   authoritative. This fixed the previous false visual block for Super Admins.
 - Match Operator requires assigned game scope and executes only matches they
   explicitly claim or receive within that scope.
+- Match conversations are private operational records shared only by the
+  Match participants and its currently assigned Match Operator. Messages are
+  persisted, bounded, rate-limited and identity-derived; Event/Game Managers
+  do not receive chat access through their read-only dashboards.
 - Staff may open the player dashboard only as a read-only utility for platform
   visibility. Staff accounts cannot join, register, check in, submit player
   results/disputes, use social/team/clan participation, or initiate player
@@ -2229,3 +2241,34 @@ to Completed and record any remaining risks under Required Future Flows.
   integration 14/14, API docs 181/181, frontend 90/90, full lint, and the
   556-module production build passed. Authenticated desktop/mobile visual
   verification remains pending.
+
+## Latest Refinement: Event Operations Coordination
+
+- After registration closes, Event Manager operations now expose bounded,
+  cursor-paginated registration records, generated rooms, operator coverage
+  and sporting standings. The manager may assign an eligible active Match
+  Operator from the Event's game scope only while a room is still awaiting an
+  operator; the conditional assignment and its staff audit commit atomically.
+- Game Manager receives a separate read-only assigned-game Event view with
+  registration identities, room/operator workload and standings. Email,
+  wallets, lobby credentials, private result evidence, Match chat and every
+  mutation remain excluded.
+- Match chat is a persistent append-only conversation owned by each Match.
+  Only server-derived Match participants and the currently assigned Match
+  Operator may read or send; history is cursor-paginated, messages are bounded
+  to 500 characters and writes are rate-limited. Event/Game Managers cannot
+  access it.
+- Match Operator operations retain the ranked room-order/result workflow and
+  now show the private Match conversation inside the assigned room. Players
+  receive the same conversation inside their Match timeline, never through an
+  Event-wide public chat.
+- Open and limited Events remain spectator-visible after registration closes
+  through completion, with safe timelines and standings. Invitation-only
+  Events remain private to invited/registered viewers at the API boundary.
+- Verification: competition integration 90/90 and competition unit 92/92;
+  focused Event registration/operations coordination replica checks 17/17;
+  frontend aggregate 94/94, full lint, 559-module build; API documentation
+  192/192; syntax and diff checks passed. The localhost public shell rendered
+  cleanly without console warnings. Authenticated desktop/mobile role workflow
+  remains a visual follow-up; server authorization and transport contracts are
+  covered by the completed automated gates.

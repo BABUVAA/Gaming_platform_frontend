@@ -2,6 +2,7 @@ export const REALTIME_CHANNEL = "realtime:event";
 
 export const REALTIME_EVENT_TYPES = Object.freeze({
   CHAT_PERSONAL_MESSAGE_CREATED: "chat.personal_message.created",
+  MATCH_CHAT_MESSAGE_CREATED: "match.chat_message.created",
   CLAN_JOIN_REQUESTS_UPDATED: "clan.join_requests.updated",
   CLAN_JOIN_REQUEST_STATUS_UPDATED:
     "clan.join_request_status.updated",

@@ -243,15 +243,15 @@ const Game = () => {
       <section>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Scheduled Events</p>
-            <h2 className="mt-1 text-2xl font-black text-white">Register and follow your Events</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Events</p>
+            <h2 className="mt-1 text-2xl font-black text-white">Register, watch rounds, and follow standings</h2>
           </div>
           {eventState.status === "failed" ? <button className="rounded-xl border border-rose-300/30 px-3 py-2 text-sm text-rose-100" onClick={() => dispatch(fetchPlayerEvents())} type="button">Retry Events</button> : null}
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {visibleEvents.map((event) => <EventCompetitionCard busy={eventState.actionById[event.id] === "loading"} event={event} key={event.id} onRegister={commitEventRegistration} staffReadOnly={isStaffUtilityMode} />)}
           {eventState.status === "loading" ? <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">Loading Events...</p> : null}
-          {eventState.status === "succeeded" && !visibleEvents.length ? <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No scheduled Events for this game.</p> : null}
+          {eventState.status === "succeeded" && !visibleEvents.length ? <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No Events are available for this game.</p> : null}
         </div>
       </section>
 

@@ -48,10 +48,10 @@ const EventDetails = () => {
   }, []);
 
   useEffect(() => {
-    if (!event?.registration?.mine || !["in_progress", "completed"].includes(event.status)) return undefined;
+    if (!["in_progress", "completed"].includes(event?.status)) return undefined;
     const request = dispatch(fetchPlayerEventStandings({ runId }));
     return () => request.abort();
-  }, [dispatch, event?.registration?.mine, event?.status, runId]);
+  }, [dispatch, event?.status, runId]);
 
   if (state.detailsStatusById[runId] === "loading" && !event) {
     return <main className="rounded-2xl border border-slate-800 p-6 text-slate-300">Loading Event...</main>;
@@ -101,7 +101,8 @@ const EventDetails = () => {
         {event.rewardTerms?.placements?.length ? <div className="mt-4 overflow-hidden rounded-2xl border border-slate-800">{event.rewardTerms.placements.map((reward) => <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-sm last:border-b-0" key={reward.place}><span className="font-black text-cyan-200">Place #{reward.place}</span><span className="font-black text-emerald-200">{money(reward.amountMinor)}</span></div>)}</div> : <p className="mt-3 text-sm text-slate-500">No placement rewards configured.</p>}
       </section>
 
-      {mine ? <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6"><h2 className="text-xl font-black text-white">Your Event</h2><EventProgression progression={progression} standings={standingPage?.standings || []} />{standingPage?.status === "pending" ? <p className="mt-3 text-sm text-slate-500">Final leaderboard will appear as results are finalized.</p> : null}{state.standingsErrorById[runId] ? <button className="mt-3 text-sm font-bold text-rose-200" onClick={() => dispatch(fetchPlayerEventStandings({ runId }))} type="button">Retry leaderboard</button> : null}{standingPage?.nextCursor ? <button className="mt-4 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={state.standingsStatusById[runId] === "loading"} onClick={() => dispatch(fetchPlayerEventStandings({ cursor: standingPage.nextCursor, runId }))} type="button">Load more standings</button> : null}</section> : null}
+      {mine ? <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6"><h2 className="text-xl font-black text-white">Your Event</h2><EventProgression progression={progression} /></section> : null}
+      {["in_progress", "completed"].includes(event.status) ? <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6"><h2 className="text-xl font-black text-white">Standings</h2><EventProgression standings={standingPage?.standings || []} />{standingPage?.status === "pending" || (!standingPage?.standings?.length && state.standingsStatusById[runId] !== "failed") ? <p className="mt-3 text-sm text-slate-500">Leaderboard updates appear as verified results are finalized.</p> : null}{state.standingsErrorById[runId] ? <button className="mt-3 text-sm font-bold text-rose-200" onClick={() => dispatch(fetchPlayerEventStandings({ runId }))} type="button">Retry leaderboard</button> : null}{standingPage?.nextCursor ? <button className="mt-4 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={state.standingsStatusById[runId] === "loading"} onClick={() => dispatch(fetchPlayerEventStandings({ cursor: standingPage.nextCursor, runId }))} type="button">Load more standings</button> : null}</section> : null}
     </main>
   );
 };

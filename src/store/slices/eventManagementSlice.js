@@ -65,6 +65,27 @@ export const fetchManagedEventMatches = createApiThunk(
   },
 );
 
+export const fetchManagedEventStandings = createApiThunk(
+  "eventManagement/fetchStandings",
+  {
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/standings`,
+    getParams: ({ cursor } = {}) => ({ limit: 25, ...(cursor ? { cursor } : {}) }),
+    selectData: (response) => response.data?.data || { standings: [] },
+    errorMessage: "Unable to load Event standings.",
+    toast: { error: true },
+  },
+);
+
+export const fetchEligibleEventOperators = createApiThunk(
+  "eventManagement/fetchEligibleOperators",
+  { path: ({ arg: runId }) => `/api/staff/events/runs/${runId}/operators`, selectData: (response) => response.data?.data?.operators || [], errorMessage: "Unable to load Match Operators." },
+);
+
+export const assignManagedEventOperator = createApiThunk(
+  "eventManagement/assignOperator",
+  { method: "patch", path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/matches/${arg.matchId}/operator`, getBody: ({ operatorId }) => ({ operatorId }), selectData: (response) => response.data?.data?.assignment, errorMessage: "Unable to assign this Match Operator.", toast: { success: true, error: true } },
+);
+
 export const createManagedEventTemplate = createApiThunk(
   "eventManagement/createTemplate",
   {
@@ -155,6 +176,7 @@ const eventManagementSlice = createSlice({
   name: "eventManagement",
   initialState: {
     error: null,
+    eligibleOperatorsByRunId: {},
     games: [],
     matchesByRunId: {},
     operationsByRunId: {},
@@ -163,6 +185,7 @@ const eventManagementSlice = createSlice({
     operationsStatusByRunId: {},
     pagination: {},
     registrationsByRunId: {},
+    standingsByRunId: {},
     runs: [],
     status: "idle",
     templates: [],
@@ -263,6 +286,21 @@ const eventManagementSlice = createSlice({
           requestId: null,
           status: action.meta.aborted ? "idle" : "failed",
         };
+      })
+      .addCase(fetchManagedEventStandings.fulfilled, (state, action) => {
+        const { cursor, runId } = action.meta.arg;
+        const current = state.standingsByRunId[runId];
+        const keyed = new Map((cursor ? current?.standings || [] : []).map((row) => [`${row.placement}:${row.player?.profileTag}`, row]));
+        action.payload.standings.forEach((row) => keyed.set(`${row.placement}:${row.player?.profileTag}`, row));
+        state.standingsByRunId[runId] = { ...action.payload, standings: [...keyed.values()] };
+      })
+      .addCase(fetchEligibleEventOperators.fulfilled, (state, action) => {
+        state.eligibleOperatorsByRunId[action.meta.arg] = action.payload;
+      })
+      .addCase(assignManagedEventOperator.fulfilled, (state, action) => {
+        const { matchId, runId } = action.meta.arg;
+        const item = state.matchesByRunId[runId]?.items?.find((row) => row.match?.id === matchId);
+        if (item?.match) { item.match.assignedOperator = action.payload.operator; item.match.status = action.payload.status; }
       })
       .addCase(createManagedEventTemplate.fulfilled, (state, action) => {
         state.templates.unshift(action.payload);

@@ -29,6 +29,13 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   authority.
 - Invitation-only Event cards are visible only to a player with an active
   invitation; server discovery and registration enforce the same rule.
+- Open and limited-seat Events remain visible after registration closes for
+  safe spectator timelines and standings; invitation-only Events stay private.
+- Game Managers may inspect bounded registration identities, Match/operator
+  coverage and standings only for assigned games, without mutation, lobby,
+  wallet, email, private evidence or chat access.
+- Match chat is private to server-derived Match participants and the assigned
+  Match Operator; it must be persistent, bounded and rate-limited.
 - Player Event registration is final. Registered and waitlisted players cannot
   cancel or re-enter; platform-owned Event recovery/refunds remain governed.
 - New Event schedules contain timing, admission, entry and reward terms only.
@@ -64,6 +71,16 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   passed 14/14, API documentation covers 181/181 routes, and frontend 90/90
   plus full lint and the 556-module build passed. Authenticated desktop/mobile
   visual verification remains pending.
+- Event operations coordination 2026-08-20: Event Managers can inspect bounded
+  registrations, rooms and standings, then atomically assign an eligible
+  game-scoped Match Operator before play. Game Managers receive the same
+  operational evidence read-only. Players and the assigned operator share a
+  persistent, bounded, rate-limited private Match chat in their existing Match
+  timelines. Open/limited Events remain safely spectator-visible after close;
+  invitation-only Events remain private. Competition integration passed 90/90,
+  competition unit 92/92, frontend 94/94 with full lint and a 559-module build,
+  and API docs 192/192. The public localhost shell is console-clean;
+  authenticated role-by-role desktop/mobile visual proof remains a follow-up.
 - Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
   public **testing/staging platform**, not a live-money launch. Backend commit
   `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis

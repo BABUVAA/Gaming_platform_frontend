@@ -15,6 +15,7 @@ import {
   FiWifi,
 } from "react-icons/fi";
 import useSocket from "../context/useSocket";
+import MatchChat from "../components/competition/MatchChat.jsx";
 import {
   claimOperatorMatch,
   executeOperatorMatchCommand,
@@ -764,6 +765,7 @@ const AssignedMatchCard = ({
           {match.resultSummary?.submittedBy || match.status === "disputed" ? (
             <ResultEvidence match={match} />
           ) : null}
+          <MatchChat audience="operator" matchId={String(match._id)} />
         </div>
       ) : null}
     </article>

@@ -5,6 +5,9 @@ import {
   fetchManagedEventMatches,
   fetchManagedEventOperations,
   fetchManagedEventRegistrations,
+  fetchManagedEventStandings,
+  fetchEligibleEventOperators,
+  assignManagedEventOperator,
 } from "../../store/slices/eventManagementSlice.js";
 
 const formatDate = (value) => {
@@ -25,6 +28,8 @@ const EventManagerOperations = ({ onClose, runId }) => {
   const operationsError = state.operationsErrorByRunId[runId];
   const registrations = state.registrationsByRunId[runId] || { items: [], status: "idle" };
   const matches = state.matchesByRunId[runId] || { items: [], status: "idle" };
+  const standings = state.standingsByRunId[runId] || { standings: [] };
+  const operators = state.eligibleOperatorsByRunId[runId] || [];
 
   useEffect(() => {
     const request = dispatch(fetchManagedEventOperations(runId));
@@ -40,6 +45,18 @@ const EventManagerOperations = ({ onClose, runId }) => {
   useEffect(() => {
     if (view !== "matches") return undefined;
     const request = dispatch(fetchManagedEventMatches({ runId }));
+    return () => request.abort();
+  }, [dispatch, runId, view]);
+
+  useEffect(() => {
+    if (view !== "matches") return undefined;
+    const request = dispatch(fetchEligibleEventOperators(runId));
+    return () => request.abort();
+  }, [dispatch, runId, view]);
+
+  useEffect(() => {
+    if (view !== "standings") return undefined;
+    const request = dispatch(fetchManagedEventStandings({ runId }));
     return () => request.abort();
   }, [dispatch, runId, view]);
 
@@ -75,6 +92,7 @@ const EventManagerOperations = ({ onClose, runId }) => {
       <div className="mt-5 flex gap-2 border-b border-slate-800 pb-3" role="tablist" aria-label="Event operational details">
         <DetailTab active={view === "registrations"} label="Registrations" onClick={() => setView("registrations")} />
         <DetailTab active={view === "matches"} label="Matches" onClick={() => setView("matches")} />
+        <DetailTab active={view === "standings"} label="Standings" onClick={() => setView("standings")} />
       </div>
 
       {view === "registrations" ? (
@@ -112,7 +130,7 @@ const EventManagerOperations = ({ onClose, runId }) => {
             <button className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={registrations.status === "loading"} onClick={() => dispatch(fetchManagedEventRegistrations({ cursor: registrations.nextCursor, runId, status: registrationFilter }))} type="button">Load more registrations</button>
           ) : null}
         </div>
-      ) : (
+      ) : view === "matches" ? (
         <div className="mt-4">
           <p className="text-sm font-black text-white">Generated Match rooms</p>
           <div className="mt-3 grid gap-3">
@@ -131,6 +149,7 @@ const EventManagerOperations = ({ onClose, runId }) => {
                   <p><span className="text-slate-600">Operator:</span> {item.match?.assignedOperator?.username || "Unassigned"}</p>
                   <p><span className="text-slate-600">Scheduled:</span> {formatDate(item.match?.scheduledFor)}</p>
                 </div>
+                {item.match?.status === "awaiting_operator" ? <label className="mt-3 block text-xs font-bold text-slate-400">Assign operator<select className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white" defaultValue="" onChange={(event) => event.target.value && dispatch(assignManagedEventOperator({ matchId: item.match.id, operatorId: event.target.value, runId }))}><option value="">Choose an operator</option>{operators.map((operator) => <option key={operator.id} value={operator.id}>{operator.username} / {operator.activeMatches} active</option>)}</select></label> : null}
                 {item.match?.finalScore ? <p className="mt-3 border-t border-slate-800 pt-3 text-sm text-slate-300">Result: {item.match.finalScore}</p> : null}
               </article>
             ))}
@@ -141,6 +160,15 @@ const EventManagerOperations = ({ onClose, runId }) => {
           {matches.nextCursor ? (
             <button className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={matches.status === "loading"} onClick={() => dispatch(fetchManagedEventMatches({ cursor: matches.nextCursor, runId }))} type="button">Load more Matches</button>
           ) : null}
+        </div>
+      ) : (
+        <div className="mt-4">
+          <p className="text-sm font-black text-white">Sporting standings</p>
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-800">
+            {standings.standings.map((row) => <div className="grid grid-cols-[3rem_1fr_auto] gap-3 border-t border-slate-800 px-4 py-3 first:border-t-0" key={`${row.placement}:${row.player?.profileTag}`}><strong className="text-cyan-200">#{row.placement}</strong><span><strong className="block text-white">{row.player?.displayName || "Player"}</strong><small className="text-slate-500">{row.player?.profileTag}</small></span><span className="capitalize text-slate-400">{labelStatus(row.result)}</span></div>)}
+            {!standings.standings.length ? <p className="p-4 text-sm text-slate-500">Standings appear after verified Match results.</p> : null}
+          </div>
+          {standings.nextCursor ? <button className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200" onClick={() => dispatch(fetchManagedEventStandings({ cursor: standings.nextCursor, runId }))} type="button">Load more standings</button> : null}
         </div>
       )}
     </section>
