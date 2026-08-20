@@ -10,10 +10,7 @@ import {
   FaGamepad,
   FaUsers,
 } from "react-icons/fa";
-import {
-  buildTournamentOfferingPath,
-  ROUTES,
-} from "../routes/routeConstants";
+import { buildTournamentOfferingPath, ROUTES } from "../routes/routeConstants";
 import {
   selectIsStaffUtilityMode,
   selectPlayerSummary,
@@ -28,6 +25,7 @@ import {
   registerForEvent,
 } from "../store/slices/eventRegistrationSlice.js";
 import EventCompetitionCard from "../components/competition/EventCompetitionCard.jsx";
+import CompetitionEntryDialog from "../components/competition/CompetitionEntryDialog.jsx";
 import {
   gameFilterOptions,
   getGameKey,
@@ -61,6 +59,7 @@ const tournamentShape = PropTypes.shape({
   prizePool: PropTypes.number,
   entryFee: PropTypes.number,
   isFeatured: PropTypes.bool,
+  joinedCount: PropTypes.number,
 });
 
 const getTournamentStatus = (status) =>
@@ -81,6 +80,7 @@ const getTournamentDate = (date) => {
 };
 
 const getJoinedCount = (tournament) => {
+  if (Number.isFinite(tournament.joinedCount)) return tournament.joinedCount;
   // Team events count registered teams, while solo events count players.
   const participants =
     tournament.mode === "solo"
@@ -108,6 +108,7 @@ const rankTournament = (tournament) => {
 const Game = () => {
   const dispatch = useDispatch();
   const [activeGame, setActiveGame] = useState("all");
+  const [pendingEvent, setPendingEvent] = useState(null);
   const playerSummary = useSelector(selectPlayerSummary);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const offerings = useSelector(selectPlayerQuickMatchOfferings);
@@ -119,6 +120,7 @@ const Game = () => {
         _id: offering._id,
         entryFee: offering.entryFeeMinor / 100,
         game: offering.gameKey,
+        joinedCount: offering.joinProgress?.joinedParticipants || 0,
         maxParticipants: offering.maxParticipants,
         mode: offering.mode,
         prizePool: offering.prizePoolMinor / 100,
@@ -135,33 +137,39 @@ const Game = () => {
       dispatch(fetchPlayerQuickMatchOfferings()),
       dispatch(fetchPlayerEvents()),
     ];
-    return () => requests.forEach((request) => request.abort());
+    const refreshTimer = window.setInterval(() => {
+      dispatch(fetchPlayerQuickMatchOfferings());
+      dispatch(fetchPlayerEvents());
+    }, 10000);
+    return () => {
+      requests.forEach((request) => request.abort());
+      window.clearInterval(refreshTimer);
+    };
   }, [dispatch]);
 
-  const visibleEvents = eventState.events.filter((event) =>
-    activeGame === "all" || getGameKey(event.game?.key) === activeGame);
+  const visibleEvents = eventState.events.filter(
+    (event) =>
+      activeGame === "all" || getGameKey(event.game?.key) === activeGame,
+  );
 
-  const commitEventRegistration = (event) => {
-    const fee = event.entryTerms?.policy === "paid"
-      ? ` INR ${(event.entryTerms.entryFeeMinor / 100).toFixed(2)}${event.entryTerms.testMoney ? " in test money" : ""} will be held.`
-      : "";
-    if (globalThis.confirm(`Event registration is final and cannot be cancelled.${fee} Continue?`)) {
-      dispatch(registerForEvent(event.id));
-    }
+  const commitEventRegistration = () => {
+    if (!pendingEvent) return;
+    dispatch(registerForEvent(pendingEvent.id));
+    setPendingEvent(null);
   };
 
   const filteredTournaments = tournaments
     .filter(
       (tournament) =>
-        activeGame === "all" ||
-        getGameKey(tournament.game) === activeGame,
+        activeGame === "all" || getGameKey(tournament.game) === activeGame,
     )
     .sort((first, second) => {
       // Featured status breaks equal-priority ties without hiding open events.
-      const statusDifference =
-        rankTournament(first) - rankTournament(second);
+      const statusDifference = rankTournament(first) - rankTournament(second);
       if (statusDifference !== 0) return statusDifference;
-      return Number(Boolean(second.isFeatured)) - Number(Boolean(first.isFeatured));
+      return (
+        Number(Boolean(second.isFeatured)) - Number(Boolean(first.isFeatured))
+      );
     });
 
   const spotlight = filteredTournaments[0] || null;
@@ -179,7 +187,9 @@ const Game = () => {
             {isStaffUtilityMode ? "Staff catalog view" : "Compete"}
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white md:text-4xl">
-            {isStaffUtilityMode ? `Player-facing catalog for ${username}` : `Ready, ${username}?`}
+            {isStaffUtilityMode
+              ? `Player-facing catalog for ${username}`
+              : `Ready, ${username}?`}
           </h1>
         </div>
 
@@ -220,18 +230,20 @@ const Game = () => {
               filter.key === "all"
                 ? tournaments.length
                 : tournaments.filter(
-                    (tournament) =>
-                      getGameKey(tournament.game) === filter.key,
+                    (tournament) => getGameKey(tournament.game) === filter.key,
                   ).length;
-            const scheduledEventCount = filter.key === "all"
-              ? eventState.events.length
-              : eventState.events.filter((event) => getGameKey(event.game?.key) === filter.key).length;
+            const scheduledEventCount =
+              filter.key === "all"
+                ? eventState.events.length
+                : eventState.events.filter(
+                    (event) => getGameKey(event.game?.key) === filter.key,
+                  ).length;
 
             return (
               <GameFilterCard
-              key={filter.key}
+                key={filter.key}
                 filter={filter}
-              eventCount={quickMatchCount + scheduledEventCount}
+                eventCount={quickMatchCount + scheduledEventCount}
                 isActive={activeGame === filter.key}
                 onSelect={() => setActiveGame(filter.key)}
               />
@@ -243,15 +255,43 @@ const Game = () => {
       <section>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Events</p>
-            <h2 className="mt-1 text-2xl font-black text-white">Register, watch rounds, and follow standings</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+              Events
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-white">
+              Register, watch rounds, and follow standings
+            </h2>
           </div>
-          {eventState.status === "failed" ? <button className="rounded-xl border border-rose-300/30 px-3 py-2 text-sm text-rose-100" onClick={() => dispatch(fetchPlayerEvents())} type="button">Retry Events</button> : null}
+          {eventState.status === "failed" ? (
+            <button
+              className="rounded-xl border border-rose-300/30 px-3 py-2 text-sm text-rose-100"
+              onClick={() => dispatch(fetchPlayerEvents())}
+              type="button"
+            >
+              Retry Events
+            </button>
+          ) : null}
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {visibleEvents.map((event) => <EventCompetitionCard busy={eventState.actionById[event.id] === "loading"} event={event} key={event.id} onRegister={commitEventRegistration} staffReadOnly={isStaffUtilityMode} />)}
-          {eventState.status === "loading" ? <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">Loading Events...</p> : null}
-          {eventState.status === "succeeded" && !visibleEvents.length ? <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No Events are available for this game.</p> : null}
+          {visibleEvents.map((event) => (
+            <EventCompetitionCard
+              busy={eventState.actionById[event.id] === "loading"}
+              event={event}
+              key={event.id}
+              onRegister={setPendingEvent}
+              staffReadOnly={isStaffUtilityMode}
+            />
+          ))}
+          {eventState.status === "loading" ? (
+            <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">
+              Loading Events...
+            </p>
+          ) : null}
+          {eventState.status === "succeeded" && !visibleEvents.length ? (
+            <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">
+              No Events are available for this game.
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -265,23 +305,29 @@ const Game = () => {
         <section>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black text-white">
-                Quick matches
-              </h2>
+              <h2 className="text-2xl font-black text-white">Quick matches</h2>
             </div>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {competitionFeed.map((tournament) => (
-              <CompetitionCard
-                key={tournament._id}
-                tournament={tournament}
-              />
+              <CompetitionCard key={tournament._id} tournament={tournament} />
             ))}
           </div>
         </section>
       ) : null}
 
+      <CompetitionEntryDialog
+        actionLabel="Proceed & register"
+        currency={pendingEvent?.entryTerms?.currency || "INR"}
+        entryFeeMinor={pendingEvent?.entryTerms?.entryFeeMinor || 0}
+        isOpen={Boolean(pendingEvent)}
+        onClose={() => setPendingEvent(null)}
+        onProceed={commitEventRegistration}
+        testMoney={pendingEvent?.entryTerms?.testMoney}
+        title={pendingEvent?.title || "Event"}
+        type="Event"
+      />
     </div>
   );
 };
@@ -475,9 +521,7 @@ const CompetitionCard = ({ tournament }) => {
             <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
               Joined
             </p>
-            <p className="mt-1 text-sm font-black text-white">
-              {joinedCount}
-            </p>
+            <p className="mt-1 text-sm font-black text-white">{joinedCount}</p>
           </div>
         </div>
 

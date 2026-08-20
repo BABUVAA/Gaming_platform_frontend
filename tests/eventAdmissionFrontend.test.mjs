@@ -176,7 +176,8 @@ test("player Event UI exposes no registration cancellation transport", async () 
 
   assert.match(pageSource, /Registration committed/);
   assert.match(pageSource, /Event registration is final and cannot be cancelled/);
-  assert.match(pageSource, /globalThis\.confirm/);
+  assert.match(pageSource, /CompetitionEntryDialog/);
+  assert.doesNotMatch(pageSource, /globalThis\.confirm/);
   assert.doesNotMatch(`${pageSource}\n${sliceSource}`, /cancelEventRegistration|Cancel \$\{mine\.status\}/);
   assert.doesNotMatch(sliceSource, /method: "delete"/);
 });
@@ -346,7 +347,7 @@ test("Event creation omits round rules and post-registration setup owns the revi
   assert.match(planSource, /advanceCount/);
   assert.match(source, /Team Event execution is not available yet/);
   assert.match(source, /toInrMinorUnits/);
-  assert.match(source, /no more than two decimal places/);
+  assert.match(source, /no more than two decimal\s+places/);
   const [templateDraftSection, runDraftSection] = source.split(
     "onSubmit={saveRun}",
   );
@@ -356,7 +357,7 @@ test("Event creation omits round rules and post-registration setup owns the revi
   );
   assert.match(
     runDraftSection,
-    /disabled=\{teamExecutionUnsupported \|\| entryFeeInvalid\}/,
+    /disabled=\{\s*teamExecutionUnsupported \|\| entryFeeInvalid\s*\}/,
   );
   assert.doesNotMatch(source, /participantIds|seedingSeed|createBatch|close-registration/);
 });
@@ -372,8 +373,8 @@ test("Event Manager separates reusable Templates from dated Events", async () =>
   assert.match(source, />Templates</);
   assert.match(source, />Events</);
   assert.match(source, /lg:grid-cols-\[15rem_minmax\(0,1fr\)\]/);
-  assert.match(source, /Approve a Template/);
-  assert.match(source, /Create Events from it/);
+  assert.match(source, /Approve a\s+Template/);
+  assert.match(source, /Create\s+Events from it/);
   assert.doesNotMatch(source, /Competition operations/);
   assert.match(source, /activeTab === "templates"/);
   assert.match(source, /Template name/);

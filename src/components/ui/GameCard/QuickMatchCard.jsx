@@ -8,6 +8,8 @@ import InviteModal from "../../feature/InviteModal";
 import { selectIsStaffUtilityMode } from "../../../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../../../utils/staffUtilityMode";
 import { buildTournamentOfferingPath } from "../../../routes/routeConstants";
+import CompetitionEntryDialog from "../../competition/CompetitionEntryDialog.jsx";
+import JoinProgress from "../../competition/JoinProgress.jsx";
 
 const reasonLabels = {
   game_account_verification_required:
@@ -19,6 +21,7 @@ const reasonLabels = {
   staff_read_only:
     "Staff accounts can view this offering but cannot join from the player dashboard.",
   queue_activation_pending: "Queue entry is being activated for this format.",
+  capacity_full: "Every seat is filled and the Match is being generated.",
 };
 
 const formatMinorAmount = (amount, currency) => {
@@ -36,6 +39,7 @@ const formatMinorAmount = (amount, currency) => {
 const QuickMatchCard = ({ offering, showDetails = true }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
+  const [isEntryConfirmationOpen, setIsEntryConfirmationOpen] = useState(false);
   const [joined, setJoined] = useState(false);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const { joinQuickMatch, joiningOfferingId, joinStatus } =
@@ -45,8 +49,9 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
   const isJoining =
     joinStatus === "loading" && joiningOfferingId === offering._id;
 
-  const handleJoin = async () => {
+  const confirmJoin = async () => {
     if (isStaffUtilityMode) return;
+    setIsEntryConfirmationOpen(false);
     setErrorMessage("");
     if (offering.teamSize > 1) {
       setIsTeamPickerOpen(true);
@@ -83,10 +88,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
         <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
           <Detail
             label="Entry"
-            value={formatMinorAmount(
-              offering.entryFeeMinor,
-              offering.currency,
-            )}
+            value={formatMinorAmount(offering.entryFeeMinor, offering.currency)}
           />
           <Detail
             label="Prize"
@@ -98,6 +100,20 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
           <Detail label="Seats" value={offering.maxParticipants} />
         </dl>
 
+        <div className="mt-4">
+          <JoinProgress
+            capacity={
+              offering.joinProgress?.capacity || offering.maxParticipants
+            }
+            joined={offering.joinProgress?.joinedParticipants || 0}
+            status={
+              offering.joinProgress?.isFull
+                ? "Match generating"
+                : "Accepting players"
+            }
+          />
+        </div>
+
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-300">
           {offering.testMoney ? (
             <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-amber-100">
@@ -107,7 +123,10 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
           {[offering.mode, offering.map, offering.region]
             .filter(Boolean)
             .map((fact, index) => (
-              <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5" key={`${fact}-${index}`}>
+              <span
+                className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5"
+                key={`${fact}-${index}`}
+              >
                 {fact}
               </span>
             ))}
@@ -129,7 +148,10 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               <p className="text-xs leading-5 text-amber-100">
                 {STAFF_UTILITY_MESSAGE}
               </p>
-              <Link className="inline-flex text-sm font-bold text-cyan-200" to="/staff">
+              <Link
+                className="inline-flex text-sm font-bold text-cyan-200"
+                to="/staff"
+              >
                 Open Staff Workspace
               </Link>
             </div>
@@ -142,7 +164,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               <button
                 className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-60"
                 disabled={joinStatus === "loading"}
-                onClick={handleJoin}
+                onClick={() => setIsEntryConfirmationOpen(true)}
                 type="button"
               >
                 {isJoining
@@ -157,8 +179,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               {(reasons.length ? reasons : ["queue_activation_pending"]).map(
                 (reason) => (
                   <p className="text-xs leading-5 text-amber-100" key={reason}>
-                    {reasonLabels[reason] ||
-                      "This queue is not available yet."}
+                    {reasonLabels[reason] || "This queue is not available yet."}
                   </p>
                 ),
               )}
@@ -187,6 +208,20 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
           ) : null}
         </div>
       </article>
+
+      {!isStaffUtilityMode ? (
+        <CompetitionEntryDialog
+          actionLabel={offering.teamSize > 1 ? "Choose team" : "Proceed & join"}
+          currency={offering.currency}
+          entryFeeMinor={offering.entryFeeMinor}
+          isOpen={isEntryConfirmationOpen}
+          onClose={() => setIsEntryConfirmationOpen(false)}
+          onProceed={confirmJoin}
+          testMoney={offering.testMoney}
+          teamSize={offering.teamSize}
+          title={offering.title}
+        />
+      ) : null}
 
       {!isStaffUtilityMode ? (
         <InviteModal
@@ -224,6 +259,13 @@ QuickMatchCard.propTypes = {
     game: PropTypes.shape({ name: PropTypes.string }),
     gameKey: PropTypes.string.isRequired,
     map: PropTypes.string,
+    joinProgress: PropTypes.shape({
+      capacity: PropTypes.number.isRequired,
+      isFull: PropTypes.bool.isRequired,
+      joinedParticipants: PropTypes.number.isRequired,
+      percentage: PropTypes.number.isRequired,
+      roomStatus: PropTypes.string.isRequired,
+    }),
     maxParticipants: PropTypes.number.isRequired,
     mode: PropTypes.string.isRequired,
     prizePoolMinor: PropTypes.number.isRequired,

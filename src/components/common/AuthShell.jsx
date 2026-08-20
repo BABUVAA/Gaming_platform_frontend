@@ -13,9 +13,10 @@ const AuthShell = ({
   footer,
 }) => {
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#111827] text-slate-100">
-      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl gap-10 px-4 py-8 md:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-12">
-        <section className="relative overflow-hidden rounded-[32px] border border-slate-600 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.10),transparent_28%),linear-gradient(180deg,#253247,#1e293b)] p-6 shadow-[0_28px_70px_rgba(2,8,23,0.24)] md:p-10">
+    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.14),transparent_36%),radial-gradient(circle_at_bottom,rgba(251,191,36,0.10),transparent_34%),#111827] text-slate-100 md:min-h-[calc(100vh-5rem)]">
+      <div className="pointer-events-none absolute inset-x-6 top-12 h-48 rounded-full bg-cyan-300/5 blur-3xl lg:hidden" />
+      <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-end gap-10 px-0 py-0 sm:items-center sm:px-4 sm:py-8 md:min-h-[calc(100vh-5rem)] md:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-12">
+        <section className="relative hidden overflow-hidden rounded-[32px] border border-slate-600 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_32%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.10),transparent_28%),linear-gradient(180deg,#253247,#1e293b)] p-6 shadow-[0_28px_70px_rgba(2,8,23,0.24)] md:p-10 lg:block">
           <div className="relative">
             <p className="text-xs uppercase tracking-[0.32em] text-amber-300">
               {eyebrow}
@@ -77,7 +78,11 @@ const AuthShell = ({
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-slate-600 bg-slate-800/95 p-5 shadow-[0_24px_70px_rgba(2,8,23,0.24)] backdrop-blur md:p-8">
+        <section className="mx-auto max-h-[calc(100vh-4rem)] w-full max-w-xl overflow-y-auto rounded-t-[28px] border border-b-0 border-slate-600 bg-slate-800/95 p-5 shadow-[0_-24px_70px_rgba(2,8,23,0.42)] backdrop-blur-xl sm:max-h-none sm:rounded-[28px] sm:border-b sm:p-7 sm:shadow-[0_24px_70px_rgba(2,8,23,0.38)] lg:max-w-none lg:rounded-[32px] lg:p-8">
+          <div
+            aria-hidden="true"
+            className="mx-auto mb-4 h-1 w-12 rounded-full bg-slate-500 sm:hidden"
+          />
           {children}
           {footer ? (
             <div className="mt-6 border-t border-slate-700 pt-5 text-sm text-slate-400">

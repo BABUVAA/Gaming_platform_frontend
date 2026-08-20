@@ -65,6 +65,16 @@ to continue the project without reopening settled decisions.
   incomplete; do not add new direct API calls to feature components.
 - Backend authorization is final. Frontend route guards and hidden UI are only
   navigation helpers.
+- Competition entry UX refinement 2026-08-20: Quick Match list/detail reads
+  include server-owned live Room seat progress, and Event surfaces use
+  authoritative registration counts. Player Join/Register opens a responsive
+  confirmation sheet showing the exact free/paid terms and wallet hold; it
+  never requests a password or accepts a client-owned amount. Full Quick Match
+  capacity fails closed at backend eligibility. Mobile Login/Signup render as
+  bottom sheets anchored to the viewport while desktop retains the two-column
+  layout. Backend competition policy passed 93/93 and replica integration
+  90/90; frontend passed 97/97, full lint and the 561-module build; API docs
+  remain complete at 192/192. The 390x844 browser gate was console-clean.
 
 ### Do Not Change Without Recording It Here
 

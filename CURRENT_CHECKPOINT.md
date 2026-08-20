@@ -81,6 +81,17 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   competition unit 92/92, frontend 94/94 with full lint and a 559-module build,
   and API docs 192/192. The public localhost shell is console-clean;
   authenticated role-by-role desktop/mobile visual proof remains a follow-up.
+- Competition entry UX 2026-08-20: Quick Match discovery/detail and Platform
+  Admin offering management expose server-owned live seat progress; Event
+  cards, detail, and Event Manager Runs expose authoritative registration
+  progress. Player Join/Register actions open a responsive confirmation sheet
+  showing exact free/paid terms and the wallet hold before the existing
+  server-authorized command; they never request a password. Full Quick Match
+  capacity fails closed. Mobile Login/Signup are bottom sheets anchored to the
+  viewport; desktop keeps its two-column layout. Backend competition policy
+  passed 93/93 and replica integration 90/90; frontend passed 97/97, full lint
+  and the 561-module build; API docs remain complete at 192/192. A 390x844
+  browser gate found no overflow or console warnings/errors.
 - Latest deployment checkpoint 2026-08-16: the Vercel/Render deployment is the
   public **testing/staging platform**, not a live-money launch. Backend commit
   `7cf9442` is live on Render and `/readyz` returns 200 with MongoDB and Redis
