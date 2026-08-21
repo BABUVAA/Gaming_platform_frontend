@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -1160,14 +1160,18 @@ roster rows, 3 stages, 16 batches/Matches, 1,000 standings, 1,000 hold postings,
 fixture-wallet totals are INR 8,000 available, zero held, zero prize-pending,
 and INR 550 withdrawable.
 
-Owner-requested reset 2026-08-17: all shared-database Event, Tournament/Quick
+Owner-requested reset repeated 2026-08-21: all shared-database Event, Tournament/Quick
 Match, Match/Room, registration, competition audit, payment Transaction,
 wallet-hold, immutable ledger, prize and withdrawal records were deleted in one
 MongoDB transaction. All 1,007 User/player accounts and 1,005 Wallet identities
 were preserved; wallet balances and embedded histories were reset to zero.
 Games, verified game accounts, staff assignments and identity/security data
 were not removed. The Event/Quick Match catalogs are now intentionally empty
-and must be recreated for the next test cycle.
+and must be recreated for the next test cycle. The latest reset removed 1
+Template, 3 Runs, 10 reviews, 2 Event jobs, 1 Quick Match offering, 2 payment
+Transactions, 2 reconciliation jobs and 6 related staff-activity rows. The
+post-transaction audit found every targeted collection at zero and the Redis
+competition-key cleanup completed successfully.
 
 Verification: backend aggregate 318/318, competition integration 89/89,
 frontend state 84/84, full lint, 554-module production build, API documentation

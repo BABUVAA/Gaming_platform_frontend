@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -308,13 +308,17 @@ the 100-player Final used the dedicated Match Operator. Completion evidence was
 rows. Wallet totals are INR 8,000 available, zero entry-held, zero
 prize-pending, and INR 550 withdrawable.
 
-Owner-requested reset 2026-08-17: the full Event/Tournament/Quick Match runtime,
+Owner-requested reset repeated 2026-08-21: the full Event/Tournament/Quick Match runtime,
 all Matches/Rooms, registrations, competition reviews/audits, payment
 Transactions, holds, ledger rows, prizes and withdrawals are now empty. The
 reset preserved all 1,007 User/player accounts, all 1,005 Wallet identities,
 verified game accounts, Games and staff assignments; every Wallet balance and
 embedded transaction history is zero. Event Templates/Runs and Quick Match
-offerings must be created again for the next test cycle.
+offerings must be created again for the next test cycle. The latest transaction
+deleted 1 Template, 3 Runs, 10 reviews, 2 Event jobs, 1 Quick Match offering,
+2 payment Transactions, 2 reconciliation jobs and 6 related activity rows;
+post-reset verification found every targeted collection at zero and cleared
+the Redis competition keys.
 
 Latest gates: backend 318/318, competition integration 89/89, frontend 84/84,
 full lint, 554-module build, and API documentation 180/180. Production still
