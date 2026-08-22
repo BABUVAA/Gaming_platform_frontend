@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,7 +32,7 @@ const STATUS_PRESENTATION = Object.freeze({
     style: "bg-rose-100 text-rose-800",
   },
   check_in: {
-    label: "Check-in open",
+    label: "Schedule pending",
     style: "bg-amber-100 text-amber-800",
   },
   disputed: {
@@ -81,11 +81,17 @@ const Matches = () => {
   const activityStatus = useSelector(selectMatchActivityStatus);
   const isLoading = activityStatus === "loading";
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const request = dispatch(fetchPlayerMatchActivity());
     return () => request.abort();
   }, [competitionRevision, dispatch]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -98,10 +104,6 @@ const Matches = () => {
             ? "Read-only match history and lifecycle information."
             : "Everything you joined, in one place."}
         </h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-          Follow player availability and operator assignment without switching
-          between tournament, event, and room pages.
-        </p>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
@@ -127,6 +129,7 @@ const Matches = () => {
             {activity.map((item) => (
               <MatchActivityCard
                 item={item}
+                now={now}
                 key={`${item.kind || "match"}-${item._id}`}
               />
             ))}
@@ -157,28 +160,16 @@ const Matches = () => {
         </div>
 
         <div className="space-y-5">
-          <InfoPanel
-            icon={<FaUsers />}
-            title="Waiting for players"
-            text="Your place is confirmed while matchmaking fills the remaining player slots."
-          />
-          <InfoPanel
-            icon={<FaHeadset />}
-            title="Assigning operator"
-            text="When the room is full, an operator is assigned before any match action begins."
-          />
-          <InfoPanel
-            icon={<FaShieldAlt />}
-            title="Nothing starts early"
-            text="Check-in and room access remain unavailable until the operator assignment stage is complete."
-          />
+          <InfoPanel icon={<FaUsers />} title="Room fills" text="Your seat stays confirmed." />
+          <InfoPanel icon={<FaHeadset />} title="Operator + schedule" text="Game Manager confirms the start time." />
+          <InfoPanel icon={<FaShieldAlt />} title="Lobby at T-10" text="Room ID and password unlock ten minutes before start." />
         </div>
       </section>
     </div>
   );
 };
 
-const MatchActivityCard = ({ item }) => {
+const MatchActivityCard = ({ item, now }) => {
   const isQueue = item.kind === "queue";
   const status =
     STATUS_PRESENTATION[item.status] ||
@@ -190,6 +181,13 @@ const MatchActivityCard = ({ item }) => {
     isQueue && item.maxPlayers > 0
       ? Math.min(100, (item.joinedPlayers / item.maxPlayers) * 100)
       : 0;
+  const scheduledAt = item.scheduledFor ? new Date(item.scheduledFor).getTime() : null;
+  const revealAt = item.lobbyRevealAt ? new Date(item.lobbyRevealAt).getTime() : null;
+  const countdown = item.status === "scheduled" && revealAt && now < revealAt
+    ? `Lobby opens in ${formatCountdown(revealAt - now)}`
+    : item.status === "scheduled" && scheduledAt && now < scheduledAt
+      ? `Starts in ${formatCountdown(scheduledAt - now)}`
+      : null;
 
   return (
     <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -249,6 +247,7 @@ const MatchActivityCard = ({ item }) => {
                 "Assigning operator"}
             </span>
           </div>
+          {countdown ? <p className="mt-3 text-sm font-black text-cyan-200">{countdown}</p> : null}
           <Link
             className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-sky-200"
             to={`/dashboard/matches/${item._id}`}
@@ -260,6 +259,14 @@ const MatchActivityCard = ({ item }) => {
       )}
     </article>
   );
+};
+
+const formatCountdown = (milliseconds) => {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return [hours, minutes, remainder].map((value) => String(value).padStart(2, "0")).join(":");
 };
 
 const InfoPanel = ({ icon, text, title }) => (
@@ -286,9 +293,11 @@ MatchActivityCard.propTypes = {
     mode: PropTypes.string,
     offeringId: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
     scheduledFor: PropTypes.string,
+    lobbyRevealAt: PropTypes.string,
     status: PropTypes.string,
     title: PropTypes.string,
   }).isRequired,
+  now: PropTypes.number.isRequired,
 };
 
 InfoPanel.propTypes = {

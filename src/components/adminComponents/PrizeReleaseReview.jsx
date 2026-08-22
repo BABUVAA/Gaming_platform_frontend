@@ -292,7 +292,7 @@ const PrizeReviewPanel = ({ confirmed, item, onConfirmChange, onRelease, request
           {item.winners.map((winner) => (
             <div className="flex items-center justify-between gap-3 text-sm" key={winner.userId}>
               <span className="text-slate-200">
-                {winner.displayName}
+                #{winner.place || 1} {winner.displayName}
                 {winner.profileTag ? ` · ${winner.profileTag}` : ""}
               </span>
               <span className="font-black text-emerald-300">
@@ -371,6 +371,7 @@ const EvidenceValue = ({ label, value }) => (
 
 const winnerShape = PropTypes.shape({
   amountMinor: PropTypes.number.isRequired,
+  place: PropTypes.number,
   displayName: PropTypes.string.isRequired,
   profileTag: PropTypes.string,
   userId: PropTypes.string.isRequired,

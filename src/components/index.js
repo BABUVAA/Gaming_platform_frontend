@@ -25,13 +25,11 @@ export { default as Toast } from "./ui/Toast/Toast.jsx";
 //my components
 
 //admin components
-export { default as TournamentManagement } from "./adminComponents/tournamentManagement/TournamentManagement.jsx";
 export { default as RewardManagement } from "./adminComponents/RewardManagement.jsx";
 export { default as VerificationManagement } from "./adminComponents/VerificationManagement.jsx";
 export { default as RoleManagement } from "./adminComponents/RoleManagement.jsx";
 export { default as GameCatalog } from "./adminComponents/GameCatalog.jsx";
 export { default as EventReviewQueue } from "./adminComponents/EventReviewQueue.jsx";
-export { default as QuickMatchOfferingManagement } from "./adminComponents/QuickMatchOfferingManagement.jsx";
 export { default as PrizeReleaseReview } from "./adminComponents/PrizeReleaseReview.jsx";
 export { default as WithdrawalReview } from "./adminComponents/WithdrawalReview.jsx";
 export { default as SecurityAttention } from "./adminComponents/SecurityAttention.jsx";

@@ -12,6 +12,7 @@ export const ROUTES = {
   STAFF: "/staff",
   STAFF_ACCESS_CONTROL: "/staff/access-control",
   EVENT_MANAGER: "/staff/events",
+  TOURNAMENT_MANAGER: "/staff/tournaments",
   GAME_MANAGER: "/staff/games",
   OPERATIONS: "/staff/operations",
   OPERATIONS_LEGACY: "/dashboard/operations",
@@ -34,6 +35,14 @@ export const ROUTES = {
   TOURNAMENT_OFFERING_DETAILS: "/dashboard/tournaments/offering/:id",
   HOST_TOURNAMENT_PROPOSAL: "/dashboard/host/tournament-proposal",
 };
+
+export const STAFF_ROUTE_SEGMENTS = Object.freeze({
+  ACCESS_CONTROL: "access-control",
+  EVENTS: "events",
+  GAMES: "games",
+  OPERATIONS: "operations",
+  TOURNAMENTS: "tournaments",
+});
 
 // Child route segments are kept beside public URLs so dashboard children can
 // stay aligned with their full-page links without repeating string literals.

@@ -9,10 +9,10 @@ import {
   FiSlash,
 } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchCatalogGames } from "../../store/slices/adminSlice";
 import {
   createQuickMatchOffering,
   fetchQuickMatchOfferings,
+  fetchTournamentManagerGames,
   updateQuickMatchOffering,
 } from "../../store/slices/quickMatchOfferingSlice";
 import JoinProgress from "../competition/JoinProgress.jsx";
@@ -26,6 +26,8 @@ const createEmptyForm = () => ({
   maxParticipants: "",
   mode: "",
   prizePoolMinor: "0",
+  rewardPolicy: "winner_split",
+  placementRewards: [{ place: 1, amountMinor: "0" }],
   region: "india",
   schedulePolicy: "on_demand",
   teamSize: "1",
@@ -39,6 +41,25 @@ const statusStyles = {
   retired: "border-rose-300/25 bg-rose-300/10 text-rose-100",
 };
 
+const formatTeamSize = (teamSize) => {
+  const size = Number(teamSize);
+  if (size === 1) return "Solo";
+  if (size === 2) return "Duo";
+  if (size === 4) return "Squad";
+  return `${size}-player team`;
+};
+
+const formatOfferingFacts = (offering) => {
+  const labels = [offering.mode, offering.map, formatTeamSize(offering.teamSize)]
+    .filter(Boolean)
+    .reduce((unique, label) => {
+      const key = String(label).toLowerCase();
+      if (!unique.has(key)) unique.set(key, label);
+      return unique;
+    }, new Map());
+  return `${[...labels.values()].join(" / ")} / ${offering.maxParticipants} seats`;
+};
+
 const toForm = (offering) => ({
   currency: offering.currency,
   entryFeeMinor: String(offering.entryFeeMinor),
@@ -48,6 +69,9 @@ const toForm = (offering) => ({
   maxParticipants: String(offering.maxParticipants),
   mode: offering.mode,
   prizePoolMinor: String(offering.prizePoolMinor),
+  rewardPolicy: offering.rewardPolicy || "winner_split",
+  placementRewards: (offering.placementRewards?.length ? offering.placementRewards : [{ place: 1, amountMinor: offering.prizePoolMinor }])
+    .map((row) => ({ place: row.place, amountMinor: String(row.amountMinor) })),
   region: offering.region,
   schedulePolicy: offering.schedulePolicy,
   teamSize: String(offering.teamSize),
@@ -65,6 +89,11 @@ const OfferingForm = ({
 }) => {
   const selectedGame = games.find((game) => game._id === form.gameId);
   const isPaid = form.entryPolicy === "paid";
+  const usesPlacements = form.rewardPolicy === "placement";
+  const updatePlacement = (index, value) => onChange(
+    "placementRewards",
+    form.placementRewards.map((row, rowIndex) => rowIndex === index ? { ...row, amountMinor: value } : row),
+  );
 
   return (
     <form
@@ -77,11 +106,6 @@ const OfferingForm = ({
             Tournament setup
           </p>
           <h2 className="mt-1 text-xl font-black text-white">{title}</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            A fixed-capacity tournament creates one match when it fills. Fees
-            and prizes are configured in minor units; no player charge is made
-            by this screen.
-          </p>
         </div>
         {onCancel && (
           <button
@@ -199,7 +223,13 @@ const OfferingForm = ({
             onChange={(event) => onChange("entryFeeMinor", event.target.value)}
           />
         </Field>
-        <Field label={`Prize pool (${form.currency} minor units)`}>
+        <Field label="Reward rule">
+          <select value={form.rewardPolicy} onChange={(event) => onChange("rewardPolicy", event.target.value)}>
+            <option value="winner_split">Split one pool between winners</option>
+            <option value="placement">Place-wise rewards</option>
+          </select>
+        </Field>
+        {!usesPlacements ? <Field label={`Prize pool (${form.currency} minor units)`}>
           <input
             min="0"
             required
@@ -207,7 +237,20 @@ const OfferingForm = ({
             value={form.prizePoolMinor}
             onChange={(event) => onChange("prizePoolMinor", event.target.value)}
           />
-        </Field>
+        </Field> : <div className="md:col-span-2 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-black text-white">Place rewards ({form.currency} minor units)</p>
+            <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold" disabled={form.placementRewards.length >= 100} onClick={() => onChange("placementRewards", [...form.placementRewards, { place: form.placementRewards.length + 1, amountMinor: "0" }])} type="button">Add place</button>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {form.placementRewards.map((row, index) => <label className="flex items-center gap-3 rounded-xl border border-slate-800 p-3 text-sm font-bold" key={row.place}>
+              <span className="w-16 text-cyan-200">#{row.place}</span>
+              <input className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white" min="1" required type="number" value={row.amountMinor} onChange={(event) => updatePlacement(index, event.target.value)} />
+              {form.placementRewards.length > 1 ? <button aria-label={`Remove place ${row.place}`} className="text-rose-200" onClick={() => onChange("placementRewards", form.placementRewards.filter((_, rowIndex) => rowIndex !== index).map((item, rowIndex) => ({ ...item, place: rowIndex + 1 })))} type="button">Remove</button> : null}
+            </label>)}
+          </div>
+          {Number(form.teamSize) > 1 ? <p className="mt-3 text-xs text-slate-400">Each place is a team total and is split across that team&apos;s verified members.</p> : null}
+        </div>}
         <Field label="Currency">
           <input
             maxLength="3"
@@ -268,21 +311,21 @@ Field.propTypes = {
 
 const QuickMatchOfferingManagement = () => {
   const dispatch = useDispatch();
-  const { catalogGames = [] } = useSelector((state) => state.admin);
-  const { error, offerings, status } = useSelector(
+  const { error, games, offerings, status } = useSelector(
     (state) => state.quickMatchOfferings,
   );
   const [form, setForm] = useState(createEmptyForm);
   const [editing, setEditing] = useState(null);
   const [mode, setMode] = useState("list");
+  const [section, setSection] = useState("overview");
   const [saving, setSaving] = useState(false);
   const activeGames = useMemo(
-    () => catalogGames.filter((game) => game.status === "active"),
-    [catalogGames],
+    () => games.filter((game) => game.status === "active"),
+    [games],
   );
 
   useEffect(() => {
-    const gamesRequest = dispatch(fetchCatalogGames());
+    const gamesRequest = dispatch(fetchTournamentManagerGames());
     const offeringRequest = dispatch(fetchQuickMatchOfferings());
     const refreshTimer = window.setInterval(
       () => dispatch(fetchQuickMatchOfferings()),
@@ -308,6 +351,7 @@ const QuickMatchOfferingManagement = () => {
     setEditing(null);
     setForm(createEmptyForm());
     setMode("list");
+    setSection("overview");
   };
   const submit = async (event) => {
     event.preventDefault();
@@ -318,6 +362,9 @@ const QuickMatchOfferingManagement = () => {
         form.entryPolicy === "free" ? 0 : Number(form.entryFeeMinor),
       maxParticipants: Number(form.maxParticipants),
       prizePoolMinor: Number(form.prizePoolMinor),
+      placementRewards: form.rewardPolicy === "placement"
+        ? form.placementRewards.map((row, index) => ({ place: index + 1, amountMinor: Number(row.amountMinor) }))
+        : [],
       status: requestedStatus,
       teamSize: Number(form.teamSize),
     };
@@ -357,23 +404,71 @@ const QuickMatchOfferingManagement = () => {
     setMode("edit");
   };
 
-  if (mode !== "list")
-    return (
-      <OfferingForm
-        form={form}
-        games={activeGames}
-        onCancel={closeForm}
-        onChange={changeForm}
-        onSubmit={submit}
-        saving={saving}
-        title={
-          editing ? "Edit paused or draft tournament" : "Create tournament"
-        }
-      />
-    );
+  const openSection = (nextSection) => {
+    setEditing(null);
+    setForm(createEmptyForm());
+    setSection(nextSection);
+    setMode(nextSection === "create" ? "create" : "list");
+  };
+  const visibleOfferings = offerings.filter((offering) => {
+    if (section === "ready")
+      return ["draft", "paused"].includes(offering.status);
+    if (section === "live") return offering.status === "active";
+    if (section === "history") return offering.status === "retired";
+    return true;
+  });
+  const sections = [
+    { id: "overview", label: "Overview", detail: `${offerings.length} tournaments` },
+    { id: "create", label: "Create", detail: `${activeGames.length} assigned games` },
+    { id: "ready", label: "Drafts & paused", detail: `${offerings.filter((item) => ["draft", "paused"].includes(item.status)).length} waiting` },
+    { id: "live", label: "Live tournaments", detail: `${offerings.filter((item) => item.status === "active").length} active` },
+    { id: "history", label: "History", detail: `${offerings.filter((item) => item.status === "retired").length} retired` },
+  ];
 
   return (
-    <section className="space-y-5">
+    <section className="grid items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4 lg:sticky lg:top-6">
+        <div className="border-b border-slate-800 px-2 pb-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+            Role dashboard
+          </p>
+          <h1 className="mt-1 text-xl font-black text-white">
+            Tournament Manager
+          </h1>
+        </div>
+        <nav aria-label="Tournament Manager responsibilities" className="mt-3 grid gap-2">
+          {sections.map((item) => (
+            <button
+              aria-current={section === item.id ? "page" : undefined}
+              className={
+                section === item.id
+                  ? "rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left"
+                  : "rounded-2xl border border-transparent px-4 py-3 text-left hover:bg-slate-900"
+              }
+              key={item.id}
+              onClick={() => openSection(item.id)}
+              type="button"
+            >
+              <span className="block font-black text-white">{item.label}</span>
+              <span className="mt-1 block text-xs text-slate-500">{item.detail}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="min-w-0 space-y-5">
+      {mode !== "list" ? (
+        <OfferingForm
+          form={form}
+          games={activeGames}
+          onCancel={closeForm}
+          onChange={changeForm}
+          onSubmit={submit}
+          saving={saving}
+          title={editing ? "Edit paused or draft tournament" : "Create tournament"}
+        />
+      ) : (
+        <>
       <header className="rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.14),_transparent_38%),#07111f] p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -383,10 +478,6 @@ const QuickMatchOfferingManagement = () => {
             <h2 className="mt-1 text-xl font-black text-white">
               Tournament Management
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Publish fixed-seat tournaments for active catalog games. A live
-              tournament must be paused before its competition rules change.
-            </p>
           </div>
           <div className="flex gap-2">
             <button
@@ -399,7 +490,7 @@ const QuickMatchOfferingManagement = () => {
             </button>
             <button
               className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950"
-              onClick={() => setMode("create")}
+              onClick={() => openSection("create")}
               type="button"
             >
               <FiPlus /> Create tournament
@@ -413,7 +504,7 @@ const QuickMatchOfferingManagement = () => {
         </p>
       )}
       <div className="grid gap-4 xl:grid-cols-2">
-        {offerings.map((offering) => (
+        {visibleOfferings.map((offering) => (
           <article
             className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5"
             key={offering._id}
@@ -427,10 +518,7 @@ const QuickMatchOfferingManagement = () => {
                   {offering.title}
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  {offering.mode}
-                  {offering.map ? ` / ${offering.map}` : ""} /{" "}
-                  {offering.teamSize}-player teams / {offering.maxParticipants}{" "}
-                  seats
+                  {formatOfferingFacts(offering)}
                 </p>
               </div>
               <span
@@ -458,8 +546,10 @@ const QuickMatchOfferingManagement = () => {
                 }
               />
               <Detail
-                label="Prize pool"
-                value={`${offering.prizePoolMinor} ${offering.currency} minor`}
+                label={offering.rewardPolicy === "placement" ? "Place rewards" : "Prize pool"}
+                value={offering.rewardPolicy === "placement"
+                  ? `${offering.placementRewards?.length || 0} places / ${offering.prizePoolMinor} ${offering.currency} minor`
+                  : `${offering.prizePoolMinor} ${offering.currency} minor`}
               />
             </dl>
             <div className="mt-4">
@@ -515,12 +605,14 @@ const QuickMatchOfferingManagement = () => {
             Loading tournaments...
           </p>
         )}
-        {status !== "loading" && offerings.length === 0 && (
+        {status !== "loading" && visibleOfferings.length === 0 && (
           <p className="rounded-3xl border border-dashed border-slate-700 bg-slate-950/70 p-5 text-sm text-slate-400">
-            No tournaments exist yet. Create a draft for an active catalog game,
-            then activate it when ready.
+            No tournaments are available in this section.
           </p>
         )}
+      </div>
+        </>
+      )}
       </div>
     </section>
   );

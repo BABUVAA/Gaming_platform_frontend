@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import JoinProgress from "./JoinProgress.jsx";
+import { getGamePresentation } from "../../config/gamePresentation.js";
 
 const clock = (milliseconds) => {
   const total = Math.max(0, Math.floor(milliseconds / 1000));
@@ -44,9 +45,24 @@ const EventCompetitionCard = ({ busy, event, onRegister, staffReadOnly }) => {
     () => event.rewardTerms?.placements || [],
     [event.rewardTerms],
   );
+  const presentation = getGamePresentation(event.game?.key);
 
   return (
-    <article className="rounded-2xl border border-slate-700 bg-slate-900/70 p-5 shadow-[0_14px_34px_rgba(2,8,23,0.18)]">
+    <article className="group overflow-hidden rounded-[26px] border border-slate-700 bg-slate-800 shadow-[0_18px_45px_rgba(2,8,23,0.22)] transition duration-300 hover:-translate-y-1 hover:border-cyan-400/50">
+      <div className="relative h-44 overflow-hidden">
+        <img
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-[68%_center] transition duration-500 group-hover:scale-105"
+          src={presentation.image}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/15 to-transparent" />
+        <div className="absolute inset-x-4 top-4 flex items-start justify-between gap-3">
+          <span className="rounded-full border border-white/20 bg-slate-950/75 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur">Event</span>
+          <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] backdrop-blur ${timeline.live ? "border-rose-300/40 bg-rose-500/20 text-rose-100" : "border-cyan-300/30 bg-slate-950/75 text-cyan-100"}`}>{timeline.label}</span>
+        </div>
+        <span className="absolute bottom-4 left-4 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">{presentation.label}</span>
+      </div>
+      <div className="p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">
@@ -60,11 +76,6 @@ const EventCompetitionCard = ({ busy, event, onRegister, staffReadOnly }) => {
             {event.format?.map ? ` / ${event.format.map}` : ""}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${timeline.live ? "border-rose-400/40 bg-rose-400/10 text-rose-200" : "border-slate-600 text-slate-300"}`}
-        >
-          {timeline.label}
-        </span>
       </div>
 
       {timeline.target ? (
@@ -175,6 +186,7 @@ const EventCompetitionCard = ({ busy, event, onRegister, staffReadOnly }) => {
           Staff read-only view
         </p>
       ) : null}
+      </div>
     </article>
   );
 };

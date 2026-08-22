@@ -42,7 +42,7 @@ const RankedStagePlanEditor = ({ capacity, onChange, stages }) => {
     const prior = stages.at(-2) || {
       advanceCount: "10",
       batchSpacingMinutes: "0",
-      checkInMinutesBefore: "15",
+      checkInMinutesBefore: "0",
       participantsPerMatch: "100",
       stageDelayMinutes: "0",
     };
@@ -97,7 +97,6 @@ const RankedStagePlanEditor = ({ capacity, onChange, stages }) => {
                   <StageNumberInput label="Top players per room" max={99} min={1} onChange={(value) => updateStage(index, "advanceCount", value)} value={stage.advanceCount} />
                 )}
                 <StageNumberInput label="Room spacing (minutes)" max={1440} min={0} onChange={(value) => updateStage(index, "batchSpacingMinutes", value)} value={stage.batchSpacingMinutes} />
-                <StageNumberInput label="Check-in before (minutes)" max={1440} min={0} onChange={(value) => updateStage(index, "checkInMinutesBefore", value)} value={stage.checkInMinutesBefore} />
                 <StageNumberInput label="Delay after prior round" max={10080} min={0} onChange={(value) => updateStage(index, "stageDelayMinutes", value)} value={stage.stageDelayMinutes} />
               </div>
             </article>

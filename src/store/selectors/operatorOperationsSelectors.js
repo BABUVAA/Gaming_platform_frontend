@@ -2,6 +2,8 @@ export const selectOperatorDashboard = (state) =>
   state.operatorOperations.dashboard;
 export const selectOperatorMatches = (state) =>
   state.operatorOperations.matches;
+export const selectOperatorActiveRooms = (state) =>
+  state.operatorOperations.rooms;
 export const selectUnassignedOperatorMatches = (state) =>
   state.operatorOperations.unassigned;
 export const selectOperatorWorkspaceStatus = (state) =>

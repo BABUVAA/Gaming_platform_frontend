@@ -4,13 +4,16 @@ import test from "node:test";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import quickMatchOfferingSlice, {
+  fetchQuickMatchOfferings,
   fetchPlayerQuickMatchOfferingById,
+  fetchPlayerQuickMatchLeaderboard,
   fetchPlayerQuickMatchOfferings,
 } from "../src/store/slices/quickMatchOfferingSlice.js";
 import {
   selectPlayerQuickMatchDetail,
   selectPlayerQuickMatchDetailStatus,
   selectPlayerQuickMatchError,
+  selectPlayerQuickMatchLeaderboard,
   selectPlayerQuickMatchOfferings,
   selectPlayerQuickMatchStatus,
 } from "../src/store/selectors/quickMatchOfferingSelectors.js";
@@ -101,6 +104,12 @@ test("paid-entry release blockers have a deliberate player explanation", async (
 
   assert.match(source, /paid_entry_unavailable:/);
   assert.match(source, /payment release checks are incomplete/);
+  assert.match(source, /offering\.membership\?\.isJoined/);
+  assert.match(source, /Joined/);
+  assert.match(source, /already_joined/);
+  assert.match(source, /status === "operator_assigned"\) return "Waiting for schedule"/);
+  assert.match(source, /status === "scheduled"\) return "Scheduled"/);
+  assert.match(source, /status === "live"\) return "Live"/);
 });
 
 test("direct offering details use the canonical ID route independent of list position", async () => {
@@ -135,6 +144,32 @@ test("direct offering details use the canonical ID route independent of list pos
       selectPlayerQuickMatchDetail(store.getState(), "offering-101").gameKey,
       "future-arena",
     );
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("joined-player leaderboard uses the private offering route and stores only the room projection", async () => {
+  const originalAdapter = api.defaults.adapter;
+  let request;
+  api.defaults.adapter = async (config) => {
+    request = config;
+    return {
+      config,
+      data: { data: { room: { id: "room-1", players: [{ seat: 1, username: "joined_player" }] } } },
+      headers: {},
+      status: 200,
+      statusText: "OK",
+    };
+  };
+  try {
+    const store = configureStore({ reducer: { quickMatchOfferings: quickMatchOfferingSlice.reducer } });
+    await store.dispatch(fetchPlayerQuickMatchLeaderboard("offering-1")).unwrap();
+    assert.equal(request.method, "get");
+    assert.equal(request.url, "/api/player/quick-matches/offering-1/leaderboard");
+    assert.deepEqual(selectPlayerQuickMatchLeaderboard(store.getState(), "offering-1").players, [
+      { seat: 1, username: "joined_player" },
+    ]);
   } finally {
     api.defaults.adapter = originalAdapter;
   }
@@ -175,6 +210,44 @@ test("StrictMode remount keeps the replacement detail request authoritative", ()
   );
   assert.equal(fulfilled.playerDetailStatusById[offeringId], "succeeded");
   assert.equal(fulfilled.playerDetails[offeringId].gameKey, "bgmi");
+});
+
+test("StrictMode remount does not surface a stale admin-list abort", () => {
+  const firstPending = reduce(
+    undefined,
+    fetchQuickMatchOfferings.pending("admin-request-1"),
+  );
+  const replacementPending = reduce(
+    firstPending,
+    fetchQuickMatchOfferings.pending("admin-request-2"),
+  );
+  const staleAbort = reduce(
+    replacementPending,
+    fetchQuickMatchOfferings.rejected(
+      { name: "AbortError", message: "Aborted" },
+      "admin-request-1",
+    ),
+  );
+
+  assert.equal(staleAbort.status, "loading");
+  assert.equal(staleAbort.error, null);
+  assert.equal(staleAbort.requestId, "admin-request-2");
+});
+
+test("Tournament Manager cards use concise team format labels", async () => {
+  const source = await readFile(
+    new URL(
+      "../src/components/adminComponents/QuickMatchOfferingManagement.jsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(source, /if \(size === 1\) return "Solo"/);
+  assert.match(source, /if \(size === 2\) return "Duo"/);
+  assert.match(source, /new Map\(\)/);
+  assert.doesNotMatch(source, /\{offering\.teamSize\}-player teams/);
+  assert.doesNotMatch(source, /Publish fixed-seat tournaments/);
 });
 
 test("team picker uses a stable empty selector result", async () => {

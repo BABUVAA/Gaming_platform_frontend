@@ -3,11 +3,9 @@ import test from "node:test";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import matchActivitySlice, {
-  checkInPlayerMatch,
   fetchPlayerMatch,
   fetchPlayerMatchActivity,
   raisePlayerMatchDispute,
-  submitPlayerMatchResult,
 } from "../src/store/slices/matchActivitySlice.js";
 
 const createStore = (role) =>
@@ -76,36 +74,32 @@ test("player Match detail uses the protected canonical read path", async () => {
   }
 });
 
-test("result submission sends only the player result contract", async () => {
+test("player dispute sends only its bounded reason after operator-owned results", async () => {
   const originalAdapter = api.defaults.adapter;
   let request;
   api.defaults.adapter = async (config) => {
     request = config;
     return response(config, {
-      data: { _id: "match-1", status: "result_pending" },
-      message: "Result submitted.",
+      data: { _id: "match-1", status: "disputed" },
+      message: "Dispute raised.",
     });
   };
 
   try {
     const store = createStore();
     await store.dispatch(
-      submitPlayerMatchResult({
+      raisePlayerMatchDispute({
         matchId: "match-1",
-        proofNote: "Recorded stream",
-        score: "2-1",
-        winnerIds: ["player-1"],
+        reason: "The operator result needs review.",
       }),
     );
 
     assert.equal(request.method, "patch");
-    assert.equal(request.url, "/api/matches/match-1/result");
+    assert.equal(request.url, "/api/matches/match-1/dispute");
     assert.deepEqual(JSON.parse(request.data), {
-      proofNote: "Recorded stream",
-      score: "2-1",
-      winnerIds: ["player-1"],
+      reason: "The operator result needs review.",
     });
-    assert.equal(store.getState().matchActivity.selectedMatch.status, "result_pending");
+    assert.equal(store.getState().matchActivity.selectedMatch.status, "disputed");
   } finally {
     api.defaults.adapter = originalAdapter;
   }
@@ -122,15 +116,6 @@ test("staff utility mode sends no Match participation command", async () => {
   try {
     const store = createStore("staff");
     const actions = await Promise.all([
-      store.dispatch(checkInPlayerMatch({ matchId: "match-1" })),
-      store.dispatch(
-        submitPlayerMatchResult({
-          matchId: "match-1",
-          proofNote: "proof",
-          score: "1-0",
-          winnerIds: ["player-1"],
-        }),
-      ),
       store.dispatch(
         raisePlayerMatchDispute({ matchId: "match-1", reason: "reason" }),
       ),

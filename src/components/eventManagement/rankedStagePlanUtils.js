@@ -61,7 +61,7 @@ export const buildDefaultRankedStages = (capacity) => {
     stages.push({
       advanceCount: String(topN),
       batchSpacingMinutes: "0",
-      checkInMinutesBefore: "15",
+      checkInMinutesBefore: "0",
       participantsPerMatch: String(roomSize),
       stageDelayMinutes: "0",
     });
@@ -70,7 +70,7 @@ export const buildDefaultRankedStages = (capacity) => {
   stages.push({
     advanceCount: "0",
     batchSpacingMinutes: "0",
-    checkInMinutesBefore: "15",
+    checkInMinutesBefore: "0",
     participantsPerMatch: String(Math.min(100, remaining)),
     stageDelayMinutes: "0",
   });

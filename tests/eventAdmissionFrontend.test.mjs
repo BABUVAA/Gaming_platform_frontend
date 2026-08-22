@@ -20,10 +20,13 @@ import eventInvitationSlice, {
 } from "../src/store/slices/eventInvitationSlice.js";
 import eventStageSlice, {
   cancelEventStageGeneration,
-  closeEventRegistration,
   fetchEventExecutionRuns,
   fetchEventStages,
+  fetchManagedEventStages,
+  fetchManagedRoundResults,
   fetchAdminEventStandings,
+  configureManagedEventRound,
+  processManagedEventRound,
   retryEventStageAdvancement,
   retryEventStageGeneration,
 } from "../src/store/slices/eventStageSlice.js";
@@ -33,17 +36,6 @@ import eventManagementSlice, {
   fetchManagedEventOperations,
   fetchManagedEventRegistrations,
 } from "../src/store/slices/eventManagementSlice.js";
-import eventStageAdjustmentSlice, {
-  fetchManagedStageAdjustments,
-  fetchStageAdjustmentReviewQueue,
-  proposeManagedStageAdjustment,
-  reviewStageAdjustment,
-} from "../src/store/slices/eventStageAdjustmentSlice.js";
-import eventRoundPlanSlice, {
-  fetchEventRoundPlanQueue,
-  proposeEventRoundPlan,
-  reviewEventRoundPlan,
-} from "../src/store/slices/eventRoundPlanSlice.js";
 
 const response = (config, data) => ({
   config,
@@ -310,7 +302,9 @@ test("Event governance and Compete UI disclose authoritative entry terms without
   assert.match(reviewSource, /aria-label="Event Management sections"/);
   assert.match(reviewSource, /label="Approvals"/);
   assert.match(reviewSource, /label="Invitations"/);
-  assert.match(reviewSource, /label="Operations & Reports"/);
+  assert.match(reviewSource, /label="Results & Rewards"/);
+  assert.match(reviewSource, /<EventStageManagement \/>/);
+  assert.doesNotMatch(reviewSource, /Operations & Reports|RoundPlanReviewQueue|StageAdjustmentReviewQueue/);
   assert.match(reviewSource, /activeView === "approvals"/);
   assert.match(reviewSource, /canReviewEventProposal\(\{ currentUser, item \}\)/);
   assert.match(reviewSource, /if \(!selected \|\| !canReview\(selected\.item\)\) return/);
@@ -323,10 +317,10 @@ test("Event governance and Compete UI disclose authoritative entry terms without
   assert.doesNotMatch(playerSource, /amountMinor|entryFeeMinor[\s\S]*registerForEvent\([^)]*,/);
 });
 
-test("Event creation omits round rules and post-registration setup owns the reviewed plan", async () => {
+test("Event creation omits round rules and Event Manager owns sequential setup", async () => {
   const [source, planSource] = await Promise.all([
     readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/components/eventManagement/PostRegistrationRoundPlan.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/eventManagement/SequentialRoundControl.jsx", import.meta.url), "utf8"),
   ]);
 
   for (const field of [
@@ -338,9 +332,10 @@ test("Event creation omits round rules and post-registration setup owns the revi
     assert.match(source, new RegExp(field));
   }
   assert.doesNotMatch(source, /executionPlan:/);
-  assert.match(planSource, /registration_closed/);
   assert.match(planSource, /registrationSummary\?\.registeredCount/);
-  assert.match(planSource, /format: "ranked_stages"/);
+  assert.match(planSource, /Configure Round/);
+  assert.match(planSource, /Promote per room/);
+  assert.match(planSource, /Final round/);
   assert.doesNotMatch(planSource, /playerIds|seedingSeed/);
   assert.match(source, /selectedRunTemplate\?\.teamSize > 1/);
   assert.match(planSource, /participantsPerMatch/);
@@ -359,7 +354,7 @@ test("Event creation omits round rules and post-registration setup owns the revi
     runDraftSection,
     /disabled=\{\s*teamExecutionUnsupported \|\| entryFeeInvalid\s*\}/,
   );
-  assert.doesNotMatch(source, /participantIds|seedingSeed|createBatch|close-registration/);
+  assert.doesNotMatch(`${source}\n${planSource}`, /participantIds|seedingSeed|createBatch|close-registration/);
 });
 
 test("Event Manager separates reusable Templates from dated Events", async () => {
@@ -439,7 +434,6 @@ test("Event Manager Run draft sends timing, admission, entry, and rewards withou
   let request;
   const payload = {
     admissionPolicy: "open",
-    registrationCapacity: 16,
     entryTerms: {
       currency: "INR",
       entryFeeMinor: 200,
@@ -472,6 +466,7 @@ test("Event Manager Run draft sends timing, admission, entry, and rewards withou
     assert.deepEqual(decodeBody(request), payload);
     assert.equal("formatSnapshot" in decodeBody(request), false);
     assert.equal("executionPlan" in decodeBody(request), false);
+    assert.equal("registrationCapacity" in decodeBody(request), false);
     assert.deepEqual(decodeBody(request).entryTerms, {
       currency: "INR",
       entryFeeMinor: 200,
@@ -483,7 +478,7 @@ test("Event Manager Run draft sends timing, admission, entry, and rewards withou
   }
 });
 
-test("Platform Admin stage read and idempotent close use server-owned empty-body contracts", async () => {
+test("Platform Admin stage evidence and governed recovery use server-owned contracts", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
   const runId = "64e000000000000000000099";
@@ -535,7 +530,6 @@ test("Platform Admin stage read and idempotent close use server-owned empty-body
     });
     await store.dispatch(fetchEventExecutionRuns());
     await store.dispatch(fetchEventStages({ runId }));
-    await store.dispatch(closeEventRegistration(runId));
     await store.dispatch(retryEventStageGeneration(runId));
     await store.dispatch(
       cancelEventStageGeneration({
@@ -549,7 +543,6 @@ test("Platform Admin stage read and idempotent close use server-owned empty-body
       [
         ["get", "/api/admin/events/execution-runs"],
         ["get", `/api/admin/events/runs/${runId}/stages`],
-        ["post", `/api/admin/events/runs/${runId}/close-registration`],
         ["post", `/api/admin/events/runs/${runId}/stages/retry`],
         ["post", `/api/admin/events/runs/${runId}/cancel-generation`],
       ],
@@ -557,13 +550,12 @@ test("Platform Admin stage read and idempotent close use server-owned empty-body
     assert.deepEqual(requests[0].params, { limit: 25 });
     assert.deepEqual(requests[1].params, { batchLimit: 25 });
     assert.deepEqual(decodeBody(requests[2]), {});
-    assert.deepEqual(decodeBody(requests[3]), {});
-    assert.deepEqual(decodeBody(requests[4]), {
+    assert.deepEqual(decodeBody(requests[3]), {
       reason: "Roster size cannot execute safely.",
     });
     assert.equal(
-      store.getState().eventStages.overviewByRunId[runId].stages[0].id,
-      "stage-1",
+      store.getState().eventStages.overviewByRunId[runId].run.status,
+      "cancelled",
     );
   } finally {
     api.defaults.adapter = originalAdapter;
@@ -571,22 +563,20 @@ test("Platform Admin stage read and idempotent close use server-owned empty-body
 });
 
 test("stage UI never sends client participants, seeds, batches, or job internals", async () => {
-  const source = await readFile(
-    new URL(
+  const [source, managerSource] = await Promise.all([
+    readFile(new URL(
       "../src/components/adminComponents/EventStageManagement.jsx",
       import.meta.url,
-    ),
-    "utf8",
-  );
+    ), "utf8"),
+    readFile(new URL("../src/components/eventManagement/SequentialRoundControl.jsx", import.meta.url), "utf8"),
+  ]);
 
-  assert.match(source, /closeEventRegistration\(selectedRunId\)/);
+  assert.match(source, /Results and rewards/);
   assert.match(source, /fetchEventExecutionRuns/);
-  assert.match(source, /retryEventStageGeneration/);
-  assert.match(source, /generation\?\.cancelAvailable/);
-  assert.match(source, /cancelEventStageGeneration\(\{ reason, runId: selectedRunId \}\)/);
-  assert.match(source, /server creates[\s\S]*seed, batch, and Match/);
+  assert.doesNotMatch(source, /closeEventRegistration|Configure Round|Retry advancement/);
+  assert.match(managerSource, /Server-owned scope, roster, and result evidence/);
   assert.doesNotMatch(
-    source,
+    `${source}\n${managerSource}`,
     /participantIds|seedingSeed|leaseOwner|jobId|createBatch/,
   );
 });
@@ -828,93 +818,64 @@ test("Event refresh removes standings that are no longer completed and owned", (
   assert.equal(next.standingsStatusById[runId], undefined);
 });
 
-test("post-registration round planning sends only the reviewed plan and server-owned identities", async () => {
+test("Event Manager configures and processes one server-owned round at a time", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
   api.defaults.adapter = async (config) => {
     requests.push(config);
-    if (config.url === "/api/admin/events/round-plans") return response(config, { data: { proposals: [], nextCursor: null } });
-    return response(config, { data: { proposal: { id: "plan-1", status: "in_review" } } });
+    return response(config, { data: { run: { id: "run-1" }, stages: [] } });
   };
-  const executionPlan = { format: "ranked_stages", stages: [{ participantsPerMatch: 100, advanceCount: 10 }, { participantsPerMatch: 100, advanceCount: 0, qualificationRule: "final_ranking" }] };
+  const definition = { participantsPerMatch: 100, advanceCount: 10, batchSpacingMinutes: 0, checkInMinutesBefore: 15, stageDelayMinutes: 0, finalRound: false };
   try {
-    const store = configureStore({ reducer: { eventRoundPlans: eventRoundPlanSlice.reducer } });
-    await store.dispatch(proposeEventRoundPlan({ executionPlan, runId: "run-1" }));
-    await store.dispatch(fetchEventRoundPlanQueue());
-    await store.dispatch(reviewEventRoundPlan({ action: "approved", note: "", proposalId: "plan-1" }));
+    const store = configureStore({ reducer: { eventStages: eventStageSlice.reducer } });
+    await store.dispatch(fetchManagedEventStages({ runId: "run-1" }));
+    await store.dispatch(configureManagedEventRound({ definition, runId: "run-1" }));
+    await store.dispatch(processManagedEventRound("run-1"));
     assert.deepEqual(requests.map(({ method, url }) => [method, url]), [
-      ["post", "/api/staff/events/runs/run-1/round-plans"],
-      ["get", "/api/admin/events/round-plans"],
-      ["patch", "/api/admin/events/round-plans/plan-1/review"],
+      ["get", "/api/staff/events/runs/run-1/stages"],
+      ["post", "/api/staff/events/runs/run-1/rounds/configure"],
+      ["post", "/api/staff/events/runs/run-1/rounds/process"],
     ]);
-    assert.deepEqual(decodeBody(requests[0]), { executionPlan });
-    assert.deepEqual(decodeBody(requests[2]), { action: "approved", note: "" });
-    assert.doesNotMatch(JSON.stringify(decodeBody(requests[0])), /playerIds|registeredCount|seedingSeed|status/);
+    assert.deepEqual(decodeBody(requests[1]), definition);
+    assert.deepEqual(decodeBody(requests[2]), {});
+    assert.doesNotMatch(JSON.stringify(decodeBody(requests[1])), /playerIds|registeredCount|seedingSeed|status/);
   } finally {
     api.defaults.adapter = originalAdapter;
   }
 });
 
-test("future-round changes use scoped proposal and independent governance routes", async () => {
+test("promoted and eliminated lists use bounded scoped result reads", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
   api.defaults.adapter = async (config) => {
     requests.push(config);
-    if (config.method === "get") {
-      return response(config, { data: { adjustments: [] } });
-    }
-    return response(config, {
-      data: {
-        adjustment: {
-          id: "adjustment-1",
-          stageNumber: 2,
-          status: config.method === "post" ? "in_review" : "approved",
-        },
-      },
-    });
+    return response(config, { data: { items: [{ player: { profileTag: "P1" }, rank: 1, result: "promoted", room: 1 }], nextCursor: null } });
   };
 
   try {
-    const store = configureStore({ reducer: { eventStageAdjustments: eventStageAdjustmentSlice.reducer } });
-    const definition = {
-      advanceCount: 10,
-      batchSpacingMinutes: 2,
-      checkInMinutesBefore: 15,
-      participantsPerMatch: 100,
-      qualificationRule: "top_n",
-      stageDelayMinutes: 20,
-    };
-    await store.dispatch(fetchManagedStageAdjustments("run-1"));
-    await store.dispatch(proposeManagedStageAdjustment({ definition, runId: "run-1", stageNumber: 2 }));
-    await store.dispatch(fetchStageAdjustmentReviewQueue());
-    await store.dispatch(reviewStageAdjustment({ action: "approved", adjustmentId: "adjustment-1", note: "" }));
-
-    assert.deepEqual(requests.map(({ method, url }) => [method, url]), [
-      ["get", "/api/staff/events/runs/run-1/stage-adjustments"],
-      ["post", "/api/staff/events/runs/run-1/stage-adjustments"],
-      ["get", "/api/admin/events/stage-adjustments"],
-      ["patch", "/api/admin/events/stage-adjustments/adjustment-1/review"],
-    ]);
-    assert.deepEqual(decodeBody(requests[1]), { definition, stageNumber: 2 });
-    assert.deepEqual(decodeBody(requests[3]), { action: "approved", note: "" });
-    assert.doesNotMatch(JSON.stringify(decodeBody(requests[1])), /playerIds|rankingIds|seedingSeed|status/);
+    const store = configureStore({ reducer: { eventStages: eventStageSlice.reducer } });
+    await store.dispatch(fetchManagedRoundResults({ result: "promoted", runId: "run-1", stageNumber: 1 }));
+    assert.equal(requests[0].url, "/api/staff/events/runs/run-1/rounds/1/results");
+    assert.deepEqual(requests[0].params, { limit: 50, result: "promoted" });
+    assert.doesNotMatch(requests[0].url + JSON.stringify(requests[0].params), /playerIds|rankingIds|seedingSeed/);
   } finally {
     api.defaults.adapter = originalAdapter;
   }
 });
 
-test("ranked Event UI exposes eliminated-round filters without client-owned outcomes", async () => {
+test("ranked Event UI exposes promoted and eliminated lists without client-owned outcomes", async () => {
   const [manager, roundPlan, operator, stage] = await Promise.all([
     readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/components/eventManagement/PostRegistrationRoundPlan.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/eventManagement/SequentialRoundControl.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Operations.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/adminComponents/EventStageManagement.jsx", import.meta.url), "utf8"),
   ]);
-  assert.match(roundPlan, /RankedStagePlanEditor/);
+  assert.match(roundPlan, /promoted/);
+  assert.match(roundPlan, /eliminated/);
   assert.match(operator, /record_result/);
   assert.match(stage, /Eliminated round/);
   assert.match(stage, /eliminatedInStage/);
-  assert.doesNotMatch(`${manager}\n${roundPlan}\n${stage}`, /seedingSeed|setWinner|eliminatePlayer/);
+  assert.doesNotMatch(`${manager}\n${roundPlan}\n${stage}`, /seedingSeed|setWinner|eliminatePlayer|playerIds/);
   assert.match(manager, /Operations handoff/);
   assert.match(manager, /awaiting operator/);
   assert.match(manager, /result attention/);

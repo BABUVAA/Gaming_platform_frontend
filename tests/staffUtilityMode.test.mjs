@@ -69,7 +69,7 @@ test("match operations is owned by the staff route tree", async () => {
   assert.match(constants, /OPERATIONS_LEGACY: "\/dashboard\/operations"/);
   assert.match(
     staffRoutes,
-    /ROUTES\.OPERATIONS[\s\S]{0,100}componentKey: "Operations"[\s\S]{0,100}access: "operator"/,
+    /STAFF_ROUTE_SEGMENTS\.OPERATIONS[\s\S]{0,100}componentKey: "Operations"[\s\S]{0,100}access: "operator"/,
   );
   assert.match(
     dashboardRoutes,
@@ -90,8 +90,41 @@ test("staff access oversight excludes hiring and remains governance-only", async
   assert.match(staffPage, /RoleManagement showStaffingActions=\{false\}/);
   assert.match(
     staffRoutes,
-    /ROUTES\.STAFF_ACCESS_CONTROL[\s\S]{0,140}access: "admin"/,
+    /STAFF_ROUTE_SEGMENTS\.ACCESS_CONTROL[\s\S]{0,140}access: "admin"/,
   );
+});
+
+test("staff workspaces share a player-style responsive shell", async () => {
+  const [layout, sidebar, routes] = await Promise.all([
+    readFile(new URL("../src/pages/StaffLayout.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/layout/StaffSidebar/StaffSideBar.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/routes/staffRoutes.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(layout, /md:grid-cols-\[18rem_minmax\(0,1fr\)\]/);
+  assert.match(layout, /<StaffSideBar \/>/);
+  assert.match(layout, /<Outlet \/>/);
+  assert.match(sidebar, /getStaffWorkspaceNavigation/);
+  assert.match(sidebar, /fixed inset-x-0 bottom-0/);
+  assert.match(routes, /componentKey: "StaffLayout"[\s\S]*children:/);
+});
+
+test("each operational role dashboard separates its responsibilities", async () => {
+  const [tournaments, events, games, operations] = await Promise.all([
+    readFile(new URL("../src/components/adminComponents/QuickMatchOfferingManagement.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/GameManagerDashboard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/Operations.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(tournaments, /Tournament Manager responsibilities/);
+  assert.match(tournaments, /Overview[\s\S]*Create[\s\S]*Drafts & paused[\s\S]*Live tournaments[\s\S]*History/);
+  assert.match(events, /Event Manager sections/);
+  assert.match(events, /Templates[\s\S]*Events/);
+  assert.match(games, /Game Manager responsibilities/);
+  assert.match(games, /Overview[\s\S]*Events[\s\S]*Attention queue[\s\S]*Operator workload[\s\S]*History/);
+  assert.match(operations, /Match Operator responsibilities/);
+  assert.match(operations, /Assignment queue[\s\S]*Assigned matches/);
 });
 
 test("route ownership keeps safe staff views separate from participation-only pages", async () => {

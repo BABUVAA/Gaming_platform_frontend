@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { FaArrowLeft, FaCheckCircle, FaFlag, FaHeadset } from "react-icons/fa";
-import { FiClock, FiUploadCloud, FiUsers } from "react-icons/fi";
+import { FaArrowLeft, FaFlag, FaHeadset } from "react-icons/fa";
+import { FiClock, FiUsers } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { showToast, types } from "../store/slices/toastSlice";
 import {
-  checkInPlayerMatch,
   fetchPlayerMatch,
   raisePlayerMatchDispute,
-  submitPlayerMatchResult,
 } from "../store/slices/matchActivitySlice.js";
 import {
   selectPlayerMatch,
@@ -25,8 +23,6 @@ const FLOW = [
   "awaiting_operator",
   "operator_assigned",
   "scheduled",
-  "check_in",
-  "lobby_ready",
   "live",
   "result_pending",
   "verified",
@@ -48,15 +44,16 @@ const STATUS_STYLE = {
 };
 
 const ACTION_RULES = {
-  checkIn: ["scheduled", "check_in"],
-  dispute: ["lobby_ready", "live", "result_pending", "verified"],
-  submitResult: ["live", "result_pending"],
+  dispute: ["live", "result_pending", "verified"],
 };
 
-const getEntityId = (value) => String(value?._id || value || "");
-const sameIds = (first = [], second = []) =>
-  first.length === second.length &&
-  [...first].sort().every((value, index) => value === [...second].sort()[index]);
+const formatCountdown = (milliseconds) => {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  return [hours, minutes, remainingSeconds].map((value) => String(value).padStart(2, "0")).join(":");
+};
 
 const MatchRoom = () => {
   const { competitionRevision } = useSocket();
@@ -69,10 +66,8 @@ const MatchRoom = () => {
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const isLoading = matchStatus === "loading";
   const isActing = actionStatus === "loading";
-  const [scoreInput, setScoreInput] = useState("");
-  const [proofNote, setProofNote] = useState("");
-  const [winnerKey, setWinnerKey] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
+  const [now, setNow] = useState(() => Date.now());
 
   const loadMatch = useCallback(
     () => dispatch(fetchPlayerMatch(id)),
@@ -84,69 +79,10 @@ const MatchRoom = () => {
     return () => request.abort();
   }, [competitionRevision, loadMatch]);
 
-  const winnerOptions = useMemo(() => {
-    const participants = match?.participants || [];
-    const teamGroups = new Map();
-    const soloOptions = [];
-    for (const participant of participants) {
-      const userId = getEntityId(participant.user);
-      if (!userId) continue;
-      const teamId = getEntityId(participant.team);
-      if (!teamId) {
-        soloOptions.push({
-          key: `user:${userId}`,
-          label:
-            participant.displayName ||
-            participant.user?.profile?.username ||
-            "Player",
-          winnerIds: [userId],
-        });
-        continue;
-      }
-      const group = teamGroups.get(teamId) || {
-        key: `team:${teamId}`,
-        label: participant.team?.teamName || "Team",
-        memberNames: [],
-        winnerIds: [],
-      };
-      group.winnerIds.push(userId);
-      group.memberNames.push(
-        participant.displayName ||
-          participant.user?.profile?.username ||
-          "Player",
-      );
-      teamGroups.set(teamId, group);
-    }
-    const teamOptions = [...teamGroups.values()].map((group) => ({
-      ...group,
-      label: `${group.label} (${group.memberNames.join(", ")})`,
-    }));
-    return teamOptions.length ? teamOptions : soloOptions;
-  }, [match?.participants]);
-
-  const selectedWinner = useMemo(
-    () => winnerOptions.find((option) => option.key === winnerKey) || null,
-    [winnerKey, winnerOptions],
-  );
-
   useEffect(() => {
-    setScoreInput(match?.resultSummary?.finalScore ?? "");
-    setProofNote(match?.resultSummary?.proofNote ?? "");
-    const savedWinnerIds = (match?.resultSummary?.winnerIds || []).map(
-      getEntityId,
-    );
-    setWinnerKey(
-      winnerOptions.find((option) =>
-        sameIds(option.winnerIds, savedWinnerIds),
-      )?.key || "",
-    );
-  }, [
-    match?._id,
-    match?.resultSummary?.finalScore,
-    match?.resultSummary?.proofNote,
-    match?.resultSummary?.winnerIds,
-    winnerOptions,
-  ]);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const stageIndex = useMemo(() => {
     if (!match?.status) return 0;
@@ -176,31 +112,8 @@ const MatchRoom = () => {
       return;
     }
 
-    if (actionName === "submitResult" && !String(payload.score || "").trim()) {
-      dispatch(
-        showToast({
-          message: "Score is required before submitting a result.",
-          type: types.WARNING,
-          position: "bottom-right",
-        }),
-      );
-      return;
-    }
-    if (actionName === "submitResult" && !payload.winnerIds?.length) {
-      dispatch(
-        showToast({
-          message: "Choose the winning player or team before submitting.",
-          type: types.WARNING,
-          position: "bottom-right",
-        }),
-      );
-      return;
-    }
-
     const command = {
-      checkIn: checkInPlayerMatch,
       dispute: raisePlayerMatchDispute,
-      submitResult: submitPlayerMatchResult,
     }[actionName];
     if (!command) return;
 
@@ -227,6 +140,22 @@ const MatchRoom = () => {
       </div>
     );
   }
+
+  const scheduledAt = match.scheduledFor ? new Date(match.scheduledFor).getTime() : null;
+  const revealAt = match.lobbyRevealAt ? new Date(match.lobbyRevealAt).getTime() : null;
+  const lifecycleMessage = match.status === "awaiting_operator"
+    ? "Room full / waiting for a Match Operator"
+    : match.status === "operator_assigned" && !scheduledAt
+      ? "Operator assigned / waiting for Game Manager schedule"
+      : match.status === "scheduled" && revealAt && now < revealAt
+        ? `Lobby opens in ${formatCountdown(revealAt - now)}`
+        : match.status === "scheduled" && scheduledAt && now < scheduledAt
+          ? `Room open / Match starts in ${formatCountdown(scheduledAt - now)}`
+          : match.status === "live"
+            ? "Match live"
+            : match.status === "result_pending"
+              ? "Waiting for operator result verification"
+              : match.status.replaceAll("_", " ");
 
   return (
     <div className="space-y-6">
@@ -273,6 +202,7 @@ const MatchRoom = () => {
             Lifecycle
           </p>
           <h2 className="mt-2 text-2xl font-black text-white">Progress Rail</h2>
+          <div className="mt-4 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100">{lifecycleMessage}</div>
           <div className="mt-5 grid gap-3">
             {FLOW.map((step, index) => {
               const isDone = index <= stageIndex;
@@ -322,23 +252,10 @@ const MatchRoom = () => {
             </p>
             {isStaffUtilityMode ? (
               <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-                {STAFF_UTILITY_MESSAGE} Check-in and disputes are player-only.
+                {STAFF_UTILITY_MESSAGE} Disputes are player-only.
               </p>
             ) : (
             <div className="mt-4 space-y-3">
-              <button
-                type="button"
-                disabled={isActing || !isActionEnabled("checkIn")}
-                onClick={() =>
-                  submitAction({
-                    actionName: "checkIn",
-                  })
-                }
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-60"
-              >
-                <FaCheckCircle />
-                Mark Check-in
-              </button>
               <textarea
                 className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-rose-400"
                 maxLength={1000}
@@ -395,73 +312,17 @@ const MatchRoom = () => {
             <p>
               Notes: <span className="text-slate-400">{match.lobby?.instructions || "No notes yet."}</span>
             </p>
+            {!match.lobby?.roomCode && match.lobbyRevealAt ? <p className="text-cyan-200">Credentials unlock at {new Date(match.lobbyRevealAt).toLocaleString()}.</p> : null}
           </div>
           )}
         </div>
 
         <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-            Result Submission
+            Results
           </p>
-          <h3 className="mt-2 text-xl font-black text-white">Upload Outcome</h3>
-          {isStaffUtilityMode ? (
-            <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-              {STAFF_UTILITY_MESSAGE} Result submission is player-only.
-            </p>
-          ) : (
-          <div className="mt-4 space-y-3">
-            <input
-              value={scoreInput}
-              onChange={(event) => setScoreInput(event.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
-              placeholder="Enter score (example: 25-17)"
-            />
-            <label className="block text-sm font-semibold text-slate-300">
-              Winning player or team
-              <select
-                className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
-                onChange={(event) => setWinnerKey(event.target.value)}
-                value={winnerKey}
-              >
-                <option value="">Select the verified winner</option>
-                {winnerOptions.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <textarea
-              rows={4}
-              value={proofNote}
-              onChange={(event) => setProofNote(event.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
-              placeholder="Proof note or result context."
-            />
-            <button
-              type="button"
-              disabled={
-                isActing ||
-                !isActionEnabled("submitResult") ||
-                !selectedWinner
-              }
-              onClick={() =>
-                submitAction({
-                  actionName: "submitResult",
-                  payload: {
-                    score: scoreInput,
-                    proofNote,
-                    winnerIds: selectedWinner?.winnerIds || [],
-                  },
-                })
-              }
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-60"
-            >
-              <FiUploadCloud />
-              Submit Result
-            </button>
-          </div>
-          )}
+          <h3 className="mt-2 text-xl font-black text-white">Operator-owned outcome</h3>
+          <p className="mt-4 text-sm leading-6 text-slate-300">The assigned Match Operator records the complete room result. Players can review the verified outcome and raise a dispute when that window opens.</p>
         </div>
       </section>
       {!isStaffUtilityMode && match.status !== "awaiting_operator" ? <MatchChat audience="player" matchId={String(match._id)} /> : null}

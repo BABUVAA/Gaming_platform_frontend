@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -21,27 +21,44 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Staff authority comes only from active `StaffAssignment` records.
 - Staff may inspect safe player-dashboard reads, but only a persisted player
   may execute participation, social, game-account, profile, or money commands.
-- Platform Admin owns Game configuration, offering publication, staff access,
-  and Event approval. Game Manager is read-only; Event Manager proposes scoped
-  drafts and may inspect bounded, safe registration/Match status for Events in
-  assigned games; Match Operator operates scoped assigned Matches. Event
-  Manager reads omit emails, lobby credentials, wallet data and player result
-  authority.
+- Platform Admin owns Game configuration, staff access, initial Event approval,
+  disputes/recovery and financial governance.
+  Tournament Manager owns Quick Match/Tournament offering creation and
+  lifecycle only within assigned game scopes. Game Manager is operationally
+  read-only except for one assigned-game account-verification decision. Event
+  Manager proposes scoped drafts and, after initial approval, owns registration
+  closure, sequential round setup, room generation/handoff, operator assignment,
+  and promoted/eliminated operational views for assigned games. Match Operator
+  operates scoped assigned Matches. Event Manager reads omit emails, lobby
+  credentials, wallet data, private chat and result-verification authority.
 - Invitation-only Event cards are visible only to a player with an active
   invitation; server discovery and registration enforce the same rule.
 - Open and limited-seat Events remain visible after registration closes for
   safe spectator timelines and standings; invitation-only Events stay private.
-- Game Managers may inspect bounded registration identities, Match/operator
-  coverage and standings only for assigned games, without mutation, lobby,
-  wallet, email, private evidence or chat access.
+- Game Managers may inspect bounded registration identities, active Quick
+  Match Rooms, Match/operator coverage and standings only for assigned games.
+  They may approve/reject a player game-account request and configure the
+  pre-start schedule plus lobby credentials for an assigned-game Match. Lobby
+  credentials are server-hidden from players until T-10 minutes. They retain
+  no Match claim/start/result, wallet, email, private chat, Game configuration,
+  competition-definition or staff mutation authority.
+- Quick Match players may participate in multiple distinct offerings and
+  Events in parallel. Duplicate entry remains forbidden only within the same
+  offering/Room. A joined player sees a private Room-member `Leaderboard` and
+  no repeat Join action; non-members cannot enumerate that lineup.
+- Quick Match and Event player check-in is retired. Full Room -> operator claim
+  -> Game Manager schedule/lobby setup -> server disclosure at T-10 -> assigned
+  operator start at schedule -> operator result is the canonical operational
+  path. Joined players receive deduplicated 50%, 90%, and full Room notices.
 - Match chat is private to server-derived Match participants and the assigned
   Match Operator; it must be persistent, bounded and rate-limited.
 - Player Event registration is final. Registered and waitlisted players cannot
   cancel or re-enter; platform-owned Event recovery/refunds remain governed.
 - New Event schedules contain timing, admission, entry and reward terms only.
-  After registration closes, Event Manager proposes rounds from the final
-  registered count; independent governance approval is required before any
-  stage job, roster, batch or Match generation.
+  After registration closes, Event Manager configures one round at a time from
+  the server-owned current list. Round 1 uses committed registrations; later
+  rounds use immutable promoted outcomes. No routine per-round governance
+  approval or client-supplied player list is allowed.
 - Redux Toolkit owns feature data; do not introduce component-level API calls
   where a Redux boundary exists.
 - Money uses integer INR minor units, an append-only balanced ledger,
@@ -49,13 +66,102 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   explicit `sandbox` money mode with PhonePe test credentials; every balance is
   labelled test money, withdrawals remain disabled, and live-money mode stays
   fail-closed until every documented release gate passes.
+- Player password reauthentication is required only for withdrawal requests.
+  Deposits and Quick Match/Event entry rely on the verified session plus their
+  provider, balance, hold, eligibility and idempotency contracts. Governance
+  staff commands retain recent authentication.
 - New Quick Matches use Game-backed `QuickMatchOffering`, Match, and Room data;
   do not revive legacy Tournament/TournamentType dependencies.
-- Scalable Events use reviewed stage definitions: bounded room size, explicit
-  qualification rule, immutable ranked batch outcome, and restart-safe paged
-  generation. Do not infer advancement from a fixed knockout bracket.
+- Tournament Manager ownership migration completed 2026-08-21. The dedicated
+  route is `/staff/tournaments`; governance status alone does not grant
+  offering mutations, game scope is repeated by every backend command, and
+  Approved Host submissions remain draft-only.
+- Scalable Events use Event Manager-owned sequential stage definitions: bounded
+  room size, explicit top-N/final rule, immutable ranked batch outcomes, and
+  restart-safe paged generation. Open registration has no product seat cap;
+  APIs and workers remain technically bounded and cursor-paged. Do not infer
+  advancement from a fixed knockout bracket or accept player IDs from clients.
 
 ## Current Verified State
+
+- Quick Match/Event room lifecycle 2026-08-22: a full Room is claimed by a
+  scoped Match Operator, scheduled and given lobby credentials by its
+  assigned-game Game Manager, disclosed to joined players at T-10, started by
+  the operator at schedule, and completed from the operator's full ranking.
+  Player check-in and player result submission are retired. Joined players get
+  a private member `Leaderboard`, no duplicate Join action, and deduplicated
+  50%/90%/full capacity notifications; participation in other distinct
+  offerings and Events remains allowed. Operator and Game Manager dashboards
+  now show bounded room progress/lineups and their exact owned actions. Wallet
+  and staff dashboards were made more compact while retaining critical safety
+  states. The authenticated audit also fixed stale `Aborted` list state,
+  duplicate Solo labels, assigned-Room pickup wording and full-Room cards that
+  ignored a generated Match's lifecycle. Backend aggregate passed 334/334
+  (competition 107/107 and replica integration 99/99); frontend passed 108/108,
+  full lint and the 557-module production build; generated API documentation
+  covers 202/202 operations. Real Game Manager, Tournament Manager, Player and
+  assigned Match Operator sessions passed desktop and 390x844 browser checks on
+  the retained 100-player Room with no console errors or horizontal overflow.
+  The exact temporary browser player and Wallet were removed after logout.
+
+- Player password scope 2026-08-21: recent password confirmation was removed
+  from PhonePe deposit creation and paid Event registration; Quick Match entry
+  already had no such guard. Player withdrawal requests remain protected, and
+  governance recent-auth rules are unchanged. Focused backend checks pass 22/22
+  and focused frontend entry/authentication checks pass 4/4.
+
+- PhonePe completion binding fix 2026-08-21: the SDK status response's provider
+  `orderId` is now compared with the provider order saved at checkout, not the
+  distinct merchant order used to query status. Exact amount/provider identity
+  still fail closed. Focused payment checks pass 14/14 and payment replica
+  integration passes 32/32. The affected ₹1,000 sandbox payment was reverified
+  as `COMPLETED` and produced exactly one balanced deposit ledger entry; the
+  target wallet now contains ₹1,000 available test money.
+
+- Scoped game-account verification 2026-08-21: Game Manager now has a compact
+  Account Verification workspace backed by bounded assigned-game APIs. Review
+  requires recent authentication and sends only decision plus note; the server
+  derives request/player/Game/reviewer identity, rejects cross-game access,
+  commits user account state + terminal request + staff audit atomically, and
+  serializes no email/wallet/raw internal data. Backend aggregate 328/328,
+  frontend 103/103 with full lint and 557-module build, API docs 199/199, and
+  diff checks pass. Authenticated desktop/mobile visual proof remains pending.
+
+- Event sequential-operations amendment 2026-08-21: open Events persist no
+  product seat cap. After initial governance approval and registration close,
+  the scoped Event Manager configures one round at a time using room size,
+  top-N promotion, timing and final-round state. Round 1 uses committed
+  registrations; every later round uses only immutable promoted outcomes.
+  Complete ordered room results retain bounded promoted/eliminated evidence.
+  Admin routine close and round-review paths are retired; governance retains
+  approvals, invitations, recovery, final evidence and independent rewards.
+  Backend competition policy passed 100/100, replica integration 93/93, API
+  docs 197/197; frontend passed 101/101, lint and the 556-module build.
+  Authenticated desktop/mobile visual proof remains pending because the local
+  API session check was unavailable during the final browser attempt.
+
+- Staff workspace shell 2026-08-21: `/staff` is the assignment-derived role
+  picker and every selected role opens its own responsibility dashboard inside
+  the same bounded responsive layout as the player dashboard. Tournament
+  Manager separates overview/create/readiness/live/history; Game Manager
+  separates overview/Events/attention/operators/history; Match Operator
+  separates assignment and owned-match desks; Event and governance retain
+  their scoped section navigation. Full frontend state passed 101/101, lint,
+  route smoke and the 563-module production build passed. Authenticated
+  visual verification remains pending; the local unauthenticated route guard
+  correctly redirects to Login.
+
+- Tournament Manager ownership 2026-08-21: added the game-scoped
+  `tournament_manager` StaffAssignment role and `/staff/tournaments`
+  workspace. Canonical offering games/list/create/update now use
+  `/api/staff/tournaments/*`; old admin offering mutations fail with stable
+  `410 TOURNAMENT_MANAGER_ROUTE_REQUIRED`. Platform/Super Admin retain role
+  assignment but no implicit offering mutation. Backend competition policy
+  passed 97/97 and replica integration 91/91; frontend passed 99/99 with full
+  lint and the 561-module production build; API docs cover 193/193 operations.
+  The unauthenticated local route correctly redirected to Login; an
+  authenticated visual role check remains pending because the local API was
+  unavailable during the browser gate.
 
 - Planning estimate: approximately 80% of the complete roadmap, 92% of the
   core playable platform, and 45% ready for unrestricted real-money traffic.
@@ -131,10 +237,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Operator scale refinement: assigned and unassigned Match queues use distinct
   bounded opaque cursors, stable indexed ordering, Redux append de-duplication,
   stale-response guards, and load-more controls.
-- Verification-request history is now bounded for both players and Platform
-  Admins: 25-item opaque cursor pages, Redux-owned player state, deduplicated
-  load-more UI, and indexed backend ordering. Focused pagination checks pass;
-  frontend lint and the current 546-module production build pass.
+- Verification-request history remains bounded for players and governance. The
+  operational decision queue is now visible to scoped Game Managers with
+  25-item opaque cursor pages and Redux append de-duplication; Platform/Super
+  Admin retain the existing governance API fallback.
 - The active Staff Directory is also bounded: 25-item opaque assignment pages,
   Redux append de-duplication, and a role/time database index preserve the
   compact role rows and revoked-role reassignment workflow.
@@ -296,8 +402,9 @@ balanced ledger row and per-attempt evidence; player retry never charges twice;
 closure captures admitted holds and releases waitlisted holds before roster
 freeze. Corrupt/missing evidence and insufficient funds produce zero partial
 admission or competition writes. The player command never accepts an amount,
-staff remains read-only, recent authentication is required, and paid Event
-entry is enabled only by the explicit sandbox release flag.
+staff remains read-only, and paid Event entry is enabled only by the explicit
+sandbox release flag. Password reauthentication is no longer required for
+registration; verified-player, balance, hold and idempotency checks remain.
 
 Shared-database Event Run `6a828224467598a0c5d5f545` completed a
 1,000-player BGMI INR 2.00 sandbox rehearsal. Round 1 used Platform Admin for
@@ -337,7 +444,8 @@ requires live-money provider certification and separately supervised workers.
   authoritative and serializers omit player email, wallet, lobby secret and
   result-authority data.
 - Platform/Super Admin Event Management now separates `Approvals`,
-  `Invitations`, and `Operations & Reports` instead of stacking every section.
+  `Invitations`, and governance-only `Results & Rewards`. Routine round and
+  batch operations live only in the Event Manager workspace.
 - The approval empty state is now action-first: one pending counter, one compact
   status card and one round-change counter. Duplicate explanations, empty
   messages and the inactive decision panel no longer consume the page.
@@ -379,7 +487,7 @@ protection. MFA and actionable alerts remain future work.
 Recent-authentication refinement: Account Settings lets a signed-in user
 confirm their current password for a 15-minute sensitive-action window. The
 timestamp lives only in the active Redis session. Platform/Super Admin
-mutations and player payment mutations fail closed with
+mutations and player withdrawal requests fail closed with
 `RECENT_AUTHENTICATION_REQUIRED` when it expires; a refresh token never
 extends the window. Backend auth policy/session checks pass 38/38; frontend
 state tests pass 74/74 with lint clean and the 548-module production build
@@ -393,12 +501,13 @@ frontend state suite pass.
 
 ## Completed Slice: Game Manager Operational Supervision
 
-Completed locally and verified 2026-08-13. `/staff/games` now provides a
+Completed locally and verified 2026-08-13. `/staff/games` provides a
 server-scoped, read-only attention queue for unassigned, delayed,
 result-pending, and disputed Matches plus bounded operator action history for
 each assigned game. It exposes no player rosters, emails, lobby secrets,
 configuration commands, assignment controls, Event approval, or financial
-data. Active Game Manager assignment and `gameScopes` remain the authority.
+data. The 2026-08-21 amendment adds only assigned-game account-verification
+decisions; active Game Manager assignment and `gameScopes` remain the authority.
 
 Backend competition policy passed 82/82; frontend passed 68/68, full lint, and
 the 533-module production build. A real seeded Game Manager loaded the assigned
@@ -441,16 +550,21 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
 
 - Run creation no longer sends `executionPlan`. Approval schedules registration
   only; closure returns round setup required and leaves generation absent.
-- Event Manager owns post-close round proposals projected from the server-owned
-  registered count. Another Platform/Super Admin must approve before the
-  first-stage job is created.
+- Event Manager owns post-close sequential round configuration projected from
+  the server-owned registered or promoted list. There is no routine per-round
+  governance approval and no client player-list input.
+- Open registration has no product capacity. Limited-seat and invitation-only
+  schedules keep their explicit capacity and all technical reads remain paged.
+- The Event Manager chooses players per room, top-N promotion, timing and final
+  state for the current round only. Verified ordered results mark every player
+  promoted or eliminated and feed the next round.
 - Player `Compete` combines scheduled Events and Quick Matches. Separate
   Tournaments/Events navigation is removed; old list paths redirect to Compete.
   Event cards show countdown, entry/access/counts, rewards, committed status and
   the viewer's Match link.
-- Gates: backend full aggregate 305/305 (policy 92/92, competition integration
-  87/87); frontend 89/89, lint, 554-module build and route smoke. Browser
-  visual gate remains pending.
+- Gates: backend competition policy 100/100, competition integration 93/93,
+  API docs 197/197; frontend 101/101, lint and 556-module build. Authenticated
+  browser visual gate remains pending because the local API was unavailable.
 
 ## Latest Small Fix: Account Email Presentation
 
@@ -464,6 +578,21 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
   its optional SDK install is malformed; configured callbacks fail closed 503.
 
 ## Work Immediately After This Slice
+
+### Completed Code Slice: Tournament Placement Rewards
+
+- Canonical offerings accept `winner_split` or a contiguous 1-100 place INR
+  table; Match financial snapshots are version 2 while version 1 remains
+  compatible.
+- Match Operator complete player/team ranking drives exact server allocations.
+  Team-place totals split deterministically among complete Match team members.
+  Governance settlement and independent release accept no client money.
+- Tournament Manager form/cards, player Compete/detail/Match view, Match
+  Operator ranking and governance release display are updated.
+- Gates: backend 325/325 (competition integration 94/94, payments integration
+  32/32); frontend 102/102, lint, 556-module build; docs 197/197; diff checks
+  clean. Authenticated desktop/mobile browser verification remains the only
+  open exit gate; the unauthenticated local shell was console-clean.
 
 1. Completed locally 2026-08-16: Event placement reward tables have Event Manager draft UI,
    server validation, Platform-Admin review disclosure, and a governed release

@@ -19,8 +19,6 @@ import {
 } from "../../store/slices/eventReviewSlice";
 import EventInvitationManagement from "./EventInvitationManagement.jsx";
 import EventStageManagement from "./EventStageManagement.jsx";
-import StageAdjustmentReviewQueue from "./StageAdjustmentReviewQueue.jsx";
-import RoundPlanReviewQueue from "./RoundPlanReviewQueue.jsx";
 
 const staffSummaryShape = PropTypes.shape({
   profile: PropTypes.shape({ username: PropTypes.string }),
@@ -119,7 +117,7 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
           </p>
           {isRun ? (
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              Registration {formatDate(item.registrationOpensAt)} to {formatDate(item.registrationClosesAt)} / {item.admissionPolicy?.replaceAll("_", " ") || "admission not set"} / {item.registrationCapacity || 0} seats / waitlist {item.waitlistEnabled ? "on" : "off"}
+              Registration {formatDate(item.registrationOpensAt)} to {formatDate(item.registrationClosesAt)} / {item.admissionPolicy?.replaceAll("_", " ") || "admission not set"} / {item.admissionPolicy === "open" ? "no seat limit" : `${item.registrationCapacity || 0} seats`} / waitlist {item.waitlistEnabled ? "on" : "off"}
             </p>
           ) : null}
           {isRun ? (
@@ -136,12 +134,12 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
                 <div className="mt-2 space-y-1">
                   {item.executionPlan.stages?.map((stage) => (
                     <p key={stage.number}>
-                      Round {stage.number}: {(item.executionPlan.projection?.find((entry) => entry.number === stage.number)?.participantCount || 0).toLocaleString("en-IN")} players / {(item.executionPlan.projection?.find((entry) => entry.number === stage.number)?.batchCount || 0).toLocaleString("en-IN")} rooms / {stage.participantsPerMatch} max per room / {stage.qualificationRule === "final_ranking" ? "final ranking" : `top ${stage.advanceCount} qualify`} / room spacing {stage.batchSpacingMinutes} min / check-in {stage.checkInMinutesBefore} min before / next-round delay {stage.stageDelayMinutes} min
+                      Round {stage.number}: {(item.executionPlan.projection?.find((entry) => entry.number === stage.number)?.participantCount || 0).toLocaleString("en-IN")} players / {(item.executionPlan.projection?.find((entry) => entry.number === stage.number)?.batchCount || 0).toLocaleString("en-IN")} rooms / {stage.participantsPerMatch} max per room / {stage.qualificationRule === "final_ranking" ? "final ranking" : `top ${stage.advanceCount} qualify`} / room spacing {stage.batchSpacingMinutes} min / next-round delay {stage.stageDelayMinutes} min
                     </p>
                   ))}
                 </div>
               ) : (
-                <p className="mt-1">2 players per match / 1 winner advances / {item.executionPlan.batchSpacingMinutes} minute spacing / check-in {item.executionPlan.checkInMinutesBefore} minutes before / registration order</p>
+                <p className="mt-1">2 players per match / 1 winner advances / {item.executionPlan.batchSpacingMinutes} minute spacing / registration order</p>
               )}
             </div>
           ) : null}
@@ -239,7 +237,7 @@ const EventReviewQueue = () => {
       <nav aria-label="Event Management sections" className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 md:grid-cols-3" role="tablist">
         <AdminEventTab active={activeView === "approvals"} count={reviewCount} label="Approvals" onClick={() => setActiveView("approvals")} />
         <AdminEventTab active={activeView === "invitations"} label="Invitations" onClick={() => setActiveView("invitations")} />
-        <AdminEventTab active={activeView === "operations"} label="Operations & Reports" onClick={() => setActiveView("operations")} />
+        <AdminEventTab active={activeView === "results"} label="Results & Rewards" onClick={() => setActiveView("results")} />
       </nav>
 
       {activeView === "approvals" ? (
@@ -266,14 +264,12 @@ const EventReviewQueue = () => {
         </div>
         {selected ? <ReviewPanel canReview={canReview(selected.item)} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} /> : null}
       </div>
-      <RoundPlanReviewQueue />
-      <StageAdjustmentReviewQueue />
       </>
       ) : activeView === "invitations" ? (
         <EventInvitationManagement />
-      ) : (
+      ) : activeView === "results" ? (
         <EventStageManagement />
-      )}
+      ) : null}
     </section>
   );
 };

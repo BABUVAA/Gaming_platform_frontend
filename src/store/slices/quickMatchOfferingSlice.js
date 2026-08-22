@@ -4,9 +4,19 @@ import createApiThunk from "../thunks/createApiThunk.js";
 export const fetchQuickMatchOfferings = createApiThunk(
   "quickMatchOfferings/fetchAll",
   {
-    path: "/api/admin/quick-match-offerings",
+    path: "/api/staff/tournaments/offerings",
     selectData: (response) => response.data?.data?.offerings || [],
     errorMessage: "Unable to load Quick Match offerings.",
+    toast: { error: true },
+  },
+);
+
+export const fetchTournamentManagerGames = createApiThunk(
+  "quickMatchOfferings/fetchManagerGames",
+  {
+    path: "/api/staff/tournaments/games",
+    selectData: (response) => response.data?.data?.games || [],
+    errorMessage: "Unable to load assigned tournament games.",
     toast: { error: true },
   },
 );
@@ -30,11 +40,20 @@ export const fetchPlayerQuickMatchOfferingById = createApiThunk(
   },
 );
 
+export const fetchPlayerQuickMatchLeaderboard = createApiThunk(
+  "quickMatchOfferings/fetchPlayerLeaderboard",
+  {
+    path: ({ arg }) => `/api/player/quick-matches/${arg}/leaderboard`,
+    selectData: (response) => response.data?.data?.room || null,
+    errorMessage: "Unable to load this tournament leaderboard.",
+  },
+);
+
 export const createQuickMatchOffering = createApiThunk(
   "quickMatchOfferings/create",
   {
     method: "post",
-    path: "/api/admin/quick-match-offerings",
+    path: "/api/staff/tournaments/offerings",
     selectData: (response) => response.data?.data?.offering,
     errorMessage: "Unable to create this Quick Match offering.",
     toast: { success: true, error: true },
@@ -45,7 +64,7 @@ export const updateQuickMatchOffering = createApiThunk(
   "quickMatchOfferings/update",
   {
     method: "patch",
-    path: ({ arg }) => `/api/admin/quick-match-offerings/${arg.offeringId}`,
+    path: ({ arg }) => `/api/staff/tournaments/offerings/${arg.offeringId}`,
     getBody: (payload) => {
       const changes = { ...payload };
       delete changes.offeringId;
@@ -67,6 +86,8 @@ const quickMatchOfferingSlice = createSlice({
   name: "quickMatchOfferings",
   initialState: {
     error: null,
+    games: [],
+    gamesStatus: "idle",
     offerings: [],
     playerError: null,
     playerDetails: {},
@@ -74,23 +95,44 @@ const quickMatchOfferingSlice = createSlice({
     playerDetailRequestIdsById: {},
     playerDetailStatusById: {},
     playerOfferings: [],
+    playerLeaderboards: {},
+    playerLeaderboardStatusById: {},
+    playerLeaderboardErrorsById: {},
     playerStatus: "idle",
+    requestId: null,
     status: "idle",
   },
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchQuickMatchOfferings.pending, (state) => {
+      .addCase(fetchQuickMatchOfferings.pending, (state, action) => {
         state.error = null;
+        state.requestId = action.meta.requestId;
         state.status = "loading";
       })
       .addCase(fetchQuickMatchOfferings.fulfilled, (state, action) => {
+        if (state.requestId !== action.meta.requestId) return;
         state.offerings = action.payload;
+        state.requestId = null;
         state.status = "succeeded";
       })
       .addCase(fetchQuickMatchOfferings.rejected, (state, action) => {
-        state.error = action.payload || action.error.message;
-        state.status = "failed";
+        if (state.requestId !== action.meta.requestId) return;
+        state.error = action.meta.aborted
+          ? null
+          : action.payload || action.error.message;
+        state.requestId = null;
+        state.status = action.meta.aborted ? "idle" : "failed";
+      })
+      .addCase(fetchTournamentManagerGames.pending, (state) => {
+        state.gamesStatus = "loading";
+      })
+      .addCase(fetchTournamentManagerGames.fulfilled, (state, action) => {
+        state.games = Array.isArray(action.payload) ? action.payload : [];
+        state.gamesStatus = "succeeded";
+      })
+      .addCase(fetchTournamentManagerGames.rejected, (state, action) => {
+        state.gamesStatus = action.meta.aborted ? "idle" : "failed";
       })
       .addCase(fetchPlayerQuickMatchOfferings.pending, (state) => {
         state.playerError = null;
@@ -144,6 +186,18 @@ const quickMatchOfferingSlice = createSlice({
         state.playerDetailErrorsById[action.meta.arg] = action.meta.aborted
           ? null
           : action.payload || action.error;
+      })
+      .addCase(fetchPlayerQuickMatchLeaderboard.pending, (state, action) => {
+        state.playerLeaderboardErrorsById[action.meta.arg] = null;
+        state.playerLeaderboardStatusById[action.meta.arg] = "loading";
+      })
+      .addCase(fetchPlayerQuickMatchLeaderboard.fulfilled, (state, action) => {
+        state.playerLeaderboards[action.meta.arg] = action.payload;
+        state.playerLeaderboardStatusById[action.meta.arg] = "succeeded";
+      })
+      .addCase(fetchPlayerQuickMatchLeaderboard.rejected, (state, action) => {
+        state.playerLeaderboardErrorsById[action.meta.arg] = action.meta.aborted ? null : action.payload || action.error;
+        state.playerLeaderboardStatusById[action.meta.arg] = action.meta.aborted ? "idle" : "failed";
       })
       .addCase(createQuickMatchOffering.fulfilled, (state, action) => {
         upsertOffering(state.offerings, action.payload);

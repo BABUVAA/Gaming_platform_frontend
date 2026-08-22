@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -21,12 +21,12 @@ import {
   executeOperatorMatchCommand,
   fetchMoreOperatorMatches,
   fetchOperatorWorkspace,
-  publishOperatorLobby,
 } from "../store/slices/operatorOperationsSlice";
 import {
   selectOperatorActiveAction,
   selectOperatorDashboard,
   selectOperatorMatches,
+  selectOperatorActiveRooms,
   selectOperatorMatchPages,
   selectOperatorMatchPageStatus,
   selectOperatorWorkspaceError,
@@ -35,10 +35,10 @@ import {
 } from "../store/selectors/operatorOperationsSelectors";
 
 const operatorCommands = Object.freeze({
-  operator_assigned: {
-    command: "prepare",
-    description: "Open this room for player check-in and lobby preparation.",
-    label: "Open check-in",
+  scheduled: {
+    command: "start",
+    description: "Start at the confirmed schedule after the ten-minute lobby window.",
+    label: "Start match",
   },
   lobby_ready: {
     command: "start",
@@ -72,7 +72,7 @@ const statusPresentation = Object.freeze({
     style: "border-slate-500/30 bg-slate-500/10 text-slate-200",
   },
   check_in: {
-    label: "Check-in",
+    label: "Lobby access",
     style: "border-amber-300/25 bg-amber-300/10 text-amber-200",
   },
   lobby_ready: {
@@ -105,12 +105,6 @@ const statusPresentation = Object.freeze({
   },
 });
 
-const emptyLobby = {
-  roomCode: "",
-  roomPassword: "",
-  instructions: "",
-};
-
 const getParticipantId = (participant) =>
   String(participant?.user?._id || participant?.user || "");
 
@@ -134,36 +128,48 @@ const getMatchGameLabel = (match) =>
   match.gameRef?.name || match.gameKey || match.game || "Game";
 const isEventMatch = (match) =>
   match.source === "event" || Boolean(match.eventBatch);
+const getRoomOperationalLabel = (room, percentage) => {
+  if (room.status !== "full") return `${percentage}% filled`;
+  if (!room.match) return "Preparing match";
+  if (room.match.assignedToViewer) return "Assigned to you";
+  if (room.match.status === "awaiting_operator") return "Ready for operator pickup";
+  if (room.match.status === "operator_assigned") return "Operator assigned";
+  if (room.match.status === "scheduled") return "Scheduled";
+  if (room.match.status === "live") return "Live";
+  if (["result_pending", "disputed"].includes(room.match.status)) return "Results pending";
+  return "Match created";
+};
+const getTournamentRankingGroups = (match) => {
+  const teamMode = Number(match.quickMatchOffering?.teamSize || 1) > 1;
+  const groups = new Map();
+  (match.participants || []).forEach((participant) => {
+    const playerId = getParticipantId(participant);
+    const teamId = String(participant.team?._id || participant.team || "");
+    const key = teamMode ? teamId : playerId;
+    if (!key) return;
+    const group = groups.get(key) || { key, names: [] };
+    group.names.push(getParticipantName(participant));
+    groups.set(key, group);
+  });
+  return [...groups.values()];
+};
 
 const Operations = () => {
   const { competitionRevision, connected } = useSocket();
   const dispatch = useDispatch();
   const dashboard = useSelector(selectOperatorDashboard);
   const matches = useSelector(selectOperatorMatches);
+  const activeRooms = useSelector(selectOperatorActiveRooms);
   const unassignedMatches = useSelector(selectUnassignedOperatorMatches);
   const workspaceStatus = useSelector(selectOperatorWorkspaceStatus);
   const error = useSelector(selectOperatorWorkspaceError);
   const activeAction = useSelector(selectOperatorActiveAction);
   const matchPages = useSelector(selectOperatorMatchPages);
   const matchPageStatus = useSelector(selectOperatorMatchPageStatus);
-  const [lobbyDrafts, setLobbyDrafts] = useState({});
   const [resultDrafts, setResultDrafts] = useState({});
   const [activeFilter, setActiveFilter] = useState("all");
+  const [activeDesk, setActiveDesk] = useState("rooms");
   const [expandedMatchId, setExpandedMatchId] = useState("");
-
-  const syncLobbyDrafts = useCallback((incomingMatches) => {
-    // Drafts are keyed by match so opening one command panel never overwrites
-    // unsent lobby values prepared for another match.
-    const drafts = incomingMatches.reduce((result, match) => {
-      result[match._id] = {
-        roomCode: match.lobby?.roomCode || "",
-        roomPassword: match.lobby?.roomPassword || "",
-        instructions: match.lobby?.instructions || "",
-      };
-      return result;
-    }, {});
-    setLobbyDrafts(drafts);
-  }, []);
 
   useEffect(() => {
     const request = dispatch(fetchOperatorWorkspace());
@@ -171,19 +177,22 @@ const Operations = () => {
   }, [competitionRevision, dispatch]);
 
   useEffect(() => {
-    syncLobbyDrafts(matches);
     setResultDrafts((current) => Object.fromEntries(matches.map((match) => {
       const existing = current[match._id];
       const serverRanking = (match.resultSummary?.rankingIds || []).map((entry) => String(entry?._id || entry));
+      const tournamentRanking = (match.resultSummary?.placementRanking || []).map((row) => String(row.team?._id || row.team || row.playerIds?.[0]?._id || row.playerIds?.[0] || ""));
       return [match._id, existing || {
         proofNote: match.resultSummary?.proofNote || "",
         rankingIds: serverRanking.length
           ? serverRanking
           : (match.participants || []).map(getParticipantId).filter(Boolean),
+        rankingKeys: tournamentRanking.length
+          ? tournamentRanking
+          : getTournamentRankingGroups(match).map((group) => group.key),
         score: match.resultSummary?.finalScore || "",
       }];
     })));
-  }, [matches, syncLobbyDrafts]);
+  }, [matches]);
 
   const orderedMatches = useMemo(
     () =>
@@ -237,34 +246,13 @@ const Operations = () => {
   };
 
   const moveRankedPlayer = (matchId, playerId, direction) => {
-    const rankingIds = [...(resultDrafts[matchId]?.rankingIds || [])];
+    const field = resultDrafts[matchId]?.rankingKeys ? "rankingKeys" : "rankingIds";
+    const rankingIds = [...(resultDrafts[matchId]?.[field] || [])];
     const currentIndex = rankingIds.indexOf(playerId);
     const nextIndex = currentIndex + direction;
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= rankingIds.length) return;
     [rankingIds[currentIndex], rankingIds[nextIndex]] = [rankingIds[nextIndex], rankingIds[currentIndex]];
-    updateResultDraft(matchId, { rankingIds });
-  };
-
-  const updateLobbyDraft = (matchId, field, value) => {
-    setLobbyDrafts((current) => ({
-      ...current,
-      [matchId]: {
-        ...(current[matchId] || emptyLobby),
-        [field]: value,
-      },
-    }));
-  };
-
-  const publishLobby = async (matchId) => {
-    const action = await dispatch(
-      publishOperatorLobby({
-        matchId,
-        lobby: lobbyDrafts[matchId] || emptyLobby,
-      }),
-    );
-    if (publishOperatorLobby.fulfilled.match(action)) {
-      dispatch(fetchOperatorWorkspace());
-    }
+    updateResultDraft(matchId, { [field]: rankingIds });
   };
 
   if (
@@ -352,6 +340,16 @@ const Operations = () => {
         ))}
       </section>
 
+      <nav aria-label="Match Operator responsibilities" className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-700/80 bg-slate-950/55 p-2">
+        {[
+          ["rooms", "Active rooms", activeRooms.length],
+          ["queue", "Full rooms", unassignedMatches.length],
+          ["matches", "Assigned matches", matches.length],
+        ].map(([id, label, count]) => (
+          <button className={activeDesk === id ? "whitespace-nowrap rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950" : "whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white"} key={id} onClick={() => setActiveDesk(id)} type="button">{label} <span className="ml-2 opacity-70">{count}</span></button>
+        ))}
+      </nav>
+
       {error ? (
         <StatusMessage
           icon={<FiAlertTriangle />}
@@ -360,7 +358,21 @@ const Operations = () => {
         />
       ) : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-amber-300/15 bg-[linear-gradient(135deg,rgba(120,53,15,0.13),rgba(15,23,42,0.88)_42%)] shadow-[0_18px_50px_rgba(2,8,23,0.26)]">
+      {activeDesk === "rooms" ? <section className="rounded-[28px] border border-slate-700/80 bg-slate-950/55 p-4 shadow-[0_18px_50px_rgba(2,8,23,0.26)] sm:p-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {activeRooms.map((room) => {
+            const percentage = room.capacity ? Math.min(100, Math.round((room.joinedCount / room.capacity) * 100)) : 0;
+            return <article className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4" key={room.id}>
+              <div className="flex items-start justify-between gap-3"><div><h2 className="font-black text-white">{room.title}</h2><p className="mt-1 text-xs capitalize text-slate-400">{room.gameKey} / {room.mode} / {room.map}</p></div><span className="text-sm font-black text-cyan-200">{room.joinedCount}/{room.capacity}</span></div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-cyan-300" style={{ width: `${percentage}%` }} /></div>
+              <p className="mt-3 text-xs font-bold text-slate-400">{getRoomOperationalLabel(room, percentage)}</p>
+            </article>;
+          })}
+          {!activeRooms.length ? <p className="text-sm text-slate-500">No active rooms in your assigned games.</p> : null}
+        </div>
+      </section> : null}
+
+      {activeDesk === "queue" ? <section className="overflow-hidden rounded-[28px] border border-amber-300/15 bg-[linear-gradient(135deg,rgba(120,53,15,0.13),rgba(15,23,42,0.88)_42%)] shadow-[0_18px_50px_rgba(2,8,23,0.26)]">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-700/70 px-5 py-5 sm:px-6">
           <div>
             <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
@@ -403,9 +415,9 @@ const Operations = () => {
             </button>
           ) : null}
         </div>
-      </section>
+      </section> : null}
 
-      <section className="rounded-[28px] border border-slate-700/80 bg-slate-950/55 shadow-[0_18px_50px_rgba(2,8,23,0.26)]">
+      {activeDesk === "matches" ? <section className="rounded-[28px] border border-slate-700/80 bg-slate-950/55 shadow-[0_18px_50px_rgba(2,8,23,0.26)]">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-700/70 px-5 py-5 sm:px-6">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
@@ -439,16 +451,13 @@ const Operations = () => {
               activeAction={activeAction}
               expanded={expandedMatchId === match._id}
               key={match._id}
-              lobbyDraft={lobbyDrafts[match._id] || emptyLobby}
               match={match}
               resultDraft={resultDrafts[match._id] || { proofNote: "", rankingIds: [], score: "" }}
-              onPublishLobby={publishLobby}
               onToggle={() =>
                 setExpandedMatchId((current) =>
                   current === match._id ? "" : match._id,
                 )
               }
-              onUpdateLobbyDraft={updateLobbyDraft}
               onUpdateResultDraft={updateResultDraft}
               onMoveRankedPlayer={moveRankedPlayer}
               onExecuteCommand={executeCommand}
@@ -481,7 +490,7 @@ const Operations = () => {
             </button>
           ) : null}
         </div>
-      </section>
+      </section> : null}
     </main>
   );
 };
@@ -590,28 +599,18 @@ const AssignmentEmptyState = () => (
 const AssignedMatchCard = ({
   activeAction,
   expanded,
-  lobbyDraft,
   match,
   resultDraft,
   onMoveRankedPlayer,
-  onPublishLobby,
   onToggle,
-  onUpdateLobbyDraft,
   onUpdateResultDraft,
   onExecuteCommand,
 }) => {
-  const checkedInCount = (match.participants || []).filter(
-    (participant) => participant.checkedIn,
-  ).length;
   const participantCount = match.participants?.length || 0;
   const presentation =
     statusPresentation[match.status] || statusPresentation.scheduled;
   const availableCommand = operatorCommands[match.status] || null;
-  const canEditLobby = ["scheduled", "check_in", "lobby_ready"].includes(
-    match.status,
-  );
   const isCommandBusy = activeAction === `${match._id}:command`;
-  const isLobbyBusy = activeAction === `${match._id}:lobby`;
   const rankedEvent = match.eventBatch?.format === "ranked_stages";
 
   return (
@@ -659,8 +658,8 @@ const AssignedMatchCard = ({
             />
             <MatchFact
               icon={<FiUsers />}
-              label="Check-ins"
-              value={`${checkedInCount}/${participantCount}`}
+              label="Lineup"
+              value={`${participantCount} players`}
             />
             <MatchFact
               icon={<FiShield />}
@@ -697,13 +696,14 @@ const AssignedMatchCard = ({
                 </div>
               ) : (
                 <p className="mt-3 text-sm leading-6 text-slate-400">
-                  The next action depends on player check-in, result submission,
-                  dispute review, or platform administration.
+                  {match.status === "operator_assigned"
+                    ? "Waiting for the Game Manager to confirm schedule and lobby access."
+                    : "The next action depends on the Match result or platform review."}
                 </p>
               )}
 
               <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                Player readiness
+                Player lineup
               </p>
               <div className="mt-2 max-h-52 space-y-2 overflow-y-auto pr-1">
                 {(match.participants || []).map((participant) => (
@@ -715,43 +715,20 @@ const AssignedMatchCard = ({
                       {participant.user?.profile?.username ||
                         participant.displayName}
                     </span>
-                    <span
-                      className={
-                        participant.checkedIn
-                          ? "text-emerald-300"
-                          : "text-slate-500"
-                      }
-                    >
-                      {participant.checkedIn ? "Ready" : "Waiting"}
-                    </span>
+                    <span className="text-slate-500">Seat</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {canEditLobby ? (
-              <LobbyEditor
-                isBusy={isLobbyBusy}
-                lobbyDraft={lobbyDraft}
-                match={match}
-                onPublish={onPublishLobby}
-                onUpdate={onUpdateLobbyDraft}
-              />
-            ) : (
-              <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-5">
-                <FiCheckCircle className="text-2xl text-cyan-300" />
-                <h4 className="mt-4 font-black text-white">
-                  Operations are stage controlled
-                </h4>
-                <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Lobby credentials can be changed only while the room is being
-                  prepared. Completed and live stages remain protected.
-                </p>
-              </div>
-            )}
+            <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-5">
+              <FiClock className="text-2xl text-cyan-300" />
+              <h4 className="mt-4 font-black text-white">Game Manager schedule</h4>
+              <p className="mt-2 text-sm leading-6 text-slate-400">{match.scheduledFor ? `${formatDateTime(match.scheduledFor)} / lobby opens ten minutes before start.` : "Schedule and lobby access are pending."}</p>
+            </div>
           </div>
 
-          {rankedEvent && match.status === "live" ? (
+          {(rankedEvent || match.quickMatchOffering) && match.status === "live" ? (
             <RankedResultEditor
               isBusy={isCommandBusy}
               match={match}
@@ -759,6 +736,7 @@ const AssignedMatchCard = ({
               onSubmit={(body) => onExecuteCommand(match._id, "record_result", body)}
               onUpdate={onUpdateResultDraft}
               resultDraft={resultDraft}
+              tournament={Boolean(match.quickMatchOffering)}
             />
           ) : null}
 
@@ -772,28 +750,31 @@ const AssignedMatchCard = ({
   );
 };
 
-const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultDraft }) => {
+const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultDraft, tournament = false }) => {
   const participantById = new Map(
     (match.participants || []).map((participant) => [getParticipantId(participant), participant]),
   );
-  const rankingIds = resultDraft.rankingIds || [];
+  const groups = tournament ? getTournamentRankingGroups(match) : [];
+  const groupById = new Map(groups.map((group) => [group.key, group]));
+  const rankingIds = tournament ? (resultDraft.rankingKeys || []) : (resultDraft.rankingIds || []);
+  const expectedSize = tournament ? groupById.size : participantById.size;
   const canSubmit =
     resultDraft.score.trim().length > 0 &&
-    rankingIds.length === participantById.size &&
-    new Set(rankingIds).size === participantById.size;
+    rankingIds.length === expectedSize &&
+    new Set(rankingIds).size === expectedSize;
 
   return (
     <section className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/5 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Ranked room result</p>
-          <h4 className="mt-1 font-black text-white">Order every player from first to last</h4>
+          <h4 className="mt-1 font-black text-white">Order every {tournament && Number(match.quickMatchOffering?.teamSize || 1) > 1 ? "team" : "player"} from first to last</h4>
           <p className="mt-1 text-xs text-slate-400">
-            Top {match.eventBatch?.stage?.advanceCount || 0} will qualify after verification and the dispute window.
+            {tournament ? "Configured place rewards are applied only after governance verification and settlement." : `Top ${match.eventBatch?.stage?.advanceCount || 0} will qualify after verification and the dispute window.`}
           </p>
         </div>
         <span className="rounded-full border border-emerald-300/20 px-3 py-1 text-xs font-bold text-emerald-100">
-          {rankingIds.length}/{participantById.size} ranked
+          {rankingIds.length}/{expectedSize} ranked
         </span>
       </div>
 
@@ -801,7 +782,7 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
         {rankingIds.map((playerId, index) => (
           <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2" key={playerId}>
             <span className="text-center text-sm font-black text-emerald-200">#{index + 1}</span>
-            <span className="truncate text-sm font-bold text-white">{getParticipantName(participantById.get(playerId))}</span>
+            <span className="truncate text-sm font-bold text-white">{tournament ? groupById.get(playerId)?.names.join(", ") : getParticipantName(participantById.get(playerId))}</span>
             <div className="flex gap-1">
               <button aria-label={`Move ${playerId} up`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === 0} onClick={() => onMove(match._id, playerId, -1)} type="button">Up</button>
               <button aria-label={`Move ${playerId} down`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === rankingIds.length - 1} onClick={() => onMove(match._id, playerId, 1)} type="button">Down</button>
@@ -820,7 +801,7 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
           <input className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm normal-case tracking-normal text-white" maxLength={1000} onChange={(event) => onUpdate(match._id, { proofNote: event.target.value })} placeholder="Observed scoreboard or evidence" value={resultDraft.proofNote} />
         </label>
       </div>
-      <button className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={isBusy || !canSubmit} onClick={() => onSubmit({ proofNote: resultDraft.proofNote, rankingIds, score: resultDraft.score })} type="button">
+      <button className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={isBusy || !canSubmit} onClick={() => onSubmit({ proofNote: resultDraft.proofNote, ...(tournament ? { rankingKeys: rankingIds } : { rankingIds }), score: resultDraft.score })} type="button">
         {isBusy ? "Saving ranking..." : "Save ranked result"}
       </button>
     </section>
@@ -892,79 +873,6 @@ const MatchFact = ({ icon, label, value }) => (
   </div>
 );
 
-const LobbyEditor = ({
-  isBusy,
-  lobbyDraft,
-  match,
-  onPublish,
-  onUpdate,
-}) => (
-  <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">
-          Lobby access
-        </p>
-        <h4 className="mt-1 font-black text-white">Room details</h4>
-      </div>
-      {match.lobby?.publishedAt ? (
-        <span className="text-[10px] font-bold text-emerald-300">
-          Shared {formatDateTime(match.lobby.publishedAt)}
-        </span>
-      ) : null}
-    </div>
-
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-      <OperatorInput
-        label="Room code"
-        onChange={(value) => onUpdate(match._id, "roomCode", value)}
-        placeholder="ROOM-1234"
-        value={lobbyDraft.roomCode}
-      />
-      <OperatorInput
-        label="Password"
-        onChange={(value) => onUpdate(match._id, "roomPassword", value)}
-        placeholder="PASS123"
-        value={lobbyDraft.roomPassword}
-      />
-    </div>
-
-    <label className="mt-3 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-      Player instructions
-      <textarea
-        className="mt-2 min-h-24 w-full resize-y rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm font-medium normal-case tracking-normal text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/50"
-        onChange={(event) =>
-          onUpdate(match._id, "instructions", event.target.value)
-        }
-        placeholder="Lobby timing and room notes"
-        value={lobbyDraft.instructions}
-      />
-    </label>
-
-    <button
-      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:bg-slate-700 disabled:text-slate-400"
-      disabled={isBusy}
-      onClick={() => onPublish(match._id)}
-      type="button"
-    >
-      <FiRadio />
-      {isBusy ? "Sharing lobby..." : "Share with players"}
-    </button>
-  </div>
-);
-
-const OperatorInput = ({ label, onChange, placeholder, value }) => (
-  <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-    {label}
-    <input
-      className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm font-medium normal-case tracking-normal text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/50"
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      value={value}
-    />
-  </label>
-);
-
 const OperationsSkeleton = () => (
   <div className="animate-pulse space-y-5">
     <div className="h-64 rounded-[30px] bg-slate-800/80" />
@@ -1023,10 +931,15 @@ const matchPropType = PropTypes.shape({
   }),
   map: PropTypes.string,
   mode: PropTypes.string,
+  quickMatchOffering: PropTypes.shape({
+    rewardPolicy: PropTypes.string,
+    teamSize: PropTypes.number,
+  }),
   participants: PropTypes.arrayOf(
     PropTypes.shape({
       checkedIn: PropTypes.bool,
       displayName: PropTypes.string,
+      team: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
       // Queue summaries intentionally keep participant identity as an ID,
       // while assigned-match detail may populate the safe display profile.
       user: PropTypes.oneOfType([
@@ -1062,21 +975,15 @@ AssignmentCard.propTypes = {
 AssignedMatchCard.propTypes = {
   activeAction: PropTypes.string.isRequired,
   expanded: PropTypes.bool.isRequired,
-  lobbyDraft: PropTypes.shape({
-    instructions: PropTypes.string,
-    roomCode: PropTypes.string,
-    roomPassword: PropTypes.string,
-  }).isRequired,
   match: matchPropType.isRequired,
   resultDraft: PropTypes.shape({
     proofNote: PropTypes.string.isRequired,
     rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+    rankingKeys: PropTypes.arrayOf(PropTypes.string),
     score: PropTypes.string.isRequired,
   }).isRequired,
   onMoveRankedPlayer: PropTypes.func.isRequired,
-  onPublishLobby: PropTypes.func.isRequired,
   onToggle: PropTypes.func.isRequired,
-  onUpdateLobbyDraft: PropTypes.func.isRequired,
   onUpdateResultDraft: PropTypes.func.isRequired,
   onExecuteCommand: PropTypes.func.isRequired,
 };
@@ -1090,8 +997,10 @@ RankedResultEditor.propTypes = {
   resultDraft: PropTypes.shape({
     proofNote: PropTypes.string.isRequired,
     rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
+    rankingKeys: PropTypes.arrayOf(PropTypes.string),
     score: PropTypes.string.isRequired,
   }).isRequired,
+  tournament: PropTypes.bool,
 };
 
 ResultEvidence.propTypes = {
@@ -1101,25 +1010,6 @@ ResultEvidence.propTypes = {
 MatchFact.propTypes = {
   icon: PropTypes.node.isRequired,
   label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-};
-
-LobbyEditor.propTypes = {
-  isBusy: PropTypes.bool.isRequired,
-  lobbyDraft: PropTypes.shape({
-    instructions: PropTypes.string,
-    roomCode: PropTypes.string,
-    roomPassword: PropTypes.string,
-  }).isRequired,
-  match: matchPropType.isRequired,
-  onPublish: PropTypes.func.isRequired,
-  onUpdate: PropTypes.func.isRequired,
-};
-
-OperatorInput.propTypes = {
-  label: PropTypes.string.isRequired,
-  onChange: PropTypes.func.isRequired,
-  placeholder: PropTypes.string.isRequired,
   value: PropTypes.string.isRequired,
 };
 

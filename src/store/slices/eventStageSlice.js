@@ -31,20 +31,71 @@ export const fetchEventStages = createApiThunk(
   },
 );
 
-export const closeEventRegistration = createApiThunk(
-  "eventStage/closeRegistration",
+export const fetchManagedEventStages = createApiThunk(
+  "eventStage/fetchManaged",
+  {
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/stages`,
+    getParams: ({ batchCursor }) => ({
+      batchLimit: 25,
+      ...(batchCursor ? { batchCursor } : {}),
+    }),
+    selectData: (response) => response.data?.data || { run: null, stages: [] },
+    errorMessage: "Unable to load Event rounds.",
+    toast: { error: true },
+  },
+);
+
+export const configureManagedEventRound = createApiThunk(
+  "eventStage/configureManagedRound",
   {
     method: "post",
-    path: ({ arg: runId }) =>
-      `/api/admin/events/runs/${runId}/close-registration`,
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/rounds/configure`,
+    getBody: ({ definition }) => ({
+      advanceCount: definition.finalRound ? 0 : definition.advanceCount,
+      batchSpacingMinutes: definition.batchSpacingMinutes,
+      checkInMinutesBefore: definition.checkInMinutesBefore,
+      finalRound: definition.finalRound,
+      participantsPerMatch: definition.participantsPerMatch,
+      stageDelayMinutes: definition.stageDelayMinutes,
+    }),
+    selectData: (response) => response.data?.data,
+    errorMessage: "Unable to configure the Event round.",
+    toast: { success: true, error: true },
+  },
+  {
+    condition: ({ runId }, { getState }) =>
+      getState().eventStages.actionByRunId[runId] !== "loading",
+  },
+);
+
+export const processManagedEventRound = createApiThunk(
+  "eventStage/processManagedRound",
+  {
+    method: "post",
+    path: ({ arg: runId }) => `/api/staff/events/runs/${runId}/rounds/process`,
     getBody: () => ({}),
     selectData: (response) => response.data?.data,
-    errorMessage: "Unable to close registration and generate Stage 1.",
+    errorMessage: "Unable to continue Event round processing.",
     toast: { success: true, error: true },
   },
   {
     condition: (runId, { getState }) =>
       getState().eventStages.actionByRunId[runId] !== "loading",
+  },
+);
+
+export const fetchManagedRoundResults = createApiThunk(
+  "eventStage/fetchManagedRoundResults",
+  {
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/rounds/${arg.stageNumber}/results`,
+    getParams: ({ cursor, result }) => ({
+      limit: 50,
+      result,
+      ...(cursor ? { cursor } : {}),
+    }),
+    selectData: (response) => response.data?.data || { items: [], nextCursor: null },
+    errorMessage: "Unable to load promoted and eliminated players.",
+    toast: { error: true },
   },
 );
 
@@ -192,6 +243,7 @@ const eventStageSlice = createSlice({
     runError: null,
     runRequestId: null,
     runStatus: "idle",
+    roundResultsByKey: {},
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -248,6 +300,78 @@ const eventStageSlice = createSlice({
             action.payload?.message || action.error.message;
         }
       })
+      .addCase(fetchManagedEventStages.pending, (state, action) => {
+        const { runId } = action.meta.arg;
+        state.errorByRunId[runId] = null;
+        state.latestRequestByRunId[runId] = action.meta.requestId;
+        state.statusByRunId[runId] = "loading";
+      })
+      .addCase(fetchManagedEventStages.fulfilled, (state, action) => {
+        const { batchCursor, runId } = action.meta.arg;
+        if (state.latestRequestByRunId[runId] !== action.meta.requestId) return;
+        state.latestRequestByRunId[runId] = null;
+        state.overviewByRunId[runId] = batchCursor
+          ? mergeStagePage(state.overviewByRunId[runId], action.payload)
+          : action.payload;
+        state.statusByRunId[runId] = "succeeded";
+      })
+      .addCase(fetchManagedEventStages.rejected, (state, action) => {
+        const { runId } = action.meta.arg;
+        if (state.latestRequestByRunId[runId] !== action.meta.requestId) return;
+        state.latestRequestByRunId[runId] = null;
+        state.statusByRunId[runId] = action.meta.aborted ? "idle" : "failed";
+        if (!action.meta.aborted) state.errorByRunId[runId] = action.payload?.message || action.error.message;
+      })
+      .addCase(configureManagedEventRound.pending, (state, action) => {
+        state.actionByRunId[action.meta.arg.runId] = "loading";
+      })
+      .addCase(configureManagedEventRound.fulfilled, (state, action) => {
+        const runId = action.meta.arg.runId;
+        state.actionByRunId[runId] = "idle";
+        state.overviewByRunId[runId] = action.payload;
+        state.statusByRunId[runId] = "succeeded";
+      })
+      .addCase(configureManagedEventRound.rejected, (state, action) => {
+        if (!action.meta.condition) state.actionByRunId[action.meta.arg.runId] = "idle";
+      })
+      .addCase(processManagedEventRound.pending, (state, action) => {
+        state.actionByRunId[action.meta.arg] = "loading";
+      })
+      .addCase(processManagedEventRound.fulfilled, (state, action) => {
+        const runId = action.meta.arg;
+        state.actionByRunId[runId] = "idle";
+        state.overviewByRunId[runId] = action.payload;
+        state.statusByRunId[runId] = "succeeded";
+      })
+      .addCase(processManagedEventRound.rejected, (state, action) => {
+        if (!action.meta.condition) state.actionByRunId[action.meta.arg] = "idle";
+      })
+      .addCase(fetchManagedRoundResults.pending, (state, action) => {
+        const { result, runId, stageNumber } = action.meta.arg;
+        const key = `${runId}:${stageNumber}:${result}`;
+        state.roundResultsByKey[key] = { ...(state.roundResultsByKey[key] || { items: [] }), error: null, status: "loading" };
+      })
+      .addCase(fetchManagedRoundResults.fulfilled, (state, action) => {
+        const { cursor, result, runId, stageNumber } = action.meta.arg;
+        const key = `${runId}:${stageNumber}:${result}`;
+        const current = state.roundResultsByKey[key]?.items || [];
+        const rows = cursor ? [...current, ...action.payload.items] : action.payload.items;
+        state.roundResultsByKey[key] = {
+          error: null,
+          items: [...new Map(rows.map((item) => [`${item.room}:${item.rank}:${item.player?.profileTag}`, item])).values()],
+          nextCursor: action.payload.nextCursor || null,
+          status: "succeeded",
+        };
+      })
+      .addCase(fetchManagedRoundResults.rejected, (state, action) => {
+        const { result, runId, stageNumber } = action.meta.arg;
+        const key = `${runId}:${stageNumber}:${result}`;
+        state.roundResultsByKey[key] = {
+          ...(state.roundResultsByKey[key] || { items: [] }),
+          error: action.meta.aborted ? null : action.payload?.message || action.error.message,
+          status: action.meta.aborted ? "idle" : "failed",
+        };
+      })
       .addCase(fetchEventPrizeRelease.pending, (state, action) => {
         const runId = action.meta.arg;
         state.prizeErrorByRunId[runId] = null;
@@ -273,24 +397,6 @@ const eventStageSlice = createSlice({
       })
       .addCase(releaseEventPrizes.rejected, (state, action) => {
         if (!action.meta.condition) state.prizeActionByRunId[action.meta.arg] = "idle";
-      })
-      .addCase(closeEventRegistration.pending, (state, action) => {
-        state.actionByRunId[action.meta.arg] = "loading";
-      })
-      .addCase(closeEventRegistration.fulfilled, (state, action) => {
-        const runId = action.meta.arg;
-        state.actionByRunId[runId] = "idle";
-        state.overviewByRunId[runId] = {
-          run: action.payload.run,
-          stages: action.payload.stage ? [action.payload.stage] : [],
-          generation: { status: "completed", retryAvailable: false },
-        };
-        state.statusByRunId[runId] = "succeeded";
-      })
-      .addCase(closeEventRegistration.rejected, (state, action) => {
-        if (!action.meta.condition) {
-          state.actionByRunId[action.meta.arg] = "idle";
-        }
       })
       .addCase(retryEventStageGeneration.pending, (state, action) => {
         state.actionByRunId[action.meta.arg] = "loading";

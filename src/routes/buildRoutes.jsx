@@ -13,6 +13,7 @@ import {
   ProtectedRoute,
   StaffRoute,
   EventManagerRoute,
+  TournamentManagerRoute,
   GameManagerRoute,
   VerifiedPlayerRoute,
   VerifiedDashboardViewerRoute,
@@ -40,6 +41,7 @@ const accessWrappers = {
   protected: ProtectedRoute,
   staff: StaffRoute,
   eventManager: EventManagerRoute,
+  tournamentManager: TournamentManagerRoute,
   gameManager: GameManagerRoute,
   // Verified-player access prevents restricted pages from mounting, which
   // also prevents their page-level API requests from starting.

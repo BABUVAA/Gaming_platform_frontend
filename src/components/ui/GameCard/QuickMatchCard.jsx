@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -21,7 +21,8 @@ const reasonLabels = {
   staff_read_only:
     "Staff accounts can view this offering but cannot join from the player dashboard.",
   queue_activation_pending: "Queue entry is being activated for this format.",
-  capacity_full: "Every seat is filled and the Match is being generated.",
+  capacity_full: "Every seat is filled.",
+  already_joined: "You already joined this tournament room.",
 };
 
 const formatMinorAmount = (amount, currency) => {
@@ -36,6 +37,19 @@ const formatMinorAmount = (amount, currency) => {
   }
 };
 
+const getProgressStatus = (offering) => {
+  const status = offering.execution?.status;
+  if (status === "awaiting_operator") return "Waiting for operator";
+  if (status === "operator_assigned") return "Waiting for schedule";
+  if (status === "scheduled") return "Scheduled";
+  if (status === "live") return "Live";
+  if (["result_pending", "disputed"].includes(status)) return "Results pending";
+  if (["verified", "settled"].includes(status)) return "Completed";
+  return offering.joinProgress?.isFull
+    ? "Match generating"
+    : "Accepting players";
+};
+
 const QuickMatchCard = ({ offering, showDetails = true }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isTeamPickerOpen, setIsTeamPickerOpen] = useState(false);
@@ -48,6 +62,11 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
   const gameName = offering.game?.name || offering.gameKey;
   const isJoining =
     joinStatus === "loading" && joiningOfferingId === offering._id;
+  const hasJoined = joined || offering.membership?.isJoined === true;
+
+  useEffect(() => {
+    if (offering.membership?.isJoined) setJoined(true);
+  }, [offering.membership?.isJoined]);
 
   const confirmJoin = async () => {
     if (isStaffUtilityMode) return;
@@ -97,6 +116,15 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               offering.currency,
             )}
           />
+          {offering.rewardPolicy === "placement" && offering.placementRewards?.length ? (
+            <div className="col-span-3 rounded-lg bg-cyan-300/5 px-2 py-2 text-xs font-bold text-cyan-200">
+              <dt className="sr-only">Place rewards</dt>
+              <dd>
+                {offering.placementRewards.slice(0, 3).map((row) => `#${row.place} ${formatMinorAmount(row.amountMinor, offering.currency)}`).join(" / ")}
+                {offering.placementRewards.length > 3 ? ` / +${offering.placementRewards.length - 3} places` : ""}
+              </dd>
+            </div>
+          ) : null}
           <Detail label="Seats" value={offering.maxParticipants} />
         </dl>
 
@@ -106,11 +134,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               offering.joinProgress?.capacity || offering.maxParticipants
             }
             joined={offering.joinProgress?.joinedParticipants || 0}
-            status={
-              offering.joinProgress?.isFull
-                ? "Match generating"
-                : "Accepting players"
-            }
+            status={getProgressStatus(offering)}
           />
         </div>
 
@@ -155,6 +179,10 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
                 Open Staff Workspace
               </Link>
             </div>
+          ) : hasJoined ? (
+            <p className="text-sm font-semibold text-emerald-200">
+              Joined / follow the room from My Matches.
+            </p>
           ) : offering.eligibility?.joinAvailable ? (
             joined ? (
               <p className="text-sm font-semibold text-emerald-200">
@@ -256,6 +284,11 @@ QuickMatchCard.propTypes = {
       reasons: PropTypes.arrayOf(PropTypes.string).isRequired,
     }).isRequired,
     entryFeeMinor: PropTypes.number.isRequired,
+    execution: PropTypes.shape({
+      lobbyRevealAt: PropTypes.string,
+      scheduledFor: PropTypes.string,
+      status: PropTypes.string.isRequired,
+    }),
     game: PropTypes.shape({ name: PropTypes.string }),
     gameKey: PropTypes.string.isRequired,
     map: PropTypes.string,
@@ -267,8 +300,15 @@ QuickMatchCard.propTypes = {
       roomStatus: PropTypes.string.isRequired,
     }),
     maxParticipants: PropTypes.number.isRequired,
+    membership: PropTypes.shape({
+      isJoined: PropTypes.bool.isRequired,
+      roomId: PropTypes.string,
+      roomStatus: PropTypes.string,
+    }),
     mode: PropTypes.string.isRequired,
     prizePoolMinor: PropTypes.number.isRequired,
+    rewardPolicy: PropTypes.oneOf(["winner_split", "placement"]),
+    placementRewards: PropTypes.arrayOf(PropTypes.shape({ place: PropTypes.number.isRequired, amountMinor: PropTypes.number.isRequired })),
     region: PropTypes.string.isRequired,
     schedulePolicy: PropTypes.oneOf(["on_demand", "scheduled"]).isRequired,
     teamSize: PropTypes.number.isRequired,

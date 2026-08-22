@@ -37,36 +37,6 @@ export const fetchPlayerMatch = createApiThunk(
   },
 );
 
-export const checkInPlayerMatch = createApiThunk(
-  "matchActivity/checkIn",
-  {
-    path: ({ arg }) => `/api/matches/${arg.matchId}/check-in`,
-    method: "patch",
-    getBody: () => ({}),
-    selectData: (response) => response.data?.data || null,
-    errorMessage: "Unable to check in to this match.",
-    toast: { success: true, error: true },
-  },
-  playerParticipationCondition,
-);
-
-export const submitPlayerMatchResult = createApiThunk(
-  "matchActivity/submitResult",
-  {
-    path: ({ arg }) => `/api/matches/${arg.matchId}/result`,
-    method: "patch",
-    getBody: ({ proofNote, score, winnerIds }) => ({
-      proofNote,
-      score,
-      winnerIds,
-    }),
-    selectData: (response) => response.data?.data || null,
-    errorMessage: "Unable to submit this match result.",
-    toast: { success: true, error: true },
-  },
-  playerParticipationCondition,
-);
-
 export const raisePlayerMatchDispute = createApiThunk(
   "matchActivity/raiseDispute",
   {
@@ -93,11 +63,7 @@ const initialState = {
 const getActivityTime = (activity) =>
   new Date(activity.createdAt || activity.scheduledFor || 0).getTime();
 
-const matchCommands = [
-  checkInPlayerMatch,
-  raisePlayerMatchDispute,
-  submitPlayerMatchResult,
-];
+const matchCommands = [raisePlayerMatchDispute];
 
 const matchActivitySlice = createSlice({
   name: "matchActivity",

@@ -293,6 +293,18 @@ export const EventManagerRoute = ({ children }) => (
   </AccessSummaryGate>
 );
 
+export const TournamentManagerRoute = ({ children }) => (
+  <AccessSummaryGate
+    hasProfileAccess={(summary) =>
+      summary.staffAssignments?.some(
+        (assignment) => assignment.role === "tournament_manager",
+      )
+    }
+  >
+    {children}
+  </AccessSummaryGate>
+);
+
 export const GameManagerRoute = ({ children }) => (
   <AccessSummaryGate
     hasProfileAccess={(summary) =>
@@ -411,6 +423,10 @@ StaffRoute.propTypes = {
 };
 
 EventManagerRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+TournamentManagerRoute.propTypes = {
   children: PropTypes.node.isRequired,
 };
 

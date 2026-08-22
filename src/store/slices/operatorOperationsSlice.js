@@ -26,23 +26,25 @@ export const fetchOperatorWorkspace = createApiThunk(
   "operatorOperations/fetchWorkspace",
   {
     request: async ({ api, signal }) => {
-      const [dashboard, matches, unassigned] = await Promise.all([
+      const [dashboard, matches, rooms, unassigned] = await Promise.all([
         api.get("/api/operator/dashboard", { signal }),
         api.get("/api/operator/matches", {
           params: { limit: OPERATOR_MATCH_PAGE_LIMIT },
           signal,
         }),
+        api.get("/api/operator/rooms", { params: { limit: 50 }, signal }),
         api.get("/api/operator/matches/unassigned", {
           params: { limit: OPERATOR_MATCH_PAGE_LIMIT },
           signal,
         }),
       ]);
 
-      return { dashboard, matches, unassigned };
+      return { dashboard, matches, rooms, unassigned };
     },
-    selectData: ({ dashboard, matches, unassigned }) => ({
+    selectData: ({ dashboard, matches, rooms, unassigned }) => ({
       dashboard: selectEnvelopeData(dashboard) || null,
       assignedPage: normalizeMatchPage(matches),
+      rooms: selectEnvelopeData(rooms)?.rooms || [],
       unassignedPage: normalizeMatchPage(unassigned),
     }),
     errorMessage: "Unable to load operator activity.",
@@ -92,22 +94,6 @@ export const claimOperatorMatch = createApiThunk(
   },
 );
 
-export const publishOperatorLobby = createApiThunk(
-  "operatorOperations/publishLobby",
-  {
-    method: "patch",
-    path: ({ arg }) => `/api/operator/matches/${arg.matchId}/lobby`,
-    getBody: ({ lobby }) => lobby,
-    selectData: selectEnvelopeData,
-    errorMessage: "Unable to publish lobby details.",
-    toast: { success: "Lobby shared with players.", error: true },
-  },
-  {
-    condition: (_, { getState }) =>
-      getState().operatorOperations.actionStatus !== "loading",
-  },
-);
-
 export const executeOperatorMatchCommand = createApiThunk(
   "operatorOperations/executeCommand",
   {
@@ -141,6 +127,7 @@ const operatorOperationsSlice = createSlice({
     dashboard: null,
     error: null,
     matches: [],
+    rooms: [],
     pageError: { assigned: null, unassigned: null },
     pageRequestId: { assigned: null, unassigned: null },
     pages: { assigned: emptyPage(), unassigned: emptyPage() },
@@ -159,6 +146,7 @@ const operatorOperationsSlice = createSlice({
       .addCase(fetchOperatorWorkspace.fulfilled, (state, action) => {
         state.dashboard = action.payload.dashboard;
         state.matches = action.payload.assignedPage.items;
+        state.rooms = action.payload.rooms;
         state.pages.assigned = action.payload.assignedPage.page;
         state.unassigned = action.payload.unassignedPage.items;
         state.pages.unassigned = action.payload.unassignedPage.page;
@@ -201,7 +189,6 @@ const operatorOperationsSlice = createSlice({
 
     [
       [claimOperatorMatch, "claim"],
-      [publishOperatorLobby, "lobby"],
       [executeOperatorMatchCommand, "command"],
     ].forEach(([thunk, actionName]) => {
       builder

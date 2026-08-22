@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import FutureRoundAdjustmentPanel from "../components/eventManagement/FutureRoundAdjustmentPanel.jsx";
 import EventManagerOperations from "../components/eventManagement/EventManagerOperations.jsx";
-import PostRegistrationRoundPlan from "../components/eventManagement/PostRegistrationRoundPlan.jsx";
+import SequentialRoundControl from "../components/eventManagement/SequentialRoundControl.jsx";
 import JoinProgress from "../components/competition/JoinProgress.jsx";
 import {
   createManagedEventRun,
@@ -138,7 +137,9 @@ const EventManagerDashboard = () => {
     const submittedDates = new FormData(event.currentTarget);
     const payload = {
       admissionPolicy: run.admissionPolicy,
-      registrationCapacity: Number(run.registrationCapacity),
+      ...(run.admissionPolicy === "open"
+        ? {}
+        : { registrationCapacity: Number(run.registrationCapacity) }),
       entryTerms: {
         currency: "INR",
         entryFeeMinor,
@@ -264,7 +265,7 @@ const EventManagerDashboard = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#050b14] px-4 py-6 text-slate-100 sm:px-6 lg:px-8 lg:py-8">
+    <main className="min-w-0 text-slate-100">
       <div className="mx-auto grid max-w-7xl items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4 lg:sticky lg:top-6">
           <div className="border-b border-slate-800 px-2 pb-4">
@@ -583,22 +584,29 @@ const EventManagerDashboard = () => {
                       <option value="limited_seats">Limited seats</option>
                     </select>
                   </label>
-                  <label className="text-sm text-slate-300">
-                    Registration capacity
-                    <input
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
-                      min="1"
-                      onChange={(event) =>
-                        setRun((current) => ({
-                          ...current,
-                          registrationCapacity: event.target.value,
-                        }))
-                      }
-                      required
-                      type="number"
-                      value={run.registrationCapacity}
-                    />
-                  </label>
+                  {run.admissionPolicy === "open" ? (
+                    <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-300">
+                      <span className="block text-xs text-slate-500">Seats</span>
+                      No registration limit
+                    </div>
+                  ) : (
+                    <label className="text-sm text-slate-300">
+                      Registration capacity
+                      <input
+                        className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 p-3"
+                        min="2"
+                        onChange={(event) =>
+                          setRun((current) => ({
+                            ...current,
+                            registrationCapacity: event.target.value,
+                          }))
+                        }
+                        required
+                        type="number"
+                        value={run.registrationCapacity}
+                      />
+                    </label>
+                  )}
                   <fieldset className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4">
                     <legend className="px-2 text-sm font-bold text-white">
                       Entry terms
@@ -991,8 +999,7 @@ const EventManagerDashboard = () => {
                   runId={selectedRunId}
                 />
               ) : null}
-              <PostRegistrationRoundPlan runs={runs} />
-              <FutureRoundAdjustmentPanel runs={runs} />
+              <SequentialRoundControl runs={runs} />
             </>
           )}
         </div>

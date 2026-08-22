@@ -147,7 +147,7 @@ const AccountSettings = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="flex items-center gap-2 text-sm font-bold text-white"><FiShield className="text-cyan-300" /> Confirm sensitive actions</p>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Confirm your password before governance or wallet actions. This expires after 15 minutes.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Players need password confirmation only before requesting a withdrawal. Staff use it before governance changes. Confirmation expires after 15 minutes.</p>
             </div>
             <div className="flex w-full gap-2 sm:w-auto">
               <input aria-label="Current password for sensitive actions" autoComplete="current-password" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white sm:w-56" onChange={(event) => setPassword(event.target.value)} placeholder="Current password" required type="password" value={password} />

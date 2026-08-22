@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -19,19 +19,40 @@ to continue the project without reopening settled decisions.
 ### Current Truth
 
 - The platform is a modular monolith. Do not split services yet.
-- Platform Admin and Super Admin own game setup, publishing, staff assignment,
-  and Event approval.
-- Game Manager is read-only for assigned games and supervises operations.
-- Game Manager read-only supervision includes bounded Event registration
+- Platform Admin and Super Admin own game setup, staff assignment, and Event
+  approval. Tournament Manager owns Quick Match/Tournament offering setup and
+  lifecycle only inside assigned game scopes.
+- Tournament offerings support either the historical single winner-pool rule
+  or an ordered INR place-reward table. Place rewards are immutable in each
+  generated Match. Solo places pay the ranked player; a team-place amount is
+  split deterministically across that ranked team's snapshotted Match members.
+  The assigned Match Operator records and verifies the complete ranking.
+  Platform/Super Admin settles it, and a different non-participant governance identity releases
+  the exact ledger-backed allocations. No result, settlement, or release
+  request accepts client-owned money or recipient amounts.
+- Game Manager supervises operations for assigned games. Its mutations are
+  limited to approving/rejecting scoped game-account verification requests and
+  setting the schedule plus lobby credentials for an assigned-game Match after
+  a Match Operator owns it. Game/catalog configuration, competition definition,
+  staff, result, dispute and money controls remain read-only.
+- Game Manager supervision includes bounded Event registration
   identities, round/Match coverage, operator workload, and sporting standings
   for assigned games. It excludes email, wallet, lobby credentials, private
-  evidence, chat, and every mutation command.
+  Match evidence and chat. Game-account review receives only the submitted UID,
+  in-game name, bounded proof note and safe player identity.
 - Event Manager creates drafts inside assigned game scopes; Platform Admin
   reviews submitted Templates and Event Runs through an audited lifecycle.
-- Event Manager also has read-only, game-scoped operational visibility for its
-  Events through bounded registration and Match-room status pages. These reads
-  omit player emails, wallet data, lobby credentials, raw result evidence and
-  operator commands.
+  After a Run is approved, routine Event execution belongs to the scoped Event
+  Manager: close registration, configure one round from the authoritative
+  eligible-player count, create bounded Match rooms, assign operators, inspect
+  verified promotion/elimination evidence, and configure the next round.
+  Governance retains audit, disputes, recovery, reward approval and independent
+  prize release; it does not approve routine room plans between rounds.
+- Event Manager operational reads and commands remain game-scoped and bounded.
+  They omit player emails, wallet data, lobby credentials and private chat.
+  Round commands never accept player IDs: the server derives Round 1 from the
+  committed registration roster and every later round from immutable promoted
+  outcomes.
 - Invitation-only Event Runs are private in player discovery: only players
   with an active invitation may see their registration card or participate.
 - Open and limited-seat Events remain spectator-visible after registration
@@ -42,9 +63,12 @@ to continue the project without reopening settled decisions.
   cannot cancel or re-enter; direct cancellation receives stable 409. Only an
   audited platform-owned Event failure/cancellation may release entry funds.
 - Event Run approval covers registration timing, admission, entry terms and
-  rewards only. Round rules are proposed after registration closes from the
-  final registered-player count, then independently approved before roster,
-  batch or Match generation.
+  rewards only. After registration closes, the Event Manager configures one
+  round at a time using room size, promotion count, timing and final-round
+  intent. The backend projects the exact rooms from the current server-owned
+  player list. Verified ordered Match results mark the configured top players
+  promoted and every other room participant eliminated. The next round can be
+  configured only from that promoted list.
 - Event proposals move through `draft`, `in_review`, `changes_requested`,
   `active`/`scheduled`, or `rejected`; creators and latest submitters cannot
   review the same revision.
@@ -53,6 +77,43 @@ to continue the project without reopening settled decisions.
   authoritative. This fixed the previous false visual block for Super Admins.
 - Match Operator requires assigned game scope and executes only matches they
   explicitly claim or receive within that scope.
+- Quick Match operational lifecycle amendment 2026-08-21: a full Room creates
+  an `awaiting_operator` Match; an assigned-scope Match Operator claims it;
+  the assigned-scope Game Manager then owns the bounded Match schedule and
+  lobby credential configuration. Lobby credentials remain hidden from
+  players until exactly ten minutes before the scheduled start. Player
+  check-in is retired for Quick Match and Event Matches: the assigned operator
+  may start only at or after the confirmed schedule with lobby evidence
+  present. Game Manager receives no result, dispute, settlement, prize, wallet,
+  or chat authority from this scheduling responsibility.
+- Quick Match participation is offering-scoped, not globally exclusive. A
+  player already joined to one offering may join another eligible Quick Match
+  or Event; each command independently enforces game account, capacity, entry
+  funds and duplicate membership for its own competition. Joined players do
+  not receive a second Join action for the same offering.
+- Quick Match joined-roster visibility is private to members of that exact
+  active Room. The player UI calls it `Leaderboard`, but before results it is
+  only an ordered joined-player lineup and must not imply sporting rank.
+  Non-members cannot enumerate it. Joined players receive idempotent capacity
+  notifications when their Room first reaches 50%, 90%, and full.
+- Quick Match/Event room-operations amendment completed 2026-08-22. The
+  backend now enforces full Room -> scoped operator claim -> assigned-game
+  Game Manager schedule/lobby setup -> T-10 credential disclosure -> operator
+  start at schedule -> operator ranking/result. Player check-in and player
+  result submission routes are retired with stable responses. Operator and
+  Game Manager workspaces expose bounded room progress and only the authority
+  each role owns; joined players receive a private lineup and cannot rejoin the
+  same offering. Wallet and staff shells were simplified without removing
+  financial safety disclosures. The authenticated audit also fixed stale
+  `Aborted` list state, duplicate Solo/team wording, assigned-Room pickup labels
+  and full-Room player cards that ignored the generated Match lifecycle.
+  Verification: backend aggregate 334/334 (competition unit 107/107, replica
+  integration 99/99), frontend 108/108 plus full lint and 557-module production
+  build, and generated API coverage 202/202. Real Game Manager, Tournament
+  Manager, Player and assigned Match Operator sessions passed desktop and
+  390x844 browser checks against the retained 100-player Room with no console
+  errors or horizontal overflow. The temporary browser player and Wallet were
+  transactionally removed.
 - Match conversations are private operational records shared only by the
   Match participants and its currently assigned Match Operator. Messages are
   persisted, bounded, rate-limited and identity-derived; Event/Game Managers
@@ -79,11 +140,17 @@ to continue the project without reopening settled decisions.
 ### Do Not Change Without Recording It Here
 
 - `User.role` values: only `player` and `staff`.
-- Staff roles: Super Admin, Platform Admin, Game Manager, Event Manager, and
-  Match Operator.
+- Staff roles: Super Admin, Platform Admin, Tournament Manager, Game Manager,
+  Event Manager, and Match Operator.
 - Platform Admin-only authority over game configuration and staff access.
-- Game Manager has no write route for games.
+- Game Manager has no write route for Game configuration. Its scoped writes
+  are the audited game-account verification decision and pre-start Match
+  schedule/lobby configuration for assigned games. It cannot claim or operate
+  Matches, verify results, resolve disputes, settle money, or release prizes.
 - Event Manager cannot publish Templates or schedule Event Runs directly.
+- Once an Event Run is approved and registration closes, its scoped Event
+  Manager owns routine round setup and Match-room handoff. Platform governance
+  retains recovery/dispute/reward authority, not per-round approval.
 - Staff player-dashboard access is read-only; only `User.role = player` may
   execute player participation commands.
 
@@ -282,8 +349,10 @@ Recent-authentication refinement 2026-08-14: Account Settings has a
 password-confirmation control that calls the authenticated, rate-limited
 `POST /api/auth/reauthenticate` route. The server stores only a timestamp in
 the active Redis session; it never stores or returns the password. Platform/
-Super Admin mutations and player payment mutations now require that timestamp
-to be fresh for 15 minutes, returning stable
+Super Admin mutations and player withdrawal requests require that timestamp
+to be fresh for 15 minutes. Player deposits and competition entry do not ask
+for a password; their provider, balance, hold, eligibility, idempotency and
+participation checks remain authoritative. Protected actions return stable
 `RECENT_AUTHENTICATION_REQUIRED` otherwise. Login creates the initial proof;
 refresh does not extend it. Backend auth policy/session checks pass 38/38 and
 frontend state tests pass 74/74 with lint clean and the 548-module production
@@ -458,7 +527,8 @@ the player to Login because verification never creates a session.
 
 1. Completed in code: Platform Admin creates and activates a Game with its immutable key,
    supported modes/maps, and account-connection policy.
-2. Completed in code: `QuickMatchOffering` is the canonical configurable product:
+2. Completed in code and ownership migration in progress 2026-08-21:
+   `QuickMatchOffering` is the canonical configurable product:
    Game, supported mode/map, team size, capacity, region, entry policy,
    schedule policy, and lifecycle (`draft`, `active`, `paused`, `retired`).
 3. Completed for new Quick Match runtime records: Match and Room reference `QuickMatchOffering` and the
@@ -468,8 +538,9 @@ the player to Login because verification never creates a session.
    frontend reads/writes before retiring Tournament/TournamentType routes or
    stored references.
 
-Exit: a Platform Admin can publish an offering for any cataloged active game
-and an eligible player can enter its queue without a legacy Tournament record.
+Exit: a game-scoped Tournament Manager can publish an offering for any active
+game inside their assignment, and an eligible player can enter its queue
+without a legacy Tournament record.
 
 #### 3. Player Competition Journey
 
@@ -527,8 +598,9 @@ response until the provider deployment is repaired.
 #### 5. Platform Administration and Governance
 
 1. Super Admin and Platform Admin use `/panelAdmin` for governance. Platform
-   Admin alone owns Game configuration, offering publication, staff access,
-   and Event approval; backend policy remains final.
+   Admin owns Game configuration, staff access, and Event approval. Tournament
+   offering publication belongs to game-scoped Tournament Manager; backend
+   policy remains final.
 2. Complete Role Management as a governance workspace: candidate search,
    recommendation/review, assignment, scopes, status changes, audit history,
    staff profile, and current workload.
@@ -617,34 +689,37 @@ React Router v7.18.2, so the earlier React Router v6 advisory/migration note is
 retired. This audit does not replace browser, authorization, deployment, or
 provider verification.
 
-Current stages/rounds implementation contract:
+Current stages/rounds implementation contract (amended 2026-08-21):
 
 - Owner and authorization: Event Manager creates the Event schedule without
-  round rules. After registration closes, the Event Manager proposes the full
-  execution plan inside assigned game scope using the authoritative registered
-  count; Platform/Super Admin independently approves it. A durable platform
-  worker generates work only after that approval. No client request supplies
-  participant IDs or a roster count.
+  round rules. Platform/Super Admin approves the registration, entry and reward
+  contract once. After registration closes, the scoped Event Manager owns
+  routine execution one round at a time. No client request supplies participant
+  IDs or a roster count; the backend uses registered players for Round 1 and
+  immutable promoted outcomes for every later round.
 - API boundary: player Event reads expose only the viewer's safe state. Run
   draft APIs accept timing, admission, entry and reward terms but no plan.
-  Post-close `/api/staff/events/runs/:runId/round-plans` owns plan input and the
-  bounded `/api/admin/events/round-plans` queue owns independent approval.
-- Data boundary: a reviewed EventRun execution plan initially supports explicit
-  single elimination only. Separate immutable roster entries, EventStage,
-  EventBatch, and durable EventJob records own execution. Match gains an
-  exactly-one EventBatch source and never pretends to be a Quick Match or
-  legacy Tournament execution.
+  Post-close staff APIs own next-round configuration and idempotent generation.
+  Governance APIs retain read-only execution evidence, recovery, dispute and
+  financial controls; the old routine round-plan approval queue is being
+  retired by this amendment.
+- Data boundary: EventRun records the sequential manager mode and the configured
+  round definitions. Separate immutable roster entries, EventStage, EventBatch,
+  EventBatchOutcome, and durable EventJob records own execution. A Match has an
+  exactly-one EventBatch source and never pretends to be a Quick Match. Each
+  later round is derived only from immutable promoted roster-entry evidence.
 - Safety: individual registration cannot safely define a team roster, so
   `teamSize > 1` fails closed until a separate immutable Event team-entry model
   exists. Format, participants per Match, advancement count, seeding policy,
   schedule spacing, and bye rules are validated and reviewed rather than
   inferred from game names or modes.
-- Completion criteria for this slice: concurrent/restarted closure freezes the
-  admitted roster once, excludes waitlisted/cancelled players, creates one
-  deterministic first stage/batch/Match graph, survives injected failures
-  without duplicate/partial execution, hands safe work to scoped operators,
-  and never marks the Event complete. Replica-set, authorization, Redux,
-  desktop/mobile browser, and clean-console gates are required.
+- Completion criteria for this amendment: open admission persists no product
+  capacity, the Event Manager configures and processes every round under game
+  scope, repeated calls converge, client roster authority is rejected, complete
+  ordered room outcomes create bounded promoted/eliminated evidence, and the
+  next round consumes only the promoted list. Governance keeps initial review,
+  safe final evidence, recovery and independent rewards; its old routine close
+  and round-review commands are retired.
 
 First-stage completion evidence (2026-08-13): 13/13 Event-stage replica tests,
 79/79 competition policy checks, 55/55 competition integration checks, the
@@ -674,14 +749,14 @@ register, and operations can execute and settle an Event with auditable state.
 
 Event canonical flow: an approved Event Run publishes a registration window
 and one admission policy: `open`, `invitation_only`, or `limited_seats`.
-Registration is accepted only while the window is open, within the capacity,
-and for eligible/invited players; a full limited-seat Event may use a bounded
-waitlist only when the Run explicitly enables it. After registration closes,
-the Event starts through ordered rounds. Each round creates scheduled batches
-of Matches, waits for verified results and the applicable dispute window, then
-advances only the qualified participants to the next round. The Event is
-complete only after its final round, final standings, and settlement are
-verified; it must never be marked complete merely because registration closes.
+`open` has no product seat cap; technical reads and writes stay cursor-paged and
+rate-limited. Invitation-only entry remains private. `limited_seats` alone owns
+a finite capacity and optional FIFO waitlist. After registration closes, the
+Event Manager selects the room size, per-room promotion count, timing, and
+whether the round is final. The backend partitions only the current eligible
+server-owned list, creates Matches once, and derives promoted/eliminated lists
+from verified complete room rankings. The manager repeats this for each next
+round until the final ranking completes the Event.
 
 #### 8. Production Operations and Scale
 
@@ -832,8 +907,9 @@ Detailed authority comes only from `StaffAssignment` records.
 |---|---|
 | Super Admin | One active account. Platform governance and administrator access. |
 | Platform Admin | One active account. Staff management, catalog, and platform oversight. |
+| Tournament Manager | Creates and manages Quick Match/Tournament offerings for assigned games. |
 | Game Manager | Supervises assigned game operations, operator workload, and room/Event health. |
-| Event Manager | Prepares scoped Event Template and Event Run proposals. |
+| Event Manager | Prepares scoped Event proposals and, after approval, operates registration closure, rounds, room handoff, promotions and eliminations. |
 | Match Operator | Assigned match lobbies, check-ins, results, and disputes. |
 
 Rules currently enforced:
@@ -863,8 +939,9 @@ Rules currently enforced:
 | Host capability | `User.permissions.canCreateTournaments` | Approved player may create supported competition offerings. It is not a staff role. |
 | Super Admin | `StaffAssignment` | Platform governance. One active/suspended assignment maximum. |
 | Platform Admin | `StaffAssignment` | Staff, catalog, and platform administration. One active/suspended assignment maximum. |
+| Tournament Manager | `StaffAssignment` | Creates and manages Game-backed Quick Match/Tournament offerings inside assigned game scopes. |
 | Game Manager | `StaffAssignment` | Read-only operational supervision for assigned games. |
-| Event Manager | `StaffAssignment` | Creates scoped Event proposals that require Platform Admin approval. |
+| Event Manager | `StaffAssignment` | Creates scoped Event proposals requiring initial Platform Admin approval, then operates approved Event rounds in scope. |
 | Match Operator | `StaffAssignment` | Operates explicitly assigned matches inside assigned game scopes. |
 
 ### Scope Rules
@@ -875,8 +952,9 @@ Rules currently enforced:
   Active StaffAssignments never grant player participation.
 - Every privileged API verifies active staff assignments on the server.
 - `gameScopes` are Game Object IDs on a StaffAssignment.
-- Game Manager, Event Manager, and Match Operator assignments require at least
-  one valid game scope. Platform roles reject client-supplied game IDs.
+- Tournament Manager, Game Manager, Event Manager, and Match Operator
+  assignments require at least one valid game scope. Platform roles reject
+  client-supplied game IDs.
 - Super Admin and Platform Admin are platform-wide governance roles.
 - Game Manager and Event Manager require the relevant game ID to be inside the
   assignment scope. Match Operator queue access requires game scope, and every
@@ -886,10 +964,10 @@ Rules currently enforced:
 - Role definitions are server-owned policy records. Each declares its
   `managedRoles`, `assignableBy` authority, and `scope`; staff-assignment
   creation, activation, suspension, and revocation enforce `assignableBy`.
-  The current graph is Super Admin ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Platform Admin ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Game Manager, Event
-  Manager, and Match Operator, with Super Admin retaining authority over every
-  lower role. New roles must be inserted through this policy graph and tested
-  before they can be assigned.
+  The current graph is Super Admin -> Platform Admin -> Tournament Manager,
+  Game Manager, Event Manager, and Match Operator, with Super Admin retaining
+  authority over every lower role. New roles must be inserted through this
+  policy graph and tested before they can be assigned.
 - Access-control APIs are mounted at `/api/access-control/*`, separate
   from `/api/admin/*`. Each response is filtered to roles the caller may
   manage, recommend, review, or inspect; access never grants platform-admin
@@ -924,8 +1002,8 @@ Rules currently enforced:
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |
 | Super Admin | `/panelAdmin` | Platform administration and governance controls. |
 | Platform Admin | `/panelAdmin` | Staff management, game catalog, verification, finance, and platform oversight. |
-| Game Manager | `/staff/games` | Scoped operational overview: room health, operator workload, and Event readiness. No mutation controls. |
-| Event Manager | `/staff/events` | Creates scoped draft template and Event Run proposals. Platform Admin approval is required for activation/scheduling. |
+| Game Manager | `/staff/games` | Scoped operations plus assigned-game player account verification. No Game configuration, competition, staff, or money mutations. |
+| Event Manager | `/staff/events` | Creates scoped draft Template/Run proposals; after initial approval, manages registration closure, round rooms, operator handoff, and promoted/eliminated lists. |
 | Match Operator | `/staff/operations` | Assigned-match operational console. |
 
 Frontend route guards improve navigation only. Backend route middleware and
@@ -1146,8 +1224,9 @@ funds under its separate audited policy.
 At close, admitted holds capture to platform revenue and waitlisted holds
 release before any roster or Match is written. Missing, extra, wrong-amount,
 wrong-currency or wrong-status evidence fails closed. Paid commands remain
-default-closed outside explicit sandbox money mode and require recent
-authentication plus verified-player participation.
+default-closed outside explicit sandbox money mode and require verified-player
+participation. The 2026-08-21 amendment removed password reauthentication from
+registration while preserving every server-owned financial check.
 
 The shared-database rehearsal `6a828224467598a0c5d5f545` completed
 1,000 verified BGMI players at INR 2.00 sandbox entry through three reviewed
@@ -1209,6 +1288,8 @@ backend competition policy 103/103 and replica-set integration 91/91,
 frontend 86/86, full lint, the 555-module production build, and API
 documentation coverage at that checkpoint. After legacy competition retirement,
 the current specification covers all 176 mounted operations.
+Superseded 2026-08-21: `Operations & Reports` is now governance-only
+`Results & Rewards`; sequential room and round work moved to Event Manager.
 The authenticated desktop/mobile admin visual gate remains pending; local
 public-shell rendering is clean, but the available browser session was not
 signed into governance after the final compact-layout edit.
@@ -1433,16 +1514,32 @@ Needs completion:
 
 ### 4. Quick Match Offering Migration
 
-Owner: Platform Admin configures offerings; Match Operator executes assigned
-matches; Game Manager supervises assigned-game health.
+Owner: Tournament Manager configures offerings only within assigned games;
+Match Operator executes assigned matches; Game Manager supervises assigned-game
+health. Platform/Super Admin assign and revoke Tournament Manager scope but do
+not gain offering mutation authority from governance status alone.
 
-Completed foundation: `QuickMatchOffering` is a Game-backed, Platform
-Admin-only API resource with a Redux-backed `/panelAdmin` workspace. Its
-current endpoints are:
+Ownership migration state 2026-08-21: **Completed locally**. The existing
+Game-backed offering Redux workspace moved from `/panelAdmin` to
+`/staff/tournaments`; dedicated staff APIs repeat Tournament Manager role and
+game-scope checks, and the old admin mutation routes are retired fail-closed.
+Approved Host proposals remain draft-only and become scoped Tournament Manager
+work; host capability does not activate or publish an offering. Offering money
+terms remain configuration only and grant no wallet, settlement, prize-release
+or payment-reconciliation authority.
 
-- `GET /api/admin/quick-match-offerings?status=&limit=`
-- `POST /api/admin/quick-match-offerings`
-- `PATCH /api/admin/quick-match-offerings/:offeringId`
+Completed foundation: `QuickMatchOffering` is a Game-backed,
+Tournament-Manager-only API resource with a Redux-backed
+`/staff/tournaments` workspace. Its current endpoints are:
+
+- `GET /api/staff/tournaments/games`
+- `GET /api/staff/tournaments/offerings?status=&limit=`
+- `POST /api/staff/tournaments/offerings`
+- `PATCH /api/staff/tournaments/offerings/:offeringId`
+
+The retired `/api/admin/quick-match-offerings*` mutation surface returns a
+stable `410 TOURNAMENT_MANAGER_ROUTE_REQUIRED`; governance identity alone does
+not authorize offering mutation.
 
 The create boundary accepts only active catalog Games, resolves configured mode
 and optional map to the canonical Game capability, rejects incomplete team
@@ -1461,8 +1558,9 @@ lifecycle transition is recorded in staff activity.
 
 Security rules:
 
-- The `/api/admin/*` mount requires active Platform Admin or Super Admin
-  authorization; no client-supplied staff role is trusted.
+- The `/api/staff/tournaments/*` mount requires an active Tournament Manager
+  assignment and filters or rejects every read/mutation by the assignment's
+  `gameScopes`; no client-supplied role or game scope is trusted.
 - Offering money-like configuration uses minor units only. It does not grant
   authority to charge a player or settle a prize; ledger and payment controls
   remain a separate required gate.
@@ -1777,7 +1875,8 @@ Completion criteria:
 
 #### 2. Event Management Lifecycle
 
-Owner: Event Manager prepares work; Platform Admin approves and publishes.
+Owner: Event Manager prepares work; Platform Admin approves and publishes the
+initial Event contract; Event Manager then owns routine Event execution.
 
 Required flow:
 
@@ -1787,11 +1886,15 @@ Required flow:
    or returns it for changes. Rejection and returned drafts remain auditable.
 3. Event Manager creates a dated draft Event Run from an approved Template
    with registration/admission, entry and reward terms only.
-4. Platform Admin validates those terms and schedules registration. After it
-   closes, Event Manager proposes rounds from the final player count and a
-   different governance administrator approves the exact projection.
-5. Only then are rosters and rooms generated. Game Manager monitors readiness;
-   Match Operators execute generated rooms;
+4. Platform Admin validates those terms and schedules registration. Open Events
+   accept all eligible registrations without a seat cap; limited-seat Events
+   retain their explicit capacity/waitlist contract.
+5. After registration closes, Event Manager configures Round 1 from the exact
+   registered count. The server creates rooms without client-owned player IDs.
+   Match Operators submit complete ordered results; the configured top players
+   are promoted and all others are recorded as eliminated. Event Manager then
+   configures the next round from promoted players and repeats until the final.
+   Game Manager monitors readiness;
    players see only approved, published registration windows.
 
 Future data model additions:
@@ -1806,15 +1909,18 @@ Future data model additions:
 
 #### 3. Tournament and Quick Match Management
 
-Owner: Platform Admin configures offerings; Event Manager proposes scheduled
-Events; Game Manager supervises readiness; Match Operator executes rooms.
+Owner: Tournament Manager configures offerings inside assigned game scopes;
+Event Manager proposes scheduled Events; Platform Admin governs staff scope and
+Event approval; Game Manager supervises readiness; Match Operator executes
+rooms.
 
 - Retire ambiguous legacy Tournament/TournamentType vocabulary in favor of
   explicit `QuickMatchOffering`, `EventTemplate`, `EventRun`, `Match`, and
   `Room` boundaries.
 - Quick Match Offering: game, mode, map, team size, capacity, region, entry
-  policy, schedule policy, and operator coverage requirement. Only Platform
-  Admin may activate, pause, or retire it.
+  policy, schedule policy, and operator coverage requirement. Only an active
+  Tournament Manager whose assignment contains the offering Game may create,
+  activate, pause, edit, reactivate, or retire it.
 - Event format: support daily/weekly/monthly recurrence, registration windows,
   batches, eliminations, seeding, standings, prizes, results, and disputes.
 - Each state transition must be idempotent, audited, and guarded against
@@ -1824,16 +1930,19 @@ Events; Game Manager supervises readiness; Match Operator executes rooms.
 
 Game Manager dashboard (`/staff/games`):
 
-- Scope: assigned `gameScopes` only; read-only supervision.
+- Scope: assigned `gameScopes` only; supervision plus scoped player
+  game-account verification decisions.
 - Shows room pipeline, waiting/active/disputed rooms, operator workload,
   Event readiness, delayed work, and escalation history.
 - Cannot modify games, staff assignments, Templates, Event Runs, wallet data,
-  or player identities.
+  or player profile identity. It may approve/reject only the submitted game
+  account identity for an assigned Game.
 - Completed locally 2026-08-13: assigned-game metrics include a bounded
   attention queue for operator assignment, delayed starts, result verification,
   and disputes plus safe recent operator action history. Backend authority
-  remains the active Game Manager assignment and `gameScopes`; no mutation route
-  was added. Verification passed backend competition policy 82/82, frontend
+  remains the active Game Manager assignment and `gameScopes`. This original
+  read-only baseline was later amended by the explicit verification authority
+  below. Verification passed backend competition policy 82/82, frontend
   68/68, lint/build, and real desktop/390px browser checks with a clean console.
 
 Event Manager dashboard (`/staff/events`):
@@ -1841,8 +1950,19 @@ Event Manager dashboard (`/staff/events`):
 - Scope: assigned `gameScopes` only.
 - Creates and edits only unapproved drafts in scope; views review status and
   reviewer feedback; never directly publishes a Template or schedules a Run.
-- Shows proposal checklist, upcoming approved work, capacity/batch planning,
-  and handoff status to Game Manager operations.
+- After approval, owns registration closure, sequential round configuration,
+  room generation/handoff, operator assignment, and safe promoted/eliminated
+  views. It cannot change approved entry/reward terms, verify disputed results,
+  settle money, or release prizes.
+
+Tournament Manager dashboard (`/staff/tournaments`):
+
+- Scope: assigned `gameScopes` only.
+- Creates and manages canonical Quick Match/Tournament offerings for active
+  scoped Games, including lifecycle and server-validated entry/prize terms.
+- Receives Approved Host draft proposals for scoped Games. It cannot mutate
+  Games, Events, staff access, wallet balances, payment reconciliation, match
+  settlement, or prize release.
 
 Match Operator dashboard (`/staff/operations`):
 
@@ -1920,6 +2040,36 @@ Security rule for all three dashboards:
 - Deployment monitoring, structured logs, backups, and disaster recovery.
 
 ## Latest Verification
+
+Run on 2026-08-21 for the shared staff dashboard layout:
+
+- Staff Home, Access Control, Tournament Manager, Event Manager, Game Manager,
+  and Match Operations now render inside one player-style responsive shell.
+  Desktop receives a persistent assignment-aware sidebar; mobile receives a
+  horizontally scrollable bottom workspace navigation. Role pages retain
+  their own scoped tools and backend guards.
+- Staff Home is the role picker. Each selected role then exposes its own
+  responsibility navigation: Tournament setup/lifecycle views, Event
+  Templates/Runs, Game oversight queues, Match assignment/owned operations,
+  or governance sections. Responsibilities are not mixed across roles.
+- Frontend state passed 101/101, full lint, route smoke and the 563-module
+  production build. The unauthenticated route redirected to Login; an
+  authenticated visual pass remains pending.
+
+Run on 2026-08-21 for Tournament Manager ownership:
+
+- Added the game-scoped `tournament_manager` StaffAssignment role, dedicated
+  `/staff/tournaments` workspace, and scoped games/offering APIs. The former
+  Platform Admin offering UI was removed and its API now fails closed with
+  `410 TOURNAMENT_MANAGER_ROUTE_REQUIRED`.
+- Backend competition policy passed 97/97 and competition database integration
+  passed 91/91, including out-of-scope creation denial with zero writes.
+- Frontend state passed 99/99, full lint and the 561-module production build;
+  generated API documentation covers all 193 mounted operations.
+- The unauthenticated local route redirected to Login as required. An
+  authenticated visual role check remains pending because the local API was
+  unavailable during the browser gate; authorization and transport contracts
+  are covered by the automated gates above.
 
 Run on 2026-08-17 for paid Event registration and the retained 1,000-player
 BGMI rehearsal:
@@ -2217,25 +2367,106 @@ Before beginning a new domain, add its owner, flow, API boundary, security
 rules, data model, and completion criteria here. After implementation, move it
 to Completed and record any remaining risks under Required Future Flows.
 
+## Completed Code Slice: Tournament Placement Rewards
+
+- Canonical Quick Match/Tournament offerings now support `winner_split` or a
+  contiguous 1-100 place INR reward table. The server derives the total prize;
+  clients cannot provide a contradictory settlement amount.
+- Generated Matches snapshot reward policy, exact place amounts and team size
+  in versioned financial evidence. Historical version-1 winner-pool Matches
+  remain settleable.
+- The assigned Match Operator records and verifies every player/team in order.
+  Solo places pay one player; team-place totals split deterministically across
+  the complete snapshotted team. Settlement records exact place/recipient audit
+  evidence and creates balanced `prize_pending` ledger rows.
+- Independent governance release validates all ranked recipients from ledger
+  evidence and displays each recipient's place. Player result submission is
+  disabled for place-wise Tournaments; player cards show the configured table.
+- Verification: backend 325/325 including competition integration 94/94 and
+  payment integration 32/32; frontend 102/102, full lint and 556-module build;
+  API documentation 197/197; both repository diff checks pass. The public
+  local Login page rendered console-clean, but the final authenticated desktop/
+  mobile Tournament Manager visual gate remains pending because no browser
+  session was available.
+
+## Completed Code Slice: Scoped Game-Account Verification
+
+- Game Manager now owns the manual player game-account decision for only the
+  Games in its active assignment. The queue is status-filtered, cursor bounded,
+  safely serialized and available in the `/staff/games` workspace.
+- Review requires recent authentication. The request identity and Game scope
+  come from the URL, persisted request and StaffAssignment; the browser sends
+  only `approved`/`rejected` plus an optional bounded note.
+- User game-account state, terminal request decision and append-only staff audit
+  commit in one MongoDB transaction. Cross-game access returns no record,
+  concurrent reviewers commit once, and responses omit email, wallet data and
+  raw submitted internals.
+- Verification: backend aggregate 328/328 including three new replica-set cases;
+  frontend 103/103, full lint and 557-module build; API docs 199/199; diff checks
+  pass. Authenticated desktop/mobile visual proof remains pending.
+
+## Latest Fix: PhonePe Sandbox Completion Binding
+
+- PhonePe V2 status lookup correctly uses the merchant order ID as its query,
+  while completion evidence now binds the returned provider `orderId` to the
+  provider order captured by the original checkout. The previous implementation
+  incorrectly compared PhonePe's provider ID with the merchant ID and therefore
+  rejected legitimate `COMPLETED` payments as evidence mismatches.
+- Exact amount, stored provider-order identity, transaction idempotency and the
+  balanced deposit ledger remain mandatory. A missing/mismatched provider ID or
+  amount still fails closed with zero credit.
+- Focused payment checks pass 14/14 and the complete payment replica integration
+  suite passes 32/32. One affected ₹1,000 sandbox order was reverified against
+  PhonePe after the fix and recovered to exactly one completed Transaction, one
+  deposit ledger entry and ₹1,000 available test balance.
+
+## Latest Refinement: Player Password Scope
+
+- Player password reauthentication is required only before creating a
+  withdrawal request. It is no longer required for PhonePe deposits, Quick
+  Match/Tournament joins, or paid/free Event registration.
+- Competition entry still requires an authenticated verified player, verified
+  game account, server-owned eligibility/capacity, exact wallet balance and
+  transactional idempotent holds. Deposits remain provider-verified and ledger
+  backed. Staff and governance recent-authentication rules are unchanged.
+- Account Settings now explains this boundary. Focused backend policy/payment
+  checks pass 22/22 and focused frontend entry/authentication checks pass 4/4.
+
 ## Latest Refinement: Post-registration Round Planning and Compete Feed
+
+Superseded operational decision (2026-08-21): initial Event approval remains
+governed, but routine round planning no longer returns to governance. The active
+amendment is sequential Event Manager-owned execution: configure one round from
+the current server-owned list, generate rooms, capture verified ranking evidence,
+mark top-N promoted and all others eliminated, then repeat from the promoted
+list. Open Events have no product seat cap. This replacement is now implemented;
+the previous full-plan proposal and per-round governance review UI/Redux are
+removed and their old mutation paths return stable retirement errors.
 
 - New Event drafts no longer accept round definitions. Initial approval covers
   timing, admission/capacity, entry terms and placement rewards.
 - Registration closure moves the Run to `registration_closed` with round setup
-  required and creates no stage job. Event Manager then proposes a complete
-  ranked plan projected from the server-owned final registered count.
-  Self-review is denied; independent approval freezes the plan and creates the
-  first-stage job.
+  required. Event Manager configures only the next round: players per room,
+  promote count, timings and final-round state. Round 1 uses committed
+  registrations; subsequent rounds use only immutable promoted outcomes.
+- Open registration omits `registrationCapacity`; limited-seat and
+  invitation-only schedules retain a finite capacity. Every API page, room and
+  worker claim remains bounded even when the total registration count is large.
+- Platform/Super Admin Event Management contains Approvals, Invitations, and
+  Results & Rewards. It does not close registration, create rooms or plan later
+  rounds. The retired admin close command returns 410.
 - Historical Runs retain their approved plans. Every new Run created through
   the service explicitly starts with `roundPlanStatus=not_configured`.
 - Player navigation now has one `Compete` destination. Scheduled Events and
   Quick Matches load together; former Tournaments/Events list paths redirect
   there. Event cards show status, access, entry, registration totals, rewards,
   commitment, own Match link and a countdown to registration or Event start.
-- Verification: backend full aggregate 305/305, including policy 92/92 and
-  competition replica integration 87/87; frontend state 89/89, lint,
-  554-module build and route smoke pass.
-  Authenticated desktop/mobile visual verification remains pending.
+- Verification: backend competition policy 100/100, competition replica
+  integration 93/93 (including an open-capacity sequential registered ->
+  promoted -> final journey), API documentation 197/197, frontend state
+  101/101, lint, diff checks and the 556-module production build pass.
+  Authenticated desktop/mobile visual verification remains pending because the
+  local API session endpoint was unavailable during the final browser attempt.
 
 ## Latest Refinement: Event Detail and Standings
 

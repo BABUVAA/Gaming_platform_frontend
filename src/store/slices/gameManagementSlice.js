@@ -13,6 +13,46 @@ export const fetchManagedGameOperations = createApiThunk(
   },
 );
 
+export const fetchManagedVerificationRequests = createApiThunk(
+  "gameManagement/fetchManagedVerificationRequests",
+  {
+    path: "/api/staff/games/verification-requests",
+    getParams: ({ cursor, limit = 25, status = "pending" } = {}) => ({ status, limit, ...(cursor ? { cursor } : {}) }),
+    selectData: (response) => response.data?.data || { items: [], page: {} },
+    errorMessage: "Unable to load game-account verification requests.",
+    toast: { error: true },
+  },
+);
+
+export const reviewManagedVerificationRequest = createApiThunk(
+  "gameManagement/reviewManagedVerificationRequest",
+  {
+    method: "patch",
+    path: ({ arg }) => `/api/staff/games/verification-requests/${arg.requestId}`,
+    getBody: ({ reviewNote, status }) => ({ status, reviewNote }),
+    selectData: (response) => response.data?.data?.request,
+    errorMessage: "Unable to record this verification decision.",
+    toast: { success: "Verification decision recorded.", error: true },
+  },
+);
+
+export const scheduleManagedMatch = createApiThunk(
+  "gameManagement/scheduleManagedMatch",
+  {
+    method: "patch",
+    path: ({ arg }) => `/api/staff/games/matches/${arg.matchId}/schedule`,
+    getBody: ({ instructions, roomCode, roomPassword, scheduledFor }) => ({
+      instructions,
+      roomCode,
+      roomPassword,
+      scheduledFor,
+    }),
+    selectData: (response) => response.data?.data?.match,
+    errorMessage: "Unable to schedule this Match.",
+    toast: { success: "Match schedule saved.", error: true },
+  },
+);
+
 const eventReadThunk = (type, suffix, fallback) => createApiThunk(
   `gameManagement/${type}`,
   {
@@ -37,7 +77,7 @@ const appendUnique = (current = [], additions = [], getKey = (item) => item.id) 
 
 const gameManagementSlice = createSlice({
   name: "gameManagement",
-  initialState: { error: null, eventMatches: {}, eventOperations: {}, eventRegistrations: {}, eventStandings: {}, operations: [], status: "idle" },
+  initialState: { error: null, eventMatches: {}, eventOperations: {}, eventRegistrations: {}, eventStandings: {}, operations: [], schedule: { error: null, matchId: null, status: "idle" }, status: "idle", verification: { actionError: null, actionStatus: "idle", error: null, items: [], page: {}, status: "idle" } },
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -70,6 +110,45 @@ const gameManagementSlice = createSlice({
         const { cursor, runId } = action.meta.arg;
         const current = state.eventStandings[runId];
         state.eventStandings[runId] = { ...action.payload, standings: cursor ? appendUnique(current?.standings, action.payload.standings, (item) => `${item.placement}:${item.player?.profileTag}`) : action.payload.standings };
+      })
+      .addCase(fetchManagedVerificationRequests.pending, (state) => {
+        state.verification.status = "loading";
+        state.verification.error = null;
+      })
+      .addCase(fetchManagedVerificationRequests.fulfilled, (state, action) => {
+        state.verification.items = action.meta.arg?.cursor ? appendUnique(state.verification.items, action.payload.items) : action.payload.items;
+        state.verification.page = action.payload.page || {};
+        state.verification.status = "succeeded";
+      })
+      .addCase(fetchManagedVerificationRequests.rejected, (state, action) => {
+        state.verification.error = action.payload || action.error.message;
+        state.verification.status = "failed";
+      })
+      .addCase(reviewManagedVerificationRequest.pending, (state) => {
+        state.verification.actionStatus = "loading";
+        state.verification.actionError = null;
+      })
+      .addCase(reviewManagedVerificationRequest.fulfilled, (state, action) => {
+        state.verification.items = state.verification.items.filter((item) => item.id !== action.payload.id);
+        state.verification.actionStatus = "succeeded";
+      })
+      .addCase(reviewManagedVerificationRequest.rejected, (state, action) => {
+        state.verification.actionError = action.payload || action.error.message;
+        state.verification.actionStatus = "failed";
+      })
+      .addCase(scheduleManagedMatch.pending, (state, action) => {
+        state.schedule.error = null;
+        state.schedule.matchId = action.meta.arg.matchId;
+        state.schedule.status = "loading";
+      })
+      .addCase(scheduleManagedMatch.fulfilled, (state) => {
+        state.schedule.matchId = null;
+        state.schedule.status = "succeeded";
+      })
+      .addCase(scheduleManagedMatch.rejected, (state, action) => {
+        state.schedule.error = action.payload || action.error;
+        state.schedule.matchId = null;
+        state.schedule.status = action.meta.aborted ? "idle" : "failed";
       });
   },
 });

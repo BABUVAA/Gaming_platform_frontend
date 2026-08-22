@@ -62,6 +62,14 @@ const staffNavigation = [
     match: [ROUTES.EVENT_MANAGER],
     requiredStaffRoles: ["event_manager"],
   },
+  {
+    label: "Tournament Manager",
+    description: "Create and manage assigned tournaments",
+    to: ROUTES.TOURNAMENT_MANAGER,
+    icon: FaTrophy,
+    match: [ROUTES.TOURNAMENT_MANAGER],
+    requiredStaffRoles: ["tournament_manager"],
+  },
 ];
 
 const staffUtilityNavigation = [
@@ -133,7 +141,7 @@ const playerNavigation = [
   },
   {
     label: "Matches",
-    description: "Check in and play",
+    description: "Schedules and results",
     to: ROUTES.MATCHES,
     icon: FaMapMarkedAlt,
     match: [ROUTES.MATCHES],
@@ -180,7 +188,20 @@ const allNavigation = [
   ...operatorNavigation,
   ...playerNavigation,
   ...staffUtilityNavigation,
+  ...staffNavigation,
 ];
+
+export const getStaffWorkspaceNavigation = (summary) => {
+  const staffRoles = new Set(
+    summary?.staffAssignments?.map((assignment) => assignment.role) || [],
+  );
+  return [
+    staffUtilityNavigation[0],
+    ...staffNavigation.filter((item) =>
+      item.requiredStaffRoles.some((role) => staffRoles.has(role)),
+    ),
+  ];
+};
 
 export const getDefaultRouteForRole = (role) => {
   // This helper is the single redirect source for role-based landings.

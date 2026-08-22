@@ -290,21 +290,9 @@ const Wallet = () => {
         </section>
       ) : null}
       <section className="rounded-3xl border border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
-        <p className="text-xs uppercase tracking-[0.3em] text-emerald-300/80">
-          Wallet Command
-        </p>
-        <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-4xl font-black text-white md:text-5xl">
-              {paymentCapabilities.testMoney
-                ? "Test deposits, tournament funds, and settlement history."
-                : "Manage deposits, platform balance, and settlement history."}
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-              {paymentCapabilities.testMoney
-                ? "This wallet is connected to PhonePe sandbox. Use its test balance to exercise paid entries, holds, prizes, and reviews without real cash-out."
-                : "This is your cash and competition ledger. Keep real funds topped up, review platform credits, and watch the status of every wallet move."}
-            </p>
+            <h1 className="text-4xl font-black text-white md:text-5xl">Wallet</h1>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -342,7 +330,7 @@ const Wallet = () => {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_0.8fr]">
+      <section className="grid gap-4 md:grid-cols-2">
         {isStaffUtilityMode ? (
           <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-amber-50 xl:col-span-2">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
@@ -359,9 +347,9 @@ const Wallet = () => {
               title="Add funds"
               copy={paymentCapabilities.depositAvailable
                 ? paymentCapabilities.testMoney
-                  ? "Add PhonePe sandbox funds for paid tournament testing. No real money is charged or paid out."
-                  : "Top up your real wallet before joining paid brackets and tournaments."
-                : "Deposits are temporarily unavailable while payment reconciliation is being certified."}
+                  ? "PhonePe sandbox deposit."
+                  : "Deposit through PhonePe."
+                : "Deposits are unavailable."}
               actionLabel={paymentCapabilities.depositAvailable ? "Add Money" : "Unavailable"}
               disabled={paymentCapabilities.depositAvailable !== true}
               onClick={() => {
@@ -372,7 +360,7 @@ const Wallet = () => {
             />
             <ActionPanel
               title="Withdraw funds"
-              copy="Move eligible winnings out with a withdrawal request from the same command deck."
+              copy="Request a reviewed payout."
               actionLabel={withdrawalAvailability.canRequest ? "Request withdrawal" : "Unavailable"}
               disabled={!withdrawalAvailability.canRequest || payoutDestinations.length === 0}
               onClick={openWithdrawal}
@@ -380,29 +368,13 @@ const Wallet = () => {
             />
           </>
         )}
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-            Quick Rules
-          </p>
-          <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
-            <li>Deposits redirect you to the payment provider securely.</li>
-            {paymentCapabilities.testMoney ? (
-              <li>Every displayed balance is sandbox test money and cash-out is disabled.</li>
-            ) : null}
-            <li>Paid entries move funds into Entry held until final settlement.</li>
-            <li>Prizes remain pending through result and dispute review.</li>
-            <li>Withdrawals move to pending and require governance review before provider processing.</li>
-          </ul>
-        </div>
       </section>
 
       {!isStaffUtilityMode ? (
         <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-300/70">Reviewed payouts</p>
-              <h2 className="mt-2 text-2xl font-black text-white">Withdrawal history</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">Requests remain pending until the server records each review and provider outcome.</p>
+              <h2 className="text-2xl font-black text-white">Withdrawal history</h2>
             </div>
             <button className="rounded-2xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 disabled:opacity-50" disabled={withdrawalHistoryStatus === "loading" || withdrawalHistoryStatus === "loadingMore"} onClick={() => dispatch(fetchWithdrawalHistory())} type="button">Refresh</button>
           </div>
@@ -421,16 +393,9 @@ const Wallet = () => {
       <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
-              Immutable history
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
+            <h2 className="text-2xl font-black text-white">
               Wallet ledger
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Posted movements are permanent. Each row shows only the wallet
-              buckets involved in your account.
-            </p>
           </div>
           <button
             type="button"
@@ -574,9 +539,6 @@ const AmountModal = ({
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
     <div className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-[0_24px_60px_rgba(2,8,23,0.55)]">
       <h2 className="text-2xl font-black text-white">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-400">
-        Choose a clean amount to continue the wallet flow.
-      </p>
 
       <div className="mt-4 grid grid-cols-4 gap-2">
         {quickAmounts.map((value) => (

@@ -222,7 +222,7 @@ const Home = () => {
             />
             <PlayerBenefit
               title="Fast match room access"
-              copy="See room details, check in, submit scores, and follow match status."
+              copy="Follow the schedule, receive lobby access at T-10, and track operator-verified results."
             />
             <PlayerBenefit
               title="Clan and squad play"

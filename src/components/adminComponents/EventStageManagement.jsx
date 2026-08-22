@@ -1,19 +1,14 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { FiLock, FiRefreshCw } from "react-icons/fi";
+import { FiRefreshCw } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  closeEventRegistration,
-  cancelEventStageGeneration,
   fetchAdminEventStandings,
   fetchEventExecutionRuns,
   fetchEventStages,
   fetchEventPrizeRelease,
   releaseEventPrizes,
-  retryEventStageGeneration,
-  retryEventStageAdvancement,
 } from "../../store/slices/eventStageSlice.js";
-import { fetchEventReviewQueue } from "../../store/slices/eventReviewSlice.js";
 
 const getId = (record) => record?.id || record?._id;
 const formatDate = (value) => {
@@ -25,7 +20,6 @@ const formatDate = (value) => {
 const EventStageManagement = () => {
   const dispatch = useDispatch();
   const [selectedRunId, setSelectedRunId] = useState("");
-  const [cancellationReason, setCancellationReason] = useState("");
   const [standingResult, setStandingResult] = useState("");
   const [standingStage, setStandingStage] = useState("");
   const stageState = useSelector((state) => state.eventStages);
@@ -33,20 +27,12 @@ const EventStageManagement = () => {
   const selectedRun = executionRuns.find(
     (run) => getId(run) === selectedRunId,
   );
-  const { actionByRunId, errorByRunId, overviewByRunId, statusByRunId } =
+  const { errorByRunId, overviewByRunId, statusByRunId } =
     stageState;
   const overview = overviewByRunId[selectedRunId];
   const standings = stageState.standingsByRunId[selectedRunId];
   const prizeRelease = stageState.prizeByRunId[selectedRunId];
   const status = statusByRunId[selectedRunId] || "idle";
-  const registrationEnded = selectedRun?.registrationClosesAt
-    ? Date.now() >= new Date(selectedRun.registrationClosesAt).getTime()
-    : false;
-  const canClose =
-    registrationEnded &&
-    ["scheduled", "registration_open", "registration_closed"].includes(
-      selectedRun?.status,
-    );
 
   useEffect(() => {
     const request = dispatch(fetchEventExecutionRuns());
@@ -65,7 +51,6 @@ const EventStageManagement = () => {
   }, [executionRuns, selectedRunId]);
 
   useEffect(() => {
-    setCancellationReason("");
     setStandingResult("");
     setStandingStage("");
   }, [selectedRunId]);
@@ -92,44 +77,6 @@ const EventStageManagement = () => {
     return () => request.abort();
   }, [dispatch, overview?.completion?.financialSettlement, selectedRunId]);
 
-  const closeRegistration = async () => {
-    try {
-      await dispatch(closeEventRegistration(selectedRunId)).unwrap();
-      dispatch(fetchEventReviewQueue());
-      dispatch(fetchEventExecutionRuns());
-    } catch {
-      // The shared request boundary keeps the server policy error visible.
-    }
-  };
-
-  const retryGeneration = async () => {
-    try {
-      await dispatch(retryEventStageGeneration(selectedRunId)).unwrap();
-      dispatch(fetchEventStages({ runId: selectedRunId }));
-      dispatch(fetchEventExecutionRuns());
-    } catch {
-      // Retry policy and error details remain server-owned.
-    }
-  };
-
-  const cancelGeneration = async () => {
-    const reason = cancellationReason.trim();
-    if (reason.length < 10 || reason.length > 1000) return;
-    if (!window.confirm("Cancel this failed Event Run? This cannot be undone.")) {
-      return;
-    }
-    try {
-      await dispatch(
-        cancelEventStageGeneration({ reason, runId: selectedRunId }),
-      ).unwrap();
-      setCancellationReason("");
-      dispatch(fetchEventStages({ runId: selectedRunId }));
-      dispatch(fetchEventExecutionRuns());
-    } catch {
-      // Cancellation eligibility and conflict errors remain server-owned.
-    }
-  };
-
   const releasePrizes = async () => {
     if (!prizeRelease?.canRelease) return;
     if (!window.confirm("Release these fixed Event prizes to players' withdrawable balances?")) return;
@@ -149,11 +96,10 @@ const EventStageManagement = () => {
             Event execution
           </p>
           <h3 className="mt-1 text-lg font-black text-white">
-            Registration close and Stage 1
+            Results and rewards
           </h3>
           <p className="mt-2 text-sm text-slate-400">
-            Platform Admin freezes the admitted roster once. The server creates
-            every seed, batch, and Match from the reviewed execution plan.
+            Inspect final evidence and independently release fixed Event rewards.
           </p>
         </div>
         {executionRuns.length > 0 ? (
@@ -215,77 +161,17 @@ const EventStageManagement = () => {
               >
                 <FiRefreshCw />
               </button>
-              <button
-                className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50"
-                disabled={
-                  !canClose || actionByRunId[selectedRunId] === "loading"
-                }
-                onClick={closeRegistration}
-                type="button"
-              >
-                <FiLock />
-                {actionByRunId[selectedRunId] === "loading"
-                  ? "Generating..."
-                  : "Close registration and generate"}
-              </button>
             </div>
           </div>
-          {!registrationEnded && ["scheduled", "registration_open"].includes(selectedRun.status) ? (
-            <p className="text-xs text-amber-200">
-              Registration must reach its reviewed closing time before this
-              action becomes available.
-            </p>
-          ) : null}
           {status === "failed" ? (
             <p className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100">
               {errorByRunId[selectedRunId]}
             </p>
           ) : null}
-          {overview?.generation?.retryAvailable ? (
-            <button
-              className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm font-black text-amber-100 disabled:opacity-50"
-              disabled={actionByRunId[selectedRunId] === "loading"}
-              onClick={retryGeneration}
-              type="button"
-            >
-              {actionByRunId[selectedRunId] === "loading"
-                ? "Retrying..."
-                : "Retry Stage 1 generation"}
-            </button>
-          ) : null}
           {overview?.generation?.errorCode ? (
             <p className="text-xs font-bold text-rose-200">
               Generation issue: {overview.generation.errorCode}
             </p>
-          ) : null}
-          {overview?.generation?.cancelAvailable ? (
-            <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4">
-              <p className="text-sm font-black text-rose-100">
-                Cancel failed Event generation
-              </p>
-              <p className="mt-1 text-xs leading-5 text-rose-100/70">
-                Use only when the server marks this terminal failure safe for
-                cancellation. Explain the decision for the audit record.
-              </p>
-              <textarea
-                className="mt-3 min-h-24 w-full rounded-xl border border-rose-300/30 bg-slate-950 p-3 text-sm text-white"
-                maxLength={1000}
-                onChange={(event) => setCancellationReason(event.target.value)}
-                placeholder="Cancellation reason (10–1000 characters)"
-                value={cancellationReason}
-              />
-              <button
-                className="mt-3 rounded-xl border border-rose-300/40 px-4 py-2 text-sm font-black text-rose-100 disabled:opacity-50"
-                disabled={
-                  cancellationReason.trim().length < 10 ||
-                  actionByRunId[selectedRunId] === "loading"
-                }
-                onClick={cancelGeneration}
-                type="button"
-              >
-                Cancel Event Run
-              </button>
-            </div>
           ) : null}
           {status === "loading" && !overview ? (
             <p className="text-sm text-slate-500">Loading stage status...</p>
@@ -311,28 +197,6 @@ const EventStageManagement = () => {
                   {job.errorCode ? ` / ${job.errorCode}` : ""}
                 </p>
               </div>
-              {job.retryAvailable ? (
-                <button
-                  className="rounded-xl border border-amber-300/30 px-4 py-2 text-sm font-black text-amber-100 disabled:opacity-50"
-                  disabled={actionByRunId[selectedRunId] === "loading"}
-                  onClick={async () => {
-                    try {
-                      await dispatch(
-                        retryEventStageAdvancement({
-                          runId: selectedRunId,
-                          stageNumber: job.stageNumber,
-                        }),
-                      ).unwrap();
-                      dispatch(fetchEventStages({ runId: selectedRunId }));
-                    } catch {
-                      // The server decides whether this retry is still valid.
-                    }
-                  }}
-                  type="button"
-                >
-                  Retry advancement
-                </button>
-              ) : null}
             </div>
           ))}
           <div className="grid gap-3">

@@ -5,6 +5,7 @@ import {
   FiGrid,
   FiMonitor,
   FiShield,
+  FiZap,
 } from "react-icons/fi";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
@@ -14,47 +15,44 @@ import { ROUTES } from "../routes/routeConstants";
 const WORKSPACES = {
   super_admin: {
     accent: "violet",
-    description: "Own platform governance, administrator access, and critical review work.",
     icon: FiShield,
-    label: "Governance",
     path: ROUTES.ADMIN_PANEL,
     responsibilities: ["Platform policy", "Staff authority", "Audit review"],
     title: "Super Admin",
   },
   platform_admin: {
     accent: "cyan",
-    description: "Manage staff, games, competitions, and platform-wide approval queues.",
     icon: FiGrid,
-    label: "Platform control",
     path: ROUTES.ADMIN_PANEL,
     responsibilities: ["People and access", "Game control", "Financial review"],
     title: "Platform Admin",
   },
+  tournament_manager: {
+    accent: "cyan",
+    icon: FiZap,
+    path: ROUTES.TOURNAMENT_MANAGER,
+    responsibilities: ["Create tournaments", "Manage lifecycle", "Monitor seats"],
+    title: "Tournament Manager",
+  },
   game_manager: {
     accent: "blue",
-    description: "Monitor assigned-game rooms, operator workload, and Event readiness.",
     icon: FiMonitor,
-    label: "Read-only supervision",
     path: ROUTES.GAME_MANAGER,
-    responsibilities: ["Room health", "Operator workload", "Escalations"],
+    responsibilities: ["Room schedules", "Lineups", "Account verification"],
     title: "Game Manager",
   },
   event_manager: {
     accent: "amber",
-    description: "Prepare scoped Event Templates and Runs for governance approval.",
     icon: FiCalendar,
-    label: "Competition planning",
     path: ROUTES.EVENT_MANAGER,
-    responsibilities: ["Draft Events", "Schedule proposals", "Review feedback"],
+    responsibilities: ["Templates", "Registrations", "Event rounds"],
     title: "Event Manager",
   },
   match_operator: {
     accent: "emerald",
-    description: "Run assigned lobbies, check-ins, match evidence, and result handoff.",
     icon: FiBriefcase,
-    label: "Live operations",
     path: ROUTES.OPERATIONS,
-    responsibilities: ["Lobby control", "Player readiness", "Result evidence"],
+    responsibilities: ["Full rooms", "Match start", "Results"],
     title: "Match Operator",
   },
 };
@@ -96,8 +94,8 @@ const StaffDashboard = () => {
   );
 
   return (
-    <main className="min-h-screen bg-[#050b14] px-4 py-6 text-slate-100 sm:px-6 lg:px-8 lg:py-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-w-0 text-slate-100">
+      <div className="mx-auto max-w-7xl space-y-5">
         <section className="rounded-3xl border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(15,23,42,0.55))] px-5 py-5 sm:px-6">
           <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
             Welcome back
@@ -107,7 +105,7 @@ const StaffDashboard = () => {
           </p>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-slate-800 bg-slate-950/25 p-4 sm:p-6">
+        <section className="rounded-3xl border border-slate-800 bg-slate-950/25 p-4 sm:p-6">
           <div className="flex items-end justify-between gap-4">
             <h2 className="text-xl font-black text-white sm:text-2xl">
               Your workspaces
@@ -150,17 +148,10 @@ const WorkspaceCard = ({ assignment, workspace }) => {
         <div className={`flex h-11 w-11 items-center justify-center rounded-2xl border text-xl ${styles.icon}`}>
           <Icon />
         </div>
-        <span className={`rounded-full border px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.13em] ${styles.tag}`}>
-          {workspace.label}
-        </span>
       </div>
 
       <h3 className="mt-5 text-xl font-black text-white">{workspace.title}</h3>
-      <p className="mt-2 min-h-12 text-sm leading-6 text-slate-400">
-        {workspace.description}
-      </p>
-
-      <ul className="mt-4 flex flex-wrap gap-2" aria-label={`${workspace.title} responsibilities`}>
+      <ul className="mt-3 flex flex-wrap gap-2" aria-label={`${workspace.title} responsibilities`}>
         {workspace.responsibilities.map((responsibility) => (
           <li className="rounded-lg border border-slate-800 bg-slate-950/70 px-2.5 py-1.5 text-xs text-slate-300" key={responsibility}>
             {responsibility}
@@ -194,9 +185,7 @@ WorkspaceCard.propTypes = {
   }).isRequired,
   workspace: PropTypes.shape({
     accent: PropTypes.string.isRequired,
-    description: PropTypes.string.isRequired,
     icon: PropTypes.elementType.isRequired,
-    label: PropTypes.string.isRequired,
     path: PropTypes.string.isRequired,
     responsibilities: PropTypes.arrayOf(PropTypes.string).isRequired,
     title: PropTypes.string.isRequired,

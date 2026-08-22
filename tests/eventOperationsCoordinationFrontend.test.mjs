@@ -52,7 +52,7 @@ test("role dashboards expose Event operations without crossing privacy boundarie
     readFile(new URL("../src/pages/MatchRoom.jsx", import.meta.url), "utf8"),
   ]);
   assert.match(eventManager, /Assign operator/); assert.match(eventManager, /Sporting standings/);
-  assert.match(gameManager, /Registrations|registrations/); assert.match(gameManager, /Lobby credentials, chat, wallets/);
+  assert.match(gameManager, /Registrations|registrations/); assert.match(gameManager, /Save schedule \/ T-10 lobby/);
   assert.match(operator, /MatchChat audience="operator"/); assert.match(operator, /RankedResultEditor/);
-  assert.match(player, /MatchChat audience="player"/); assert.doesNotMatch(gameManager, /roomPassword|proofNote|email/);
+  assert.match(player, /MatchChat audience="player"/); assert.doesNotMatch(gameManager, /proofNote|email/);
 });

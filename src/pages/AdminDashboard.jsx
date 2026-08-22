@@ -1,7 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers, FiZap } from "react-icons/fi";
-import { EventReviewQueue, GameCatalog, PaymentReconciliationReview, PrizeReleaseReview, QuickMatchOfferingManagement, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
+import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers } from "react-icons/fi";
+import { EventReviewQueue, GameCatalog, PaymentReconciliationReview, PrizeReleaseReview, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
 
 const ADMIN_AREAS = [
   {
@@ -11,7 +11,7 @@ const ADMIN_AREAS = [
     label: "People and access",
   },
   {
-    description: "Game setup, ownership, readiness, and publishing.",
+    description: "Game setup, ownership, readiness, and lifecycle.",
     icon: FiGrid,
     id: "games",
     label: "Game control",
@@ -33,12 +33,6 @@ const ADMIN_AREAS = [
     icon: FiCheckSquare,
     id: "events",
     label: "Event Management",
-  },
-  {
-    description: "Fixed-seat tournament configuration and lifecycle.",
-    icon: FiZap,
-    id: "quick-matches",
-    label: "Tournament Management",
   },
   {
     description: "Independent review of settled winner prize releases.",
@@ -79,7 +73,7 @@ const AdminDashboard = () => {
             <div className="mt-8 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
               <FiShield className="text-lg text-cyan-300" />
               <p className="mt-3 text-sm font-black text-white">Admin-only changes</p>
-              <p className="mt-2 text-xs leading-5 text-slate-400">Game setup, publishing, and staff authority stay inside this workspace. Operations staff can see work but cannot change platform rules.</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">Game setup, Event review, and staff authority stay inside this workspace.</p>
             </div>
           </aside>
 
@@ -94,8 +88,6 @@ const AdminDashboard = () => {
               <GameCatalog />
             ) : activeSection === "events" ? (
               <EventReviewQueue />
-            ) : activeSection === "quick-matches" ? (
-              <QuickMatchOfferingManagement />
             ) : activeSection === "security" ? (
               <SecurityAttention />
             ) : activeSection === "prize-releases" ? (

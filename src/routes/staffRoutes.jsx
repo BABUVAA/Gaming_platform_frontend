@@ -1,9 +1,18 @@
-import { ROUTES } from "./routeConstants";
+import { ROUTES, STAFF_ROUTE_SEGMENTS } from "./routeConstants";
 
 export const staffRoutes = [
-  { path: ROUTES.STAFF, componentKey: "StaffDashboard", access: "staff", withSuspense: true },
-  { path: ROUTES.STAFF_ACCESS_CONTROL, componentKey: "StaffAccessControl", access: "admin", withSuspense: true },
-  { path: ROUTES.OPERATIONS, componentKey: "Operations", access: "operator", withSuspense: true },
-  { path: ROUTES.EVENT_MANAGER, componentKey: "EventManagerDashboard", access: "eventManager", withSuspense: true },
-  { path: ROUTES.GAME_MANAGER, componentKey: "GameManagerDashboard", access: "gameManager", withSuspense: true },
+  {
+    path: ROUTES.STAFF,
+    componentKey: "StaffLayout",
+    access: "staff",
+    withSuspense: true,
+    children: [
+      { index: true, componentKey: "StaffDashboard" },
+      { path: STAFF_ROUTE_SEGMENTS.ACCESS_CONTROL, componentKey: "StaffAccessControl", access: "admin" },
+      { path: STAFF_ROUTE_SEGMENTS.OPERATIONS, componentKey: "Operations", access: "operator" },
+      { path: STAFF_ROUTE_SEGMENTS.EVENTS, componentKey: "EventManagerDashboard", access: "eventManager" },
+      { path: STAFF_ROUTE_SEGMENTS.TOURNAMENTS, componentKey: "TournamentManagerDashboard", access: "tournamentManager" },
+      { path: STAFF_ROUTE_SEGMENTS.GAMES, componentKey: "GameManagerDashboard", access: "gameManager" },
+    ],
+  },
 ];

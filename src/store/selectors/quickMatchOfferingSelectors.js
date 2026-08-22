@@ -24,3 +24,12 @@ export const selectPlayerQuickMatchDetailError = (state, offeringId) =>
   getStoredErrorMessage(
     state.quickMatchOfferings.playerDetailErrorsById[offeringId],
   );
+
+export const selectPlayerQuickMatchLeaderboard = (state, offeringId) =>
+  state.quickMatchOfferings.playerLeaderboards[offeringId] || null;
+
+export const selectPlayerQuickMatchLeaderboardStatus = (state, offeringId) =>
+  state.quickMatchOfferings.playerLeaderboardStatusById[offeringId] || "idle";
+
+export const selectPlayerQuickMatchLeaderboardError = (state, offeringId) =>
+  getStoredErrorMessage(state.quickMatchOfferings.playerLeaderboardErrorsById[offeringId]);
