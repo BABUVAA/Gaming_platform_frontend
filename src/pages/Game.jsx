@@ -4,17 +4,11 @@ import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import {
   FaArrowRight,
-  FaCalendarAlt,
   FaClock,
-  FaFire,
   FaGamepad,
-  FaUsers,
 } from "react-icons/fa";
-import { buildTournamentOfferingPath, ROUTES } from "../routes/routeConstants";
-import {
-  selectIsStaffUtilityMode,
-  selectPlayerSummary,
-} from "../store/selectors/playerSelectors";
+import { buildTournamentOfferingPath } from "../routes/routeConstants";
+import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 import {
   selectPlayerQuickMatchOfferings,
   selectPlayerQuickMatchStatus,
@@ -58,6 +52,12 @@ const tournamentShape = PropTypes.shape({
   registeredTeams: PropTypes.arrayOf(PropTypes.object),
   prizePool: PropTypes.number,
   entryFee: PropTypes.number,
+  placementRewards: PropTypes.arrayOf(
+    PropTypes.shape({
+      amountMinor: PropTypes.number.isRequired,
+      place: PropTypes.number.isRequired,
+    }),
+  ),
   isFeatured: PropTypes.bool,
   joinedCount: PropTypes.number,
 });
@@ -109,7 +109,6 @@ const Game = () => {
   const dispatch = useDispatch();
   const [activeGame, setActiveGame] = useState("all");
   const [pendingEvent, setPendingEvent] = useState(null);
-  const playerSummary = useSelector(selectPlayerSummary);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const offerings = useSelector(selectPlayerQuickMatchOfferings);
   const tournamentsStatus = useSelector(selectPlayerQuickMatchStatus);
@@ -123,6 +122,7 @@ const Game = () => {
         joinedCount: offering.joinProgress?.joinedParticipants || 0,
         maxParticipants: offering.maxParticipants,
         mode: offering.mode,
+        placementRewards: offering.placementRewards || [],
         prizePool: offering.prizePoolMinor / 100,
         registeredPlayers: [],
         registeredTeams: [],
@@ -172,56 +172,8 @@ const Game = () => {
       );
     });
 
-  const spotlight = filteredTournaments[0] || null;
-  const competitionFeed = filteredTournaments.slice(1, 5);
-  const username = playerSummary?.username || "Player";
-
   return (
     <div className="space-y-7 pb-8 text-slate-100">
-      {/* The page header only needs the player's display name. Competition and
-          account domains remain independent below this layout boundary. */}
-      <section className="flex flex-col gap-5 rounded-[28px] border border-slate-700 bg-slate-800/90 p-5 shadow-[0_20px_55px_rgba(2,8,23,0.22)] backdrop-blur md:flex-row md:items-center md:justify-between md:p-6">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-            <FaGamepad />
-            {isStaffUtilityMode ? "Staff catalog view" : "Compete"}
-          </div>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-white md:text-4xl">
-            {isStaffUtilityMode
-              ? `Player-facing catalog for ${username}`
-              : `Ready, ${username}?`}
-          </h1>
-        </div>
-
-        <div className="flex gap-2">
-          <Link
-            to={ROUTES.MATCHES}
-            className="rounded-xl border border-slate-600 bg-slate-700 px-4 py-3 text-xs font-black text-slate-100 transition hover:border-slate-500 hover:bg-slate-600"
-          >
-            {isStaffUtilityMode ? "Match history" : "My matches"}
-          </Link>
-        </div>
-      </section>
-
-      <section>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Events</p>
-            <h2 className="mt-1 text-2xl font-black text-white">Register, watch rounds, and follow standings</h2>
-          </div>
-          {eventState.status === "failed" ? (
-            <button className="rounded-xl border border-rose-300/30 px-3 py-2 text-sm text-rose-100" onClick={() => dispatch(fetchPlayerEvents())} type="button">Retry Events</button>
-          ) : null}
-        </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          {visibleEvents.map((event) => (
-            <EventCompetitionCard busy={eventState.actionById[event.id] === "loading"} event={event} key={event.id} onRegister={setPendingEvent} staffReadOnly={isStaffUtilityMode} />
-          ))}
-          {eventState.status === "loading" ? <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">Loading Events...</p> : null}
-          {eventState.status === "succeeded" && !visibleEvents.length ? <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-500">No Events are available for this game.</p> : null}
-        </div>
-      </section>
-
       <section className="rounded-[28px] border border-slate-700 bg-slate-800/55 p-4 shadow-[0_18px_45px_rgba(2,8,23,0.16)] md:p-5">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
@@ -271,27 +223,71 @@ const Game = () => {
         </div>
       </section>
 
-      {spotlight ? (
-        <SpotlightTournament tournament={spotlight} />
-      ) : (
-        <CompetitionEmptyState isLoading={tournamentsStatus === "loading"} />
-      )}
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+              Events
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-white">
+              Events for the selected game
+            </h2>
+          </div>
+          {eventState.status === "failed" ? (
+            <button
+              className="rounded-xl border border-rose-300/30 px-3 py-2 text-sm text-rose-100"
+              onClick={() => dispatch(fetchPlayerEvents())}
+              type="button"
+            >
+              Retry Events
+            </button>
+          ) : null}
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {visibleEvents.map((event) => (
+            <EventCompetitionCard
+              busy={eventState.actionById[event.id] === "loading"}
+              event={event}
+              key={event.id}
+              onRegister={setPendingEvent}
+              staffReadOnly={isStaffUtilityMode}
+            />
+          ))}
+          {eventState.status === "loading" ? (
+            <p className="rounded-2xl border border-slate-800 p-5 text-sm text-slate-400">
+              Loading Events...
+            </p>
+          ) : null}
+          {eventState.status === "succeeded" && !visibleEvents.length ? (
+            <p className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-400">
+              No Events are available for this game.
+            </p>
+          ) : null}
+        </div>
+      </section>
 
-      {competitionFeed.length > 0 ? (
+      {filteredTournaments.length > 0 ? (
         <section>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-black text-white">Quick matches</h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+                Tournaments
+              </p>
+              <h2 className="mt-1 text-2xl font-black text-white">
+                Tournaments for the selected game
+              </h2>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {competitionFeed.map((tournament) => (
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {filteredTournaments.map((tournament) => (
               <CompetitionCard key={tournament._id} tournament={tournament} />
             ))}
           </div>
         </section>
-      ) : null}
+      ) : (
+        <CompetitionEmptyState isLoading={tournamentsStatus === "loading"} />
+      )}
 
       <CompetitionEntryDialog
         actionLabel="Proceed & register"
@@ -359,168 +355,111 @@ const GameFilterCard = ({ eventCount, filter, isActive, onSelect }) => (
   </button>
 );
 
-const SpotlightTournament = ({ tournament }) => {
-  const joinedCount = getJoinedCount(tournament);
-  const filledPercentage = getFilledPercentage(tournament);
-
-  return (
-    <section className="group relative grid overflow-hidden rounded-[34px] border border-slate-700 bg-slate-800 shadow-[0_28px_70px_rgba(2,8,23,0.28)] lg:grid-cols-[0.9fr_1.1fr]">
-      {/* The featured event uses a true light split layout. Text no longer
-          depends on a dark image overlay, so artwork and details stay clear. */}
-      <div className="flex flex-col justify-between p-5 md:p-8">
-        <div>
-          <div className="flex items-start justify-between gap-4">
-            <span className="inline-flex items-center gap-2 rounded-full bg-amber-300 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-950">
-              <FaFire />
-              Featured
-            </span>
-            <span className="rounded-full border border-cyan-400/30 bg-cyan-400/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
-              {getTournamentStatus(tournament.status)}
-            </span>
-          </div>
-
-          <p className="mt-10 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
-            {tournament.game} / {tournament.mode}
-          </p>
-          <h2 className="mt-2 text-3xl font-black leading-tight text-white md:text-5xl">
-            {tournament.tournamentName}
-          </h2>
-
-          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-300">
-            <span className="inline-flex items-center gap-2">
-              <FaCalendarAlt className="text-amber-300" />
-              {getTournamentDate(tournament.startDate)}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <FaUsers className="text-cyan-300" />
-              {joinedCount} of {tournament.maxParticipants || 0} joined
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-8 flex items-end justify-between gap-5 rounded-[22px] border border-slate-600 bg-slate-700 p-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-              Prize
-            </p>
-            <p className="mt-1 text-3xl font-black text-white">
-              Rs {tournament.prizePool || 0}
-            </p>
-            <p className="mt-1 text-xs text-slate-300">
-              Entry Rs {tournament.entryFee || 0}
-            </p>
-          </div>
-          <Link
-            to={buildTournamentOfferingPath(tournament._id)}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-600 px-5 text-sm font-black text-white transition hover:bg-cyan-500"
-          >
-            View event
-            <FaArrowRight />
-          </Link>
-        </div>
-      </div>
-
-      <div className="relative min-h-64 overflow-hidden lg:min-h-[30rem]">
-        <img
-          src={getGamePresentation(tournament.game).image}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover object-[68%_center] transition duration-700 group-hover:scale-[1.025]"
-        />
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 h-1 bg-slate-600">
-        <div
-          className="h-full bg-[linear-gradient(90deg,#22d3ee,#fbbf24)] transition-all duration-700"
-          style={{ width: `${filledPercentage}%` }}
-        />
-      </div>
-    </section>
-  );
-};
-
 const CompetitionCard = ({ tournament }) => {
   const joinedCount = getJoinedCount(tournament);
   const filledPercentage = getFilledPercentage(tournament);
   const presentation = getGamePresentation(tournament.game);
+  const placementRewards = tournament.placementRewards || [];
 
   return (
-    <article className="group overflow-hidden rounded-[26px] border border-slate-700 bg-slate-800 shadow-[0_18px_45px_rgba(2,8,23,0.22)] transition duration-300 hover:-translate-y-1 hover:border-cyan-400/50">
-      {/* The poster carries game identity while the body keeps event decisions
-          readable and consistent across every supported game. */}
-      <div className="relative h-52 overflow-hidden">
-        <img
-          src={presentation.image}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover object-[68%_center] transition duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
-        <div className="absolute inset-x-4 top-4 flex items-start justify-between gap-3">
-          <span className="rounded-full border border-slate-500 bg-slate-800/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-sm backdrop-blur">
-            {getTournamentStatus(tournament.status)}
-          </span>
-          <span className="rounded-full bg-cyan-300 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-sm">
-            {tournament.mode}
-          </span>
-        </div>
-        <span className="absolute bottom-4 left-4 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
-          {presentation.label}
-        </span>
-      </div>
+    <article className="group relative min-h-[16rem] overflow-hidden rounded-[22px] border border-slate-700 bg-slate-900 shadow-[0_14px_32px_rgba(2,8,23,0.28)] transition duration-300 hover:-translate-y-1 hover:border-cyan-400/60">
+      <img
+        src={presentation.image}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover object-[68%_center] transition duration-500 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.48),rgba(2,6,23,0.84)_40%,rgba(2,6,23,0.99)_100%)]" />
 
-      <div className="p-5">
-        <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300">
-          <FaClock className="text-amber-600" />
-          {getTournamentDate(tournament.startDate)}
-        </span>
-        <h3 className="mt-2 min-h-14 line-clamp-2 text-2xl font-black leading-tight text-white">
-          {tournament.tournamentName}
-        </h3>
-
-        <div className="mt-5 grid grid-cols-[1fr_auto_auto] items-end gap-5 rounded-2xl border border-slate-700 bg-slate-700/55 p-4">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-              Prize pool
-            </p>
-            <p className="mt-1 text-xl font-black text-amber-300">
-              Rs {tournament.prizePool || 0}
-            </p>
-          </div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-              Entry
-            </p>
-            <p className="mt-1 text-sm font-black text-white">
-              Rs {tournament.entryFee || 0}
-            </p>
-          </div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
-              Joined
-            </p>
-            <p className="mt-1 text-sm font-black text-white">{joinedCount}</p>
+      <div className="relative flex min-h-[16rem] flex-col justify-between p-4">
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <span className="rounded-full border border-slate-500 bg-slate-800/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-sm backdrop-blur">
+              {getTournamentStatus(tournament.status)}
+            </span>
+            <span className="rounded-full bg-cyan-300 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-950 shadow-sm">
+              Mode · {tournament.mode}
+            </span>
           </div>
         </div>
 
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-            <span>Event capacity</span>
-            <span>{Math.round(filledPercentage)}%</span>
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+            {presentation.label}
+          </span>
+          <h3 className="mt-1 line-clamp-2 text-lg font-black leading-tight text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)] sm:text-xl">
+            {tournament.tournamentName}
+          </h3>
+          <span className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-slate-200">
+            <FaClock className="text-amber-300" />
+            {getTournamentDate(tournament.startDate)}
+          </span>
+
+          <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-white/15 bg-slate-950/75 p-2.5 backdrop-blur-sm">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                Reward
+              </p>
+              <p className="mt-0.5 text-sm font-black text-amber-300">
+                ₹{Number(tournament.prizePool || 0).toLocaleString("en-IN")}
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                Entry
+              </p>
+              <p className="mt-0.5 text-sm font-black text-white">
+                {tournament.entryFee > 0
+                  ? `₹${Number(tournament.entryFee).toLocaleString("en-IN")}`
+                  : "Free"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                Capacity
+              </p>
+              <p className="mt-0.5 text-sm font-black text-white">
+                {tournament.maxParticipants || 0} seats
+              </p>
+            </div>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-700">
+
+          {placementRewards.length ? (
+            <p className="mt-2 line-clamp-1 text-[10px] font-bold text-amber-100">
+              {placementRewards
+                .slice(0, 3)
+                .map(
+                  (reward) =>
+                    `#${reward.place} ₹${Number(reward.amountMinor / 100).toLocaleString("en-IN")}`,
+                )
+                .join(" · ")}
+              {placementRewards.length > 3
+                ? ` · +${placementRewards.length - 3} places`
+                : ""}
+            </p>
+          ) : null}
+
+          <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-slate-200">
+            <span>
+              {joinedCount}/{tournament.maxParticipants || 0} joined
+            </span>
+            <span>{Math.round(filledPercentage)}% full</span>
+          </div>
+          <div
+            aria-label={`${joinedCount} of ${tournament.maxParticipants || 0} seats filled`}
+            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-700/80"
+          >
             <div
               className="h-full rounded-full bg-[linear-gradient(90deg,#22d3ee,#fbbf24)] transition-all duration-700"
               style={{ width: `${filledPercentage}%` }}
             />
           </div>
-        </div>
 
-        <div className="mt-5">
           <Link
             to={buildTournamentOfferingPath(tournament._id)}
             aria-label={`Open ${tournament.tournamentName}`}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 text-sm font-black text-white transition group-hover:bg-cyan-500"
+            className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 text-xs font-black text-slate-950 transition group-hover:bg-cyan-200"
           >
-            View tournament
+            Open tournament
             <FaArrowRight />
           </Link>
         </div>
@@ -542,10 +481,6 @@ const CompetitionEmptyState = ({ isLoading }) => (
     </p>
   </section>
 );
-
-SpotlightTournament.propTypes = {
-  tournament: tournamentShape.isRequired,
-};
 
 CompetitionCard.propTypes = {
   tournament: tournamentShape.isRequired,

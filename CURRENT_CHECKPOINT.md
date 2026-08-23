@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-22
+Last updated: 2026-08-23
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -83,6 +83,20 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   advancement from a fixed knockout bracket or accept player IDs from clients.
 
 ## Current Verified State
+
+- Compete cards 2026-08-23: removed the oversized first-card spotlight and
+  render every filtered Event and Quick Match in consistent compact poster
+  cards. Both grids are one column on phones and two columns from small-tablet
+  width; game artwork fills each card behind a readability gradient. Event
+  countdowns, facts and action rows are condensed while retaining registration,
+  personal-Match and progress behavior. Browse order is Game selection, Events,
+  then Tournaments, with both competition categories filtered by the selected
+  game and direct View/Join actions on eligible Events. The redundant Ready/user
+  hero is removed so game selection is the first page section. Tournament cards
+  expose mode, reward, entry, capacity, joined percentage/progress and leading
+  placement rewards. Frontend passed 109/109, full lint,
+  diff check and the 557-module production build. Authenticated visual review
+  remains pending.
 
 - Quick Match/Event room lifecycle 2026-08-22: a full Room is claimed by a
   scoped Match Operator, scheduled and given lobby credentials by its

@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-22
+Last updated: 2026-08-23
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -114,6 +114,22 @@ to continue the project without reopening settled decisions.
   390x844 browser checks against the retained 100-player Room with no console
   errors or horizontal overflow. The temporary browser player and Wallet were
   transactionally removed.
+- Compete card refinement completed 2026-08-23. The oversized first-offering
+  spotlight was removed: every filtered Event and Quick Match now renders in a
+  compact responsive poster card, one column on phones and two columns from
+  small-tablet width. Game artwork is the full-card background; explicit dark
+  gradients keep status, mode, title, countdown/timing, money, capacity and
+  actions readable. Event countdowns and action rows were condensed without
+  removing registration, personal-Match or progress behavior. The Quick Match
+  feed no longer drops offerings after the first five. Browse order is now
+  Game selection -> game-filtered Events -> game-filtered Tournaments; eligible
+  Event cards expose direct View Event and Join Event actions. The redundant
+  personalized Ready hero was removed so Compete opens directly on game selection.
+  Tournament cards explicitly show mode, total reward, entry fee, seat capacity,
+  joined/maximum progress, percentage and placement-reward previews when present.
+  Frontend verification
+  passed 109/109, full lint, diff check and the 557-module production build.
+  Authenticated visual review remains a follow-up.
 - Match conversations are private operational records shared only by the
   Match participants and its currently assigned Match Operator. Messages are
   persisted, bounded, rate-limited and identity-derived; Event/Game Managers

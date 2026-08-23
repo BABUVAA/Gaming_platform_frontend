@@ -45,3 +45,33 @@ test("legacy Tournament UI modules and routes are absent", async () => {
     await assert.rejects(access(new URL(path, import.meta.url)));
   }
 });
+
+test("Compete renders Events and Quick Matches as compact two-column poster cards", async () => {
+  const [gamePage, eventCard] = await Promise.all([
+    read("../src/pages/Game.jsx"),
+    read("../src/components/competition/EventCompetitionCard.jsx"),
+  ]);
+
+  assert.match(gamePage, /filteredTournaments\.map\(\(tournament\)/);
+  assert.match(gamePage, /grid-cols-1 gap-4 sm:grid-cols-2/);
+  assert.match(gamePage, /src=\{presentation\.image\}/);
+  assert.match(gamePage, /absolute inset-0 bg-\[linear-gradient/);
+  assert.match(gamePage, /Mode · \{tournament\.mode\}/);
+  assert.match(gamePage, /Capacity/);
+  assert.match(gamePage, /% full/);
+  assert.match(gamePage, /placementRewards/);
+  assert.match(eventCard, /src=\{presentation\.image\}/);
+  assert.match(eventCard, /absolute inset-0 bg-\[linear-gradient/);
+  assert.match(eventCard, /min-h-\[18rem\]/);
+  assert.match(eventCard, /"Join Event"/);
+  assert.doesNotMatch(gamePage, /Ready, \$\{username\}|selectPlayerSummary/);
+  assert.ok(
+    gamePage.indexOf("Choose your game") <
+      gamePage.indexOf("Events for the selected game"),
+  );
+  assert.ok(
+    gamePage.indexOf("Events for the selected game") <
+      gamePage.indexOf("Tournaments for the selected game"),
+  );
+  assert.doesNotMatch(gamePage, /SpotlightTournament/);
+});
