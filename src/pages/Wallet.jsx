@@ -277,25 +277,25 @@ const Wallet = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {paymentCapabilities.testMoney ? (
-        <section className="rounded-3xl border border-amber-300/40 bg-amber-300/10 p-5 text-amber-50">
+        <section className="rounded-2xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-amber-50">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
             PhonePe sandbox - test money only
           </p>
-          <p className="mt-2 text-sm leading-6">
+          <p className="mt-1 text-xs leading-5">
             Deposits, entry fees, prizes, and wallet balances on this deployment
             are test values. They cannot be withdrawn or exchanged for real money.
           </p>
         </section>
       ) : null}
-      <section className="rounded-3xl border border-emerald-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <section className="rounded-2xl border border-emerald-500/20 bg-slate-950/90 p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-4xl font-black text-white md:text-5xl">Wallet</h1>
+            <h1 className="text-2xl font-black text-white">Wallet</h1>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid flex-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard
               label="Available"
               value={formatMinor(wallet?.availableMinor, wallet?.currency)}
@@ -330,9 +330,9 @@ const Wallet = () => {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-3 md:grid-cols-2">
         {isStaffUtilityMode ? (
-          <div className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-amber-50 xl:col-span-2">
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-amber-50 xl:col-span-2">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
               View-only wallet history
             </p>
@@ -371,7 +371,7 @@ const Wallet = () => {
       </section>
 
       {!isStaffUtilityMode ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+        <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black text-white">Withdrawal history</h2>
@@ -390,7 +390,7 @@ const Wallet = () => {
         </section>
       ) : null}
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-black text-white">
@@ -621,12 +621,12 @@ const LedgerEntry = ({ entry }) => (
 );
 
 const MetricCard = ({ label, value, accent, icon }) => (
-  <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
     <div className="flex items-center justify-between gap-3">
       <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{label}</p>
-      <span className="rounded-xl bg-white/5 p-2 text-slate-300">{icon}</span>
+      <span className="rounded-lg bg-white/5 p-1.5 text-slate-300">{icon}</span>
     </div>
-    <p className={`mt-3 text-3xl font-black ${accent}`}>{value}</p>
+    <p className={`mt-2 text-xl font-black ${accent}`}>{value}</p>
   </div>
 );
 
@@ -638,13 +638,13 @@ const ActionPanel = ({
   onClick,
   tone,
 }) => (
-  <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-    <h2 className="text-xl font-black text-white">{title}</h2>
-    <p className="mt-3 text-sm leading-7 text-slate-400">{copy}</p>
+  <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
+    <h2 className="text-lg font-black text-white">{title}</h2>
+    <p className="mt-1 text-xs leading-5 text-slate-400">{copy}</p>
     <Button
       onClick={onClick}
       disabled={disabled}
-      className={`mt-5 w-full rounded-2xl py-3 ${
+      className={`mt-3 w-full rounded-xl py-2.5 ${
         tone === "danger"
           ? "bg-rose-500 text-white hover:bg-rose-400"
           : "bg-cyan-300 text-slate-950"

@@ -51,6 +51,19 @@ export const fetchPlayerEventStandings = createApiThunk(
   },
 );
 
+export const fetchPlayerEventLeaderboard = createApiThunk(
+  "eventRegistration/fetchLeaderboard",
+  {
+    path: ({ arg }) => `/api/player/events/${arg.runId}/leaderboard`,
+    getParams: ({ cursor }) => ({
+      limit: 10,
+      ...(cursor ? { cursor } : {}),
+    }),
+    selectData: (response) => response.data?.data,
+    errorMessage: "Unable to load the Event leaderboard.",
+  },
+);
+
 export const registerForEvent = createApiThunk(
   "eventRegistration/register",
   {
@@ -59,7 +72,10 @@ export const registerForEvent = createApiThunk(
     getBody: () => ({}),
     selectData: (response) => response.data?.data,
     errorMessage: "Unable to register for this Event.",
-    onSuccess: ({ thunkAPI }) => thunkAPI.dispatch(fetchPlayerEvents()),
+    onSuccess: ({ arg, thunkAPI }) => {
+      thunkAPI.dispatch(fetchPlayerEvents());
+      thunkAPI.dispatch(fetchPlayerEventLeaderboard({ runId: arg }));
+    },
     toast: { success: true, error: true },
   },
   playerParticipationOnly,
@@ -85,6 +101,10 @@ const eventRegistrationSlice = createSlice({
     detailsStatusById: {},
     error: null,
     events: [],
+    leaderboardsById: {},
+    leaderboardsErrorById: {},
+    leaderboardsRequestById: {},
+    leaderboardsStatusById: {},
     standingsById: {},
     standingsErrorById: {},
     standingsRequestById: {},
@@ -165,6 +185,35 @@ const eventRegistrationSlice = createSlice({
             action.payload?.message || action.error.message;
         }
       })
+      .addCase(fetchPlayerEventLeaderboard.pending, (state, action) => {
+        const { runId } = action.meta.arg;
+        state.leaderboardsErrorById[runId] = null;
+        state.leaderboardsRequestById[runId] = action.meta.requestId;
+        state.leaderboardsStatusById[runId] = "loading";
+      })
+      .addCase(fetchPlayerEventLeaderboard.fulfilled, (state, action) => {
+        const { cursor, runId } = action.meta.arg;
+        if (state.leaderboardsRequestById[runId] !== action.meta.requestId) return;
+        const previous = state.leaderboardsById[runId];
+        const items = cursor
+          ? appendLeaderboardRows(previous?.items, action.payload.items)
+          : action.payload.items;
+        state.leaderboardsById[runId] = { ...action.payload, items };
+        state.leaderboardsRequestById[runId] = null;
+        state.leaderboardsStatusById[runId] = "succeeded";
+      })
+      .addCase(fetchPlayerEventLeaderboard.rejected, (state, action) => {
+        const { runId } = action.meta.arg;
+        if (state.leaderboardsRequestById[runId] !== action.meta.requestId) return;
+        state.leaderboardsRequestById[runId] = null;
+        state.leaderboardsStatusById[runId] = action.meta.aborted
+          ? "idle"
+          : "failed";
+        if (!action.meta.aborted) {
+          state.leaderboardsErrorById[runId] =
+            action.payload?.message || action.error.message;
+        }
+      })
       .addCase(registerForEvent.pending, (state, action) => {
         state.actionById[action.meta.arg] = "loading";
       })
@@ -190,6 +239,12 @@ function appendStandingRows(current = [], additions = []) {
       row,
     ),
   );
+  return [...rows.values()];
+}
+
+function appendLeaderboardRows(current = [], additions = []) {
+  const rows = new Map(current.map((row) => [row.id, row]));
+  additions.forEach((row) => rows.set(row.id, row));
   return [...rows.values()];
 }
 

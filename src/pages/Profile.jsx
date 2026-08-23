@@ -213,9 +213,9 @@ const Profile = () => {
           {STAFF_UTILITY_MESSAGE} Profile media and social-link changes are unavailable here.
         </section>
       ) : null}
-      <section className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/85 shadow-[0_24px_70px_rgba(2,8,23,0.45)]">
+      <section className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/85">
         <div
-          className="relative h-52 bg-cover bg-center md:h-64"
+          className="relative h-32 bg-cover bg-center md:h-40"
           style={{
             backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.82)), url(${displayProfile.banner || "/pubg_background.jpg"})`,
           }}
@@ -227,16 +227,16 @@ const Profile = () => {
               setSelectedImageType("banner");
               setIsImageModalOpen(true);
             }}
-            className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/55 disabled:cursor-not-allowed disabled:opacity-60"
+            className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/55 px-3 py-2 text-xs font-semibold text-white transition hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <FiImage />
             Update Banner
           </button>
         </div>
 
-        <div className="relative px-5 pb-6 md:px-8">
-          <div className="-mt-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end">
+        <div className="relative px-4 pb-4">
+          <div className="-mt-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
               <div className="relative">
                 <img
                   src={
@@ -249,7 +249,7 @@ const Profile = () => {
                       ? externalPlayer?.username || "Player avatar"
                       : playerProfile.username || "Player avatar"
                   }
-                  className="h-28 w-28 rounded-[28px] border-4 border-slate-950 object-cover shadow-xl md:h-32 md:w-32"
+                  className="h-20 w-20 rounded-2xl border-4 border-slate-950 object-cover shadow-xl md:h-24 md:w-24"
                 />
                 <button
                   type="button"
@@ -258,7 +258,7 @@ const Profile = () => {
                     setSelectedImageType("profile");
                     setIsImageModalOpen(true);
                   }}
-                  className="absolute -bottom-2 -right-2 rounded-full border border-cyan-300/30 bg-cyan-300 px-3 py-3 text-slate-950 shadow-lg transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="absolute -bottom-2 -right-2 rounded-full border border-cyan-300/30 bg-cyan-300 p-2.5 text-slate-950 shadow-lg transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <FiCamera />
                 </button>
@@ -268,13 +268,13 @@ const Profile = () => {
                 <p className="text-xs uppercase tracking-[0.26em] text-cyan-300/80">
                   Player Identity
                 </p>
-                <h1 className="mt-2 text-3xl font-black text-white">
+                <h1 className="mt-1 text-2xl font-black text-white">
                   {isViewingExternal
                     ? externalPlayer?.username || "Player"
                     : playerProfile.username || "Player"}
                 </h1>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-300">
-            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
                     {isViewingExternal
                       ? externalPlayerTag || "Player preview"
                       : profile?.email || "No email available"}
@@ -282,7 +282,7 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={copyProfileTag}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 font-semibold transition hover:border-cyan-300/30 hover:text-cyan-200"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-semibold transition hover:border-cyan-300/30 hover:text-cyan-200"
                   >
                     <FiCopy />
                     {(isViewingExternal
@@ -298,7 +298,7 @@ const Profile = () => {
               type="button"
               disabled={isViewingExternal || isStaffUtilityMode}
               onClick={openSocialEditor}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2.5 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FiEdit3 />
               Edit Social Links
@@ -307,22 +307,22 @@ const Profile = () => {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-[28px] border border-white/10 bg-slate-950/80 p-5 shadow-[0_18px_40px_rgba(2,8,23,0.35)]"
+            className="rounded-2xl border border-white/10 bg-slate-950/80 p-3"
           >
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
               {stat.label}
             </p>
-            <p className="mt-3 text-3xl font-black text-white">{stat.value}</p>
+            <p className="mt-1 text-2xl font-black text-white">{stat.value}</p>
           </div>
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">

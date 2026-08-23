@@ -16,7 +16,7 @@ const createStore = (role) =>
     },
   });
 
-test("canonical Quick Match join uses the player offering route and minimal body", async () => {
+test("canonical Quick Match join sends only its idempotent attempt", async () => {
   const originalAdapter = api.defaults.adapter;
   let request;
   api.defaults.adapter = async (config) => {
@@ -34,6 +34,7 @@ test("canonical Quick Match join uses the player offering route and minimal body
     const store = createStore();
     const action = await store.dispatch(
       joinQuickMatchQueue({
+        attemptId: "join_attempt_1",
         offeringId: "offering-1",
       }),
     );
@@ -41,7 +42,7 @@ test("canonical Quick Match join uses the player offering route and minimal body
     assert.equal(action.type, joinQuickMatchQueue.fulfilled.type);
     assert.equal(request.method, "post");
     assert.equal(request.url, "/api/player/quick-matches/offering-1/queue");
-    assert.deepEqual(JSON.parse(request.data), {});
+    assert.deepEqual(JSON.parse(request.data), { attemptId: "join_attempt_1" });
     assert.equal(store.getState().matchmaking.joinStatus, "succeeded");
   } finally {
     api.defaults.adapter = originalAdapter;
@@ -90,13 +91,17 @@ test("canonical team join sends only its selected team", async () => {
     const store = createStore();
     await store.dispatch(
       joinQuickMatchQueue({
+        attemptId: "join_attempt_2",
         offeringId: "offering-2",
         teamId: "team-1",
       }),
     );
 
     assert.equal(request.url, "/api/player/quick-matches/offering-2/queue");
-    assert.deepEqual(JSON.parse(request.data), { teamId: "team-1" });
+    assert.deepEqual(JSON.parse(request.data), {
+      attemptId: "join_attempt_2",
+      teamId: "team-1",
+    });
   } finally {
     api.defaults.adapter = originalAdapter;
   }

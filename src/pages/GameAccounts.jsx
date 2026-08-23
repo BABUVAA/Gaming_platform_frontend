@@ -32,7 +32,6 @@ const emptyForm = {
 const GameAccounts = () => {
   const dispatch = useDispatch();
   const games = useSelector((store) => store.games?.data);
-  const profile = useSelector((store) => store.player?.profile);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
   const [linkedAccounts, setLinkedAccounts] = useState([]);
@@ -173,29 +172,21 @@ const GameAccounts = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#07111f] text-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
-        <section className="overflow-hidden rounded-2xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.22),_transparent_35%),linear-gradient(135deg,_#0b1628,_#09111d_50%,_#0f172a)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.55)]">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">
+    <div className="text-slate-100">
+      <div className="space-y-4">
+        <section className="rounded-2xl border border-cyan-500/20 bg-slate-950/90 p-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-white">
                 Game Accounts
-              </p>
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-5xl">
-                Connect your game identities before match time.
               </h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-                This is the foundation for tournament eligibility, manual
-                operator review, and live match readiness across Clash of Clans
-                and BGMI.
-              </p>
             </div>
 
-            <div className="grid w-full gap-3 sm:grid-cols-3 lg:w-auto">
+            <div className="grid w-full gap-2 sm:grid-cols-3 lg:w-auto">
               {stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur"
+                  className="rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5"
                 >
                   <div className="flex items-center gap-2 text-cyan-300">
                     {stat.icon}
@@ -203,7 +194,7 @@ const GameAccounts = () => {
                       {stat.label}
                     </span>
                   </div>
-                  <p className="mt-3 text-3xl font-black text-white">
+                  <p className="mt-1 text-xl font-black text-white">
                     {stat.value}
                   </p>
                 </div>
@@ -212,24 +203,20 @@ const GameAccounts = () => {
           </div>
         </section>
 
-        <section className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,6,23,0.45)]">
+        <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold text-white">
                   Supported Games
                 </h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Each game uses its own verification flow so operators know
-                  exactly what to trust.
-                </p>
               </div>
               <div className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">
                 {availableGames.length} Live
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
               {availableGames.map((game) => {
                 const account = accountByGameKey[game.link];
                 const status = account?.verificationStatus || "unlinked";
@@ -239,13 +226,13 @@ const GameAccounts = () => {
                     key={game._id}
                     className="overflow-hidden rounded-2xl border border-slate-800 bg-[linear-gradient(180deg,_rgba(15,23,42,0.86),_rgba(2,6,23,0.96))]"
                   >
-                    <div className="border-b border-slate-800 px-5 py-4">
+                    <div className="border-b border-slate-800 px-4 py-3">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
                             {game.link}
                           </p>
-                          <h3 className="mt-1 text-2xl font-black text-white">
+                          <h3 className="mt-1 text-xl font-black text-white">
                             {game.name || game.title}
                           </h3>
                         </div>
@@ -260,18 +247,18 @@ const GameAccounts = () => {
                       </div>
                     </div>
 
-                    <div className="px-5 py-4">
+                    <div className="px-4 py-3">
                       <div className="flex items-center gap-2 text-sm text-cyan-200">
                         <FaBolt />
                         <span>{methodLabels[game.verificationMethod]}</span>
                       </div>
 
-                      <p className="mt-3 text-sm leading-6 text-slate-300">
+                      <p className="mt-2 text-xs leading-5 text-slate-300">
                         {game.verificationInstructions}
                       </p>
 
                       {account && (
-                        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                             Active Account
                           </p>
@@ -292,7 +279,7 @@ const GameAccounts = () => {
                         <button
                           type="button"
                           onClick={() => openConnectModal(game)}
-                          className="mt-5 inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
+                          className="mt-3 inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
                         >
                           {game.verificationMethod === "api_token"
                             ? account
@@ -310,31 +297,8 @@ const GameAccounts = () => {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,6,23,0.45)]">
-              <h2 className="text-xl font-bold text-white">Player Readiness</h2>
-              <div className="mt-4 space-y-3 text-sm text-slate-300">
-                <p className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                  <span className="block text-xs uppercase tracking-[0.2em] text-slate-500">
-                    Profile
-                  </span>
-                  <span className="mt-2 block text-lg font-semibold text-white">
-                    {profile?.profile?.username || "Player"}
-                  </span>
-                  <span className="text-slate-400">
-                    {profile?.profileTag || "No player tag"}
-                  </span>
-                </p>
-
-                <p className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
-                  Link verified accounts now so tournament joins, quick 5v5
-                  matchmaking, and operator review all use the same trusted
-                  identity.
-                </p>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,6,23,0.45)]">
+          <div>
+            <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-xl font-bold text-white">
                   Verification Queue

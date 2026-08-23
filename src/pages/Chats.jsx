@@ -35,39 +35,25 @@ const Chats = () => {
   };
 
   return (
-    <div className="flex min-h-0 flex-col space-y-6">
-      <section className="rounded-3xl border border-violet-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(167,139,250,0.18),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-violet-300/80">
-              Communications
-            </p>
-            <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
-              Coordinate clan traffic, match notes, and private player messages.
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-              Keep your squad channel active, open direct player threads, and
-              move between conversations without losing the live match shell.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
+    <div className="flex min-h-0 flex-col space-y-4">
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-black text-white">Chats</h1>
+        <div className="flex flex-wrap gap-2">
             {helperStats.map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
+                className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2"
               >
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                  {stat.label}
-                </p>
-                <p className="mt-3 text-lg font-black text-white">{stat.value}</p>
+                <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                  {stat.label}: {" "}
+                </span>
+                <span className="text-xs font-black text-white">{stat.value}</span>
               </div>
             ))}
-          </div>
         </div>
       </section>
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[22rem_minmax(0,1fr)] lg:[height:calc(100vh-16rem)]">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[19rem_minmax(0,1fr)] lg:[height:calc(100vh-9rem)]">
         <div
           className={`min-h-0 ${selectedChat ? "hidden lg:block" : "block"}`}
         >
@@ -83,7 +69,7 @@ const Chats = () => {
           className={`min-h-0 ${selectedChat ? "block" : "hidden lg:block"}`}
         >
           {selectedChat ? (
-            <div className="h-full min-h-0 rounded-3xl border border-slate-800 bg-slate-950/90 p-2 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+            <div className="h-full min-h-0 rounded-2xl border border-slate-800 bg-slate-950/90 p-2">
               <ChatBox
                 selectedChat={selectedChat}
                 chatType={chatType}
@@ -92,7 +78,7 @@ const Chats = () => {
               />
             </div>
           ) : (
-            <div className="flex h-full min-h-[20rem] items-center justify-center rounded-3xl border border-dashed border-slate-800 bg-slate-950/70 p-6 text-center text-sm text-slate-400">
+            <div className="flex h-full min-h-[20rem] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/70 p-5 text-center text-sm text-slate-400">
               Pick a clan or private thread to open the live communication pane.
             </div>
           )}
@@ -113,7 +99,7 @@ const Chats = () => {
 
 const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
   return (
-    <div className="h-full min-h-0 overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/90 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+    <div className="h-full min-h-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90">
       <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">

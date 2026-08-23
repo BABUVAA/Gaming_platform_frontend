@@ -62,10 +62,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-w-0 w-full overflow-x-hidden min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.08),transparent_24%),#111827] md:min-h-[calc(100vh-80px)]">
-      <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)] min-h-[calc(100vh-64px)] max-w-[1600px] md:grid-cols-[18rem_minmax(0,1fr)] md:px-0">
+      <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)] min-h-[calc(100vh-64px)] max-w-[1600px] md:grid-cols-[14rem_minmax(0,1fr)] md:px-0">
         <SideBar />
 
-        <div className="min-w-0 min-h-0 w-full max-w-full px-3 pb-24 pt-4 md:px-6 md:pb-10 md:pt-6">
+        <div className="min-w-0 min-h-0 w-full max-w-full px-3 pb-24 pt-4 md:px-5 md:pb-8 md:pt-5">
           <StaffReadOnlyNotice />
           <Outlet />
         </div>

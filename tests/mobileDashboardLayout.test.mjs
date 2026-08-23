@@ -9,7 +9,7 @@ test("dashboard content owns one bounded mobile grid column", async () => {
   ]);
 
   assert.match(dashboard, /grid-cols-\[minmax\(0,1fr\)\]/);
-  assert.match(dashboard, /md:grid-cols-\[18rem_minmax\(0,1fr\)\]/);
+  assert.match(dashboard, /md:grid-cols-\[14rem_minmax\(0,1fr\)\]/);
   assert.match(dashboard, /min-w-0 w-full overflow-x-hidden/);
   assert.match(dashboard, /w-full max-w-full/);
   assert.match(app, /min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto/);

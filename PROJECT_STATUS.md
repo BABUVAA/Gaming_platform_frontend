@@ -55,12 +55,31 @@ to continue the project without reopening settled decisions.
   outcomes.
 - Invitation-only Event Runs are private in player discovery: only players
   with an active invitation may see their registration card or participate.
+- Event participant leaderboards are cursor-bounded and expose only a safe
+  display name. Registered players begin with no sporting rank (`-` in the
+  UI); only final immutable standings replace it with an authoritative place.
+  Waitlisted/cancelled entries are excluded. Open/limited Events follow their
+  spectator visibility, while invitation-only Events retain exact private
+  visibility at the backend read boundary.
+- Local test catalog seeded 2026-08-23 through canonical services and audited
+  staff identities. The existing Event Manager assignment now covers BGMI and
+  COC. BGMI owns an active monthly Solo/Erangal Template and a scheduled,
+  registration-open September 2026 Run. COC owns an active monthly 5v5/War
+  Template and a submitted Run that remains `in_review`; it must not be
+  published by bypassing the server's explicit team-Event registration gate.
+  Quick Matches cover every configured capability combination: BGMI
+  Solo/Duo/Squad on Erangal/Miramar and COC 5v5 on War. The existing paid BGMI
+  Solo/Erangal offering was reused; the six newly created offerings are free,
+  active, on-demand test competitions. Creation is idempotent through
+  `scripts/createMonthlyTestCompetitions.js`.
 - Open and limited-seat Events remain spectator-visible after registration
   closes through completion. Invitation-only Events remain private. Spectator
   reads expose schedules, safe round/Match status and sporting standings only;
   registration controls disappear and lobby/private evidence never leaks.
 - Event registration is a player commitment. Confirmed and waitlisted players
-  cannot cancel or re-enter; direct cancellation receives stable 409. Only an
+  cannot cancel or re-enter; one registration remains attached through every
+  later Run round, including weekly-spaced rounds when configured. Players do
+  not re-register per round. Direct cancellation receives stable 409. Only an
   audited platform-owned Event failure/cancellation may release entry funds.
 - Event Run approval covers registration timing, admission, entry terms and
   rewards only. After registration closes, the Event Manager configures one
@@ -86,11 +105,13 @@ to continue the project without reopening settled decisions.
   may start only at or after the confirmed schedule with lobby evidence
   present. Game Manager receives no result, dispute, settlement, prize, wallet,
   or chat authority from this scheduling responsibility.
-- Quick Match participation is offering-scoped, not globally exclusive. A
-  player already joined to one offering may join another eligible Quick Match
-  or Event; each command independently enforces game account, capacity, entry
-  funds and duplicate membership for its own competition. Joined players do
-  not receive a second Join action for the same offering.
+- Quick Match participation is waiting-Room-scoped, not offering- or globally
+  exclusive. A player may hold only one seat in the current waiting Room for an
+  offering. When that Room fills it becomes an independent Match and the next
+  waiting Room opens immediately; the same player may join it while the prior
+  Match is still active. Every fresh entry independently enforces game account,
+  roster, capacity and funds. A caller-owned attempt ID makes retries return the
+  original Room instead of charging or joining the next one accidentally.
 - Quick Match joined-roster visibility is private to members of that exact
   active Room. The player UI calls it `Leaderboard`, but before results it is
   only an ordered joined-player lineup and must not imply sporting rank.
@@ -102,8 +123,10 @@ to continue the project without reopening settled decisions.
   start at schedule -> operator ranking/result. Player check-in and player
   result submission routes are retired with stable responses. Operator and
   Game Manager workspaces expose bounded room progress and only the authority
-  each role owns; joined players receive a private lineup and cannot rejoin the
-  same offering. Wallet and staff shells were simplified without removing
+  each role owns; joined players receive a private lineup and cannot duplicate
+  their current waiting-Room entry. A filled Room no longer blocks entry into
+  the next Room for the same offering. Wallet and staff shells were simplified
+  without removing
   financial safety disclosures. The authenticated audit also fixed stale
   `Aborted` list state, duplicate Solo/team wording, assigned-Room pickup labels
   and full-Room player cards that ignored the generated Match lifecycle.
@@ -123,12 +146,54 @@ to continue the project without reopening settled decisions.
   removing registration, personal-Match or progress behavior. The Quick Match
   feed no longer drops offerings after the first five. Browse order is now
   Game selection -> game-filtered Events -> game-filtered Tournaments; eligible
-  Event cards expose direct View Event and Join Event actions. The redundant
+  Event cards expose direct View Event and Join Now actions. The redundant
   personalized Ready hero was removed so Compete opens directly on game selection.
   Tournament cards explicitly show mode, total reward, entry fee, seat capacity,
   joined/maximum progress, percentage and placement-reward previews when present.
-  Frontend verification
-  passed 109/109, full lint, diff check and the 557-module production build.
+  Their compact `View` action uses text only, without a trailing arrow.
+  Eligible player cards expose `Join Now` for both Events and Quick Matches;
+  committed Events and current waiting-Room entries replace it with `Joined`.
+  Once a Quick Match Room fills, its card/detail opens `Join Next Room` without
+  waiting for that Match to finish. The backend rejects duplicate entry into the
+  same Event Run or current Quick Match waiting Room. Event
+  cards follow their published long-form Run and round timing. Quick Matches
+  follow Room fill, operator claim and Game Manager scheduling; the UI does not
+  invent a one-hour start guarantee when no persisted schedule exists.
+  Event details now use an artwork-backed compact header, 2x2 phone facts and
+  direct Join Now/disabled Joined actions. Registration dates and separate
+  oversized panels are removed. One compact section switches between Rewards
+  and Leaderboard subtabs: rewards use simple Place/Reward rows without
+  repeating the currency label, while registered players use Rank/Player rows
+  with `-` until final results supply an authoritative placement. The backend
+  leaderboard is bounded, registered-only and display-name-only; invitation
+  privacy is rechecked through the exact Event read before any roster page.
+  The player Matches page is reduced to Live Matches and Completed sections;
+  filling, assigned, scheduled, live and result-review activity remains in the
+  active section, while verified, settled and cancelled records move to history.
+  The hero, lifecycle explanation panels and discovery shortcut were removed.
+  Player-dashboard density was reduced across the shared shell and primary tabs:
+  on phones, the Compete Game lobby is a compact three-column selector using
+  6rem artwork cards, abbreviated counts and no description copy; larger cards
+  return at tablet width. The player feed uses concise `Events` and `Quick Matches`
+  headings without repeated selected-game explanation copy. The shared shell remains responsive and
+  the sidebar is narrower with compact label-only rows, page padding is smaller,
+  and Chats, Wallet, Profile, Game Accounts and Clan no longer use oversized
+  promotional heroes. Functional actions, account states, wallet safety notices,
+  balances, verification queues and player identity controls remain present.
+  Clan mobile refinement reduces profile spacing and badge size, keeps actions
+  responsive, retains facts in a compact two-column grid, clamps long clan
+  descriptions to three lines behind `Read more`, and limits description inputs
+  to 6rem on phones without truncating stored content. The Clan identity keeps
+  its logo left, places a small copyable tag inline with the name and the plain
+  description beside it, removes the redundant `Your Clan` label, and uses an
+  icon-only top-right bookmark ribbon instead of Save/Saved copy.
+  The member section uses one `Members` heading and only rank, avatar, player
+  name and role; player tags, joined dates and leader/co-leader/elder summaries
+  are removed. Mobile rows are shorter.
+  Frontend verification passed 113/113, full lint, diff check and the
+  557-module production build. Backend verification passed 335/335, including
+  100/100 competition replica checks, and API documentation covers 203/203
+  mounted operations.
   Authenticated visual review remains a follow-up.
 - Match conversations are private operational records shared only by the
   Match participants and its currently assigned Match Operator. Messages are
@@ -2382,6 +2447,35 @@ Use these states for every feature:
 Before beginning a new domain, add its owner, flow, API boundary, security
 rules, data model, and completion criteria here. After implementation, move it
 to Completed and record any remaining risks under Required Future Flows.
+
+## Completed Code Slice: Repeat Quick Match Rooms and Compact Player Views
+
+- Quick Match entry now belongs to the current waiting Room. Filling a Room
+  creates its independent Match and immediately exposes a fresh waiting Room,
+  so the same player may join the next Room without waiting for the prior Match
+  to end. Only duplicate membership in the current waiting Room is blocked.
+- Each browser action sends a bounded attempt ID. An exact retry returns its
+  original Room/Match; a genuinely new attempt can enter the next Room. Paid
+  repeat entries create separate Room-scoped wallet holds and independently
+  validate exact funds inside the existing transaction and offering lock.
+- Player discovery/progress ignores filled Rooms when calculating the next
+  available capacity while safely projecting the viewer's latest Room/Match.
+  Private `Leaderboard` reads select the current waiting Room before historical
+  filled Rooms and remain unavailable to non-members.
+- Tournament detail now matches the compact Event-detail language: artwork
+  header, four facts, Room progress, direct `Join Now`/`Joined`/`Join Next Room`,
+  and simple Rewards/Leaderboard subtabs with `-` before an official rank.
+  My Matches is one compact section split into Live Matches and Completed.
+- Deployment startup removes only the two exact legacy offering-scoped index
+  names before creating the waiting-Room membership and Room-hold indexes. The
+  same migration can be run explicitly with
+  `npm run migrate:quick-match-repeat-entry`.
+- Verification: backend aggregate 338/338, including competition unit 108/108,
+  competition replica integration 102/102 and payment integration 32/32;
+  frontend 114/114, full lint and 556-module production build; generated API
+  documentation 203/203; both repository diff checks pass. The public local
+  authentication shell rendered console-clean. Authenticated desktop/mobile
+  visual proof remains a follow-up because the browser had no player session.
 
 ## Completed Code Slice: Tournament Placement Rewards
 

@@ -21,7 +21,6 @@ const reasonLabels = {
   staff_read_only:
     "Staff accounts can view this offering but cannot join from the player dashboard.",
   queue_activation_pending: "Queue entry is being activated for this format.",
-  capacity_full: "Every seat is filled.",
   already_joined: "You already joined this tournament room.",
 };
 
@@ -65,7 +64,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
   const hasJoined = joined || offering.membership?.isJoined === true;
 
   useEffect(() => {
-    if (offering.membership?.isJoined) setJoined(true);
+    setJoined(offering.membership?.isJoined === true);
   }, [offering.membership?.isJoined]);
 
   const confirmJoin = async () => {
@@ -78,10 +77,10 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
     }
 
     try {
-      await joinQuickMatch({
+      const result = await joinQuickMatch({
         offeringId: offering._id,
       }).unwrap();
-      setJoined(true);
+      setJoined(result.roomStatus !== "full");
     } catch (error) {
       setErrorMessage(getStoredErrorMessage(error));
     }
@@ -180,14 +179,14 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               </Link>
             </div>
           ) : hasJoined ? (
-            <p className="text-sm font-semibold text-emerald-200">
-              Joined / follow the room from My Matches.
-            </p>
+            <span className="inline-flex rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-2 text-sm font-black text-emerald-100">
+              Joined
+            </span>
           ) : offering.eligibility?.joinAvailable ? (
             joined ? (
-              <p className="text-sm font-semibold text-emerald-200">
-                Queue joined. Follow progress in My Matches.
-              </p>
+              <span className="inline-flex rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-2 text-sm font-black text-emerald-100">
+                Joined
+              </span>
             ) : (
               <button
                 className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950 disabled:cursor-wait disabled:opacity-60"
@@ -195,11 +194,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
                 onClick={() => setIsEntryConfirmationOpen(true)}
                 type="button"
               >
-                {isJoining
-                  ? "Joining..."
-                  : offering.teamSize > 1
-                    ? "Choose team"
-                    : "Join queue"}
+                {isJoining ? "Joining..." : "Join Now"}
               </button>
             )
           ) : (
@@ -257,7 +252,7 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
           isOpen={isTeamPickerOpen}
           mode={offering.mode}
           onClose={() => setIsTeamPickerOpen(false)}
-          onJoined={() => setJoined(true)}
+          onJoined={(result) => setJoined(result?.roomStatus !== "full")}
           offeringId={offering._id}
           teamSize={offering.teamSize}
         />

@@ -54,11 +54,11 @@ const InviteModal = ({
     try {
       // The thunk submits the durable HTTP command. The backend still checks
       // the team roster, while Socket.IO distributes later live updates.
-      await joinQuickMatch({
+      const result = await joinQuickMatch({
         offeringId,
         teamId,
       }).unwrap();
-      onJoined?.();
+      onJoined?.(result);
       onClose();
     } catch (error) {
       // Inline feedback keeps the dialog useful even when its toast is missed.

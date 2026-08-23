@@ -1,6 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
 import createApiThunk from "../thunks/createApiThunk.js";
 
+const createJoinAttemptId = () =>
+  globalThis.crypto?.randomUUID?.() ||
+  `join_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+
 /**
  * Adds a player or an eligible saved team to a Quick Match queue.
  *
@@ -14,7 +18,10 @@ export const joinQuickMatchQueue = createApiThunk(
     path: ({ arg }) =>
       `/api/player/quick-matches/${arg.offeringId}/queue`,
     method: "post",
-    getBody: ({ teamId }) => (teamId ? { teamId } : {}),
+    getBody: ({ attemptId, teamId }) => ({
+      attemptId: attemptId || createJoinAttemptId(),
+      ...(teamId ? { teamId } : {}),
+    }),
     // The response contains the queue position/status needed by future match
     // screens, without exposing Axios response objects to Redux state.
     selectData: (response) => response.data?.data || response.data,

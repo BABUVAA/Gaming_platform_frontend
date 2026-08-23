@@ -3,12 +3,13 @@ import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import {
-  FaArrowRight,
   FaClock,
   FaGamepad,
 } from "react-icons/fa";
 import { buildTournamentOfferingPath } from "../routes/routeConstants";
+import { getStoredErrorMessage } from "../api/apiError";
 import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import { useMatchmakingStore } from "../store/hooks/useStore";
 import {
   selectPlayerQuickMatchOfferings,
   selectPlayerQuickMatchStatus,
@@ -20,6 +21,7 @@ import {
 } from "../store/slices/eventRegistrationSlice.js";
 import EventCompetitionCard from "../components/competition/EventCompetitionCard.jsx";
 import CompetitionEntryDialog from "../components/competition/CompetitionEntryDialog.jsx";
+import InviteModal from "../components/feature/InviteModal.jsx";
 import {
   gameFilterOptions,
   getGameKey,
@@ -60,6 +62,15 @@ const tournamentShape = PropTypes.shape({
   ),
   isFeatured: PropTypes.bool,
   joinedCount: PropTypes.number,
+  currency: PropTypes.string,
+  eligibility: PropTypes.shape({
+    joinAvailable: PropTypes.bool.isRequired,
+    reasons: PropTypes.arrayOf(PropTypes.string).isRequired,
+  }),
+  membership: PropTypes.shape({ isJoined: PropTypes.bool.isRequired }),
+  offering: PropTypes.object,
+  teamSize: PropTypes.number,
+  testMoney: PropTypes.bool,
 });
 
 const getTournamentStatus = (status) =>
@@ -109,7 +120,13 @@ const Game = () => {
   const dispatch = useDispatch();
   const [activeGame, setActiveGame] = useState("all");
   const [pendingEvent, setPendingEvent] = useState(null);
+  const [pendingTournament, setPendingTournament] = useState(null);
+  const [teamPickerOffering, setTeamPickerOffering] = useState(null);
+  const [joinedOfferingIds, setJoinedOfferingIds] = useState([]);
+  const [tournamentJoinError, setTournamentJoinError] = useState({});
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
+  const { joinQuickMatch, joiningOfferingId, joinStatus } =
+    useMatchmakingStore();
   const offerings = useSelector(selectPlayerQuickMatchOfferings);
   const tournamentsStatus = useSelector(selectPlayerQuickMatchStatus);
   const eventState = useSelector((state) => state.eventRegistration);
@@ -117,16 +134,22 @@ const Game = () => {
     () =>
       offerings.map((offering) => ({
         _id: offering._id,
+        currency: offering.currency,
         entryFee: offering.entryFeeMinor / 100,
+        eligibility: offering.eligibility,
         game: offering.gameKey,
         joinedCount: offering.joinProgress?.joinedParticipants || 0,
         maxParticipants: offering.maxParticipants,
+        membership: offering.membership,
         mode: offering.mode,
+        offering,
         placementRewards: offering.placementRewards || [],
         prizePool: offering.prizePoolMinor / 100,
         registeredPlayers: [],
         registeredTeams: [],
         status: offering.status,
+        teamSize: offering.teamSize,
+        testMoney: offering.testMoney,
         tournamentName: offering.title,
       })),
     [offerings],
@@ -158,6 +181,42 @@ const Game = () => {
     setPendingEvent(null);
   };
 
+  const markTournamentJoined = (offeringId, roomStatus) => {
+    setJoinedOfferingIds((current) =>
+      roomStatus === "full"
+        ? current.filter((id) => id !== offeringId)
+        : current.includes(offeringId)
+          ? current
+          : [...current, offeringId],
+    );
+    dispatch(fetchPlayerQuickMatchOfferings());
+  };
+
+  const commitTournamentJoin = async () => {
+    const offering = pendingTournament;
+    if (!offering || isStaffUtilityMode) return;
+    setPendingTournament(null);
+    setTournamentJoinError((current) => ({
+      ...current,
+      [offering._id]: "",
+    }));
+
+    if (offering.teamSize > 1) {
+      setTeamPickerOffering(offering);
+      return;
+    }
+
+    try {
+      const result = await joinQuickMatch({ offeringId: offering._id }).unwrap();
+      markTournamentJoined(offering._id, result.roomStatus);
+    } catch (error) {
+      setTournamentJoinError((current) => ({
+        ...current,
+        [offering._id]: getStoredErrorMessage(error),
+      }));
+    }
+  };
+
   const filteredTournaments = tournaments
     .filter(
       (tournament) =>
@@ -174,13 +233,13 @@ const Game = () => {
 
   return (
     <div className="space-y-7 pb-8 text-slate-100">
-      <section className="rounded-[28px] border border-slate-700 bg-slate-800/55 p-4 shadow-[0_18px_45px_rgba(2,8,23,0.16)] md:p-5">
-        <div className="mb-5 flex items-end justify-between gap-4">
+      <section className="rounded-[22px] border border-slate-700 bg-slate-800/55 p-3 shadow-[0_18px_45px_rgba(2,8,23,0.16)] sm:rounded-[28px] sm:p-4 md:p-5">
+        <div className="mb-3 flex items-end justify-between gap-3 sm:mb-5 sm:gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
               Game lobby
             </p>
-            <h2 className="mt-1 text-xl font-black text-white">
+            <h2 className="mt-0.5 text-base font-black text-white sm:mt-1 sm:text-xl">
               Choose your game
             </h2>
           </div>
@@ -194,7 +253,7 @@ const Game = () => {
           ) : null}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {gameFilterOptions.map((filter) => {
             // Counts help players choose an active game before opening a card.
             const quickMatchCount =
@@ -226,11 +285,8 @@ const Game = () => {
       <section>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+            <h2 className="text-xl font-black text-white sm:text-2xl">
               Events
-            </p>
-            <h2 className="mt-1 text-2xl font-black text-white">
-              Events for the selected game
             </h2>
           </div>
           {eventState.status === "failed" ? (
@@ -270,18 +326,30 @@ const Game = () => {
         <section>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
-                Tournaments
-              </p>
-              <h2 className="mt-1 text-2xl font-black text-white">
-                Tournaments for the selected game
+              <h2 className="text-xl font-black text-white sm:text-2xl">
+                Quick Matches
               </h2>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {filteredTournaments.map((tournament) => (
-              <CompetitionCard key={tournament._id} tournament={tournament} />
+              <CompetitionCard
+                errorMessage={tournamentJoinError[tournament._id]}
+                isJoining={
+                  joinStatus === "loading" &&
+                  joiningOfferingId === tournament._id
+                }
+                joined={
+                  joinedOfferingIds.includes(tournament._id) ||
+                  tournament.membership?.isJoined === true ||
+                  tournament.eligibility?.reasons?.includes("already_joined")
+                }
+                key={tournament._id}
+                onJoin={() => setPendingTournament(tournament.offering)}
+                staffReadOnly={isStaffUtilityMode}
+                tournament={tournament}
+              />
             ))}
           </div>
         </section>
@@ -300,6 +368,36 @@ const Game = () => {
         title={pendingEvent?.title || "Event"}
         type="Event"
       />
+
+      <CompetitionEntryDialog
+        actionLabel={
+          pendingTournament?.teamSize > 1 ? "Choose team" : "Proceed & join"
+        }
+        currency={pendingTournament?.currency || "INR"}
+        entryFeeMinor={pendingTournament?.entryFeeMinor || 0}
+        isOpen={Boolean(pendingTournament)}
+        onClose={() => setPendingTournament(null)}
+        onProceed={commitTournamentJoin}
+        testMoney={pendingTournament?.testMoney}
+        teamSize={pendingTournament?.teamSize}
+        title={pendingTournament?.title || "Tournament"}
+        type="Tournament"
+      />
+
+      {teamPickerOffering ? (
+        <InviteModal
+          game={teamPickerOffering.gameKey}
+          isOpen
+          mode={teamPickerOffering.mode}
+          onClose={() => setTeamPickerOffering(null)}
+          onJoined={(result) => {
+            markTournamentJoined(teamPickerOffering._id, result?.roomStatus);
+            setTeamPickerOffering(null);
+          }}
+          offeringId={teamPickerOffering._id}
+          teamSize={teamPickerOffering.teamSize}
+        />
+      ) : null}
     </div>
   );
 };
@@ -309,10 +407,10 @@ const GameFilterCard = ({ eventCount, filter, isActive, onSelect }) => (
     type="button"
     aria-pressed={isActive}
     onClick={onSelect}
-    className={`group relative h-36 overflow-hidden rounded-[22px] border text-left transition duration-300 md:h-44 ${
+    className={`group relative h-24 overflow-hidden rounded-2xl border text-left transition duration-300 sm:h-36 sm:rounded-[22px] md:h-44 ${
       isActive
-        ? "-translate-y-1 border-cyan-300 shadow-[0_18px_40px_rgba(34,211,238,0.18)] ring-2 ring-cyan-300/20"
-        : "border-slate-600 shadow-[0_14px_30px_rgba(2,8,23,0.18)] hover:-translate-y-1 hover:border-slate-400"
+        ? "border-cyan-300 shadow-[0_12px_28px_rgba(34,211,238,0.16)] ring-2 ring-cyan-300/20 sm:-translate-y-1"
+        : "border-slate-600 shadow-[0_10px_24px_rgba(2,8,23,0.16)] hover:border-slate-400 sm:hover:-translate-y-1"
     }`}
   >
     {filter.images ? (
@@ -335,27 +433,34 @@ const GameFilterCard = ({ eventCount, filter, isActive, onSelect }) => (
     )}
 
     <span className="absolute inset-0 bg-[linear-gradient(0deg,rgba(15,23,42,0.96),rgba(15,23,42,0.22)_68%,rgba(15,23,42,0.08))]" />
-    <span className="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-900/70 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white backdrop-blur">
-      {eventCount} {eventCount === 1 ? "event" : "events"}
+    <span className="absolute left-2 top-2 rounded-full border border-white/20 bg-slate-900/75 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.12em] text-white backdrop-blur sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[9px] sm:tracking-[0.16em]">
+      {eventCount}<span className="hidden sm:inline"> {eventCount === 1 ? "event" : "events"}</span>
     </span>
     {isActive ? (
-      <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-cyan-300 text-xs font-black text-slate-950 shadow-lg">
+      <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-300 text-[10px] font-black text-slate-950 shadow-lg sm:right-3 sm:top-3 sm:h-7 sm:w-7 sm:text-xs">
         ✓
       </span>
     ) : null}
 
-    <span className="absolute inset-x-4 bottom-4">
-      <span className="block text-base font-black text-white md:text-lg">
+    <span className="absolute inset-x-2 bottom-2 sm:inset-x-4 sm:bottom-4">
+      <span className="block truncate text-xs font-black text-white sm:text-base md:text-lg">
         {filter.label}
       </span>
-      <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300">
+      <span className="mt-0.5 hidden text-[10px] font-bold uppercase tracking-[0.16em] text-slate-300 sm:block">
         {filter.description}
       </span>
     </span>
   </button>
 );
 
-const CompetitionCard = ({ tournament }) => {
+const CompetitionCard = ({
+  errorMessage,
+  isJoining,
+  joined,
+  onJoin,
+  staffReadOnly,
+  tournament,
+}) => {
   const joinedCount = getJoinedCount(tournament);
   const filledPercentage = getFilledPercentage(tournament);
   const presentation = getGamePresentation(tournament.game);
@@ -454,14 +559,36 @@ const CompetitionCard = ({ tournament }) => {
             />
           </div>
 
-          <Link
-            to={buildTournamentOfferingPath(tournament._id)}
-            aria-label={`Open ${tournament.tournamentName}`}
-            className="mt-3 flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 text-xs font-black text-slate-950 transition group-hover:bg-cyan-200"
+          <div
+            className={`mt-3 grid gap-2 ${!staffReadOnly && (joined || tournament.eligibility?.joinAvailable) ? "grid-cols-2" : "grid-cols-1"}`}
           >
-            Open tournament
-            <FaArrowRight />
-          </Link>
+            <Link
+              to={buildTournamentOfferingPath(tournament._id)}
+              aria-label={`Open ${tournament.tournamentName}`}
+              className="flex h-9 items-center justify-center gap-2 rounded-xl border border-white/15 bg-slate-950/65 px-3 text-xs font-black text-white transition hover:border-cyan-300/40"
+            >
+              View
+            </Link>
+            {!staffReadOnly && joined ? (
+              <span className="flex h-9 items-center justify-center rounded-xl border border-emerald-300/30 bg-emerald-400/15 px-3 text-xs font-black text-emerald-200">
+                Joined
+              </span>
+            ) : !staffReadOnly && tournament.eligibility?.joinAvailable ? (
+              <button
+                className="h-9 rounded-xl bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+                disabled={isJoining}
+                onClick={onJoin}
+                type="button"
+              >
+                {isJoining ? "Joining..." : "Join Now"}
+              </button>
+            ) : null}
+          </div>
+          {errorMessage ? (
+            <p className="mt-2 text-[11px] font-semibold text-rose-200">
+              {errorMessage}
+            </p>
+          ) : null}
         </div>
       </div>
     </article>
@@ -483,6 +610,11 @@ const CompetitionEmptyState = ({ isLoading }) => (
 );
 
 CompetitionCard.propTypes = {
+  errorMessage: PropTypes.string,
+  isJoining: PropTypes.bool.isRequired,
+  joined: PropTypes.bool.isRequired,
+  onJoin: PropTypes.func.isRequired,
+  staffReadOnly: PropTypes.bool.isRequired,
   tournament: tournamentShape.isRequired,
 };
 

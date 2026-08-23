@@ -60,18 +60,96 @@ test("Compete renders Events and Quick Matches as compact two-column poster card
   assert.match(gamePage, /Capacity/);
   assert.match(gamePage, /% full/);
   assert.match(gamePage, /placementRewards/);
+  assert.match(gamePage, /grid grid-cols-3 gap-2 sm:gap-3/);
+  assert.match(gamePage, /h-24 overflow-hidden.*sm:h-36.*md:h-44/);
+  assert.match(gamePage, /hidden text-\[10px\].*sm:block/);
+  assert.match(gamePage, /useMatchmakingStore/);
+  assert.match(gamePage, /tournament\.membership\?\.isJoined/);
+  assert.match(gamePage, /"Join Now"/);
+  assert.match(gamePage, />\s*Joined\s*</);
   assert.match(eventCard, /src=\{presentation\.image\}/);
   assert.match(eventCard, /absolute inset-0 bg-\[linear-gradient/);
   assert.match(eventCard, /min-h-\[18rem\]/);
-  assert.match(eventCard, /"Join Event"/);
+  assert.match(eventCard, /"Join Now"/);
+  assert.match(eventCard, />\s*Joined\s*</);
+  assert.doesNotMatch(eventCard, /Registration committed \/ cancellation unavailable/);
   assert.doesNotMatch(gamePage, /Ready, \$\{username\}|selectPlayerSummary/);
-  assert.ok(
-    gamePage.indexOf("Choose your game") <
-      gamePage.indexOf("Events for the selected game"),
-  );
-  assert.ok(
-    gamePage.indexOf("Events for the selected game") <
-      gamePage.indexOf("Tournaments for the selected game"),
-  );
+  assert.match(gamePage, />\s*Events\s*<\/h2>/);
+  assert.match(gamePage, />\s*Quick Matches\s*<\/h2>/);
+  assert.doesNotMatch(gamePage, />\s*Tournaments\s*<\/h2>/);
+  assert.doesNotMatch(gamePage, /for the selected game/);
   assert.doesNotMatch(gamePage, /SpotlightTournament/);
+});
+
+test("player Matches separates live activity from completed history", async () => {
+  const matchesPage = await read("../src/pages/Matches.jsx");
+
+  assert.match(matchesPage, /COMPLETED_STATUSES/);
+  assert.match(matchesPage, /\["live", "Live Matches", liveMatches\.length\]/);
+  assert.match(matchesPage, /\["completed", "Completed", completedMatches\.length\]/);
+  assert.match(matchesPage, /role="tablist"/);
+  assert.match(matchesPage, /liveMatches/);
+  assert.match(matchesPage, /completedMatches/);
+  assert.doesNotMatch(matchesPage, /Match timeline|InfoPanel|Everything you joined/);
+});
+
+test("Quick Match details mirror the compact Event tab layout and reopen after full", async () => {
+  const [detailPage, gamePage, quickCard] = await Promise.all([
+    read("../src/pages/QuickMatchDetails.jsx"),
+    read("../src/pages/Game.jsx"),
+    read("../src/components/ui/GameCard/QuickMatchCard.jsx"),
+  ]);
+
+  assert.match(detailPage, /\["rewards", "leaderboard"\]/);
+  assert.match(detailPage, /Join Next Room/);
+  assert.match(detailPage, /left="-"/);
+  assert.doesNotMatch(detailPage, /OverviewBlock|QuickMatchCard/);
+  assert.match(gamePage, /roomStatus === "full"/);
+  assert.match(quickCard, /result\.roomStatus !== "full"/);
+});
+
+test("player dashboard tabs use the compact shell and omit promotional heroes", async () => {
+  const [sidebar, chats, wallet, gameAccounts, profile, clanStyles] =
+    await Promise.all([
+      read("../src/components/layout/SideBar/SideBar.jsx"),
+      read("../src/pages/Chats.jsx"),
+      read("../src/pages/Wallet.jsx"),
+      read("../src/pages/GameAccounts.jsx"),
+      read("../src/pages/Profile.jsx"),
+      read("../src/styles/index.css"),
+    ]);
+
+  assert.match(sidebar, /md:w-56/);
+  assert.doesNotMatch(sidebar, /Competition Hub|item\.description/);
+  assert.doesNotMatch(chats, /Coordinate clan traffic|text-5xl/);
+  assert.doesNotMatch(gameAccounts, /Connect your game identities before match time/);
+  assert.match(wallet, /text-2xl font-black text-white">Wallet/);
+  assert.match(profile, /relative h-32 bg-cover bg-center md:h-40/);
+  assert.match(clanStyles, /\.clan-hero \{[\s\S]*?min-height: 0/);
+});
+
+test("Clan overview keeps its description and profile compact on phones", async () => {
+  const [clanPage, styles] = await Promise.all([
+    read("../src/pages/Clan.jsx"),
+    read("../src/styles/index.css"),
+  ]);
+
+  assert.match(clanPage, /descriptionExpanded/);
+  assert.match(clanPage, /clan-bookmark-strip/);
+  assert.doesNotMatch(clanPage, />Your Clan</);
+  assert.match(clanPage, /title="Copy clan tag"/);
+  assert.doesNotMatch(clanPage, />Clan roster</);
+  assert.match(clanPage, />Members<\/h2>/);
+  assert.doesNotMatch(clanPage, /clan-role-summary/);
+  assert.doesNotMatch(clanPage, /clan-member-row__joined/);
+  assert.match(clanPage, /aria-label=\{isBookmarked \? "Remove clan bookmark" : "Bookmark clan"\}/);
+  assert.doesNotMatch(clanPage, /isBookmarked \? "Saved" : "Save"/);
+  assert.match(clanPage, /clan-description--collapsed/);
+  assert.match(clanPage, /"Read more"/);
+  assert.match(clanPage, /space-y-3 sm:space-y-5/);
+  assert.match(styles, /\.clan-description--collapsed[\s\S]*-webkit-line-clamp: 3/);
+  assert.match(styles, /\.clan-bookmark-strip[\s\S]*clip-path:/);
+  assert.match(styles, /\.clan-create textarea,[\s\S]*height: 6rem/);
+  assert.match(styles, /grid-template-columns: repeat\(auto-fit, minmax\(7rem, 1fr\)\)/);
+  assert.doesNotMatch(styles, /\.clan-role-summary/);
 });

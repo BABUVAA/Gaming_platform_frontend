@@ -7,18 +7,20 @@ import CompetitionEntryDialog from "../components/competition/CompetitionEntryDi
 import JoinProgress from "../components/competition/JoinProgress.jsx";
 import {
   fetchPlayerEventDetails,
+  fetchPlayerEventLeaderboard,
   fetchPlayerEventStandings,
   registerForEvent,
   selectEventProgression,
 } from "../store/slices/eventRegistrationSlice.js";
 import { selectPlayerSummary } from "../store/selectors/playerSelectors.js";
+import { getGamePresentation } from "../config/gamePresentation.js";
 
-const formatDate = (value) => {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not scheduled" : date.toLocaleString();
-};
-
-const money = (minor = 0) => `INR ${(minor / 100).toFixed(2)}`;
+const amount = (minor = 0) =>
+  (minor / 100).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  });
+const money = (minor = 0) => `₹${amount(minor)}`;
 
 const countdown = (target, now) => {
   const seconds = Math.max(
@@ -37,9 +39,12 @@ const EventDetails = () => {
   const dispatch = useDispatch();
   const [now, setNow] = useState(Date.now());
   const [confirmingEntry, setConfirmingEntry] = useState(false);
+  const [detailsTab, setDetailsTab] = useState("rewards");
   const state = useSelector((root) => root.eventRegistration);
   const event = state.detailsById[runId];
+  const eventId = event?.id;
   const standingPage = state.standingsById[runId];
+  const leaderboardPage = state.leaderboardsById[runId];
   const staffReadOnly = useSelector(selectPlayerSummary)?.role === "staff";
   const busy = state.actionById[runId] === "loading";
 
@@ -66,6 +71,12 @@ const EventDetails = () => {
     return () => request.abort();
   }, [dispatch, event?.status, runId]);
 
+  useEffect(() => {
+    if (!eventId) return undefined;
+    const request = dispatch(fetchPlayerEventLeaderboard({ runId }));
+    return () => request.abort();
+  }, [dispatch, eventId, runId]);
+
   if (state.detailsStatusById[runId] === "loading" && !event) {
     return (
       <main className="rounded-2xl border border-slate-800 p-6 text-slate-300">
@@ -91,7 +102,17 @@ const EventDetails = () => {
 
   const mine = event.registration?.mine;
   const committed = ["registered", "waitlisted"].includes(mine?.status);
+  const presentation = getGamePresentation(event.game?.key);
   const progression = selectEventProgression(event, standingPage);
+  const showFinalRanks =
+    event.status === "completed" && standingPage?.standings?.length > 0;
+  const leaderboardRows = showFinalRanks
+    ? standingPage.standings.map((standing) => ({
+        id: `${standing.placement}:${standing.player.profileTag || standing.player.displayName}`,
+        player: { displayName: standing.player.displayName },
+        rank: standing.placement,
+      }))
+    : leaderboardPage?.items || [];
   const startsLater = new Date(event.startsAt).getTime() > now;
   const register = () => {
     dispatch(registerForEvent(event.id));
@@ -99,20 +120,27 @@ const EventDetails = () => {
   };
 
   return (
-    <main className="space-y-5">
+    <main className="space-y-4 pb-8">
       <Link
-        className="inline-flex text-sm font-bold text-slate-400 hover:text-cyan-200"
+        className="inline-flex items-center text-xs font-bold text-slate-400 hover:text-cyan-200 sm:text-sm"
         to="/dashboard"
       >
-        Back to Compete
+        ← Back to Compete
       </Link>
-      <section className="rounded-3xl border border-cyan-300/20 bg-slate-950 p-6">
+      <section className="relative overflow-hidden rounded-[24px] border border-cyan-300/20 bg-slate-950 shadow-[0_18px_44px_rgba(2,8,23,0.3)]">
+        <img
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-[68%_center] opacity-40"
+          src={presentation.image}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.54),rgba(2,6,23,0.94)_42%,rgba(2,6,23,0.99)_100%)]" />
+        <div className="relative p-4 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
               {event.game?.name || "Event"}
             </p>
-            <h1 className="mt-2 text-3xl font-black text-white">
+            <h1 className="mt-2 text-2xl font-black leading-tight text-white sm:text-3xl">
               {event.title}
             </h1>
             <p className="mt-2 text-sm capitalize text-slate-400">
@@ -122,15 +150,15 @@ const EventDetails = () => {
             </p>
           </div>
           {startsLater ? (
-            <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 px-4 py-3 text-right">
-              <p className="text-xs text-slate-400">Event starts in</p>
-              <p className="mt-1 font-mono text-xl font-black text-cyan-100">
+            <div className="rounded-xl border border-cyan-300/20 bg-slate-950/70 px-3 py-2 text-right backdrop-blur">
+              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Starts in</p>
+              <p className="mt-0.5 whitespace-nowrap font-mono text-sm font-black text-cyan-100 sm:text-lg">
                 {countdown(event.startsAt, now)}
               </p>
             </div>
           ) : null}
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
           <Fact
             label="Entry"
             value={
@@ -145,7 +173,11 @@ const EventDetails = () => {
           />
           <Fact
             label="Players"
-            value={`${(event.registration?.registeredCount || 0).toLocaleString("en-IN")} / ${(event.registration?.capacity || 0).toLocaleString("en-IN")}`}
+            value={
+              event.registration?.capacity > 0
+                ? `${(event.registration?.registeredCount || 0).toLocaleString("en-IN")} / ${event.registration.capacity.toLocaleString("en-IN")}`
+                : (event.registration?.registeredCount || 0).toLocaleString("en-IN")
+            }
           />
           <Fact
             label="Access"
@@ -169,29 +201,9 @@ const EventDetails = () => {
             />
           </div>
         ) : null}
-        <div className="mt-4 grid gap-3 text-sm text-slate-400 sm:grid-cols-3">
-          <p>
-            Opens{" "}
-            <span className="block font-bold text-slate-200">
-              {formatDate(event.registration?.opensAt)}
-            </span>
-          </p>
-          <p>
-            Closes{" "}
-            <span className="block font-bold text-slate-200">
-              {formatDate(event.registration?.closesAt)}
-            </span>
-          </p>
-          <p>
-            Starts{" "}
-            <span className="block font-bold text-slate-200">
-              {formatDate(event.startsAt)}
-            </span>
-          </p>
-        </div>
         {!staffReadOnly && !committed && event.registration?.isOpen ? (
           <button
-            className="mt-5 rounded-xl bg-cyan-300 px-5 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50"
+            className="mt-4 w-full rounded-xl bg-cyan-300 px-5 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50 sm:w-auto"
             disabled={busy || event.entryTerms?.paidEntryAvailable === false}
             onClick={() => setConfirmingEntry(true)}
             type="button"
@@ -200,84 +212,144 @@ const EventDetails = () => {
               ? "Registering..."
               : event.entryTerms?.paidEntryAvailable === false
                 ? "Paid entry unavailable"
-                : "Register for Event"}
+                : "Join Now"}
           </button>
         ) : null}
         {committed ? (
-          <p className="mt-5 text-sm font-bold capitalize text-cyan-200">
-            Your entry: {mine.status.replaceAll("_", " ")}
-          </p>
+          <button
+            className="mt-4 w-full cursor-default rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-2.5 text-sm font-black capitalize text-emerald-100 sm:w-auto"
+            disabled
+            type="button"
+          >
+            Joined · {mine.status.replaceAll("_", " ")}
+          </button>
         ) : null}
+        </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6">
-        <h2 className="text-xl font-black text-white">Rewards</h2>
-        {event.rewardTerms?.placements?.length ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-800">
-            {event.rewardTerms.placements.map((reward) => (
-              <div
-                className="flex items-center justify-between border-b border-slate-800 px-4 py-3 text-sm last:border-b-0"
-                key={reward.place}
-              >
-                <span className="font-black text-cyan-200">
-                  Place #{reward.place}
-                </span>
-                <span className="font-black text-emerald-200">
-                  {money(reward.amountMinor)}
-                </span>
+      <section className="rounded-[22px] border border-slate-800 bg-slate-950 p-4 sm:p-5">
+        <div
+          aria-label="Event details"
+          className="grid grid-cols-2 rounded-xl bg-slate-900 p-1"
+          role="tablist"
+        >
+          {[
+            ["rewards", "Rewards"],
+            ["leaderboard", "Leaderboard"],
+          ].map(([value, label]) => (
+            <button
+              aria-selected={detailsTab === value}
+              className={`rounded-lg px-3 py-2 text-sm font-black transition ${
+                detailsTab === value
+                  ? "bg-cyan-300 text-slate-950"
+                  : "text-slate-400 hover:text-white"
+              }`}
+              key={value}
+              onClick={() => setDetailsTab(value)}
+              role="tab"
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {detailsTab === "rewards" ? (
+          event.rewardTerms?.placements?.length ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-800">
+              <div className="grid grid-cols-[1fr_auto] bg-slate-900/80 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                <span>Place</span>
+                <span>Reward (₹)</span>
               </div>
-            ))}
-          </div>
+              {event.rewardTerms.placements.map((reward) => (
+                <div
+                  className="grid grid-cols-[1fr_auto] border-t border-slate-800 px-3 py-2.5 text-sm"
+                  key={reward.place}
+                >
+                  <span className="font-bold text-slate-200">#{reward.place}</span>
+                  <span className="font-black text-emerald-200">
+                    {amount(reward.amountMinor)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">
+              No placement rewards configured.
+            </p>
+          )
         ) : (
-          <p className="mt-3 text-sm text-slate-500">
-            No placement rewards configured.
-          </p>
+          <>
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-800">
+              <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] bg-slate-900/80 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                <span>Rank</span>
+                <span>Player</span>
+              </div>
+              {leaderboardRows.map((row) => (
+                <div
+                  className="grid grid-cols-[3.5rem_minmax(0,1fr)] border-t border-slate-800 px-3 py-2.5 text-sm"
+                  key={row.id}
+                >
+                  <span className="font-black text-cyan-200">
+                    {row.rank ? `#${row.rank}` : "-"}
+                  </span>
+                  <span className="truncate font-bold text-slate-200">
+                    {row.player.displayName}
+                  </span>
+                </div>
+              ))}
+              {!leaderboardRows.length ? (
+                <p className="border-t border-slate-800 px-3 py-3 text-sm text-slate-500">
+                  {state.leaderboardsStatusById[runId] === "loading"
+                    ? "Loading players..."
+                    : "No players have joined yet."}
+                </p>
+              ) : null}
+            </div>
+            {state.leaderboardsErrorById[runId] ? (
+              <button
+                className="mt-3 text-sm font-bold text-rose-200"
+                onClick={() => dispatch(fetchPlayerEventLeaderboard({ runId }))}
+                type="button"
+              >
+                Retry leaderboard
+              </button>
+            ) : null}
+            {(showFinalRanks
+              ? standingPage?.nextCursor
+              : leaderboardPage?.page?.nextCursor) ? (
+              <button
+                className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50"
+                disabled={
+                  showFinalRanks
+                    ? state.standingsStatusById[runId] === "loading"
+                    : state.leaderboardsStatusById[runId] === "loading"
+                }
+                onClick={() =>
+                  dispatch(
+                    showFinalRanks
+                      ? fetchPlayerEventStandings({
+                          cursor: standingPage.nextCursor,
+                          runId,
+                        })
+                      : fetchPlayerEventLeaderboard({
+                          cursor: leaderboardPage.page.nextCursor,
+                          runId,
+                        }),
+                  )
+                }
+                type="button"
+              >
+                Load more
+              </button>
+            ) : null}
+          </>
         )}
       </section>
 
       {mine ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6">
+        <section className="rounded-[22px] border border-slate-800 bg-slate-950 p-4 sm:p-5">
           <h2 className="text-xl font-black text-white">Your Event</h2>
           <EventProgression progression={progression} />
-        </section>
-      ) : null}
-      {["in_progress", "completed"].includes(event.status) ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-950 p-6">
-          <h2 className="text-xl font-black text-white">Standings</h2>
-          <EventProgression standings={standingPage?.standings || []} />
-          {standingPage?.status === "pending" ||
-          (!standingPage?.standings?.length &&
-            state.standingsStatusById[runId] !== "failed") ? (
-            <p className="mt-3 text-sm text-slate-500">
-              Leaderboard updates appear as verified results are finalized.
-            </p>
-          ) : null}
-          {state.standingsErrorById[runId] ? (
-            <button
-              className="mt-3 text-sm font-bold text-rose-200"
-              onClick={() => dispatch(fetchPlayerEventStandings({ runId }))}
-              type="button"
-            >
-              Retry leaderboard
-            </button>
-          ) : null}
-          {standingPage?.nextCursor ? (
-            <button
-              className="mt-4 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 disabled:opacity-50"
-              disabled={state.standingsStatusById[runId] === "loading"}
-              onClick={() =>
-                dispatch(
-                  fetchPlayerEventStandings({
-                    cursor: standingPage.nextCursor,
-                    runId,
-                  }),
-                )
-              }
-              type="button"
-            >
-              Load more standings
-            </button>
-          ) : null}
         </section>
       ) : null}
       <CompetitionEntryDialog
@@ -296,13 +368,14 @@ const EventDetails = () => {
 };
 
 const Fact = ({ label, value }) => (
-  <div className="rounded-2xl border border-slate-800 p-4">
+  <div className="min-w-0 rounded-xl border border-white/10 bg-slate-950/65 p-3 backdrop-blur">
     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
       {label}
     </p>
-    <p className="mt-1 font-black capitalize text-white">{value}</p>
+    <p className="mt-1 truncate text-sm font-black capitalize text-white sm:text-base">{value}</p>
   </div>
 );
+
 Fact.propTypes = {
   label: PropTypes.string.isRequired,
   value: PropTypes.string.isRequired,

@@ -27,7 +27,7 @@ const EventProgression = ({ progression, standings = [] }) => {
   const ownBatch = progression?.myBatch || progression?.nextBatch;
 
   return (
-    <section className="mt-4 space-y-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4">
+    <section className="mt-3 space-y-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 sm:space-y-3 sm:p-4">
       {progression ? (
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -87,7 +87,7 @@ const EventProgression = ({ progression, standings = [] }) => {
           <ol className="mt-2 space-y-2">
             {standings.map((standing) => (
               <li
-                className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-2 rounded-xl bg-slate-950/60 px-3 py-2 text-sm"
+                className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-slate-950/60 px-2.5 py-2 text-xs sm:text-sm"
                 key={`${standing.placement}-${standing.player.profileTag || standing.player.displayName}`}
               >
                 <span className="font-black text-cyan-200">

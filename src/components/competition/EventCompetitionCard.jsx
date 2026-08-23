@@ -167,7 +167,7 @@ const EventCompetitionCard = ({ busy, event, onRegister, staffReadOnly }) => {
           ) : null}
 
           <div
-            className={`mt-3 grid gap-2 ${canRegister ? "grid-cols-2" : "grid-cols-1"}`}
+            className={`mt-3 grid gap-2 ${canRegister || committed ? "grid-cols-2" : "grid-cols-1"}`}
           >
             <Link
               className="flex h-9 items-center justify-center rounded-xl border border-white/15 bg-slate-950/55 px-3 text-xs font-black text-slate-100 hover:border-cyan-300/40 hover:text-cyan-100"
@@ -189,16 +189,14 @@ const EventCompetitionCard = ({ busy, event, onRegister, staffReadOnly }) => {
                   ? "Registering..."
                   : event.entryTerms?.paidEntryAvailable === false
                     ? "Unavailable"
-                    : "Join Event"}
+                    : "Join Now"}
               </button>
+            ) : committed ? (
+              <span className="flex h-9 items-center justify-center rounded-xl border border-emerald-300/30 bg-emerald-400/15 px-3 text-xs font-black text-emerald-200">
+                Joined
+              </span>
             ) : null}
           </div>
-
-          {committed ? (
-            <p className="mt-2 text-[10px] font-bold text-slate-300">
-              Registration committed / cancellation unavailable
-            </p>
-          ) : null}
           {staffReadOnly ? (
             <p className="mt-2 text-[10px] font-bold text-cyan-200">
               Staff read-only view

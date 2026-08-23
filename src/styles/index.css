@@ -76,10 +76,10 @@ body {
 .clan-hero {
   position: relative;
   display: grid;
-  min-height: 25rem;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--clan-border);
-  border-radius: 2rem;
+  border-radius: 1rem;
   background:
     linear-gradient(90deg, rgba(5, 11, 24, 0.98) 0%, rgba(5, 11, 24, 0.92) 48%, rgba(5, 11, 24, 0.28) 100%),
     url("/pubg-banner.webp") center 28% / cover no-repeat;
@@ -98,11 +98,11 @@ body {
 .clan-hero__content {
   z-index: 2;
   display: flex;
-  width: calc(100% - 15rem);
-  max-width: 49rem;
+  width: 100%;
+  max-width: none;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(1.5rem, 4vw, 3.5rem);
+  padding: 1rem;
 }
 
 .clan-kicker {
@@ -132,12 +132,12 @@ body {
 
 .clan-hero__title {
   max-width: 46rem;
-  margin-top: 1.15rem;
+  margin-top: 0.65rem;
   color: #f8fafc;
-  font-size: clamp(2.35rem, 5vw, 4.8rem);
+  font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 950;
   letter-spacing: -0.055em;
-  line-height: 0.98;
+  line-height: 1.1;
 }
 
 .clan-hero__title span {
@@ -146,10 +146,10 @@ body {
 
 .clan-hero__copy {
   max-width: 34rem;
-  margin-top: 1rem;
+  margin-top: 0.45rem;
   color: #cbd5e1;
   font-size: clamp(0.9rem, 1.5vw, 1.05rem);
-  line-height: 1.7;
+  line-height: 1.4;
 }
 
 .clan-hero__stats {
@@ -157,7 +157,7 @@ body {
   max-width: 43rem;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.65rem;
-  margin-top: 1.75rem;
+  margin-top: 0.75rem;
 }
 
 .clan-metric {
@@ -195,7 +195,7 @@ body {
   z-index: 2;
   right: clamp(1.5rem, 5vw, 5rem);
   bottom: 2rem;
-  display: flex;
+  display: none;
   width: 13rem;
   flex-direction: column;
   align-items: center;
@@ -594,6 +594,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1.1rem;
+  padding-right: 2.5rem;
 }
 
 .clan-profile-card__badge {
@@ -611,7 +612,31 @@ body {
   gap: 0.5rem;
 }
 
-.clan-secondary-action,
+.clan-bookmark-strip {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 1.25rem;
+  display: grid;
+  width: 2.5rem;
+  height: 3.15rem;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-top: 0;
+  background: rgba(15, 23, 42, 0.92);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
+  color: #94a3b8;
+  font-size: 1rem;
+  transition: 180ms ease;
+}
+
+.clan-bookmark-strip:hover,
+.clan-bookmark-strip--active {
+  border-color: rgba(103, 232, 249, 0.35);
+  background: #67e8f9;
+  color: #082f49;
+}
+
 .clan-danger-action {
   display: inline-flex;
   min-height: 2.7rem;
@@ -622,17 +647,6 @@ body {
   font-size: 0.78rem;
   font-weight: 800;
   transition: 180ms ease;
-}
-
-.clan-secondary-action {
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  color: #cbd5e1;
-}
-
-.clan-secondary-action:hover {
-  border-color: rgba(103, 232, 249, 0.28);
-  color: #a5f3fc;
 }
 
 .clan-danger-action {
@@ -647,14 +661,15 @@ body {
 
 .clan-description {
   position: relative;
-  margin-top: 1.35rem;
-  border-left: 2px solid var(--clan-cyan-strong);
-  border-radius: 0 0.8rem 0.8rem 0;
-  background: rgba(2, 6, 23, 0.27);
-  padding: 0.85rem 1rem;
-  color: #cbd5e1;
-  font-size: 0.88rem;
-  line-height: 1.7;
+  max-width: 42rem;
+  margin-top: 0.45rem;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.clan-description-toggle {
+  display: none;
 }
 
 .clan-detail-grid {
@@ -783,31 +798,6 @@ body {
   opacity: 0.55;
 }
 
-.clan-role-summary {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.45rem;
-}
-
-.clan-role-summary span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: 1px solid rgba(148, 163, 184, 0.13);
-  border-radius: 999px;
-  background: rgba(2, 6, 23, 0.32);
-  padding: 0.4rem 0.7rem;
-  color: #94a3b8;
-  font-size: 0.67rem;
-  font-weight: 800;
-}
-
-.clan-role-summary span:first-child {
-  border-color: rgba(251, 191, 36, 0.18);
-  color: #fde68a;
-}
-
 .clan-roster__list {
   display: grid;
   gap: 0.5rem;
@@ -816,7 +806,7 @@ body {
 
 .clan-roster__columns {
   display: grid;
-  grid-template-columns: 2rem 2.8rem minmax(9rem, 1fr) minmax(7rem, auto) minmax(8rem, auto);
+  grid-template-columns: 2rem 2.8rem minmax(9rem, 1fr) minmax(7rem, auto);
   gap: 0.8rem;
   padding: 0 0.8rem 0.15rem;
   color: #64748b;
@@ -834,15 +824,10 @@ body {
   grid-column: 4;
 }
 
-.clan-roster__columns span:nth-child(4) {
-  grid-column: 5;
-  text-align: right;
-}
-
 .clan-member-row {
   display: grid;
   min-height: 4.6rem;
-  grid-template-columns: 2rem 2.8rem minmax(9rem, 1fr) minmax(7rem, auto) minmax(8rem, auto);
+  grid-template-columns: 2rem 2.8rem minmax(9rem, 1fr) minmax(7rem, auto);
   align-items: center;
   gap: 0.8rem;
   border: 1px solid rgba(148, 163, 184, 0.11);
@@ -927,17 +912,6 @@ body {
   text-transform: uppercase;
 }
 
-.clan-member-row__identity > span,
-.clan-member-row__joined {
-  display: block;
-  overflow: hidden;
-  margin-top: 0.18rem;
-  color: #64748b;
-  font-size: 0.68rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .clan-role {
   display: inline-flex;
   width: fit-content;
@@ -972,11 +946,6 @@ body {
 
 .clan-member-row__identity:disabled {
   cursor: default;
-}
-
-.clan-member-row__joined {
-  margin: 0;
-  text-align: right;
 }
 
 .clan-empty {
@@ -1244,7 +1213,7 @@ body {
 
 @media (max-width: 1023px) {
   .clan-hero {
-    min-height: 23rem;
+    min-height: 0;
   }
 
   .clan-hero__visual {
@@ -1283,13 +1252,13 @@ body {
   }
 
   .clan-hero {
-    min-height: 28rem;
-    border-radius: 1.4rem;
+    min-height: 0;
+    border-radius: 1rem;
     background-position: 60% center;
   }
 
   .clan-hero__content {
-    justify-content: flex-end;
+    justify-content: center;
   }
 
   .clan-hero__stats {
@@ -1298,6 +1267,7 @@ body {
 
   .clan-surface {
     border-radius: 1.35rem;
+    padding: 0.9rem;
   }
 
   .clan-tab {
@@ -1310,13 +1280,56 @@ body {
   }
 
   .clan-profile-card__badge {
-    width: 4.25rem;
-    height: 4.25rem;
+    width: 3.75rem;
+    height: 3.75rem;
   }
 
   .clan-profile-card__actions {
     width: 100%;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  }
+
+  .clan-profile-card__actions > button {
+    justify-content: center;
+  }
+
+  .clan-description {
+    margin-top: 0.35rem;
+    padding: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .clan-description--collapsed {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .clan-description-toggle {
+    display: inline-flex;
+    margin-top: 0.45rem;
+    color: #67e8f9;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .clan-info-block {
+    border-radius: 0.9rem;
+    padding: 0.7rem;
+  }
+
+  .clan-info-block > p {
+    margin-top: 0.55rem;
+    font-size: 0.9rem;
+  }
+
+  .clan-create textarea,
+  .clan-settings__field textarea {
+    height: 6rem;
+    min-height: 6rem;
   }
 
   .clan-detail-grid {
@@ -1324,17 +1337,19 @@ body {
   }
 
   .clan-roster__header {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
   }
 
-  .clan-role-summary {
-    justify-content: flex-start;
+  .clan-roster__list {
+    gap: 0.4rem;
+    margin-top: 0.75rem;
   }
 
   .clan-member-row {
-    grid-template-columns: 2.6rem minmax(0, 1fr) auto;
-    gap: 0.65rem;
+    min-height: 3.7rem;
+    grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    padding: 0.5rem 0.6rem;
   }
 
   .clan-roster__columns {
@@ -1346,19 +1361,14 @@ body {
   }
 
   .clan-member-row__avatar {
-    width: 2.6rem;
-    height: 2.6rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.75rem;
   }
 
   .clan-role {
     grid-column: 3;
     grid-row: 1;
-  }
-
-  .clan-member-row__joined {
-    grid-column: 2 / 4;
-    justify-content: flex-start;
-    text-align: left;
   }
 
   .clan-settings__header,
@@ -1400,17 +1410,13 @@ body {
 
 @media (max-width: 420px) {
   .clan-detail-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .clan-hero__stats {
     grid-template-columns: 1fr 1fr;
   }
 
-  .clan-role-summary span {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

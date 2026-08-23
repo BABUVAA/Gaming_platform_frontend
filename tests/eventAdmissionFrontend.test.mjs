@@ -6,6 +6,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import eventRegistrationReducer, {
   fetchPlayerEventDetails,
+  fetchPlayerEventLeaderboard,
   fetchPlayerEventStandings,
   fetchPlayerEvents,
   registerForEvent,
@@ -84,6 +85,7 @@ test("player Event discovery and committed registration use canonical routes", a
     });
     await store.dispatch(fetchPlayerEvents());
     await store.dispatch(registerForEvent("event-run-1"));
+    await new Promise((resolve) => setImmediate(resolve));
 
     assert.deepEqual(
       requests.map(({ method, url }) => [method, url]),
@@ -91,6 +93,7 @@ test("player Event discovery and committed registration use canonical routes", a
         ["get", "/api/player/events"],
         ["post", "/api/player/events/event-run-1/register"],
         ["get", "/api/player/events"],
+        ["get", "/api/player/events/event-run-1/leaderboard"],
       ],
     );
     assert.deepEqual(decodeBody(requests[1]), {});
@@ -148,10 +151,61 @@ test("Event details use an exact read and closed registration renders no action"
     assert.doesNotMatch(cardSource, />Registration closed<\/button>/);
     assert.match(cardSource, /View Event/);
     assert.match(detailSource, /Rewards/);
+    assert.match(detailSource, /getGamePresentation/);
+    assert.match(detailSource, /grid grid-cols-2 gap-2 lg:grid-cols-4/);
+    assert.match(detailSource, /Reward \(₹\)/);
+    assert.match(detailSource, /<span>Rank<\/span>/);
+    assert.match(detailSource, /row\.rank \? .* : "-"/);
+    assert.match(detailSource, /"Join Now"/);
+    assert.match(detailSource, /Joined ·/);
     assert.match(detailSource, /fetchPlayerEventStandings/);
-    assert.match(detailSource, /Load more standings/);
+    assert.match(detailSource, /fetchPlayerEventLeaderboard/);
+    assert.doesNotMatch(detailSource, /ScheduleFact|formatDate/);
     assert.match(detailSource, /!committed && event\.registration\?\.isOpen/);
     assert.match(routesSource, /componentKey: "EventDetails"/);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("Event leaderboard appends bounded safe player pages with opaque cursors", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    const secondPage = config.params?.cursor === "next-page";
+    return response(config, {
+      data: {
+        items: secondPage
+          ? [{ id: "registration-2", rank: null, player: { displayName: "Bravo" } }]
+          : [{ id: "registration-1", rank: null, player: { displayName: "Alpha" } }],
+        page: { nextCursor: secondPage ? null : "next-page" },
+      },
+    });
+  };
+
+  try {
+    const store = configureStore({ reducer: { eventRegistration: eventRegistrationReducer } });
+    await store.dispatch(fetchPlayerEventLeaderboard({ runId: "run-1" }));
+    await store.dispatch(
+      fetchPlayerEventLeaderboard({ cursor: "next-page", runId: "run-1" }),
+    );
+    assert.deepEqual(
+      requests.map(({ params, url }) => [url, params]),
+      [
+        ["/api/player/events/run-1/leaderboard", { limit: 10 }],
+        ["/api/player/events/run-1/leaderboard", { cursor: "next-page", limit: 10 }],
+      ],
+    );
+    assert.deepEqual(
+      store.getState().eventRegistration.leaderboardsById["run-1"].items.map(
+        ({ id, rank, player }) => [id, rank, player.displayName],
+      ),
+      [
+        ["registration-1", null, "Alpha"],
+        ["registration-2", null, "Bravo"],
+      ],
+    );
   } finally {
     api.defaults.adapter = originalAdapter;
   }

@@ -1,18 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  FaArrowRight,
   FaClock,
   FaHeadset,
-  FaShieldAlt,
-  FaUsers,
 } from "react-icons/fa";
-import {
-  buildTournamentOfferingPath,
-  ROUTES,
-} from "../routes/routeConstants";
+import { buildTournamentOfferingPath } from "../routes/routeConstants";
 import { fetchPlayerMatchActivity } from "../store/slices/matchActivitySlice.js";
 import {
   selectMatchActivity,
@@ -73,6 +67,8 @@ const STATUS_PRESENTATION = Object.freeze({
   },
 });
 
+const COMPLETED_STATUSES = new Set(["cancelled", "settled", "verified"]);
+
 const Matches = () => {
   const dispatch = useDispatch();
   const { competitionRevision } = useSocket();
@@ -81,7 +77,16 @@ const Matches = () => {
   const activityStatus = useSelector(selectMatchActivityStatus);
   const isLoading = activityStatus === "loading";
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
+  const [activeTab, setActiveTab] = useState("live");
   const [now, setNow] = useState(() => Date.now());
+  const liveMatches = useMemo(
+    () => activity.filter((item) => !COMPLETED_STATUSES.has(item.status)),
+    [activity],
+  );
+  const completedMatches = useMemo(
+    () => activity.filter((item) => COMPLETED_STATUSES.has(item.status)),
+    [activity],
+  );
 
   useEffect(() => {
     const request = dispatch(fetchPlayerMatchActivity());
@@ -95,74 +100,51 @@ const Matches = () => {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-sky-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_30%),linear-gradient(135deg,_#0f172a,_#020617)] p-6 shadow-[0_24px_60px_rgba(2,8,23,0.5)]">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
-          {isStaffUtilityMode ? "Staff match view" : "My matches"}
-        </p>
-        <h1 className="mt-3 text-4xl font-black text-white md:text-5xl">
-          {isStaffUtilityMode
-            ? "Read-only match history and lifecycle information."
-            : "Everything you joined, in one place."}
-        </h1>
-      </section>
+      <h1 className="text-2xl font-black text-white">Matches</h1>
 
-      <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-                Current activity
-              </p>
-              <h2 className="mt-2 text-2xl font-black text-white">
-                Match timeline
-              </h2>
-            </div>
-            <Link
-              className="text-sm font-bold text-sky-200"
-              to={ROUTES.TOURNAMENT}
-            >
-              {isStaffUtilityMode ? "View tournaments" : "Find tournaments"}
-            </Link>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {activity.map((item) => (
-              <MatchActivityCard
-                item={item}
-                now={now}
-                key={`${item.kind || "match"}-${item._id}`}
-              />
-            ))}
-
-            {!isLoading && activity.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-6 text-center">
-                <p className="font-bold text-white">No matches yet</p>
-                <p className="mt-2 text-sm text-slate-400">
-                  {isStaffUtilityMode
-                    ? "No safe match history is available for this account."
-                    : "Join a tournament and your player queue will appear here."}
-                </p>
-              </div>
-            ) : null}
-
-            {isLoading ? (
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
-                Loading your matches...
-              </div>
-            ) : null}
-
-            {activityStatus === "failed" ? (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-950/30 p-5 text-sm text-rose-200">
-                {activityError || "Unable to load your match activity."}
-              </div>
-            ) : null}
-          </div>
+      {isLoading ? (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">
+          Loading matches...
         </div>
+      ) : null}
 
-        <div className="space-y-5">
-          <InfoPanel icon={<FaUsers />} title="Room fills" text="Your seat stays confirmed." />
-          <InfoPanel icon={<FaHeadset />} title="Operator + schedule" text="Game Manager confirms the start time." />
-          <InfoPanel icon={<FaShieldAlt />} title="Lobby at T-10" text="Room ID and password unlock ten minutes before start." />
+      {activityStatus === "failed" ? (
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-950/30 p-5 text-sm text-rose-200">
+          {activityError || "Unable to load your matches."}
+        </div>
+      ) : null}
+
+      <section className="rounded-[22px] border border-slate-800 bg-slate-950 p-4 sm:p-5">
+        <div className="grid grid-cols-2 rounded-xl bg-slate-900 p-1" role="tablist" aria-label="My matches">
+          {[
+            ["live", "Live Matches", liveMatches.length],
+            ["completed", "Completed", completedMatches.length],
+          ].map(([value, label, count]) => (
+            <button
+              aria-selected={activeTab === value}
+              className={`rounded-lg px-3 py-2 text-sm font-black ${activeTab === value ? "bg-cyan-300 text-slate-950" : "text-slate-400 hover:text-white"}`}
+              key={value}
+              onClick={() => setActiveTab(value)}
+              role="tab"
+              type="button"
+            >
+              {label} · {count}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {(activeTab === "live" ? liveMatches : completedMatches).map((item) => (
+            <MatchActivityCard item={item} now={now} key={`${item.kind || "match"}-${item._id}`} />
+          ))}
+          {(activeTab === "live" ? liveMatches : completedMatches).length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-800 p-4 text-sm text-slate-500">
+              {activeTab === "live"
+                ? isStaffUtilityMode
+                  ? "No active matches are visible."
+                  : "No active matches yet."
+                : "No completed matches yet."}
+            </p>
+          ) : null}
         </div>
       </section>
     </div>
@@ -190,7 +172,7 @@ const MatchActivityCard = ({ item, now }) => {
       : null;
 
   return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <article className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">
@@ -225,11 +207,7 @@ const MatchActivityCard = ({ item, now }) => {
               to={buildTournamentOfferingPath(item.offeringId)}
             >
               View tournament
-              <FaArrowRight />
             </Link>
-            <span className="text-xs text-slate-500">
-              Your place is confirmed while this room fills.
-            </span>
           </div>
         </div>
       ) : (
@@ -253,7 +231,6 @@ const MatchActivityCard = ({ item, now }) => {
             to={`/dashboard/matches/${item._id}`}
           >
             Open match
-            <FaArrowRight />
           </Link>
         </>
       )}
@@ -268,14 +245,6 @@ const formatCountdown = (milliseconds) => {
   const remainder = seconds % 60;
   return [hours, minutes, remainder].map((value) => String(value).padStart(2, "0")).join(":");
 };
-
-const InfoPanel = ({ icon, text, title }) => (
-  <div className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5 shadow-[0_18px_50px_rgba(2,8,23,0.35)]">
-    <div className="text-xl text-sky-300">{icon}</div>
-    <h2 className="mt-3 text-xl font-black text-white">{title}</h2>
-    <p className="mt-3 text-sm leading-7 text-slate-300">{text}</p>
-  </div>
-);
 
 MatchActivityCard.propTypes = {
   item: PropTypes.shape({
@@ -298,12 +267,6 @@ MatchActivityCard.propTypes = {
     title: PropTypes.string,
   }).isRequired,
   now: PropTypes.number.isRequired,
-};
-
-InfoPanel.propTypes = {
-  icon: PropTypes.node.isRequired,
-  text: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired,
 };
 
 export default Matches;

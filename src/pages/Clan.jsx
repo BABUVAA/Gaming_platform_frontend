@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 import api from "../api/axios-api";
 import {
   FiBookmark,
-  FiCopy,
   FiMapPin,
   FiSearch,
   FiSettings,
@@ -568,7 +567,7 @@ const Clan = () => {
   }
 
   return (
-    <div className="clan-page space-y-5">
+    <div className="clan-page space-y-3 sm:space-y-5">
       <section className="clan-nav" aria-label="Clan navigation">
         <div className="clan-nav__track">
           {navigationTabs.map((tab) => (
@@ -1003,6 +1002,7 @@ const ClanOverviewPanel = ({
   onReviewJoinRequest,
 }) => {
   const [selectedMember, setSelectedMember] = useState(null);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   if (hasClan && !clanData) {
     return (
@@ -1037,15 +1037,13 @@ const ClanOverviewPanel = ({
     (member) => getEntityId(member.user) === String(currentUserId),
   );
   const currentRole = currentMember?.role || "MEMBER";
-  const coLeaderCount = members.filter(
-    (member) => member.role === "COLEADER",
-  ).length;
-  const elderCount = members.filter((member) => member.role === "ELDER").length;
   const joinRequests = clanData.joinRequests || [];
   const clanBadgeSource =
     !clanData.badge || clanData.badge === "clan-badge.png"
       ? "/clan-badge.png"
       : clanData.badge;
+  const description = clanData.bio || "No clan description has been added yet.";
+  const canCollapseDescription = description.length > 110;
 
   // A single controlled member menu prevents several destructive action sets
   // from remaining open while the leader reviews the roster.
@@ -1057,8 +1055,18 @@ const ClanOverviewPanel = ({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <section className="clan-surface clan-profile-card">
+        <button
+          aria-label={isBookmarked ? "Remove clan bookmark" : "Bookmark clan"}
+          className={`clan-bookmark-strip ${isBookmarked ? "clan-bookmark-strip--active" : ""}`}
+          onClick={() => onToggleBookmark(clanData._id, isBookmarked)}
+          title={isBookmarked ? "Remove bookmark" : "Bookmark clan"}
+          type="button"
+        >
+          {isBookmarked ? <FiBookmark /> : <FaRegBookmark />}
+        </button>
+
         <div className="clan-profile-card__main">
           <img
             src={clanBadgeSource}
@@ -1066,30 +1074,38 @@ const ClanOverviewPanel = ({
             className="clan-profile-card__badge"
           />
           <div className="min-w-0 flex-1">
-            <p className="clan-eyebrow">Your Clan</p>
-            <h2 className="mt-1 truncate text-3xl font-black text-white md:text-4xl">
-              {clanData.clanName}
-            </h2>
-            <button
-              type="button"
-              onClick={() => onCopyTag(clanData.clanTag)}
-              className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-cyan-200 transition hover:text-cyan-100"
+            <div className="flex min-w-0 items-center gap-2">
+              <h2 className="min-w-0 truncate text-2xl font-black text-white sm:text-3xl md:text-4xl">
+                {clanData.clanName}
+              </h2>
+              <button
+                className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-black text-cyan-200 transition hover:bg-cyan-300/15"
+                onClick={() => onCopyTag(clanData.clanTag)}
+                title="Copy clan tag"
+                type="button"
+              >
+                {clanData.clanTag}
+              </button>
+            </div>
+            <p
+              className={`clan-description ${canCollapseDescription && !descriptionExpanded ? "clan-description--collapsed" : ""}`}
             >
-              <FiCopy />
-              {clanData.clanTag}
-            </button>
+              {description}
+            </p>
+            {canCollapseDescription ? (
+              <button
+                aria-expanded={descriptionExpanded}
+                className="clan-description-toggle"
+                onClick={() => setDescriptionExpanded((current) => !current)}
+                type="button"
+              >
+                {descriptionExpanded ? "Show less" : "Read more"}
+              </button>
+            ) : null}
           </div>
 
-          <div className="clan-profile-card__actions">
-            <button
-              type="button"
-              onClick={() => onToggleBookmark(clanData._id, isBookmarked)}
-              className="clan-secondary-action"
-            >
-              {isBookmarked ? <FiBookmark /> : <FaRegBookmark />}
-              {isBookmarked ? "Saved" : "Save"}
-            </button>
-            {currentRole !== "LEADER" ? (
+          {currentRole !== "LEADER" ? (
+            <div className="clan-profile-card__actions">
               <button
                 type="button"
                 onClick={onLeaveClan}
@@ -1097,13 +1113,9 @@ const ClanOverviewPanel = ({
               >
                 Leave
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
-
-        <p className="clan-description">
-          {clanData.bio || "No clan description has been added yet."}
-        </p>
 
         <div className="clan-detail-grid">
           <InfoBlock icon={<FiMapPin />} label="Location" value={clanData.location || "Not set"} />
@@ -1195,15 +1207,7 @@ const ClanOverviewPanel = ({
 
       <section className="clan-surface clan-roster">
         <div className="clan-roster__header">
-          <div>
-            <p className="clan-eyebrow">Members</p>
-            <h2 className="clan-heading">Clan roster</h2>
-          </div>
-          <div className="clan-role-summary">
-            <span><FaCrown /> 1 Leader</span>
-            <span>{coLeaderCount}/5 Co-leaders</span>
-            <span>{elderCount} Elders</span>
-          </div>
+          <h2 className="text-xl font-black text-white sm:text-2xl">Members</h2>
         </div>
 
         <div className="clan-roster__list">
@@ -1211,7 +1215,6 @@ const ClanOverviewPanel = ({
             <span>#</span>
             <span>Player</span>
             <span>Role</span>
-            <span>Joined</span>
           </div>
           {members.map((member, index) => (
             <ClanMemberRow
@@ -1314,16 +1317,10 @@ const ClanMemberRow = ({
           {member.clanMemberName || "Player"}
           {isCurrentPlayer ? <small>You</small> : null}
         </strong>
-        <span>{member.clanMemberTag || "Platform player"}</span>
       </button>
       <span className={`clan-role clan-role--${member.role.toLowerCase()}`}>
         {member.role === "LEADER" ? <FaCrown /> : <FiShield />}
         {formatClanRole(member.role)}
-      </span>
-      <span className="clan-member-row__joined">
-        {member.joinedAt
-          ? new Date(member.joinedAt).toLocaleDateString()
-          : "-"}
       </span>
     </div>
   );
@@ -1377,9 +1374,6 @@ const ClanMemberActionsDialog = ({
             <h2 className="clan-heading truncate" id="member-actions-title">
               {member.clanMemberName || "Player"}
             </h2>
-            <p className="clan-member-dialog__tag">
-              {member.clanMemberTag || "Platform player"}
-            </p>
           </div>
           <button
             aria-label="Close member options"
