@@ -250,11 +250,19 @@ test("Tournament Manager cards use concise team format labels", async () => {
   assert.doesNotMatch(source, /Publish fixed-seat tournaments/);
 });
 
-test("team picker uses a stable empty selector result", async () => {
+test("team picker keeps stable empty state and links to team creation", async () => {
   const source = await readFile(
     new URL("../src/components/feature/InviteModal.jsx", import.meta.url),
     "utf8",
   );
+  const clanSource = await readFile(
+    new URL("../src/pages/Clan.jsx", import.meta.url),
+    "utf8",
+  );
   assert.match(source, /const EMPTY_TEAMS = Object\.freeze\(\[\]\)/);
   assert.match(source, /teams \|\| EMPTY_TEAMS/);
+  assert.match(source, /to=\{`\$\{ROUTES\.CLAN\}\?tab=teams`\}/);
+  assert.match(source, />\s*Create Team\s*<\/Link>/);
+  assert.match(clanSource, /searchParams\.get\("tab"\)/);
+  assert.match(clanSource, /requestedTab === "teams"/);
 });

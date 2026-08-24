@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-23
+Last updated: 2026-08-24
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -93,6 +93,29 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   advancement from a fixed knockout bracket or accept player IDs from clients.
 
 ## Current Verified State
+
+- Competition read caching 2026-08-24: high-frequency Quick Match discovery,
+  scoped Tournament Manager offering lists, authorized Room leaderboards,
+  private player Event discovery/detail, Event participant leaderboards and
+  player standings now use short-lived Redis projections. Keys use versioned
+  namespaces and hashed variants; concurrent misses share one loader, writes
+  advance epochs, and an epoch recheck blocks stale refill races. Offering
+  create/update, committed Quick Match join, Event registration, invitation
+  and revocation invalidate their affected namespaces. MongoDB membership and
+  invitation visibility remain authoritative. Auth/session, wallet/payment,
+  notification, chat, operator evidence and lobby-secret Match responses
+  deliberately bypass response caching. Backend aggregate components pass
+  343/343, including competition policy 113/113 and replica integration
+  102/102; focused cache behavior passes 5/5. The local Redis daemon was not
+  available for a live adapter probe, so deployed hit/miss observation remains
+  an operational follow-up; Redis-down fallback is verified.
+
+- Team-entry recovery 2026-08-24: when a team Quick Match has no matching
+  saved roster, its picker now exposes `Create Team` and opens the Clan Teams
+  workspace directly. Players without a Clan land on Clan creation first; once
+  a Clan exists the same `?tab=teams` destination opens the team builder. The
+  existing server-owned roster eligibility and join command are unchanged.
+  Frontend 114/114, full lint and the 556-module production build pass.
 
 - Test competition catalog 2026-08-23: the active Event Manager scope now
   includes BGMI and COC. BGMI Monthly Championship has an active monthly

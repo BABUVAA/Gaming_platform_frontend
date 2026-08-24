@@ -1,7 +1,9 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { getStoredErrorMessage } from "../../api/apiError";
+import { ROUTES } from "../../routes/routeConstants";
 import { useMatchmakingStore } from "../../store/hooks/useStore";
 
 const normalizeGameKey = (game) =>
@@ -93,8 +95,17 @@ const InviteModal = ({
 
         <div className="mt-5 max-h-64 space-y-2 overflow-y-auto">
           {availableTeams.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-sm text-slate-400">
-              No matching saved team is available yet.
+            <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-center">
+              <p className="text-sm text-slate-400">
+                No matching saved team is available yet.
+              </p>
+              <Link
+                className="mt-4 inline-flex rounded-xl border border-cyan-300/60 px-4 py-2 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10"
+                onClick={onClose}
+                to={`${ROUTES.CLAN}?tab=teams`}
+              >
+                Create Team
+              </Link>
             </div>
           ) : (
             availableTeams.map((team) => {

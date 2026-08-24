@@ -2448,6 +2448,18 @@ Before beginning a new domain, add its owner, flow, API boundary, security
 rules, data model, and completion criteria here. After implementation, move it
 to Completed and record any remaining risks under Required Future Flows.
 
+## Latest Small Refinement: Team Creation from Quick Match Entry
+
+- A team-format Quick Match picker with no eligible saved roster now presents
+  a direct `Create Team` action instead of a dead-end disabled join button.
+- The action closes the picker and opens `/dashboard/clan?tab=teams`. The Clan
+  workspace honors that destination after its membership read: existing Clan
+  members land on the team builder, while players without a Clan first receive
+  the existing Clan creation path and reach Teams after creation.
+- No join, roster, game, format or financial authority moved into the browser;
+  the backend continues to validate the completed selected team. Verification:
+  frontend 114/114, full lint and 556-module production build.
+
 ## Completed Code Slice: Repeat Quick Match Rooms and Compact Player Views
 
 - Quick Match entry now belongs to the current waiting Room. Filling a Room
@@ -2627,3 +2639,31 @@ removed and their old mutation paths return stable retirement errors.
   cleanly without console warnings. Authenticated desktop/mobile role workflow
   remains a visual follow-up; server authorization and transport contracts are
   covered by the completed automated gates.
+
+## Completed Code Slice: Competition Read Caching
+
+- Redis now caches only bounded competition read projections: shared/scoped
+  Quick Match offering discovery, authorized Room lineups, private player Event
+  list/detail views, display-name Event leaderboards and player standings.
+  Player Match reads containing time-gated lobby credentials remain uncached,
+  as do auth/session, money, payment, withdrawal, notification, private chat
+  and operator-evidence responses.
+- Cache keys use versioned namespaces plus SHA-256 variant digests so player
+  identities and cursors do not appear in Redis key names. Mandatory 10-15
+  second TTLs bound missed invalidations; Redis errors fall through to MongoDB.
+  Per-process single-flight coalescing prevents duplicate loaders for one key.
+- Committed offering create/update, Quick Match join, Event registration,
+  invitation and revocation writes advance namespace epochs. Readers recheck
+  the epoch before filling Redis, preventing a slow pre-write query from
+  repopulating stale data. Old epochs expire without Redis scans or broad
+  flushes. Socket.IO continues to signal clients to refetch; HTTP and MongoDB
+  remain authoritative.
+- Quick Match leaderboard membership and Event invitation visibility are
+  checked before cached data is returned. A private viewer overlay is never
+  mixed into a shared public offering cache.
+- Verification: focused cache behavior 5/5, competition policy 113/113,
+  competition replica integration 102/102, and all backend aggregate
+  components 343/343 passed. The local Redis daemon was unavailable for a live
+  adapter probe; fail-open behavior is covered and deployed cache hit-rate/
+  invalidation observation remains an operations follow-up. The endpoint and
+  bypass matrix is documented in backend `docs/COMPETITION_CACHE.md`.

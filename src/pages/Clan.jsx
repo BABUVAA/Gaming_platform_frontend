@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { Form } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Form, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../api/axios-api";
 import {
@@ -64,6 +63,7 @@ import {
 const Clan = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { summary } = useSelector((store) => store.player);
   const {
     bookmarkedClans = [],
@@ -117,8 +117,15 @@ const Clan = () => {
 
   useEffect(() => {
     if (userClanStatus !== "succeeded") return;
-    setActiveTab(hasClan ? "myClan" : "createClan");
-  }, [hasClan, userClanStatus]);
+    const requestedTab = searchParams.get("tab");
+    setActiveTab(
+      hasClan && requestedTab === "teams"
+        ? "teams"
+        : hasClan
+          ? "myClan"
+          : "createClan",
+    );
+  }, [hasClan, searchParams, userClanStatus]);
 
   useEffect(() => {
     if (userClanStatus === "idle") {
