@@ -34,6 +34,8 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState("");
 
   const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat;
   const senderId = profile?._id;
@@ -44,7 +46,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   );
   const isConnected = Boolean(socket?.socket && socket?.connected);
   const canSend = Boolean(
-    message.trim() && isConnected && chatId && senderId && !isJoiningRoom
+    message.trim() && isConnected && chatId && senderId && !isJoiningRoom && !isSending
   );
 
   useEffect(() => {
@@ -52,7 +54,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   }, [cachedMessages, chatId]);
 
   useEffect(() => {
-    if (!socket?.socket || !chatId || !senderId) return;
+    if (!socket?.socket || !isConnected || !chatId || !senderId) return;
 
     setIsJoiningRoom(true);
 
@@ -81,7 +83,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
       socket.socket.off(`${chatType}_message`, messageListener);
       socket.socket.off(`${chatType}_load_messages`, loadMessagesListener);
     };
-  }, [chatType, chatId, senderId, socket?.socket]);
+  }, [chatType, chatId, senderId, socket?.socket, isConnected]);
 
   useEffect(() => {
     const container = chatDisplayRef.current;
@@ -125,8 +127,30 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
     }
 
     shouldStickToBottomRef.current = true;
-    socket.socket.emit(`${chatType}_message`, messageData);
-    setMessage("");
+    setIsSending(true);
+    setSendError("");
+    socket.socket.timeout(10000).emit(
+      `${chatType}_message`,
+      messageData,
+      (transportError, response) => {
+        setIsSending(false);
+        if (transportError || response?.success !== true) {
+          setSendError(
+            response?.error?.message ||
+              "Message was not delivered. Please try again.",
+          );
+          return;
+        }
+
+        setMessages((current) =>
+          dedupeMessages([...current, response.message]),
+        );
+        // Do not erase text typed while the previous message was in flight.
+        setMessage((current) =>
+          current.trim() === trimmedMessage ? "" : current,
+        );
+      },
+    );
   };
 
   if (!chatType) {
@@ -239,6 +263,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             onKeyDown={(event) => event.key === "Enter" && sendMessage()}
+            maxLength={500}
             disabled={!isConnected || !chatId || !senderId}
           />
 
@@ -248,9 +273,12 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
             onClick={sendMessage}
           >
             <FiSend />
-            Send
+            {isSending ? "Sending..." : "Send"}
           </button>
         </div>
+        {sendError ? (
+          <p className="mt-2 px-2 text-xs text-rose-300">{sendError}</p>
+        ) : null}
       </div>
     </div>
   );

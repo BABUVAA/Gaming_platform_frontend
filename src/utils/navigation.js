@@ -9,6 +9,7 @@ import {
   FaUser,
   FaWallet,
   FaLink,
+  FaDiscord,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
 import { ROUTES } from "../routes/routeConstants.js";
@@ -73,6 +74,13 @@ const staffNavigation = [
 ];
 
 const staffUtilityNavigation = [
+  {
+    label: "Discord",
+    description: "Connect and sync staff roles",
+    to: ROUTES.DISCORD_OPERATIONS,
+    icon: FaDiscord,
+    match: [ROUTES.DISCORD_OPERATIONS],
+  },
   {
     label: "Staff Workspace",
     description: "Open your assigned operational tools",
@@ -197,6 +205,7 @@ export const getStaffWorkspaceNavigation = (summary) => {
   );
   return [
     staffUtilityNavigation[0],
+    staffUtilityNavigation[1],
     ...staffNavigation.filter((item) =>
       item.requiredStaffRoles.some((role) => staffRoles.has(role)),
     ),

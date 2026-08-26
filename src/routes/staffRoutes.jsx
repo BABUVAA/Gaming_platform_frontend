@@ -13,6 +13,7 @@ export const staffRoutes = [
       { path: STAFF_ROUTE_SEGMENTS.EVENTS, componentKey: "EventManagerDashboard", access: "eventManager" },
       { path: STAFF_ROUTE_SEGMENTS.TOURNAMENTS, componentKey: "TournamentManagerDashboard", access: "tournamentManager" },
       { path: STAFF_ROUTE_SEGMENTS.GAMES, componentKey: "GameManagerDashboard", access: "gameManager" },
+      { path: STAFF_ROUTE_SEGMENTS.DISCORD, componentKey: "DiscordOperations", access: "staff" },
     ],
   },
 ];

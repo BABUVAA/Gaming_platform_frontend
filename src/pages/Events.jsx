@@ -10,6 +10,7 @@ import { selectPlayerSummary } from "../store/selectors/playerSelectors.js";
 import EventProgression from "../components/EventProgression.jsx";
 import CompetitionEntryDialog from "../components/competition/CompetitionEntryDialog.jsx";
 import JoinProgress from "../components/competition/JoinProgress.jsx";
+import EventTeamPicker from "../components/competition/EventTeamPicker.jsx";
 
 const formatDate = (value) => {
   const date = new Date(value);
@@ -29,6 +30,7 @@ const Events = () => {
   } = useSelector((state) => state.eventRegistration);
   const staffReadOnly = useSelector(selectPlayerSummary)?.role === "staff";
   const [pendingEvent, setPendingEvent] = useState(null);
+  const [teamPickerEvent, setTeamPickerEvent] = useState(null);
 
   useEffect(() => {
     const request = dispatch(fetchPlayerEvents());
@@ -52,7 +54,11 @@ const Events = () => {
   }, [dispatch, events]);
 
   const commitRegistration = () => {
-    if (pendingEvent) dispatch(registerForEvent(pendingEvent.id));
+    if (Number(pendingEvent?.format?.teamSize || 1) > 1) {
+      setTeamPickerEvent(pendingEvent);
+    } else if (pendingEvent) {
+      dispatch(registerForEvent(pendingEvent.id));
+    }
     setPendingEvent(null);
   };
 
@@ -243,6 +249,16 @@ const Events = () => {
         title={pendingEvent?.title || "Event"}
         type="Event"
       />
+      {teamPickerEvent ? (
+        <EventTeamPicker
+          event={teamPickerEvent}
+          onClose={() => setTeamPickerEvent(null)}
+          onSelect={({ paymentMode, rewardMode, teamId }) => {
+            dispatch(registerForEvent({ paymentMode, rewardMode, runId: teamPickerEvent.id, teamId }));
+            setTeamPickerEvent(null);
+          }}
+        />
+      ) : null}
 
       {status === "succeeded" && events.length === 0 ? (
         <p className="rounded-2xl border border-slate-800 p-5 text-slate-400">

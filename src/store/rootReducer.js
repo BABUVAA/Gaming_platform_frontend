@@ -33,6 +33,8 @@ import securityAttentionSlice from "./slices/securityAttentionSlice.js";
 import verificationRequestSlice from "./slices/verificationRequestSlice.js";
 import paymentReconciliationReviewSlice from "./slices/paymentReconciliationReviewSlice.js";
 import matchChatSlice from "./slices/matchChatSlice.js";
+import discordOperationsSlice from "./slices/discordOperationsSlice.js";
+import sensitiveActionSlice from "./slices/sensitiveActionSlice.js";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -65,12 +67,14 @@ const combinedReducer = combineReducers({
   matchmaking: matchmakingSlice.reducer,
   matchActivity: matchActivitySlice.reducer,
   matchChat: matchChatSlice,
+  discordOperations: discordOperationsSlice.reducer,
   payment: paymentSlice.reducer,
   player: playerSlice.reducer,
   clan: clanSlice.reducer,
   toast: toastSlice.reducer,
   notifications: notificationSlice.reducer,
   requestScope: requestScopeSlice.reducer,
+  sensitiveAction: sensitiveActionSlice.reducer,
   social: socialSlice.reducer,
 });
 
@@ -101,6 +105,8 @@ const privateSliceKeys = [
   "securityAttention",
   "verificationRequests",
   "paymentReconciliationReview",
+  "discordOperations",
+  "sensitiveAction",
 ];
 
 const clearPrivateSlices = (state) => {

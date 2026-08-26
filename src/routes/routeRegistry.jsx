@@ -27,6 +27,7 @@ const LazyComponents = {
   EventManagerDashboard: lazy(() => import("../pages/EventManagerDashboard.jsx")),
   TournamentManagerDashboard: lazy(() => import("../pages/TournamentManagerDashboard.jsx")),
   GameManagerDashboard: lazy(() => import("../pages/GameManagerDashboard.jsx")),
+  DiscordOperations: lazy(() => import("../pages/DiscordOperations.jsx")),
   Login: lazy(() => import("../pages/Login")),
   SignUp: lazy(() => import("../pages/SignUp")),
   Clan: lazy(() => import("../pages/Clan")),

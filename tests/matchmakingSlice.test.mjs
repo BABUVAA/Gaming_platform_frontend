@@ -73,7 +73,7 @@ test("staff utility mode never sends a Quick Match join request", async () => {
   }
 });
 
-test("canonical team join sends only its selected team", async () => {
+test("canonical team join sends only its selected team, attempt, payment, and reward choice", async () => {
   const originalAdapter = api.defaults.adapter;
   let request;
   api.defaults.adapter = async (config) => {
@@ -93,6 +93,8 @@ test("canonical team join sends only its selected team", async () => {
       joinQuickMatchQueue({
         attemptId: "join_attempt_2",
         offeringId: "offering-2",
+        paymentMode: "captain_pays",
+        rewardMode: "reimburse_then_split",
         teamId: "team-1",
       }),
     );
@@ -100,6 +102,8 @@ test("canonical team join sends only its selected team", async () => {
     assert.equal(request.url, "/api/player/quick-matches/offering-2/queue");
     assert.deepEqual(JSON.parse(request.data), {
       attemptId: "join_attempt_2",
+      paymentMode: "captain_pays",
+      rewardMode: "reimburse_then_split",
       teamId: "team-1",
     });
   } finally {

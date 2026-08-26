@@ -248,6 +248,8 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
 
       {!isStaffUtilityMode ? (
         <InviteModal
+          currency={offering.currency}
+          entryFeeMinor={offering.entryFeeMinor}
           game={offering.gameKey}
           isOpen={isTeamPickerOpen}
           mode={offering.mode}

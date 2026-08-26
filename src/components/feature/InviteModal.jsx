@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { getStoredErrorMessage } from "../../api/apiError";
 import { ROUTES } from "../../routes/routeConstants";
 import { useMatchmakingStore } from "../../store/hooks/useStore";
+import TeamPaymentChoice from "../competition/TeamPaymentChoice.jsx";
 
 const normalizeGameKey = (game) =>
   String(game || "").toLowerCase() === "pubg"
@@ -15,6 +16,8 @@ const EMPTY_TEAMS = Object.freeze([]);
 
 const InviteModal = ({
   game,
+  currency = "INR",
+  entryFeeMinor = 0,
   isOpen,
   mode,
   onClose,
@@ -24,6 +27,8 @@ const InviteModal = ({
 }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [teamId, setTeamId] = useState("");
+  const [paymentMode, setPaymentMode] = useState("captain_pays");
+  const [rewardMode, setRewardMode] = useState("captain_keeps");
   const { joinQuickMatch, joinStatus, joiningOfferingId } =
     useMatchmakingStore();
   const teams = useSelector(
@@ -58,6 +63,8 @@ const InviteModal = ({
       // the team roster, while Socket.IO distributes later live updates.
       const result = await joinQuickMatch({
         offeringId,
+        paymentMode,
+        rewardMode,
         teamId,
       }).unwrap();
       onJoined?.(result);
@@ -137,6 +144,16 @@ const InviteModal = ({
           )}
         </div>
 
+        <TeamPaymentChoice
+          currency={currency}
+          entryFeeMinor={entryFeeMinor}
+          onChange={setPaymentMode}
+          onRewardChange={setRewardMode}
+          rewardValue={rewardMode}
+          teamSize={teamSize}
+          value={paymentMode}
+        />
+
         {errorMessage && (
           <p className="mt-4 text-sm font-medium text-rose-300">
             {errorMessage}
@@ -157,6 +174,8 @@ const InviteModal = ({
 };
 
 InviteModal.propTypes = {
+  currency: PropTypes.string,
+  entryFeeMinor: PropTypes.number,
   game: PropTypes.string.isRequired,
   isOpen: PropTypes.bool.isRequired,
   mode: PropTypes.string.isRequired,

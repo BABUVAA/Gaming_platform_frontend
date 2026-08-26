@@ -4,7 +4,7 @@ import createApiThunk from "../thunks/createApiThunk.js";
 export const fetchInvitationRuns = createApiThunk(
   "eventInvitation/fetchRuns",
   {
-    path: "/api/admin/events/invitation-runs",
+    path: "/api/staff/events/invitation-runs",
     getParams: ({ cursor } = {}) => ({
       limit: 25,
       ...(cursor ? { cursor } : {}),
@@ -18,7 +18,7 @@ export const fetchInvitationRuns = createApiThunk(
 export const fetchEventInvitations = createApiThunk(
   "eventInvitation/fetch",
   {
-    path: ({ arg }) => `/api/admin/events/runs/${arg.runId}/invitations`,
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/invitations`,
     getParams: ({ cursor }) => ({
       limit: 50,
       ...(cursor ? { cursor } : {}),
@@ -34,7 +34,7 @@ export const searchInvitationCandidates = createApiThunk(
   "eventInvitation/searchCandidates",
   {
     path: ({ arg }) =>
-      `/api/admin/events/runs/${arg.runId}/invitation-candidates`,
+      `/api/staff/events/runs/${arg.runId}/invitation-candidates`,
     getParams: ({ search }) => ({ limit: 20, search: search.trim() }),
     selectData: (response) => response.data?.data?.players || [],
     errorMessage: "Unable to search eligible Event players.",
@@ -46,7 +46,7 @@ export const inviteEventPlayers = createApiThunk(
   "eventInvitation/invite",
   {
     method: "post",
-    path: ({ arg }) => `/api/admin/events/runs/${arg.runId}/invitations`,
+    path: ({ arg }) => `/api/staff/events/runs/${arg.runId}/invitations`,
     getBody: ({ playerIds }) => ({ playerIds }),
     selectData: (response) => response.data?.data?.invitations || [],
     errorMessage: "Unable to save these Event invitations.",
@@ -59,7 +59,7 @@ export const revokeEventInvitation = createApiThunk(
   {
     method: "delete",
     path: ({ arg }) =>
-      `/api/admin/events/runs/${arg.runId}/invitations/${arg.invitationId}`,
+      `/api/staff/events/runs/${arg.runId}/invitations/${arg.invitationId}`,
     getBody: () => undefined,
     selectData: (response) => response.data?.data?.invitation,
     errorMessage: "Unable to revoke this Event invitation.",

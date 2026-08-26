@@ -73,10 +73,10 @@ const WithdrawalReview = () => {
 
   return (
     <section className="space-y-5">
-      <header className="rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_38%),#07111f] p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">Financial governance</p><h2 className="mt-1 text-2xl font-black text-white">Withdrawal Review</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Claim a request before deciding it. Approval only queues provider processing; it never marks a payout as paid.</p></div>
-          <button className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={status === "loading" || status === "loadingMore"} onClick={refresh} type="button"><FiRefreshCw /> Refresh</button>
+      <header className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-bold text-slate-300">{items.length} request{items.length === 1 ? "" : "s"} loaded</p>
+          <button className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={status === "loading" || status === "loadingMore"} onClick={refresh} type="button"><FiRefreshCw /> Refresh</button>
         </div>
       </header>
 

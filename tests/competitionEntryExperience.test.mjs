@@ -36,6 +36,25 @@ test("competition entry confirmation discloses wallet hold and never requests a 
   assert.doesNotMatch(`${compete}\n${eventDetails}`, /globalThis\.confirm/);
 });
 
+test("paid team entry lets the captain choose payment and reward handling", async () => {
+  const [choice, quickPicker, eventPicker] = await Promise.all([
+    source("../src/components/competition/TeamPaymentChoice.jsx"),
+    source("../src/components/feature/InviteModal.jsx"),
+    source("../src/components/competition/EventTeamPicker.jsx"),
+  ]);
+  assert.match(choice, /captain_pays/);
+  assert.match(choice, /Split between team/);
+  assert.match(choice, /entryFeeMinor \* teamSize/);
+  assert.match(choice, /Keep full reward/);
+  assert.match(choice, /Share with team/);
+  assert.match(choice, /reimburse_then_split/);
+  assert.match(quickPicker, /paymentMode/);
+  assert.match(quickPicker, /rewardMode/);
+  assert.match(eventPicker, /paymentMode/);
+  assert.match(eventPicker, /rewardMode/);
+  assert.doesNotMatch(choice, /type="password"/);
+});
+
 test("mobile authentication opens as a bottom sheet before the desktop marketing panel", async () => {
   const authShell = await source("../src/components/common/AuthShell.jsx");
   assert.match(authShell, /hidden[^"]*lg:block/);

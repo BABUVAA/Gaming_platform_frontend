@@ -16,6 +16,7 @@ import {
   updateQuickMatchOffering,
 } from "../../store/slices/quickMatchOfferingSlice";
 import JoinProgress from "../competition/JoinProgress.jsx";
+import StaffWorkspaceHeader from "../common/StaffWorkspaceHeader.jsx";
 
 const createEmptyForm = () => ({
   currency: "INR",
@@ -426,31 +427,24 @@ const QuickMatchOfferingManagement = () => {
   ];
 
   return (
-    <section className="grid items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4 lg:sticky lg:top-6">
-        <div className="border-b border-slate-800 px-2 pb-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
-            Role dashboard
-          </p>
-          <h1 className="mt-1 text-xl font-black text-white">
-            Tournament Manager
-          </h1>
-        </div>
-        <nav aria-label="Tournament Manager responsibilities" className="mt-3 grid gap-2">
+    <section className="space-y-4">
+      <StaffWorkspaceHeader description="Quick Match offerings, rooms and rewards." title="Tournament Manager" />
+      <div className="grid items-start gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
+      <aside className="rounded-2xl border border-slate-800 bg-slate-950/70 p-2 lg:sticky lg:top-5">
+        <nav aria-label="Tournament Manager responsibilities" className="grid gap-1">
           {sections.map((item) => (
             <button
               aria-current={section === item.id ? "page" : undefined}
               className={
                 section === item.id
-                  ? "rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left"
-                  : "rounded-2xl border border-transparent px-4 py-3 text-left hover:bg-slate-900"
+                  ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left"
+                  : "rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-900"
               }
               key={item.id}
               onClick={() => openSection(item.id)}
               type="button"
             >
-              <span className="block font-black text-white">{item.label}</span>
-              <span className="mt-1 block text-xs text-slate-500">{item.detail}</span>
+              <span className="flex items-center justify-between gap-2 font-black text-white"><span>{item.label}</span><span className="text-xs text-cyan-200">{item.detail.split(" ")[0]}</span></span>
             </button>
           ))}
         </nav>
@@ -469,16 +463,9 @@ const QuickMatchOfferingManagement = () => {
         />
       ) : (
         <>
-      <header className="rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.14),_transparent_38%),#07111f] p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
-              Competition configuration
-            </p>
-            <h2 className="mt-1 text-xl font-black text-white">
-              Tournament Management
-            </h2>
-          </div>
+      <header className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-black text-white">Quick Matches</h2>
           <div className="flex gap-2">
             <button
               className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200"
@@ -613,6 +600,7 @@ const QuickMatchOfferingManagement = () => {
       </div>
         </>
       )}
+      </div>
       </div>
     </section>
   );

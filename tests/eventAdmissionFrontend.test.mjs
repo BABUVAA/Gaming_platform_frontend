@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { canReviewEventProposal } from "../src/utils/eventReviewPolicy.js";
+import {
+  describeTeamRewardSplit,
+  getCompetitionRankingGroups,
+  usesRankingKeys,
+} from "../src/utils/competitionUnits.js";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import eventRegistrationReducer, {
@@ -127,6 +132,37 @@ test("staff Event registration is blocked before mutation transport", async () =
   }
 });
 
+test("team Event registration sends only the selected team and captain payment choice", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    if (config.method === "post") return response(config, { data: { registration: { id: "registration-team", status: "registered", team: { id: "team-1" } } } });
+    return response(config, { data: { events: [], items: [], page: { nextCursor: null } } });
+  };
+  try {
+    const store = configureStore({ reducer: {
+      eventRegistration: eventRegistrationReducer,
+      player: (state = { summary: { role: "player" } }) => state,
+    } });
+    await store.dispatch(registerForEvent({ paymentMode: "captain_pays", rewardMode: "reimburse_then_split", runId: "run-team", teamId: "team-1" }));
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests[0].url, "/api/player/events/run-team/register");
+    assert.deepEqual(decodeBody(requests[0]), { paymentMode: "captain_pays", rewardMode: "reimburse_then_split", teamId: "team-1" });
+    assert.equal(store.getState().eventRegistration.actionById["run-team"], "idle");
+
+    const pickerSource = await readFile(new URL("../src/components/competition/EventTeamPicker.jsx", import.meta.url), "utf8");
+    assert.match(pickerSource, /team\.status === "ready"/);
+    assert.match(pickerSource, /fetchPlayerProfile/);
+    assert.match(pickerSource, /TeamPaymentChoice/);
+    assert.match(pickerSource, /identifier\(team\.createdBy\) === currentUserId/);
+    assert.match(pickerSource, /Create a team/);
+    assert.doesNotMatch(pickerSource, /participantIds|players:/);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
 test("Event details use an exact read and closed registration renders no action", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
@@ -228,7 +264,7 @@ test("player Event UI exposes no registration cancellation transport", async () 
   assert.doesNotMatch(sliceSource, /method: "delete"/);
 });
 
-test("Platform Admin invitation runs, candidates, list, invite, and revoke use bounded contracts", async () => {
+test("Event Manager invitation runs, candidates, list, invite, and revoke use bounded scoped contracts", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
   const activeInvitation = {
@@ -238,7 +274,7 @@ test("Platform Admin invitation runs, candidates, list, invite, and revoke use b
   };
   api.defaults.adapter = async (config) => {
     requests.push(config);
-    if (config.url === "/api/admin/events/invitation-runs") {
+    if (config.url === "/api/staff/events/invitation-runs") {
       return response(config, {
         data: {
           nextCursor: "next-run-page",
@@ -281,16 +317,16 @@ test("Platform Admin invitation runs, candidates, list, invite, and revoke use b
     assert.deepEqual(
       requests.map(({ method, url }) => [method, url]),
       [
-        ["get", "/api/admin/events/invitation-runs"],
+        ["get", "/api/staff/events/invitation-runs"],
         [
           "get",
-          `/api/admin/events/runs/${runId}/invitation-candidates`,
+          `/api/staff/events/runs/${runId}/invitation-candidates`,
         ],
-        ["get", `/api/admin/events/runs/${runId}/invitations`],
-        ["post", `/api/admin/events/runs/${runId}/invitations`],
+        ["get", `/api/staff/events/runs/${runId}/invitations`],
+        ["post", `/api/staff/events/runs/${runId}/invitations`],
         [
           "delete",
-          `/api/admin/events/runs/${runId}/invitations/invitation-1`,
+          `/api/staff/events/runs/${runId}/invitations/invitation-1`,
         ],
       ],
     );
@@ -313,8 +349,8 @@ test("Platform Admin invitation runs, candidates, list, invite, and revoke use b
   }
 });
 
-test("Event governance and Compete UI disclose authoritative entry terms without accepting a fee", async () => {
-  const [reviewSource, invitationSource, navigationSource, playerSource, competeSource] = await Promise.all([
+test("Event governance stays approval-only while Event Manager owns invitations and results", async () => {
+  const [reviewSource, managerSource, resultsSource, invitationSource, navigationSource, playerSource, competeSource] = await Promise.all([
     readFile(
       new URL(
         "../src/components/adminComponents/EventReviewQueue.jsx",
@@ -322,6 +358,8 @@ test("Event governance and Compete UI disclose authoritative entry terms without
       ),
       "utf8",
     ),
+    readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/eventManagement/EventManagerResults.jsx", import.meta.url), "utf8"),
     readFile(
       new URL(
         "../src/components/adminComponents/EventInvitationManagement.jsx",
@@ -353,13 +391,16 @@ test("Event governance and Compete UI disclose authoritative entry terms without
   assert.doesNotMatch(invitationSource, /findUsers|\/api\/admin\/findUsers/);
   assert.match(reviewSource, /Independent review required/);
   assert.match(reviewSource, /Another admin reviews/);
-  assert.match(reviewSource, /aria-label="Event Management sections"/);
-  assert.match(reviewSource, /label="Approvals"/);
-  assert.match(reviewSource, /label="Invitations"/);
-  assert.match(reviewSource, /label="Results & Rewards"/);
-  assert.match(reviewSource, /<EventStageManagement \/>/);
+  assert.doesNotMatch(reviewSource, /Event Management sections|Invitations|Results & Rewards|EventStageManagement/);
+  assert.match(managerSource, />Invitations</);
+  assert.match(managerSource, />Results & Rewards</);
+  assert.match(managerSource, /<EventInvitationManagement \/>/);
+  assert.match(managerSource, /<EventManagerResults runs=\{runs\} \/>/);
+  assert.match(resultsSource, /fetchManagedEventStages/);
+  assert.match(resultsSource, /fetchManagedEventStandings/);
+  assert.match(resultsSource, /fetchManagedEventPrizeStatus/);
+  assert.doesNotMatch(resultsSource, /releaseEventPrizes|\/api\/admin/);
   assert.doesNotMatch(reviewSource, /Operations & Reports|RoundPlanReviewQueue|StageAdjustmentReviewQueue/);
-  assert.match(reviewSource, /activeView === "approvals"/);
   assert.match(reviewSource, /canReviewEventProposal\(\{ currentUser, item \}\)/);
   assert.match(reviewSource, /if \(!selected \|\| !canReview\(selected\.item\)\) return/);
   assert.doesNotMatch(navigationSource, /label: "Events"|label: "Tournaments"/);
@@ -368,7 +409,8 @@ test("Event governance and Compete UI disclose authoritative entry terms without
   assert.match(playerSource, /test money/);
   assert.match(playerSource, /Hold fee and register/);
   assert.match(playerSource, /paidEntryAvailable === false/);
-  assert.doesNotMatch(playerSource, /amountMinor|entryFeeMinor[\s\S]*registerForEvent\([^)]*,/);
+  assert.doesNotMatch(playerSource, /registerForEvent\(\{[^}]*entryFeeMinor/);
+  assert.doesNotMatch(playerSource, /registerForEvent\(\{[^}]*amountMinor/);
 });
 
 test("Event creation omits round rules and Event Manager owns sequential setup", async () => {
@@ -388,13 +430,14 @@ test("Event creation omits round rules and Event Manager owns sequential setup",
   assert.doesNotMatch(source, /executionPlan:/);
   assert.match(planSource, /registrationSummary\?\.registeredCount/);
   assert.match(planSource, /Configure Round/);
-  assert.match(planSource, /Promote per room/);
+  assert.match(planSource, /Players promoted per room/);
   assert.match(planSource, /Final round/);
   assert.doesNotMatch(planSource, /playerIds|seedingSeed/);
-  assert.match(source, /selectedRunTemplate\?\.teamSize > 1/);
+  assert.match(planSource, /teamSize/);
+  assert.match(planSource, /Room size must be a multiple/);
   assert.match(planSource, /participantsPerMatch/);
   assert.match(planSource, /advanceCount/);
-  assert.match(source, /Team Event execution is not available yet/);
+  assert.doesNotMatch(source, /Team Event execution is not available yet/);
   assert.match(source, /toInrMinorUnits/);
   assert.match(source, /no more than two decimal\s+places/);
   const [templateDraftSection, runDraftSection] = source.split(
@@ -406,8 +449,9 @@ test("Event creation omits round rules and Event Manager owns sequential setup",
   );
   assert.match(
     runDraftSection,
-    /disabled=\{\s*teamExecutionUnsupported \|\| entryFeeInvalid\s*\}/,
+    /disabled=\{entryFeeInvalid \|\| paidTeamEntryUnsupported\}/,
   );
+  assert.doesNotMatch(runDraftSection, /teamExecutionUnsupported/);
   assert.doesNotMatch(`${source}\n${planSource}`, /participantIds|seedingSeed|createBatch|close-registration/);
 });
 
@@ -421,9 +465,10 @@ test("Event Manager separates reusable Templates from dated Events", async () =>
   assert.match(source, /aria-label="Event Manager sections"/);
   assert.match(source, />Templates</);
   assert.match(source, />Events</);
-  assert.match(source, /lg:grid-cols-\[15rem_minmax\(0,1fr\)\]/);
-  assert.match(source, /Approve a\s+Template/);
-  assert.match(source, /Create\s+Events from it/);
+  assert.match(source, /lg:grid-cols-\[12rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /StaffWorkspaceHeader/);
+  assert.doesNotMatch(source, /Approve a\s+Template/);
+  assert.doesNotMatch(source, /Create\s+Events from it/);
   assert.doesNotMatch(source, /Competition operations/);
   assert.match(source, /activeTab === "templates"/);
   assert.match(source, /Template name/);
@@ -898,6 +943,54 @@ test("Event Manager configures and processes one server-owned round at a time", 
   }
 });
 
+test("team Event round transport sends player room size and team promotion count only", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    return response(config, { data: { run: { id: "run-team" }, stages: [] } });
+  };
+  try {
+    const store = configureStore({ reducer: { eventStages: eventStageSlice.reducer } });
+    await store.dispatch(configureManagedEventRound({
+      definition: { participantsPerMatch: 10, advanceCount: 1, batchSpacingMinutes: 0, checkInMinutesBefore: 0, stageDelayMinutes: 0, finalRound: false },
+      runId: "run-team",
+    }));
+    assert.deepEqual(decodeBody(requests[0]), {
+      participantsPerMatch: 10,
+      advanceCount: 1,
+      batchSpacingMinutes: 0,
+      checkInMinutesBefore: 0,
+      stageDelayMinutes: 0,
+      finalRound: false,
+    });
+    assert.doesNotMatch(JSON.stringify(decodeBody(requests[0])), /teamIds|playerIds|members|amountMinor/);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("team Event ranking uses only immutable server competition keys", () => {
+  const match = {
+    eventBatch: { stage: { teamSize: 2 } },
+    participants: [
+      { competitionUnitKey: "snapshot-a", competitionUnitName: "Alpha", team: "mutable-team-a", user: "p1" },
+      { competitionUnitKey: "snapshot-a", competitionUnitName: "Alpha", team: "mutable-team-a", user: "p2" },
+      { competitionUnitKey: "snapshot-b", competitionUnitName: "Beta", team: "mutable-team-b", user: "p3" },
+      { competitionUnitKey: "snapshot-b", competitionUnitName: "Beta", team: "mutable-team-b", user: "p4" },
+    ],
+  };
+  assert.equal(usesRankingKeys(match), true);
+  assert.deepEqual(
+    getCompetitionRankingGroups(match).map(({ key, name, participants }) => ({ key, name, players: participants.map((item) => item.user) })),
+    [
+      { key: "snapshot-a", name: "Alpha", players: ["p1", "p2"] },
+      { key: "snapshot-b", name: "Beta", players: ["p3", "p4"] },
+    ],
+  );
+  assert.equal(describeTeamRewardSplit(1001, 5), "1 at 2.01, 4 at 2.00");
+});
+
 test("promoted and eliminated lists use bounded scoped result reads", async () => {
   const originalAdapter = api.defaults.adapter;
   const requests = [];
@@ -927,6 +1020,9 @@ test("ranked Event UI exposes promoted and eliminated lists without client-owned
   assert.match(roundPlan, /promoted/);
   assert.match(roundPlan, /eliminated/);
   assert.match(operator, /record_result/);
+  assert.match(operator, /rankingKeys/);
+  assert.match(roundPlan, /Teams promoted per room/);
+  assert.match(roundPlan, /players advance/);
   assert.match(stage, /Eliminated round/);
   assert.match(stage, /eliminatedInStage/);
   assert.doesNotMatch(`${manager}\n${roundPlan}\n${stage}`, /seedingSeed|setWinner|eliminatePlayer|playerIds/);

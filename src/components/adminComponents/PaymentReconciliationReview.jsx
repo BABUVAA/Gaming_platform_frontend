@@ -40,16 +40,9 @@ const PaymentReconciliationReview = () => {
 
   return (
     <section className="space-y-5">
-      <header className="rounded-3xl border border-amber-300/25 bg-amber-300/10 p-5">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
-          PhonePe sandbox only
-        </p>
-        <h2 className="mt-2 text-2xl font-black text-white">Payment monitoring</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-50/80">
-          Verify pending test deposits directly against PhonePe. The browser never
-          chooses an outcome or amount; the server credits only a provider-confirmed
-          completed order. Sandbox balances cannot be withdrawn.
-        </p>
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3">
+        <p className="text-sm font-bold text-amber-100">PhonePe sandbox · withdrawals disabled</p>
+        <span className="rounded-lg border border-amber-300/20 px-2.5 py-1 text-xs font-black text-amber-200">Test money</span>
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

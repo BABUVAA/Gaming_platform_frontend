@@ -15,6 +15,7 @@ export const ROUTES = {
   TOURNAMENT_MANAGER: "/staff/tournaments",
   GAME_MANAGER: "/staff/games",
   OPERATIONS: "/staff/operations",
+  DISCORD_OPERATIONS: "/staff/discord",
   OPERATIONS_LEGACY: "/dashboard/operations",
   GAME: "/dashboard/game",
   TOURNAMENT: "/dashboard/tournament",
@@ -42,6 +43,7 @@ export const STAFF_ROUTE_SEGMENTS = Object.freeze({
   GAMES: "games",
   OPERATIONS: "operations",
   TOURNAMENTS: "tournaments",
+  DISCORD: "discord",
 });
 
 // Child route segments are kept beside public URLs so dashboard children can

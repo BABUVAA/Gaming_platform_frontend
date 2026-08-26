@@ -3,6 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import EventManagerOperations from "../components/eventManagement/EventManagerOperations.jsx";
 import SequentialRoundControl from "../components/eventManagement/SequentialRoundControl.jsx";
 import JoinProgress from "../components/competition/JoinProgress.jsx";
+import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
+import EventInvitationManagement from "../components/adminComponents/EventInvitationManagement.jsx";
+import EventManagerResults from "../components/eventManagement/EventManagerResults.jsx";
 import {
   createManagedEventRun,
   createManagedEventTemplate,
@@ -98,7 +101,8 @@ const EventManagerDashboard = () => {
   const selectedRunTemplate = approvedTemplates.find(
     (item) => item._id === run.templateId,
   );
-  const teamExecutionUnsupported = selectedRunTemplate?.teamSize > 1;
+  const paidTeamEntryUnsupported =
+    Number(selectedRunTemplate?.teamSize || 1) > 1 && run.entryPolicy === "paid";
   const entryFeeMinor =
     run.entryPolicy === "paid" ? toInrMinorUnits(run.entryFeeRupees) : 0;
   const entryFeeInvalid =
@@ -266,27 +270,21 @@ const EventManagerDashboard = () => {
 
   return (
     <main className="min-w-0 text-slate-100">
-      <div className="mx-auto grid max-w-7xl items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="rounded-3xl border border-slate-800 bg-slate-950/90 p-4 lg:sticky lg:top-6">
-          <div className="border-b border-slate-800 px-2 pb-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
-              Staff workspace
-            </p>
-            <h1 className="mt-1 text-xl font-black text-white">
-              Event Manager
-            </h1>
-          </div>
+      <div className="mx-auto max-w-7xl space-y-4">
+        <StaffWorkspaceHeader description="Templates, Events, registrations and rounds." title="Event Manager" />
+        <div className="grid items-start gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
+        <aside className="rounded-2xl border border-slate-800 bg-slate-950/70 p-2 lg:sticky lg:top-5">
           <nav
             aria-label="Event Manager sections"
-            className="mt-3 grid gap-2"
+            className="grid gap-1"
             role="tablist"
           >
             <button
               aria-selected={activeTab === "templates"}
               className={
                 activeTab === "templates"
-                  ? "rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left"
-                  : "rounded-2xl border border-transparent px-4 py-3 text-left hover:bg-slate-900"
+                  ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left"
+                  : "rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-900"
               }
               onClick={() => setActiveTab("templates")}
               role="tab"
@@ -298,16 +296,27 @@ const EventManagerDashboard = () => {
                   {templates.length}
                 </span>
               </span>
-              <span className="mt-1 block text-xs leading-5 text-slate-400">
-                Reusable setups
-              </span>
             </button>
+            <button
+              aria-selected={activeTab === "invitations"}
+              className={activeTab === "invitations" ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left font-black text-white" : "rounded-xl border border-transparent px-3 py-2.5 text-left font-black text-white hover:bg-slate-900"}
+              onClick={() => setActiveTab("invitations")}
+              role="tab"
+              type="button"
+            >Invitations</button>
+            <button
+              aria-selected={activeTab === "results"}
+              className={activeTab === "results" ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left font-black text-white" : "rounded-xl border border-transparent px-3 py-2.5 text-left font-black text-white hover:bg-slate-900"}
+              onClick={() => setActiveTab("results")}
+              role="tab"
+              type="button"
+            >Results & Rewards</button>
             <button
               aria-selected={activeTab === "events"}
               className={
                 activeTab === "events"
-                  ? "rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left"
-                  : "rounded-2xl border border-transparent px-4 py-3 text-left hover:bg-slate-900"
+                  ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left"
+                  : "rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-900"
               }
               onClick={() => setActiveTab("events")}
               role="tab"
@@ -319,21 +328,8 @@ const EventManagerDashboard = () => {
                   {runs.length}
                 </span>
               </span>
-              <span className="mt-1 block text-xs leading-5 text-slate-400">
-                Scheduled competitions
-              </span>
             </button>
           </nav>
-          <div className="mt-5 border-t border-slate-800 px-2 pt-4 text-xs leading-5 text-slate-500">
-            <p>
-              <span className="font-black text-slate-300">1.</span> Approve a
-              Template
-            </p>
-            <p>
-              <span className="font-black text-slate-300">2.</span> Create
-              Events from it
-            </p>
-          </div>
         </aside>
 
         <div className="min-w-0 space-y-6">
@@ -486,7 +482,7 @@ const EventManagerDashboard = () => {
                   </div>
                 </div>
               </form>
-            ) : (
+            ) : activeTab === "events" ? (
               <form
                 className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5"
                 onSubmit={saveRun}
@@ -521,6 +517,8 @@ const EventManagerDashboard = () => {
                       onChange={(event) =>
                         setRun((current) => ({
                           ...current,
+                          entryFeeRupees: Number(approvedTemplates.find((item) => item._id === event.target.value)?.teamSize || 1) > 1 ? "0" : current.entryFeeRupees,
+                          entryPolicy: Number(approvedTemplates.find((item) => item._id === event.target.value)?.teamSize || 1) > 1 ? "free" : current.entryPolicy,
                           templateId: event.target.value,
                         }))
                       }
@@ -535,12 +533,6 @@ const EventManagerDashboard = () => {
                       ))}
                     </select>
                   </label>
-                  {teamExecutionUnsupported ? (
-                    <p className="rounded-xl border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">
-                      Team Event execution is not available yet. Choose an
-                      approved solo template for this first-stage workflow.
-                    </p>
-                  ) : null}
                   {[
                     ["registrationOpensAt", "Registration opens"],
                     ["registrationClosesAt", "Registration closes"],
@@ -634,7 +626,7 @@ const EventManagerDashboard = () => {
                           value={run.entryPolicy}
                         >
                           <option value="free">Free entry</option>
-                          <option value="paid">Paid entry</option>
+                          <option disabled={Number(selectedRunTemplate?.teamSize || 1) > 1} value="paid">Paid entry</option>
                         </select>
                       </label>
                       <label className="text-sm text-slate-300">
@@ -747,7 +739,7 @@ const EventManagerDashboard = () => {
                   <div className="flex gap-2">
                     <button
                       className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950 disabled:opacity-50"
-                      disabled={teamExecutionUnsupported || entryFeeInvalid}
+                      disabled={entryFeeInvalid || paidTeamEntryUnsupported}
                     >
                       {editingRunId ? "Save changes" : "Save draft"}
                     </button>
@@ -766,7 +758,7 @@ const EventManagerDashboard = () => {
                   </div>
                 </div>
               </form>
-            )}
+            ) : null}
           </section>
 
           {activeTab === "templates" ? (
@@ -836,7 +828,7 @@ const EventManagerDashboard = () => {
                 )}
               </div>
             </section>
-          ) : (
+          ) : activeTab === "events" ? (
             <>
               <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5">
                 <div>
@@ -1001,8 +993,11 @@ const EventManagerDashboard = () => {
               ) : null}
               <SequentialRoundControl runs={runs} />
             </>
-          )}
+          ) : null}
+          {activeTab === "invitations" ? <EventInvitationManagement /> : null}
+          {activeTab === "results" ? <EventManagerResults runs={runs} /> : null}
         </div>
+      </div>
       </div>
     </main>
   );

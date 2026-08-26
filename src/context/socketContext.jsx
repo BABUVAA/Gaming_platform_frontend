@@ -27,6 +27,10 @@ import {
   REALTIME_EVENT_TYPES,
   isSupportedRealtimeEvent,
 } from "../realtime/eventContracts";
+import {
+  removeMessageThread,
+  resolveMessageThreadId,
+} from "../utils/chatMessages";
 
 const getMessageSignature = (message = {}, fallbackIndex = 0) =>
   message?._id ||
@@ -106,16 +110,7 @@ export const SocketProvider = ({ children }) => {
       // We resolve the active user from the store at event time so incoming
       // socket payloads always compare against fresh auth state.
       const currentUserId = getCurrentUserId();
-      const chatId =
-        newMessage?.chatId ||
-        newMessage?.clanId ||
-        (newMessage?.receiverId && newMessage?.senderId && currentUserId
-          ? newMessage.senderId === currentUserId
-            ? newMessage.receiverId
-            : newMessage.senderId
-          : null) ||
-        newMessage?.receiverId ||
-        newMessage?.senderId;
+      const chatId = resolveMessageThreadId(newMessage, currentUserId);
 
       if (!chatId) return;
 
@@ -214,6 +209,18 @@ export const SocketProvider = ({ children }) => {
         REALTIME_EVENT_TYPES.SOCIAL_CONNECTIONS_UPDATED
       ) {
         scheduleDomainRefresh("social", fetchSocialConnections);
+        if (event.data.reason === "FRIEND_REMOVED") {
+          const currentUserId = String(getCurrentUserId() || "");
+          const removedFriendId = event.data.participantIds
+            ?.map((userId) => String(userId))
+            .find((userId) => userId !== currentUserId);
+          if (removedFriendId) {
+            dispatch(playerActions.removeActiveChat(removedFriendId));
+            setMessages((current) =>
+              removeMessageThread(current, removedFriendId)
+            );
+          }
+        }
       } else if (
         event.type ===
         REALTIME_EVENT_TYPES.CHAT_PERSONAL_MESSAGE_CREATED
@@ -238,6 +245,13 @@ export const SocketProvider = ({ children }) => {
     };
 
     const onConnect = () => {
+      // The server still restores authenticated rooms and handlers after the
+      // transport connects. `session:ready` marks the usable live session.
+      setConnected(false);
+      setLastError("");
+    };
+
+    const onSessionReady = () => {
       setConnected(true);
       setLastError("");
       // Reconnects may have missed events while offline, so every competition
@@ -336,6 +350,7 @@ export const SocketProvider = ({ children }) => {
     };
 
     socket.on("connect", onConnect);
+    socket.on("session:ready", onSessionReady);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
     socket.on("auth:expired", onAuthExpired);
@@ -355,6 +370,7 @@ export const SocketProvider = ({ children }) => {
       );
       domainRefreshTimers.clear();
       socket.off("connect", onConnect);
+      socket.off("session:ready", onSessionReady);
       socket.off("disconnect", onDisconnect);
       socket.off("connect_error", onConnectError);
       socket.off("auth:expired", onAuthExpired);

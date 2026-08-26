@@ -210,6 +210,8 @@ const QuickMatchDetails = () => {
         type="Quick Match"
       />
       <InviteModal
+        currency={offering.currency}
+        entryFeeMinor={offering.entryFeeMinor}
         game={offering.gameKey}
         isOpen={teamPickerOpen}
         mode={offering.mode}

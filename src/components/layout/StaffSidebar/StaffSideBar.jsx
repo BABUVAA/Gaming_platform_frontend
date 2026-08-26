@@ -1,24 +1,19 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
-import {
-  getNavigationTitle,
-  getStaffWorkspaceNavigation,
-} from "../../../utils/navigation";
+import { getStaffWorkspaceNavigation } from "../../../utils/navigation";
 import { ROUTES } from "../../../routes/routeConstants.js";
 
 const StaffSideBar = () => {
   const summary = useSelector(selectPlayerSummary);
-  const location = useLocation();
   const navigation = getStaffWorkspaceNavigation(summary);
-  const currentArea = getNavigationTitle(location.pathname);
 
   const links = navigation.map((item) => {
     const Icon = item.icon;
     return (
       <NavLink
         className={({ isActive }) =>
-          `group flex items-center gap-4 rounded-2xl border px-4 py-3 transition ${
+          `group flex items-center gap-3 rounded-xl border px-3 py-2.5 transition ${
             isActive
               ? "border-cyan-400/40 bg-cyan-400/15 text-white shadow-[0_14px_30px_rgba(8,145,178,0.10)]"
               : "border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-600 hover:bg-slate-700 hover:text-white"
@@ -31,7 +26,7 @@ const StaffSideBar = () => {
         {({ isActive }) => (
           <>
             <span
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${
                 isActive
                   ? "bg-cyan-600 text-white"
                   : "bg-slate-700 text-cyan-300 group-hover:bg-slate-600"
@@ -39,14 +34,7 @@ const StaffSideBar = () => {
             >
               <Icon size={18} />
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-bold">
-                {item.label}
-              </span>
-              <span className="block truncate text-xs text-slate-500">
-                {item.description}
-              </span>
-            </span>
+            <span className="min-w-0 truncate text-sm font-bold">{item.label}</span>
           </>
         )}
       </NavLink>
@@ -55,19 +43,8 @@ const StaffSideBar = () => {
 
   return (
     <>
-      <aside className="hidden md:flex md:w-72 md:flex-col md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-4 md:py-5 md:backdrop-blur">
-        <div className="rounded-2xl border border-cyan-400/20 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.13),transparent_42%),linear-gradient(135deg,#132b3a,#25344a)] p-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-cyan-300">
-            Staff workspace
-          </p>
-          <h2 className="mt-3 truncate text-2xl font-black text-white">
-            {currentArea.label}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            Your active assignments and scoped tools.
-          </p>
-        </div>
-        <nav className="mt-6 space-y-2">{links}</nav>
+      <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-3 md:py-4 md:backdrop-blur">
+        <nav className="space-y-1.5">{links}</nav>
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 flex gap-2 overflow-x-auto border-t border-slate-700 bg-[#182235]/95 px-2 py-2 shadow-[0_-12px_30px_rgba(2,8,23,0.18)] backdrop-blur md:hidden">

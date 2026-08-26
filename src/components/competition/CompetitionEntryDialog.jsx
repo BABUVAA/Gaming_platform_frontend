@@ -75,7 +75,7 @@ const CompetitionEntryDialog = ({
           <p>
             {isPaid
               ? teamSize > 1
-                ? `This is the amount per player. Proceeding with a complete ${teamSize}-player team moves this amount from every member's Available balance to Entry held.`
+                ? `This is the amount per player. After choosing a complete ${teamSize}-player team, the captain can pay the full total or split it between members.`
                 : "This amount moves from Available balance to Entry held when you proceed. Settlement or cancellation remains server-controlled."
               : "No wallet amount will be held for this entry."}{" "}
             No password is required.

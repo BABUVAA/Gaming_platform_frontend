@@ -5,6 +5,7 @@ import api from "../src/api/axios-api.js";
 import matchActivitySlice, {
   fetchPlayerMatch,
   fetchPlayerMatchActivity,
+  fetchMorePlayerMatchActivity,
   raisePlayerMatchDispute,
 } from "../src/store/slices/matchActivitySlice.js";
 
@@ -47,6 +48,52 @@ test("player activity combines canonical queues and matches in timeline order", 
       ["match-1", "queue-1"],
     );
     assert.equal(store.getState().matchActivity.activityStatus, "succeeded");
+    assert.equal(store.getState().matchActivity.matchPage.nextCursor, null);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("player activity appends cursor pages independently and de-duplicates retries", async () => {
+  const originalAdapter = api.defaults.adapter;
+  api.defaults.adapter = async (config) => {
+    const cursor = config.params?.cursor;
+    if (config.url === "/api/matches/queues") {
+      return response(config, cursor ? {
+        data: [{ _id: "queue-2", kind: "queue", createdAt: "2026-08-09T08:00:00Z" }],
+        page: { hasMore: false, nextCursor: null },
+      } : {
+        data: [{ _id: "queue-1", kind: "queue", createdAt: "2026-08-09T10:00:00Z" }],
+        page: { hasMore: true, nextCursor: "queue-cursor" },
+      });
+    }
+    return response(config, cursor ? {
+      data: [
+        { _id: "match-1", kind: "match", createdAt: "2026-08-09T11:00:00Z" },
+        { _id: "match-2", kind: "match", createdAt: "2026-08-09T09:00:00Z" },
+      ],
+      page: { hasMore: false, nextCursor: null },
+    } : {
+      data: [{ _id: "match-1", kind: "match", createdAt: "2026-08-09T11:00:00Z" }],
+      page: { hasMore: true, nextCursor: "match-cursor" },
+    });
+  };
+
+  try {
+    const store = createStore();
+    await store.dispatch(fetchPlayerMatchActivity());
+    await store.dispatch(fetchMorePlayerMatchActivity({
+      matchCursor: "match-cursor",
+      queueCursor: "queue-cursor",
+    }));
+
+    assert.deepEqual(
+      store.getState().matchActivity.activity.map((item) => item._id),
+      ["match-1", "queue-1", "match-2", "queue-2"],
+    );
+    assert.equal(store.getState().matchActivity.activity.length, 4);
+    assert.equal(store.getState().matchActivity.matchPage.hasMore, false);
+    assert.equal(store.getState().matchActivity.queuePage.hasMore, false);
   } finally {
     api.defaults.adapter = originalAdapter;
   }

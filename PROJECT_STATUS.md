@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-23
+Last updated: 2026-08-26
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -18,14 +18,43 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Event responsibility amendment completed 2026-08-25. Admin `Event
+  Management` contains only independent Template/Event approval. The scoped
+  Event Manager workspace now owns invitation-only Event rosters plus final
+  sporting results and reward-status visibility. Invitation routes live under
+  `/api/staff/events/*` and repeat active Event Manager and assigned-Game checks.
+  The obsolete governance invitation routes and handlers are removed completely;
+  old URLs fall through to the normal API-not-found response. Event reward release did not move into
+  operations: completed allocations appear under the separate Admin `Prize
+  Review` and still require an independent non-recipient governance identity.
+  Backend 375/375, frontend 120/120, ESLint, both diff checks and the 564-module
+  production build pass; API documentation covers all 208 mounted operations.
+
+- Staff workspaces use one compact player-style shell. Match Operator and Game
+  Manager share concise top responsibility tabs; Event Manager and Tournament
+  Manager keep compact left-side work navigation because their creation and
+  operations surfaces need more room. Governance uses the same visual density.
+  Duplicate role banners, decorative heroes and nonessential instructional
+  copy are removed, while counts, state, actions and safety warnings remain.
+  This is a frontend presentation contract only: staff roles, assignment/game
+  scopes, routes, Redux/API ownership and server authorization are unchanged.
+  Verification on 2026-08-25 passed frontend 120/120, ESLint, diff check and
+  the 563-module production build. The unauthenticated browser route correctly
+  reached Login without console warnings; authenticated role-by-role visual
+  proof remains a follow-up.
+
 - The platform is a modular monolith. Do not split services yet.
 - Platform Admin and Super Admin own game setup, staff assignment, and Event
   approval. Tournament Manager owns Quick Match/Tournament offering setup and
   lifecycle only inside assigned game scopes.
 - Tournament offerings support either the historical single winner-pool rule
   or an ordered INR place-reward table. Place rewards are immutable in each
-  generated Match. Solo places pay the ranked player; a team-place amount is
-  split deterministically across that ranked team's snapshotted Match members.
+  generated Match. Solo places pay the ranked player. Split-funded teams split
+  a team-place amount deterministically across the snapshotted Match members.
+  A captain-funded team snapshots either `captain_keeps` (the captain receives
+  the complete team reward) or `reimburse_then_split` (the captain first
+  recovers every funded seat fee, then remaining winnings split across the
+  immutable team).
   The assigned Match Operator records and verifies the complete ranking.
   Platform/Super Admin settles it, and a different non-participant governance identity releases
   the exact ledger-backed allocations. No result, settlement, or release
@@ -45,9 +74,12 @@ to continue the project without reopening settled decisions.
   After a Run is approved, routine Event execution belongs to the scoped Event
   Manager: close registration, configure one round from the authoritative
   eligible-player count, create bounded Match rooms, assign operators, inspect
-  verified promotion/elimination evidence, and configure the next round.
-  Governance retains audit, disputes, recovery, reward approval and independent
-  prize release; it does not approve routine room plans between rounds.
+  verified promotion/elimination evidence, configure the next round, manage
+  invitation-only rosters, and inspect final sporting results/reward status.
+  Governance Event Management owns only independent Template/Event approval.
+  Governance retains disputes, exceptional recovery and independent ledger
+  release under its dedicated review workspaces; it does not manage Event
+  invitations, sporting results, or routine room plans.
 - Event Manager operational reads and commands remain game-scoped and bounded.
   They omit player emails, wallet data, lobby credentials and private chat.
   Round commands never accept player IDs: the server derives Round 1 from the
@@ -66,7 +98,9 @@ to continue the project without reopening settled decisions.
   COC. BGMI owns an active monthly Solo/Erangal Template and a scheduled,
   registration-open September 2026 Run. COC owns an active monthly 5v5/War
   Template and a submitted Run that remains `in_review`; it must not be
-  published by bypassing the server's explicit team-Event registration gate.
+  published by bypassing the server's explicit team-Event execution gate.
+  Free team admission now has an immutable server-derived roster foundation,
+  but team Match ranking, advancement, standings and rewards are not yet safe.
   Quick Matches cover every configured capability combination: BGMI
   Solo/Duo/Squad on Erangal/Miramar and COC 5v5 on War. The existing paid BGMI
   Solo/Erangal offering was reused; the six newly created offerings are free,
@@ -228,7 +262,9 @@ to continue the project without reopening settled decisions.
   are the audited game-account verification decision and pre-start Match
   schedule/lobby configuration for assigned games. It cannot claim or operate
   Matches, verify results, resolve disputes, settle money, or release prizes.
-- Event Manager cannot publish Templates or schedule Event Runs directly.
+- Event Manager cannot approve/publish its own Templates or Event Runs, resolve
+  financial governance, or release ledger-backed prizes. It does own scoped
+  invitation rosters and sporting result/reward-status views after approval.
 - Once an Event Run is approved and registration closes, its scoped Event
   Manager owns routine round setup and Match-room handoff. Platform governance
   retains recovery/dispute/reward authority, not per-round approval.
@@ -789,11 +825,18 @@ Current stages/rounds implementation contract (amended 2026-08-21):
   EventBatchOutcome, and durable EventJob records own execution. A Match has an
   exactly-one EventBatch source and never pretends to be a Quick Match. Each
   later round is derived only from immutable promoted roster-entry evidence.
-- Safety: individual registration cannot safely define a team roster, so
-  `teamSize > 1` fails closed until a separate immutable Event team-entry model
-  exists. Format, participants per Match, advancement count, seeding policy,
-  schedule spacing, and bye rules are validated and reviewed rather than
-  inferred from game names or modes.
+- Safety: free team admission now stores one registration per member plus an
+  immutable server-derived team/name/captain/member snapshot. The captain sends
+  only a saved Team ID; every member's player role, consent, eligibility,
+  invitation and game account are rechecked transactionally. For paid entry,
+  accepted ready-team membership authorizes the captain to choose either full
+  captain funding or one exact per-member seat hold; every payer is derived and
+  snapshotted by the server. Every normal
+  `teamSize > 1` approval, round and generation path also remains fail-closed
+  until team Match ranking, advancement, standings and reward allocation are
+  implemented end to end. Format, participants per Match, advancement count,
+  seeding policy, schedule spacing, and bye rules are validated and reviewed
+  rather than inferred from game names or modes.
 - Completion criteria for this amendment: open admission persists no product
   capacity, the Event Manager configures and processes every round under game
   scope, repeated calls converge, client roster authority is rejected, complete
@@ -941,18 +984,18 @@ prove the completion criteria.
 | P0 | Payment safety | Immutable integer-minor-unit ledger settlement, durable reconciliation, reviewed prize/withdrawal lifecycles, and explicit sandbox test-money mode are implemented. Platform Admin can manually request authoritative PhonePe status; exact order/amount evidence credits once and mismatch credits zero. Withdrawals and live-money mode remain blocked. | Complete deployed sandbox deposit/callback/retry evidence, provision and monitor reconciliation plus Event workers, integrate and certify a payout provider, then separately approve live-money release. |
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
 | P1 | Transactional account email | Resend-backed verification and password recovery are implemented behind a server service. Local environment-only credentials, live authorized-recipient delivery, database transaction tests, and an isolated real-route browser workflow are verified. A dedicated sender domain and operational delivery evidence remain open. | Verify a dedicated account-email domain for broader delivery, then certify staging delivery, failure, and bounce monitoring without storing secrets in the repository. |
-| P1 | Distributed security | Authentication, signup, verification, recovery, password-change, refresh, staff-assignment, Event-governance, operator, and player-financial mutations use atomic Redis counters keyed by hashed client/actor correlation and fail closed if protection storage is unavailable. MFA/recent-auth controls and mutation-specific operational alerts remain. | Add actionable alerts and MFA or recent-auth for sensitive governance and financial actions. |
+| P1 | Distributed security | Authentication, signup, verification, recovery, password-change, refresh, staff-assignment, Event-governance, operator, and player-financial mutations use atomic Redis counters keyed by hashed client/actor correlation and fail closed if protection storage is unavailable. Session-bound recent authentication protects governance and withdrawals; MFA and actionable mutation alerts remain. | Add MFA/passkeys and production alerts for sensitive governance and financial denials/actions. |
 | P1 | Frontend boundaries | Multiple feature pages call the Axios client directly despite the documented Redux boundary. Identity verification and recovery now use Redux thunks, but other domains remain. | Migrate one domain at a time to shared thunks/selectors and add component/integration tests. |
 | P1 | API scale | Event execution, wallet history, security attention, staff profiles, player notifications, and assigned/unassigned operator Match queues use bounded stable reads with append de-duplication. Other social and compatibility list reads remain. | Cursor pagination with bounded limits and stable sorting for every remaining list; record endpoint deprecation dates and remove aliases after client migration. |
-| P1 | Financial model | Wallet embeds transaction summaries while Transaction is also stored separately, and money uses JavaScript Number values. The two representations can drift and arrays can grow without bound. | Adopt an immutable ledger as source of truth, minor-unit/decimal amounts, paginated projections, and reconciliation jobs. |
-| P2 | Operations | Logging is console-based; no structured request tracing, metrics, alerting, job queue, backup verification, or disaster-recovery evidence was found. | Define SLOs, correlation IDs, redaction, metrics/alerts, durable jobs, backup restore drills, and failure runbooks. |
+| Closed | Financial model | The append-only balanced ledger stores integer INR minor units as the source of truth; Wallet is a rebuildable bucket projection and owner history is cursor-paginated. Durable reconciliation and idempotent settlement are implemented. External payment/payout certification remains under Payment safety. | Verified by payment policy plus replica-set ledger, settlement, prize-release and withdrawal tests. |
+| P2 | Operations | Request and worker logs are structured/redacted, request IDs exist, and durable Event/payment jobs have restart-safe code. Central collection, metrics, heartbeat alerts, SLO enforcement, worker deployment, backup restore and disaster-recovery drills remain unproven. | Provision/supervise workers, centralize logs, add actionable metrics/alerts and SLOs, then rehearse restart, backup restore and incident rollback. |
 | P2 | Frontend quality | Frontend lint is clean. Route-level lazy loading is retained and stable vendor chunks now split React/router, state, realtime, and icons; the largest emitted JavaScript chunk fell from 508 kB to 261 kB. Automated component/browser coverage and further route-specific splitting remain. | Add tests for critical flows and continue splitting only when measured route load evidence justifies it. |
 
 ### Documentation Drift Found
 
 - API discovery is now machine-checkable. The backend owns
   `docs/openapi.json` (OpenAPI 3.1) and `docs/API_REFERENCE.md`; the generator
-  inventories all 176 mounted HTTP method/path pairs and labels their access
+  inventories all 207 mounted HTTP method/path pairs and labels their access
   boundary. `npm run docs:api` regenerates the specification and
   `npm run docs:api:check` fails for missing/extra paths, duplicate operation
   IDs, or missing shared contracts. Domain request/response schemas should be
@@ -1377,6 +1420,120 @@ signed into governance after the final compact-layout edit.
 
 ## Active Work
 
+### Team Event Execution (Completed for free-entry ranked/sequential Events)
+
+- A captain submits only a saved Team ID. The backend derives the canonical
+  roster and rechecks inside one MongoDB transaction: ready Team state,
+  captain ownership, exact Game/mode/team size, member consent, player-only
+  classification, ban state, verified game accounts, admission capacity,
+  waitlist policy and every invitation.
+- Every roster member receives one EventRegistration with an immutable
+  team/name/captain/member snapshot. Whole-team registration and invitation
+  consumption commit together. Duplicate retries converge, overlapping rosters
+  produce one complete winner plus a stable conflict, and roster drift or any
+  ineligible member creates zero partial registration/counter writes.
+- Compete and Event details use a Redux-owned team picker. It lazily loads the
+  saved profile, exposes loading/retry/create-Team recovery, filters plausible
+  captain-owned ready rosters, and sends no member IDs.
+- Free-entry ranked/sequential team Events are now playable end to end. The
+  immutable team unit is carried through roster freeze, player-capacity-aligned
+  batches, Match participants, operator `rankingKeys`, outcomes, whole-team
+  promotion/elimination, later rounds, team-place standings and rewards.
+  `advanceCount` is a team count while room capacity remains a player count and
+  must be divisible by `teamSize`.
+- A configured placement reward is the total for that team place. The server
+  splits it deterministically among immutable members, preserving every minor
+  unit; clients never submit allocations. Shared standings and result feeds
+  expose only safe team key/name/member counts, never member database IDs.
+- Paid team Event entry supports `captain_pays` and `split` while preserving
+  one participant registration and hold per seat. Ledger movements, capture,
+  cancellation release and recovery refund use the immutable payer rather than
+  changing sporting ownership. Legacy reviewed-plan/single-elimination team
+  execution remains intentionally fail-closed; the supported path is Event
+  Manager-owned ranked sequential rounds.
+- Verification 2026-08-24: dedicated 5v5 COC and multiround tests prove whole-
+  team batching/advancement, retry-safe generation, malformed/split ranking
+  rejection, team-place standings and exact 1001/500 minor-unit splits. Backend
+  maintained aggregate now passes 367/367 with the dedicated team suite in the
+  aggregate script; frontend passes 119/119, ESLint and the 560-module
+  production build. API documentation remains 207/207.
+
+### Production Worker and Configuration Hardening (Code complete; deployment proof pending)
+
+- Event and payment workers now clean up MongoDB and Redis after partial
+  startup, interrupt idle polling on SIGTERM/SIGINT, stop between bounded
+  Event batches, finish only the current bounded unit, and close both
+  datastores inside Render's configured 300-second drain window.
+- Structured worker lifecycle logs contain code/status metadata only. Each
+  heartbeat actually pings MongoDB and Redis and reports their latency.
+  Runtime parsing and production validation share bounded interval and batch
+  ranges, including the notification service's real maximum of 100.
+- Production sandbox deposits require PhonePe callback username/password.
+  Discord remains optional, but any partial Discord configuration or a non-
+  HTTPS production OAuth redirect fails startup. Duplicate canonical Discord
+  role names fail closed instead of choosing an ambiguous role.
+- Repository evidence is complete, but no worker was provisioned or deployed.
+  Remaining external gates are the explicit $14/month Render decision, cloud
+  secrets, supervised restart/heartbeat alerts, one exactly-once PhonePe
+  sandbox callback/poll credit, deployed Discord env/callback, and later live
+  payout/provider certification. Paid entry, withdrawals and live-money mode
+  remain closed.
+- Discord publication and role sync are crash-durable in code. API mutations
+  enqueue Mongo-backed leased jobs (inside the owning transaction where one
+  exists); the Event worker reconciles bounded missed intents, reclaims expired
+  leases and retries with backoff. Stable nonces/edit evidence converge message
+  delivery, while role delivery recomputes current assignments so suspension or
+  revocation removes stale Discord roles. Private invitation Events and lobby
+  secrets are excluded at both enqueue/reconciliation and payload boundaries.
+  Deployed worker supervision remains an external proof gate.
+
+### Discord Community and Staff Connection (Local integration complete; deployment env pending)
+
+- Discord remains a communication surface only. Platform sessions, active
+  `StaffAssignment` records and game/Match scopes remain the sole authority.
+- `EGAMING ESPORTS` was reset into bounded Start Here, Official Updates, Live
+  Events, BGMI, Clash of Clans, Community, private Staff Operations and Archive
+  areas. Existing content was moved or hidden, never broadly deleted. Original
+  generated EGAMING icon and banner assets are stored under
+  `backend/assets/discord`; the reset command is dry-run by default and its
+  post-activation dry run is fully clean.
+- Staff OAuth uses one-time Redis state and `identify guilds.join`. The backend
+  persists only Discord identity, never OAuth access/refresh tokens. It joins
+  the member and reconciles the six canonical Discord roles from active
+  assignments. Assignment, scope, suspension and revocation changes enqueue a
+  non-authoritative durable sync; delivery recomputes current assignments, so
+  stale managed roles are removed while unrelated Discord roles are preserved.
+  Bot hierarchy failures are explicit and retryable.
+- `/staff/discord` is now a compact Redux-owned connection surface with Connect,
+  Sync roles and Open Discord only. The superseded free-text composer API,
+  publish limiter/model runtime, legacy setup script and confusing footer were
+  removed. Staff perform normal chat, voice and moderation in Discord itself.
+- Server-owned lifecycle transitions publish durable, mention-disabled embeds:
+  approved public Event launches, generated Event rounds, Match schedules and
+  dispute-closed Event/settled Quick Match results. Existing mutable messages
+  are edited by durable subject/type identity. Invitation-only Events, lobby
+  credentials, chat, disputes, wallet data and unverified results are excluded.
+- Live proof published two current BGMI Event launch cards to `event-launches`;
+  both contain Registration, Event starts, Entry and Rewards fields and no
+  footer. The exact superseded generic message and its one obsolete dispatch
+  row were removed; competition and account data were untouched.
+- Verification: backend 346/346, including competition 116/116 and replica
+  integration 102/102; frontend 115/115, lint and the 558-module build; API
+  documentation 207/207; both diff checks pass. Discord Community was enabled
+  by the server owner on 2026-08-24 with `#rules` as the guidelines channel and
+  the private `#discord-delivery-log` as both the Community-updates and safety-
+  notifications channel. The managed bot role is above all six canonical staff
+  roles, and the post-activation reset dry run is fully clean. Local OAuth is
+  configured: the backend secret is loaded, and Discord Developer Portal owns
+  the exact localhost and Render callback URLs. A Redis-backed authorization
+  probe verified the `identify guilds.join` URL and removed its temporary state.
+  Authenticated proof then connected `bhupeshplatformadmin@gmail.com` to Discord
+  and live Discord membership exactly mirrored its five active assignments:
+  Platform Admin, Tournament Manager, Game Manager, Event Manager and Match
+  Operator, with no sync error. Local integration is complete. Deployment still
+  requires equivalent `DISCORD_CLIENT_SECRET` plus deployed callback configuration
+  in the Render environment; no secret is tracked in Git.
+
 ### 0. Transactional Account Email Activation
 
 State: Completed for local development and test on 2026-08-09. The backend
@@ -1780,8 +1937,9 @@ Paid Quick Match progress 2026-08-09:
   discovery remain blocked on real provider adapter/worker evidence.
 
 - `QuickMatchOffering.entryFeeMinor` is the fee for one player seat, including
-  every member of a submitted Team. A Team join succeeds only when every
-  member can fund their own seat; the captain never silently pays for others.
+  every member of a submitted Team. The captain explicitly selects
+  `captain_pays` or `split`; the first charges every seat to the captain and the
+  second charges one seat to each accepted member. Clients never send amounts.
 - INR is stored and moved as integer minor units. A posted append-only
   double-entry ledger is the financial source of truth; Wallet is a rebuildable
   per-user projection with `available`, `entry-held`, `prize-pending`,
@@ -2511,6 +2669,68 @@ to Completed and record any remaining risks under Required Future Flows.
   mobile Tournament Manager visual gate remains pending because no browser
   session was available.
 
+## Latest Refinement: Bounded Simple Chat Delivery
+
+- The product intentionally keeps Friend, Clan and Match chat small: no read
+  receipts, unread tracking, editing, deletion controls or permanent archive.
+  MongoDB retains only the newest 200 messages per conversation. Friend and
+  Clan Redis projections retain 100 and their socket room open loads 50.
+- Friend and Clan sends now use a bounded Socket.IO acknowledgement. The input
+  clears only after success, failed text remains available to retry, and the
+  acknowledged message is reconciled locally even when its live publication is
+  missed. Redis cache reads fall back to MongoDB; a cache write failure after a
+  durable MongoDB save no longer reports a false send failure.
+- Personal realtime messages are indexed in the browser by the other player's
+  User ID rather than the backend's composite room ID, so an open conversation
+  renders incoming messages immediately in both directions. The backend emits
+  `session:ready` only after authenticated rooms and chat handlers exist; the
+  client does not join or send before that signal.
+- Unfriending is destructive for that direct conversation by product decision.
+  One MongoDB transaction marks the Friendship removed, deletes every Personal
+  Chat document for the pair, and removes both users' active-chat/sidebar rows.
+  The pair's Redis chat window is cleared after commit, and the removal event
+  clears both connected clients. Re-friending starts with an empty thread.
+- Match chat retains the newest 200 rows with indexed oldest-row pruning. The
+  database write remains successful if best-effort retention cleanup is briefly
+  unavailable; the next message repairs the rolling bound.
+- Clan Chat now loads its canonical record through the current membership API.
+  The previous UI incorrectly treated the player profile's raw clan reference
+  as a populated record and could hide/break chat for a normal MEMBER. Every
+  active clan role can now see the channel. Backend membership is still checked
+  on room open and every send, so leaving or removal immediately revokes access.
+- Verification 2026-08-26: the prior backend aggregate baseline is 377/377,
+  including a real MongoDB newest-200 Match retention test. After this fix,
+  affected backend realtime passes 13/13 and transaction-capable Friendship
+  cleanup passes 1/1. Frontend passes 125/125, full ESLint and the 567-module
+  production build. A broader backend rerun encountered transient in-memory
+  Mongo startup timeouts in unrelated suites; the auth integration retry
+  passed, while the later Event-advancement startup failure left that aggregate
+  rerun incomplete without producing a product assertion failure.
+- Local two-player proof 2026-08-26: `babu` and `bhupesh_player` exchanged live
+  messages in both directions with correct UI thread keys and reload history.
+  Unfriend then removed the Mongo conversation, both sidebar rows and Redis
+  cache, while notifying both sockets. The Friendship was restored afterward
+  and intentionally has no prior chat history. No credentials remain in the
+  repository.
+
+## Latest Refinement: Inline Staff Sensitive-Action Confirmation
+
+- When a staff command receives the server-owned
+  `RECENT_AUTHENTICATION_REQUIRED` code, the shared staff shell now opens a
+  compact password dialog over the current workspace instead of requiring the
+  staff member to navigate to Account Settings.
+- Password confirmation still uses `POST /api/auth/reauthenticate`; plaintext
+  credentials and the recent-authentication timestamp are never persisted in
+  Redux or browser storage. A successful confirmation resumes the original
+  command automatically exactly once. Cancelling stops it, while an incorrect
+  password keeps the dialog open for correction.
+- The existing backend 15-minute Redis session window, active StaffAssignment,
+  game-scope and command authorization checks remain authoritative and are
+  unchanged. Player password scope remains withdrawal-only.
+- Verification 2026-08-25: frontend state/contract tests pass 120/120, full
+  ESLint passes, the 566-module production build passes, and diff validation
+  passes.
+
 ## Completed Code Slice: Scoped Game-Account Verification
 
 - Game Manager now owns the manual player game-account decision for only the
@@ -2667,3 +2887,123 @@ removed and their old mutation paths return stable retirement errors.
   adapter probe; fail-open behavior is covered and deployed cache hit-rate/
   invalidation observation remains an operations follow-up. The endpoint and
   bypass matrix is documented in backend `docs/COMPETITION_CACHE.md`.
+
+## Latest Refinement: Player Matches Workspace
+
+- The existing Live Matches and Completed split remains the only player Match
+  navigation. Cards now distinguish Quick Match queues from Event rooms and
+  show Event round/room identity where available.
+- Compact artwork-backed cards reuse the frontend Game presentation registry.
+  Queue cards show only the current room status; generated Match cards
+  prioritize schedule, assigned operator, lobby/start countdown and current
+  lifecycle. A missed scheduled start becomes a clear delayed/operator-waiting
+  state instead of leaving a zero countdown. Every card retains one direct
+  destination instead of duplicating operational controls on the list.
+- Match detail no longer renders a lifecycle progress rail. Its Lobby, Chat,
+  Dispute and Results tabs keep distinct work together: Lobby renders BGMI solo
+  player tiles plus horizontal two-seat duo and four-seat squad cards in a
+  two-column desktop room grid. COC renders explicit Team A versus Team B war
+  panels with five numbered slots per side. Game-specific slots use flat filled
+  surfaces to distinguish occupied player initials and active markers from
+  muted `Available` vacancies, without decorative HUD effects or explanation
+  panels. Slot usernames wrap naturally on desktop and mobile rather than being
+  hidden by a one-line ellipsis. The authenticated player seat is labelled
+  `You`, and team modes additionally highlight that player's complete team.
+  Chat remains the private
+  participant/operator channel; Dispute preserves the stage-gated command;
+  Results renders verified placement ranking and result notes.
+- Loading uses two restrained card skeletons, errors include an inline Retry,
+  and a small refresh action is available without adding another dashboard
+  explanation panel. Lobby credentials remain exclusively on the protected
+  participant Match detail response and are still time-gated by the backend.
+- Frontend tests pass 114/114, ESLint and the production build pass. A real authenticated staff utility
+  session rendered console-clean on desktop and 390x844 mobile with exact
+  viewport width and no horizontal overflow. Populated player-card browser
+  verification remains a follow-up because the available session was staff
+  read-only.
+
+## Latest Completion Pass: Team Events and Reliability Hardening
+
+- Team Event free-admission groundwork and its independent security review
+  pass. The review found and fixed a high-severity shared-roster gap: eligibility
+  now loads and enforces every member's persisted `role === player`, so a Team
+  containing a member who became staff cannot enter an Event or Quick Match.
+  A concurrent overlapping-Team regression proves exactly one complete roster
+  wins and the loser receives stable 409 with no partial registration.
+- BGMI duo/squad Match lobbies now render every capacity-implied team card, not
+  only occupied groups. Existing current-player/current-team highlighting and
+  wrapped usernames remain intact.
+- Ranked/sequential team Event execution now carries immutable team
+  identities through room generation, operator team ranking, whole-team
+  advancement, standings and deterministic team-total reward splitting. The
+  independent safety review removed internal member-ID leakage and corrected
+  promoted/eliminated pagination to return one whole team per row. Paid team
+  entry now records captain-funded or split-member payer evidence per seat.
+- Game Manager assigned-game reads now use database aggregate counts and
+  independent per-game bounded feeds. A busy game cannot starve another game
+  behind a global limit, and room-to-Match lookups are restricted to returned
+  rooms. Supporting Match, Room, EventRun and StaffActivity indexes are present.
+- Discord publications and staff role sync now use a leased Mongo outbox with
+  transaction-aware enqueue, bounded reconciliation, expired-lease recovery,
+  retry backoff and idempotent delivery evidence. Current assignments are
+  recomputed at delivery so revoked roles converge; private Events and lobby
+  credentials cannot enter publication payloads.
+- Profile upload accepts only one 512KB JPEG/PNG whose signature matches its
+  declared type and uses server-owned safe avatar/banner paths. S3 and COC
+  upstream calls are bounded; COC tags are canonical and rate-limited through
+  Redis, and upstream failures use redacted shared envelopes.
+- Player Match and waiting-Room history replaced both silent 100-row caps with
+  independent opaque cursors, 1-50 bounded pages, stable indexed ordering and
+  backward-compatible root arrays. Redux refresh replaces while load-more
+  appends/de-duplicates with stale-response protection.
+- Frontend verification: 119/119 state/contract tests, full ESLint, 560-module
+  production build and diff check pass. The public local shell rendered with no
+  browser console warnings; authenticated team-Event and populated team Match-
+  room proof remains pending because the local API was not running.
+- Backend verification: the maintained aggregate passes 367/367: auth 48,
+  auth integration 7, social 23, competition 119, competition integration 116,
+  payment policy 11, payment integration 32 and realtime 11. API documentation
+  covers 207/207 mounted operations; both repository diff checks pass.
+- Next safe local priorities are remaining social/compatibility pagination,
+  Redux-boundary migrations, graceful API shutdown/monitoring hooks and durable
+  deployment evidence. External deployment/provider gates still require their
+  documented billing and release decisions.
+
+## Latest Refinement: Captain-Owned Team Entry and Reward Choice
+
+- Paid team Quick Matches and Events now expose two explicit captain choices:
+  `captain_pays` funds the complete server-derived roster from the captain's
+  wallet, while `split` funds one reviewed per-seat fee from each accepted team
+  member. Solo entry remains self-funded and free entry creates no hold.
+- Only the canonical ready-team captain can submit the saved Team ID and mode.
+  The backend re-derives member consent, eligibility and exact amounts; no
+  client player list or amount is accepted. All registrations/queue membership
+  and every seat hold commit in one MongoDB transaction or roll back together.
+- Quick Match `WalletHold` and Event `EventEntryHold` retain the participant as
+  sporting seat owner and snapshot a separate immutable payer. Settlement,
+  cancellation release and Event recovery refund follow that payer. Sporting
+  standings always belong to the canonical team; reward recipients follow the
+  immutable funding/reward policy chosen at entry.
+- Captain-funded teams now snapshot one bounded reward choice. With
+  `captain_keeps`, the complete team-place reward is posted to the captain. With
+  `reimburse_then_split`, the captain first recovers every funded seat fee and
+  the remaining winnings split deterministically across the immutable team.
+  If the reward does not cover the funded entry total, it remains entirely with
+  the captain. Split-funded teams retain deterministic member reward splitting.
+- Compete, Quick Match detail/cards, Event detail and the compatibility Event
+  list use compact payment and reward choices after the captain selects a
+  matching ready team. Redux sends only Team ID, bounded attempt ID where
+  applicable, payment mode and reward enum. Passwords remain withdrawal-only
+  on the player side.
+- Production/live-money enablement remains fail-closed behind the existing
+  provider, worker, monitoring and release gates. This contract is available
+  only wherever the existing paid-entry sandbox/release flag is enabled.
+- Verification 2026-08-25: backend maintained aggregate 375/375 (auth 48,
+  auth integration 7, social 23, competition 122, competition integration 121,
+  payment policy 11, payment integration 32 and realtime 11). Replica journeys
+  prove both reward choices through Quick Match hold/capture/settlement/release
+  and ranked Event pending allocation; corrupt payer/policy evidence fails
+  closed. Frontend 120/120, ESLint and the 561-module production build pass.
+  API documentation covers 207/207 mounted operations and both repository diff
+  checks pass. Authenticated paid-team browser proof remains a testing
+  follow-up, not an authorization substitute.

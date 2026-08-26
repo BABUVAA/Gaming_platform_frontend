@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { sessionInvalidated } from "../actions/sessionActions";
 import createApiThunk from "../thunks/createApiThunk";
+import { removeActiveChatByUserId } from "../../utils/chatMessages";
 
 const selectPlayerSummaryData = (response) => {
   const summary = response.data?.data;
@@ -138,6 +139,13 @@ const playerSlice = createSlice({
         ...state.profile.activeChats[existingIndex],
         ...incomingChat,
       };
+    },
+    removeActiveChat: (state, action) => {
+      if (!state.profile || !Array.isArray(state.profile.activeChats)) return;
+      state.profile.activeChats = removeActiveChatByUserId(
+        state.profile.activeChats,
+        action.payload,
+      );
     },
   },
   extraReducers: (builder) => {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers } from "react-icons/fi";
 import { EventReviewQueue, GameCatalog, PaymentReconciliationReview, PrizeReleaseReview, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
+import EventPrizeGovernanceReview from "../components/adminComponents/EventPrizeGovernanceReview.jsx";
 
 const ADMIN_AREAS = [
   {
@@ -53,34 +54,18 @@ const AdminDashboard = () => {
   const activeArea = ADMIN_AREAS.find((area) => area.id === activeSection);
 
   return (
-    <div className="min-h-screen bg-[#040914] text-slate-100">
-      <div className="mx-auto min-h-screen max-w-[1680px] p-3 md:p-5">
-        <div className="grid min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[34px] border border-slate-800 bg-[#07111f] shadow-[0_32px_100px_rgba(0,0,0,0.42)] lg:grid-cols-[19rem_minmax(0,1fr)]">
-          <aside className="border-b border-slate-800 bg-[#030813] p-5 lg:border-b-0 lg:border-r lg:p-6">
-            <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-300 text-lg font-black text-slate-950">EG</span>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Platform</p>
-                <p className="mt-1 font-black text-white">Control room</p>
-              </div>
-            </div>
-
-            <p className="mt-8 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">Workspaces</p>
-            <nav className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_24%),#111827] text-slate-100">
+      <div className="mx-auto grid min-h-screen w-full max-w-[1600px] grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)]">
+          <aside className="border-b border-slate-700 bg-[#182235]/90 p-3 backdrop-blur md:border-b-0 md:border-r md:py-4">
+            <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-1">
               {ADMIN_AREAS.map((area) => <WorkspaceButton active={area.id === activeSection} area={area} key={area.id} onClick={() => setActiveSection(area.id)} />)}
             </nav>
-
-            <div className="mt-8 rounded-2xl border border-cyan-300/15 bg-cyan-300/5 p-4">
-              <FiShield className="text-lg text-cyan-300" />
-              <p className="mt-3 text-sm font-black text-white">Admin-only changes</p>
-              <p className="mt-2 text-xs leading-5 text-slate-400">Game setup, Event review, and staff authority stay inside this workspace.</p>
-            </div>
           </aside>
 
-          <main className="min-w-0 p-4 md:p-6 lg:p-8">
-            <header className="mb-4 flex items-center justify-between border-b border-slate-800 pb-4">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">{activeArea.label}</p>
-              <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-300">Governance workspace</span>
+          <main className="min-w-0 p-3 pb-24 md:p-5">
+            <header className="mb-4 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/55 px-4 py-4">
+              <div><h1 className="text-xl font-black text-white sm:text-2xl">{activeArea.label}</h1><p className="mt-1 text-sm text-slate-400">Platform governance</p></div>
+              <span className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-bold text-slate-300">Admin</span>
             </header>
             {activeSection === "roles" ? (
               <RoleManagement />
@@ -91,14 +76,13 @@ const AdminDashboard = () => {
             ) : activeSection === "security" ? (
               <SecurityAttention />
             ) : activeSection === "prize-releases" ? (
-              <PrizeReleaseReview />
+              <><PrizeReleaseReview /><EventPrizeGovernanceReview /></>
             ) : activeSection === "payment-reconciliation" ? (
               <PaymentReconciliationReview />
             ) : (
               <WithdrawalReview />
             )}
           </main>
-        </div>
       </div>
     </div>
   );
@@ -106,9 +90,9 @@ const AdminDashboard = () => {
 
 const WorkspaceButton = ({ active, area, onClick }) => {
   const Icon = area.icon;
-  return <button className={active ? "flex items-start gap-3 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4 text-left" : "flex items-start gap-3 rounded-2xl border border-transparent p-4 text-left hover:bg-slate-900/70"} onClick={onClick} type="button"><span className={active ? "rounded-xl bg-cyan-300 p-2 text-slate-950" : "rounded-xl bg-slate-900 p-2 text-slate-400"}><Icon /></span><span><span className="block text-sm font-black text-white">{area.label}</span><span className="mt-1 block text-xs leading-5 text-slate-400">{area.description}</span></span></button>;
+  return <button className={active ? "flex min-w-0 items-center gap-3 rounded-xl border border-cyan-400/40 bg-cyan-400/15 px-3 py-2.5 text-left" : "flex min-w-0 items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2.5 text-left hover:bg-slate-700"} onClick={onClick} type="button"><span className={active ? "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-600 text-white" : "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-700 text-cyan-300"}><Icon /></span><span className="min-w-0 truncate text-sm font-bold text-white">{area.label}</span></button>;
 };
 
-WorkspaceButton.propTypes = { active: PropTypes.bool.isRequired, area: PropTypes.shape({ description: PropTypes.string.isRequired, icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired }).isRequired, onClick: PropTypes.func.isRequired };
+WorkspaceButton.propTypes = { active: PropTypes.bool.isRequired, area: PropTypes.shape({ icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired }).isRequired, onClick: PropTypes.func.isRequired };
 
 export default AdminDashboard;

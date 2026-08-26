@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { FiAlertTriangle, FiClock, FiRadio, FiRefreshCw, FiUsers } from "react-icons/fi";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { ROUTES } from "../routes/routeConstants";
 import { fetchManagedGameOperations, scheduleManagedMatch } from "../store/slices/gameManagementSlice";
 import GameManagerEventDetails from "../components/gameManagement/GameManagerEventDetails.jsx";
 import GameAccountVerificationQueue from "../components/gameManagement/GameAccountVerificationQueue.jsx";
+import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
+import StaffWorkspaceTabs from "../components/common/StaffWorkspaceTabs.jsx";
 
 const formatSchedule = (value) => {
   if (!value) return "Schedule pending";
@@ -28,9 +28,9 @@ const formatAction = (entry) => {
 };
 
 const Metric = ({ label, value, warning = false }) => (
-  <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-    <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-    <p className={warning ? "mt-2 text-3xl font-black text-amber-300" : "mt-2 text-3xl font-black text-white"}>{value}</p>
+  <div className="rounded-xl border border-slate-800 bg-slate-950/45 p-3">
+    <p className="text-xs font-bold text-slate-500">{label}</p>
+    <p className={warning ? "mt-1 text-xl font-black text-amber-300" : "mt-1 text-xl font-black text-white"}>{value}</p>
   </div>
 );
 
@@ -81,19 +81,12 @@ const GameManagerDashboard = () => {
 
   return (
     <main className="min-w-0 text-slate-100">
-      <div className="mx-auto max-w-[1500px] space-y-5">
-        <header className="overflow-hidden rounded-[30px] border border-slate-800 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.15),_transparent_32%),#07111f] p-6 md:p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Staff workspace</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-white md:text-4xl">Game operations</h1>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200" to={ROUTES.STAFF}>All workspaces</Link>
-              <button className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-60" disabled={status === "loading"} onClick={() => dispatch(fetchManagedGameOperations())} type="button"><FiRefreshCw /> Refresh</button>
-            </div>
-          </div>
-        </header>
+      <div className="mx-auto max-w-[1500px] space-y-4">
+        <StaffWorkspaceHeader
+          actions={<button className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-slate-800 disabled:opacity-60" disabled={status === "loading"} onClick={() => dispatch(fetchManagedGameOperations())} type="button"><FiRefreshCw /> Refresh</button>}
+          description="Rooms, schedules, Events and account verification."
+          title="Game Manager"
+        />
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Metric label="Active matches" value={total.activeMatches} />
@@ -102,19 +95,15 @@ const GameManagerDashboard = () => {
           <Metric label="Assigned operators" value={total.operators} />
         </section>
 
-        <nav aria-label="Game Manager responsibilities" className="flex max-w-full gap-2 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/60 p-2">
-          {[
-            ["overview", "Overview"],
-            ["rooms", "Rooms & schedules"],
-            ["events", "Events"],
-            ["attention", "Attention queue"],
-            ["operators", "Operator workload"],
-            ["verification", "Account verification"],
-            ["history", "History"],
-          ].map(([id, label]) => (
-            <button className={activeSection === id ? "whitespace-nowrap rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950" : "whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white"} key={id} onClick={() => setActiveSection(id)} type="button">{label}</button>
-          ))}
-        </nav>
+        <StaffWorkspaceTabs activeId={activeSection} ariaLabel="Game Manager responsibilities" items={[
+          { id: "overview", label: "Overview" },
+          { id: "rooms", label: "Rooms & schedules" },
+          { id: "events", label: "Events" },
+          { id: "attention", label: "Attention" },
+          { id: "operators", label: "Operators" },
+          { id: "verification", label: "Account verification" },
+          { id: "history", label: "History" },
+        ]} onChange={setActiveSection} />
 
         {error && <section className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{error}</section>}
         {status === "loading" && operations.length === 0 && <section className="rounded-3xl border border-slate-800 bg-[#07111f] p-8 text-slate-400">Loading assigned game operations...</section>}
@@ -125,9 +114,9 @@ const GameManagerDashboard = () => {
         {activeSection !== "verification" ? <section className="grid gap-5 xl:grid-cols-2">
           {activeSection === "events" && selectedEvent ? <GameManagerEventDetails event={selectedEvent} onClose={() => setSelectedEvent(null)} /> : null}
           {operations.map((item) => (
-            <article className="rounded-3xl border border-slate-800 bg-[#07111f] p-5 md:p-6" key={item.game._id}>
+            <article className="rounded-2xl border border-slate-800 bg-[#07111f] p-4" key={item.game._id}>
               <div className="flex items-start justify-between gap-4">
-                <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">{item.game.status}</p><h2 className="mt-2 text-2xl font-black text-white">{item.game.name}</h2><p className="mt-1 text-sm text-slate-500">{item.game.link}</p></div>
+                <div><p className="text-xs font-bold capitalize text-cyan-300">{item.game.status}</p><h2 className="mt-1 text-lg font-black text-white">{item.game.name}</h2><p className="mt-1 text-xs text-slate-500">{item.game.link}</p></div>
                 {item.metrics.attentionNeeded > 0 && <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-bold text-amber-200"><FiAlertTriangle /> {item.metrics.attentionNeeded} needs attention</span>}
               </div>
 

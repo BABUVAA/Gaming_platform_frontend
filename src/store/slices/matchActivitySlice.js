@@ -1,6 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
 import createApiThunk from "../thunks/createApiThunk.js";
 
+const normalizePage = (page) => ({
+  hasMore: page?.hasMore === true,
+  limit: Number(page?.limit) || 25,
+  nextCursor: page?.nextCursor || null,
+});
+
 const playerParticipationCondition = {
   condition: (_, { getState }) =>
     getState().player?.summary?.role !== "staff",
@@ -17,13 +23,53 @@ export const fetchPlayerMatchActivity = createApiThunk(
       return {
         data: {
           matches: matchesResponse.data?.data || [],
+          matchPage: normalizePage(matchesResponse.data?.page),
           queues: queuesResponse.data?.data || [],
+          queuePage: normalizePage(queuesResponse.data?.page),
         },
       };
     },
     selectData: (response) => response.data,
     errorMessage: "Unable to load your match activity.",
     toast: { error: true },
+  },
+);
+
+export const fetchMorePlayerMatchActivity = createApiThunk(
+  "matchActivity/fetchMoreActivity",
+  {
+    request: async ({ api, arg, signal }) => {
+      const requests = [];
+      if (arg?.queueCursor) {
+        requests.push(api.get("/api/matches/queues", {
+          params: { cursor: arg.queueCursor },
+          signal,
+        }).then((result) => ({ kind: "queues", result })));
+      }
+      if (arg?.matchCursor) {
+        requests.push(api.get("/api/matches", {
+          params: { cursor: arg.matchCursor },
+          signal,
+        }).then((result) => ({ kind: "matches", result })));
+      }
+      const pages = await Promise.all(requests);
+      return {
+        data: pages.reduce((loaded, { kind, result }) => ({
+          ...loaded,
+          [kind]: result.data?.data || [],
+          [kind === "matches" ? "matchPage" : "queuePage"]: normalizePage(result.data?.page),
+        }), {}),
+      };
+    },
+    selectData: (response) => response.data,
+    errorMessage: "Unable to load more match activity.",
+    toast: { error: true },
+  },
+  {
+    condition: (arg, { getState }) => {
+      const state = getState().matchActivity;
+      return state.moreStatus !== "loading" && Boolean(arg?.matchCursor || arg?.queueCursor);
+    },
   },
 );
 
@@ -54,7 +100,13 @@ const initialState = {
   actionStatus: "idle",
   activity: [],
   activityError: null,
+  activityRequestId: null,
   activityStatus: "idle",
+  matchPage: { hasMore: false, nextCursor: null },
+  moreError: null,
+  moreRequestId: null,
+  moreStatus: "idle",
+  queuePage: { hasMore: false, nextCursor: null },
   selectedError: null,
   selectedMatch: null,
   selectedStatus: "idle",
@@ -62,6 +114,18 @@ const initialState = {
 
 const getActivityTime = (activity) =>
   new Date(activity.createdAt || activity.scheduledFor || 0).getTime();
+
+const mergeActivity = (current, queues = [], matches = []) => {
+  const byIdentity = new Map(
+    current.map((item) => [`${item.kind || "match"}:${item._id}`, item]),
+  );
+  [...queues, ...matches].forEach((item) => {
+    byIdentity.set(`${item.kind || "match"}:${item._id}`, item);
+  });
+  return [...byIdentity.values()].sort(
+    (first, second) => getActivityTime(second) - getActivityTime(first),
+  );
+};
 
 const matchCommands = [raisePlayerMatchDispute];
 
@@ -77,29 +141,64 @@ const matchActivitySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchPlayerMatchActivity.pending, (state) => {
+      .addCase(fetchPlayerMatchActivity.pending, (state, action) => {
         state.activityError = null;
+        state.activityRequestId = action.meta.requestId;
         state.activityStatus = "loading";
+        state.moreError = null;
+        state.moreRequestId = null;
+        state.moreStatus = "idle";
       })
       .addCase(fetchPlayerMatchActivity.fulfilled, (state, action) => {
+        if (state.activityRequestId !== action.meta.requestId) return;
         const queues = Array.isArray(action.payload?.queues)
           ? action.payload.queues
           : [];
         const matches = Array.isArray(action.payload?.matches)
           ? action.payload.matches
           : [];
-        state.activity = [...queues, ...matches].sort(
-          (first, second) => getActivityTime(second) - getActivityTime(first),
-        );
+        state.activity = mergeActivity([], queues, matches);
+        state.matchPage = action.payload?.matchPage || { hasMore: false, nextCursor: null };
+        state.queuePage = action.payload?.queuePage || { hasMore: false, nextCursor: null };
+        state.activityRequestId = null;
         state.activityStatus = "succeeded";
       })
       .addCase(fetchPlayerMatchActivity.rejected, (state, action) => {
+        if (state.activityRequestId !== action.meta.requestId) return;
+        state.activityRequestId = null;
         if (action.meta.aborted) {
           state.activityStatus = "idle";
           return;
         }
         state.activityError = action.payload;
         state.activityStatus = "failed";
+      })
+      .addCase(fetchMorePlayerMatchActivity.pending, (state, action) => {
+        state.moreError = null;
+        state.moreRequestId = action.meta.requestId;
+        state.moreStatus = "loading";
+      })
+      .addCase(fetchMorePlayerMatchActivity.fulfilled, (state, action) => {
+        if (state.moreRequestId !== action.meta.requestId) return;
+        state.activity = mergeActivity(
+          state.activity,
+          Array.isArray(action.payload?.queues) ? action.payload.queues : [],
+          Array.isArray(action.payload?.matches) ? action.payload.matches : [],
+        );
+        if (action.payload?.matchPage) state.matchPage = action.payload.matchPage;
+        if (action.payload?.queuePage) state.queuePage = action.payload.queuePage;
+        state.moreRequestId = null;
+        state.moreStatus = "succeeded";
+      })
+      .addCase(fetchMorePlayerMatchActivity.rejected, (state, action) => {
+        if (state.moreRequestId !== action.meta.requestId) return;
+        state.moreRequestId = null;
+        if (action.meta.condition || action.meta.aborted) {
+          state.moreStatus = "idle";
+          return;
+        }
+        state.moreError = action.payload;
+        state.moreStatus = "failed";
       })
       .addCase(fetchPlayerMatch.pending, (state) => {
         state.selectedError = null;

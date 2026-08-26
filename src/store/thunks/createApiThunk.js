@@ -2,10 +2,12 @@ import axios from "axios";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios-api.js";
 import {
+  API_ERROR_CODE,
   getApiErrorToast,
   normalizeApiError,
 } from "../../api/apiError.js";
 import { showToast, types } from "../slices/toastSlice.js";
+import { requestSensitiveActionConfirmation } from "../slices/sensitiveActionSlice.js";
 
 const SUPPORTED_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
 
@@ -234,7 +236,9 @@ export const createApiThunk = (
       let response;
       let data;
 
-      try {
+      let recentAuthenticationRetried = false;
+
+      while (true) try {
         const path = await resolveOption(configuration.path, {
           arg,
           thunkAPI,
@@ -257,6 +261,7 @@ export const createApiThunk = (
           thunkAPI,
         });
         data = await selectData(response, arg, thunkAPI);
+        break;
       } catch (error) {
         // Let Redux Toolkit preserve its native aborted metadata. Turning an
         // intentional cancellation into an API error would create false UI.
@@ -273,6 +278,30 @@ export const createApiThunk = (
           });
         }, "error-message");
         const normalizedError = normalizeApiError(error, errorMessage);
+
+        if (
+          normalizedError.code === API_ERROR_CODE.RECENT_AUTHENTICATION_REQUIRED &&
+          thunkAPI.getState()?.auth?.user?.role === "staff" &&
+          !recentAuthenticationRetried
+        ) {
+          const confirmed = await requestSensitiveActionConfirmation(
+            thunkAPI.dispatch,
+            thunkAPI.signal,
+          );
+
+          if (confirmed && !thunkAPI.signal.aborted) {
+            recentAuthenticationRetried = true;
+            continue;
+          }
+
+          return thunkAPI.rejectWithValue({
+            ...normalizedError,
+            code: "SENSITIVE_ACTION_CANCELLED",
+            message: "Action cancelled.",
+            retryable: false,
+          });
+        }
+
         const errorContext = {
           arg,
           error,

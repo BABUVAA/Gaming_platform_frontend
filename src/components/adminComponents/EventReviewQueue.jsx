@@ -17,8 +17,6 @@ import {
   reviewEventRun,
   reviewEventTemplate,
 } from "../../store/slices/eventReviewSlice";
-import EventInvitationManagement from "./EventInvitationManagement.jsx";
-import EventStageManagement from "./EventStageManagement.jsx";
 
 const staffSummaryShape = PropTypes.shape({
   profile: PropTypes.shape({ username: PropTypes.string }),
@@ -112,23 +110,17 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
             {isRun ? "Event schedule" : "Event template"}
           </p>
           <h3 className="mt-2 font-black text-white">{title}</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            {gameName} {isRun ? `/ ${formatDate(item.startsAt)}` : `/ ${item.mode} / ${item.teamSize} player team`}
-          </p>
-          {isRun ? (
-            <p className="mt-2 text-xs leading-5 text-slate-500">
-              Registration {formatDate(item.registrationOpensAt)} to {formatDate(item.registrationClosesAt)} / {item.admissionPolicy?.replaceAll("_", " ") || "admission not set"} / {item.admissionPolicy === "open" ? "no seat limit" : `${item.registrationCapacity || 0} seats`} / waitlist {item.waitlistEnabled ? "on" : "off"}
-            </p>
-          ) : null}
-          {isRun ? (
-            <p className="mt-2 text-xs font-bold leading-5 text-emerald-100/80">
-              Entry: {item.entryTerms?.policy === "paid"
-                ? `INR ${(item.entryTerms.entryFeeMinor / 100).toFixed(2)} per player / held at registration`
-                : "Free"}
-            </p>
-          ) : null}
+          <p className="mt-1 text-sm text-slate-400">{gameName}</p>
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <ReviewFact label="Format" value={`${item.formatSnapshot?.mode || item.mode || "Mode"} · ${item.formatSnapshot?.teamSize || item.teamSize || 1} player`} />
+            {isRun ? <ReviewFact label="Starts" value={formatDate(item.startsAt)} /> : null}
+            {isRun ? <ReviewFact label="Entry" value={item.entryTerms?.policy === "paid" ? `INR ${(item.entryTerms.entryFeeMinor / 100).toFixed(2)}` : "Free"} /> : null}
+            {isRun ? <ReviewFact label="Access" value={item.admissionPolicy?.replaceAll("_", " ") || "Not set"} /> : null}
+          </dl>
+          {isRun ? <p className="mt-3 text-xs text-slate-500">Registration: {formatDate(item.registrationOpensAt)} – {formatDate(item.registrationClosesAt)}</p> : null}
           {isRun && item.roundPlanStatus === "approved" && item.executionPlan ? (
-            <div className="mt-2 rounded-xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-xs leading-5 text-cyan-100/80">
+            <details className="mt-3 rounded-xl border border-cyan-300/15 bg-cyan-300/5 p-3 text-xs leading-5 text-cyan-100/80">
+              <summary className="cursor-pointer font-black">Legacy round plan</summary>
               <p className="font-black capitalize">{item.executionPlan.format?.replaceAll("_", " ")}</p>
               {item.executionPlan.format === "ranked_stages" ? (
                 <div className="mt-2 space-y-1">
@@ -141,19 +133,17 @@ const ReviewCard = ({ canReview, item, kind, onChoose, selected }) => {
               ) : (
                 <p className="mt-1">2 players per match / 1 winner advances / {item.executionPlan.batchSpacingMinutes} minute spacing / registration order</p>
               )}
-            </div>
+            </details>
           ) : null}
           {isRun && item.formatSnapshot ? (
-            <p className="mt-2 text-xs leading-5 text-slate-400">
-              Locked format / {item.formatSnapshot.gameKey} / {item.formatSnapshot.mode} / {item.formatSnapshot.map || "no map"} / {item.formatSnapshot.teamSize}-player entry / template revision {item.formatSnapshot.templateRevision}
-            </p>
+            <p className="mt-2 text-xs text-slate-500">{item.formatSnapshot.map || "No map"} · template revision {item.formatSnapshot.templateRevision}</p>
           ) : null}
           {isRun && item.rewardTerms?.placements?.length ? (
-            <p className="mt-2 text-xs leading-5 text-emerald-100/80">
-              Placement rewards: {item.rewardTerms.placements.map((reward) => `#${reward.place} INR ${(reward.amountMinor / 100).toFixed(2)}`).join(" / ")}
+            <p className="mt-2 text-xs font-bold text-emerald-200">
+              Rewards: {item.rewardTerms.placements.map((reward) => `#${reward.place} ${(reward.amountMinor / 100).toFixed(2)}`).join(" · ")}
             </p>
           ) : isRun ? (
-            <p className="mt-2 text-xs text-slate-500">No placement rewards proposed.</p>
+            <p className="mt-2 text-xs text-slate-500">No rewards</p>
           ) : null}
         </div>
         <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-200">
@@ -183,6 +173,18 @@ ReviewCard.propTypes = {
   selected: PropTypes.bool.isRequired,
 };
 
+const ReviewFact = ({ label, value }) => (
+  <div className="rounded-lg bg-slate-900/80 px-2.5 py-2">
+    <dt className="text-slate-500">{label}</dt>
+    <dd className="mt-0.5 truncate font-bold capitalize text-slate-200">{value}</dd>
+  </div>
+);
+
+ReviewFact.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+};
+
 const EventReviewQueue = () => {
   const dispatch = useDispatch();
   const { error, runs, status, templates } = useSelector(
@@ -192,7 +194,6 @@ const EventReviewQueue = () => {
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState("");
   const [decision, setDecision] = useState("");
-  const [activeView, setActiveView] = useState("approvals");
 
   useEffect(() => {
     dispatch(fetchEventReviewQueue());
@@ -234,14 +235,6 @@ const EventReviewQueue = () => {
 
   return (
     <section className="space-y-5">
-      <nav aria-label="Event Management sections" className="grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 md:grid-cols-3" role="tablist">
-        <AdminEventTab active={activeView === "approvals"} count={reviewCount} label="Approvals" onClick={() => setActiveView("approvals")} />
-        <AdminEventTab active={activeView === "invitations"} label="Invitations" onClick={() => setActiveView("invitations")} />
-        <AdminEventTab active={activeView === "results"} label="Results & Rewards" onClick={() => setActiveView("results")} />
-      </nav>
-
-      {activeView === "approvals" ? (
-      <>
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-[#07111f] p-3">
         <div className="flex items-center gap-3">
           <span className="grid size-9 place-items-center rounded-xl bg-cyan-300/10 text-cyan-300"><FiInbox /></span>
@@ -264,40 +257,12 @@ const EventReviewQueue = () => {
         </div>
         {selected ? <ReviewPanel canReview={canReview(selected.item)} decision={decision} note={note} onDecision={submitDecision} onNoteChange={setNote} selected={selected} /> : null}
       </div>
-      </>
-      ) : activeView === "invitations" ? (
-        <EventInvitationManagement />
-      ) : activeView === "results" ? (
-        <EventStageManagement />
-      ) : null}
     </section>
   );
 };
 
-const AdminEventTab = ({ active, count, label, onClick }) => (
-  <button
-    aria-selected={active}
-    className={active
-      ? "flex items-center justify-between gap-3 rounded-xl bg-cyan-300 px-4 py-3 text-left text-sm font-black text-slate-950"
-      : "flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold text-slate-400 hover:bg-slate-900"}
-    onClick={onClick}
-    role="tab"
-    type="button"
-  >
-    <span>{label}</span>
-    {typeof count === "number" ? <span className={active ? "rounded-full bg-slate-950/15 px-2 py-0.5 text-xs" : "rounded-full bg-slate-900 px-2 py-0.5 text-xs text-cyan-200"}>{count}</span> : null}
-  </button>
-);
-
-AdminEventTab.propTypes = {
-  active: PropTypes.bool.isRequired,
-  count: PropTypes.number,
-  label: PropTypes.string.isRequired,
-  onClick: PropTypes.func.isRequired,
-};
-
 const QueueGroup = ({ canReview, icon: Icon, items, kind, onChoose, selected, title }) => (
-  <section className="rounded-3xl border border-slate-800 bg-[#07111f] p-5">
+  <section className="rounded-2xl border border-slate-800 bg-[#07111f] p-4">
     <div className="flex items-center gap-2"><Icon className="text-cyan-300" /><h3 className="font-black text-white">{title}</h3><span className="rounded-full bg-slate-900 px-2 py-1 text-xs text-slate-400">{items.length}</span></div>
     <div className="mt-4 grid gap-3">
       {items.map((item) => <ReviewCard canReview={canReview(item)} item={item} key={item._id} kind={kind} onChoose={onChoose} selected={selected?.id === item._id} />)}
@@ -327,13 +292,11 @@ QueueGroup.propTypes = {
 const ReviewPanel = ({ canReview, decision, note, onDecision, onNoteChange, selected }) => {
   const { item, kind } = selected;
   return (
-    <aside className="h-fit rounded-3xl border border-cyan-300/20 bg-[#07111f] p-5">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Decision record</p>
-      <h3 className="mt-2 text-xl font-black text-white">{item.title}</h3>
-      <dl className="mt-5 space-y-3 text-sm"><ReviewValue label="Proposal type" value={kind === "run" ? "Dated Event schedule" : "Repeatable Event template"} /><ReviewValue label="Revision" value={String(item.revision || 1)} /><ReviewValue label="Submitted by" value={item.submittedBy?.profile?.username || item.createdBy?.profile?.username || "Staff member"} /><ReviewValue label="Submitted" value={formatDate(item.submittedAt)} /></dl>
+    <aside className="h-fit rounded-2xl border border-cyan-300/20 bg-[#07111f] p-4">
+      <h3 className="text-lg font-black text-white">{item.title}</h3>
+      <dl className="mt-4 space-y-3 text-sm"><ReviewValue label="Type" value={kind === "run" ? "Event" : "Template"} /><ReviewValue label="Revision" value={String(item.revision || 1)} /><ReviewValue label="Submitted by" value={item.submittedBy?.profile?.username || item.createdBy?.profile?.username || "Staff member"} /><ReviewValue label="Submitted" value={formatDate(item.submittedAt)} /></dl>
       {!canReview ? <p className="mt-5 rounded-xl border border-amber-300/25 bg-amber-300/10 p-3 text-sm text-amber-100">Independent review is required. Another Platform or Super Admin must record this decision.</p> : null}
       <label className="mt-5 block text-sm font-bold text-slate-200">Review note<textarea className="mt-2 min-h-28 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white" disabled={!canReview} maxLength="1000" onChange={(event) => onNoteChange(event.target.value)} placeholder="Required for changes or rejection. Explain the decision clearly." value={note} /></label>
-      <p className="mt-2 text-xs leading-5 text-slate-500">Approval may be recorded without a note. Changes requested and rejection require at least 10 characters.</p>
       <div className="mt-5 grid gap-2"><button className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-60" disabled={!canReview || Boolean(decision)} onClick={() => onDecision("approved")} type="button"><FiCheckCircle /> {decision === "approved" ? "Recording..." : "Approve"}</button><button className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100 disabled:opacity-60" disabled={!canReview || Boolean(decision)} onClick={() => onDecision("changes_requested")} type="button"><FiRotateCcw /> {decision === "changes_requested" ? "Recording..." : "Request changes"}</button><button className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-sm font-black text-rose-100 disabled:opacity-60" disabled={!canReview || Boolean(decision)} onClick={() => onDecision("rejected")} type="button"><FiXCircle /> {decision === "rejected" ? "Recording..." : "Reject proposal"}</button></div>
     </aside>
   );

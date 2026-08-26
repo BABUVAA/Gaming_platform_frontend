@@ -120,23 +120,11 @@ const PrizeReleaseReview = () => {
 
   return (
     <section className="space-y-5">
-      <header className="rounded-3xl border border-emerald-300/20 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_38%),#07111f] p-5">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-              Financial governance
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">
-              Prize release review
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              Independently review settled Match evidence before moving the
-              server-recorded prize from Prize pending to Withdrawable. Winner
-              identities and amounts cannot be changed here.
-            </p>
-          </div>
+      <header className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="inline-flex items-center gap-2 text-sm font-bold text-slate-300"><FiShield className="text-emerald-300" />{items.length} settled Match{items.length === 1 ? "" : "es"}</p>
           <button
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200 disabled:opacity-50"
             disabled={queueStatus === "loading" || queueStatus === "loadingMore"}
             onClick={refreshQueue}
             type="button"
@@ -144,9 +132,6 @@ const PrizeReleaseReview = () => {
             <FiRefreshCw className={queueStatus === "loading" ? "animate-spin" : ""} />
             Refresh queue
           </button>
-        </div>
-        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
-          <FiShield /> {items.length} settled Match{items.length === 1 ? "" : "es"} loaded for review
         </div>
       </header>
 

@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import EventProgression from "../components/EventProgression.jsx";
 import CompetitionEntryDialog from "../components/competition/CompetitionEntryDialog.jsx";
+import EventTeamPicker from "../components/competition/EventTeamPicker.jsx";
 import JoinProgress from "../components/competition/JoinProgress.jsx";
 import {
   fetchPlayerEventDetails,
@@ -14,6 +15,7 @@ import {
 } from "../store/slices/eventRegistrationSlice.js";
 import { selectPlayerSummary } from "../store/selectors/playerSelectors.js";
 import { getGamePresentation } from "../config/gamePresentation.js";
+import { describeTeamRewardSplit } from "../utils/competitionUnits.js";
 
 const amount = (minor = 0) =>
   (minor / 100).toLocaleString("en-IN", {
@@ -21,6 +23,20 @@ const amount = (minor = 0) =>
     minimumFractionDigits: 2,
   });
 const money = (minor = 0) => `₹${amount(minor)}`;
+const groupTeamStandings = (standings = []) => {
+  const groups = new Map();
+  standings.forEach((standing) => {
+    const key = String(standing.team?.key || "");
+    if (!key) return;
+    const current = groups.get(key) || {
+      id: key,
+      player: { displayName: standing.team.name || "Team" },
+      rank: standing.placement,
+    };
+    groups.set(key, current);
+  });
+  return [...groups.values()].sort((left, right) => left.rank - right.rank);
+};
 
 const countdown = (target, now) => {
   const seconds = Math.max(
@@ -39,6 +55,7 @@ const EventDetails = () => {
   const dispatch = useDispatch();
   const [now, setNow] = useState(Date.now());
   const [confirmingEntry, setConfirmingEntry] = useState(false);
+  const [choosingTeam, setChoosingTeam] = useState(false);
   const [detailsTab, setDetailsTab] = useState("rewards");
   const state = useSelector((root) => root.eventRegistration);
   const event = state.detailsById[runId];
@@ -104,10 +121,12 @@ const EventDetails = () => {
   const committed = ["registered", "waitlisted"].includes(mine?.status);
   const presentation = getGamePresentation(event.game?.key);
   const progression = selectEventProgression(event, standingPage);
+  const teamSize = Number(event.format?.teamSize || 1);
+  const teamEvent = teamSize > 1;
   const showFinalRanks =
     event.status === "completed" && standingPage?.standings?.length > 0;
   const leaderboardRows = showFinalRanks
-    ? standingPage.standings.map((standing) => ({
+    ? teamEvent ? groupTeamStandings(standingPage.standings) : standingPage.standings.map((standing) => ({
         id: `${standing.placement}:${standing.player.profileTag || standing.player.displayName}`,
         player: { displayName: standing.player.displayName },
         rank: standing.placement,
@@ -115,8 +134,12 @@ const EventDetails = () => {
     : leaderboardPage?.items || [];
   const startsLater = new Date(event.startsAt).getTime() > now;
   const register = () => {
-    dispatch(registerForEvent(event.id));
     setConfirmingEntry(false);
+    if (Number(event.format?.teamSize || 1) > 1) {
+      setChoosingTeam(true);
+      return;
+    }
+    dispatch(registerForEvent(event.id));
   };
 
   return (
@@ -258,7 +281,7 @@ const EventDetails = () => {
             <div className="mt-3 overflow-hidden rounded-xl border border-slate-800">
               <div className="grid grid-cols-[1fr_auto] bg-slate-900/80 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
                 <span>Place</span>
-                <span>Reward (₹)</span>
+                <span>{teamEvent ? "Team reward (₹)" : "Reward (₹)"}</span>
               </div>
               {event.rewardTerms.placements.map((reward) => (
                 <div
@@ -266,8 +289,9 @@ const EventDetails = () => {
                   key={reward.place}
                 >
                   <span className="font-bold text-slate-200">#{reward.place}</span>
-                  <span className="font-black text-emerald-200">
-                    {amount(reward.amountMinor)}
+                  <span className="text-right font-black text-emerald-200">
+                    <span className="block">{amount(reward.amountMinor)}</span>
+                    {teamEvent ? <small className="block font-medium text-slate-500">{describeTeamRewardSplit(reward.amountMinor, teamSize)}</small> : null}
                   </span>
                 </div>
               ))}
@@ -282,7 +306,7 @@ const EventDetails = () => {
             <div className="mt-3 overflow-hidden rounded-xl border border-slate-800">
               <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] bg-slate-900/80 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
                 <span>Rank</span>
-                <span>Player</span>
+                <span>{teamEvent ? "Team" : "Player"}</span>
               </div>
               {leaderboardRows.map((row) => (
                 <div
@@ -363,6 +387,16 @@ const EventDetails = () => {
         title={event.title}
         type="Event"
       />
+      {choosingTeam ? (
+        <EventTeamPicker
+          event={event}
+          onClose={() => setChoosingTeam(false)}
+          onSelect={({ paymentMode, rewardMode, teamId }) => {
+            dispatch(registerForEvent({ paymentMode, rewardMode, runId: event.id, teamId }));
+            setChoosingTeam(false);
+          }}
+        />
+      ) : null}
     </main>
   );
 };

@@ -27,9 +27,10 @@ test("security attention refresh and pagination use only the opaque governance c
   } finally { api.defaults.adapter = original; }
 });
 
-test("security UI is review-only and explains its privacy boundary", async () => {
+test("security UI is compact and review-only", async () => {
   const source = await readFile(new URL("../src/components/adminComponents/SecurityAttention.jsx", import.meta.url), "utf8");
-  assert.match(source, /Raw credentials, tokens, IP addresses, and full identity hashes are never exposed/);
+  assert.match(source, /Retained authentication signals/);
+  assert.doesNotMatch(source, /Raw credentials|full identity hashes/);
   assert.match(source, /Load older signals/);
   assert.doesNotMatch(source, /ban user|revoke session|delete event/i);
 });

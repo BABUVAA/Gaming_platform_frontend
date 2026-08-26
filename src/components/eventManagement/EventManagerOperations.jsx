@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -30,6 +30,17 @@ const EventManagerOperations = ({ onClose, runId }) => {
   const matches = state.matchesByRunId[runId] || { items: [], status: "idle" };
   const standings = state.standingsByRunId[runId] || { standings: [] };
   const operators = state.eligibleOperatorsByRunId[runId] || [];
+  const teamSize = Number(operations?.run?.format?.teamSize || 1);
+  const teamEvent = teamSize > 1;
+  const displayStandings = useMemo(() => {
+    if (!teamEvent) return standings.standings;
+    const byTeam = new Map();
+    standings.standings.forEach((row) => {
+      const key = String(row.team?.key || "");
+      if (key && !byTeam.has(key)) byTeam.set(key, row);
+    });
+    return [...byTeam.values()];
+  }, [standings.standings, teamEvent]);
 
   useEffect(() => {
     const request = dispatch(fetchManagedEventOperations(runId));
@@ -82,7 +93,7 @@ const EventManagerOperations = ({ onClose, runId }) => {
 
       {summary ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard label="Registered" value={summary.registrations.registered} />
+          <SummaryCard label="Registered" value={teamEvent ? `${summary.registrations.registered / teamSize} teams / ${summary.registrations.registered} players` : summary.registrations.registered} />
           <SummaryCard label="Waitlisted" value={summary.registrations.waitlisted} />
           <SummaryCard label="Match rooms" value={summary.matches.total} />
           <SummaryCard label="Result attention" value={summary.matches.resultAttention + summary.matches.disputed} />
@@ -116,7 +127,7 @@ const EventManagerOperations = ({ onClose, runId }) => {
               <div className="grid gap-2 border-t border-slate-800 px-4 py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center" key={entry.id}>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-white">{entry.player?.username || "Player"}</p>
-                  <p className="truncate text-xs text-slate-500">{entry.player?.profileTag || "No profile tag"}</p>
+                  <p className="truncate text-xs text-slate-500">{entry.team?.name ? `${entry.team.name} / ${entry.player?.profileTag || "Player"}` : entry.player?.profileTag || "No profile tag"}</p>
                 </div>
                 <span className="w-fit rounded-full border border-slate-700 px-2 py-1 text-[10px] font-black uppercase text-cyan-200">{labelStatus(entry.status)}</span>
                 <time className="text-xs text-slate-500">{formatDate(entry.enteredAt)}</time>
@@ -144,7 +155,7 @@ const EventManagerOperations = ({ onClose, runId }) => {
                   <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] font-black uppercase text-cyan-200">{labelStatus(item.match?.status || item.batch.status)}</span>
                 </div>
                 <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-2 xl:grid-cols-4">
-                  <p><span className="text-slate-600">Players:</span> {item.batch.participantCount}</p>
+                  <p><span className="text-slate-600">Lineup:</span> {teamEvent ? `${item.batch.teamCount || item.batch.participantCount / teamSize} teams / ` : ""}{item.batch.participantCount} players</p>
                   <p><span className="text-slate-600">Checked in:</span> {item.match?.checkedInCount || 0}</p>
                   <p><span className="text-slate-600">Operator:</span> {item.match?.assignedOperator?.username || "Unassigned"}</p>
                   <p><span className="text-slate-600">Scheduled:</span> {formatDate(item.match?.scheduledFor)}</p>
@@ -165,8 +176,8 @@ const EventManagerOperations = ({ onClose, runId }) => {
         <div className="mt-4">
           <p className="text-sm font-black text-white">Sporting standings</p>
           <div className="mt-3 overflow-hidden rounded-2xl border border-slate-800">
-            {standings.standings.map((row) => <div className="grid grid-cols-[3rem_1fr_auto] gap-3 border-t border-slate-800 px-4 py-3 first:border-t-0" key={`${row.placement}:${row.player?.profileTag}`}><strong className="text-cyan-200">#{row.placement}</strong><span><strong className="block text-white">{row.player?.displayName || "Player"}</strong><small className="text-slate-500">{row.player?.profileTag}</small></span><span className="capitalize text-slate-400">{labelStatus(row.result)}</span></div>)}
-            {!standings.standings.length ? <p className="p-4 text-sm text-slate-500">Standings appear after verified Match results.</p> : null}
+            {displayStandings.map((row) => <div className="grid grid-cols-[3rem_1fr_auto] gap-3 border-t border-slate-800 px-4 py-3 first:border-t-0" key={`${row.placement}:${row.team?.key || row.player?.profileTag}`}><strong className="text-cyan-200">#{row.placement}</strong><span><strong className="block text-white">{teamEvent ? row.team?.name || "Team" : row.player?.displayName || "Player"}</strong><small className="text-slate-500">{teamEvent ? `${row.team?.memberCount || teamSize} players` : row.player?.profileTag}</small></span><span className="capitalize text-slate-400">{labelStatus(row.result)}</span></div>)}
+            {!displayStandings.length ? <p className="p-4 text-sm text-slate-500">Standings appear after verified Match results.</p> : null}
           </div>
           {standings.nextCursor ? <button className="mt-3 rounded-xl border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200" onClick={() => dispatch(fetchManagedEventStandings({ cursor: standings.nextCursor, runId }))} type="button">Load more standings</button> : null}
         </div>
@@ -187,7 +198,7 @@ const DetailTab = ({ active, label, onClick }) => (
 );
 
 DetailTab.propTypes = { active: PropTypes.bool.isRequired, label: PropTypes.string.isRequired, onClick: PropTypes.func.isRequired };
-SummaryCard.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.number.isRequired };
+SummaryCard.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired };
 EventManagerOperations.propTypes = { onClose: PropTypes.func.isRequired, runId: PropTypes.string.isRequired };
 
 export default EventManagerOperations;

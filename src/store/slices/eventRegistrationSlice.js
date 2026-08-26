@@ -68,13 +68,17 @@ export const registerForEvent = createApiThunk(
   "eventRegistration/register",
   {
     method: "post",
-    path: ({ arg }) => `/api/player/events/${arg}/register`,
-    getBody: () => ({}),
+    path: ({ arg }) => `/api/player/events/${typeof arg === "string" ? arg : arg.runId}/register`,
+    getBody: (arg) => typeof arg === "string" ? {} : ({
+      ...(arg.teamId ? { teamId: arg.teamId } : {}),
+      ...(arg.paymentMode ? { paymentMode: arg.paymentMode } : {}),
+      ...(arg.rewardMode ? { rewardMode: arg.rewardMode } : {}),
+    }),
     selectData: (response) => response.data?.data,
     errorMessage: "Unable to register for this Event.",
     onSuccess: ({ arg, thunkAPI }) => {
       thunkAPI.dispatch(fetchPlayerEvents());
-      thunkAPI.dispatch(fetchPlayerEventLeaderboard({ runId: arg }));
+      thunkAPI.dispatch(fetchPlayerEventLeaderboard({ runId: typeof arg === "string" ? arg : arg.runId }));
     },
     toast: { success: true, error: true },
   },
@@ -82,13 +86,14 @@ export const registerForEvent = createApiThunk(
 );
 
 const finishAction = (state, action, status) => {
-  const event = state.events.find((item) => item.id === action.meta.arg);
+  const runId = typeof action.meta.arg === "string" ? action.meta.arg : action.meta.arg.runId;
+  const event = state.events.find((item) => item.id === runId);
   if (event) {
     event.registration.mine = { ...action.payload.registration, status };
   }
-  const detail = state.detailsById[action.meta.arg];
+  const detail = state.detailsById[runId];
   if (detail) detail.registration.mine = { ...action.payload.registration, status };
-  state.actionById[action.meta.arg] = "idle";
+  state.actionById[runId] = "idle";
 };
 
 const eventRegistrationSlice = createSlice({
@@ -215,13 +220,15 @@ const eventRegistrationSlice = createSlice({
         }
       })
       .addCase(registerForEvent.pending, (state, action) => {
-        state.actionById[action.meta.arg] = "loading";
+        const runId = typeof action.meta.arg === "string" ? action.meta.arg : action.meta.arg.runId;
+        state.actionById[runId] = "loading";
       })
       .addCase(registerForEvent.fulfilled, (state, action) => {
         finishAction(state, action, action.payload.registration.status);
       })
       .addCase(registerForEvent.rejected, (state, action) => {
-        state.actionById[action.meta.arg] = "idle";
+        const runId = typeof action.meta.arg === "string" ? action.meta.arg : action.meta.arg.runId;
+        state.actionById[runId] = "idle";
       });
   },
 });

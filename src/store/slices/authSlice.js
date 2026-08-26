@@ -137,7 +137,7 @@ export const reauthenticate = createApiThunk("auth/reauthenticate", {
   method: "post",
   selectData: (response) => response.data.data,
   errorMessage: "Password confirmation failed.",
-  toast: { success: "Sensitive actions are unlocked for 15 minutes.", error: true },
+  toast: { success: "Sensitive actions are unlocked for 15 minutes.", error: false },
 });
 
 export const register = createApiThunk(

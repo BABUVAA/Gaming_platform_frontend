@@ -21,6 +21,7 @@ import {
 } from "../store/slices/eventRegistrationSlice.js";
 import EventCompetitionCard from "../components/competition/EventCompetitionCard.jsx";
 import CompetitionEntryDialog from "../components/competition/CompetitionEntryDialog.jsx";
+import EventTeamPicker from "../components/competition/EventTeamPicker.jsx";
 import InviteModal from "../components/feature/InviteModal.jsx";
 import {
   gameFilterOptions,
@@ -122,6 +123,7 @@ const Game = () => {
   const [pendingEvent, setPendingEvent] = useState(null);
   const [pendingTournament, setPendingTournament] = useState(null);
   const [teamPickerOffering, setTeamPickerOffering] = useState(null);
+  const [teamPickerEvent, setTeamPickerEvent] = useState(null);
   const [joinedOfferingIds, setJoinedOfferingIds] = useState([]);
   const [tournamentJoinError, setTournamentJoinError] = useState({});
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
@@ -177,6 +179,11 @@ const Game = () => {
 
   const commitEventRegistration = () => {
     if (!pendingEvent) return;
+    if (Number(pendingEvent.format?.teamSize || 1) > 1) {
+      setTeamPickerEvent(pendingEvent);
+      setPendingEvent(null);
+      return;
+    }
     dispatch(registerForEvent(pendingEvent.id));
     setPendingEvent(null);
   };
@@ -386,6 +393,8 @@ const Game = () => {
 
       {teamPickerOffering ? (
         <InviteModal
+          currency={teamPickerOffering.currency}
+          entryFeeMinor={teamPickerOffering.entryFeeMinor}
           game={teamPickerOffering.gameKey}
           isOpen
           mode={teamPickerOffering.mode}
@@ -396,6 +405,16 @@ const Game = () => {
           }}
           offeringId={teamPickerOffering._id}
           teamSize={teamPickerOffering.teamSize}
+        />
+      ) : null}
+      {teamPickerEvent ? (
+        <EventTeamPicker
+          event={teamPickerEvent}
+          onClose={() => setTeamPickerEvent(null)}
+          onSelect={({ paymentMode, rewardMode, teamId }) => {
+            dispatch(registerForEvent({ paymentMode, rewardMode, runId: teamPickerEvent.id, teamId }));
+            setTeamPickerEvent(null);
+          }}
         />
       ) : null}
     </div>

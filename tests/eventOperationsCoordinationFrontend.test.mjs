@@ -45,14 +45,18 @@ test("player and operator Match chat send only bounded message text", async () =
 });
 
 test("role dashboards expose Event operations without crossing privacy boundaries", async () => {
-  const [eventManager, gameManager, operator, player] = await Promise.all([
+  const [eventManager, gameManager, operator, player, matchChat] = await Promise.all([
     readFile(new URL("../src/components/eventManagement/EventManagerOperations.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/gameManagement/GameManagerEventDetails.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Operations.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/MatchRoom.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/common/ChatBox.jsx", import.meta.url), "utf8"),
   ]);
   assert.match(eventManager, /Assign operator/); assert.match(eventManager, /Sporting standings/);
   assert.match(gameManager, /Registrations|registrations/); assert.match(gameManager, /Save schedule \/ T-10 lobby/);
   assert.match(operator, /MatchChat audience="operator"/); assert.match(operator, /RankedResultEditor/);
   assert.match(player, /MatchChat audience="player"/); assert.doesNotMatch(gameManager, /proofNote|email/);
+  assert.match(matchChat, /timeout\(10000\)\.emit/);
+  assert.match(matchChat, /response\?\.success !== true/);
+  assert.match(matchChat, /maxLength=\{500\}/);
 });

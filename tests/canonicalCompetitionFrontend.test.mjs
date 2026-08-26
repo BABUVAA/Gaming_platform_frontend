@@ -82,7 +82,10 @@ test("Compete renders Events and Quick Matches as compact two-column poster card
 });
 
 test("player Matches separates live activity from completed history", async () => {
-  const matchesPage = await read("../src/pages/Matches.jsx");
+  const [matchesPage, matchRoom] = await Promise.all([
+    read("../src/pages/Matches.jsx"),
+    read("../src/pages/MatchRoom.jsx"),
+  ]);
 
   assert.match(matchesPage, /COMPLETED_STATUSES/);
   assert.match(matchesPage, /\["live", "Live Matches", liveMatches\.length\]/);
@@ -90,7 +93,32 @@ test("player Matches separates live activity from completed history", async () =
   assert.match(matchesPage, /role="tablist"/);
   assert.match(matchesPage, /liveMatches/);
   assert.match(matchesPage, /completedMatches/);
+  assert.match(matchesPage, /getGamePresentation/);
+  assert.match(matchesPage, /Event\$\{item\.event\?\.stage/);
+  assert.match(matchesPage, /Room filling/);
+  assert.match(matchesPage, /aria-label="Refresh matches"/);
+  assert.match(matchesPage, /View Quick Match/);
+  assert.match(matchesPage, /Start delayed · waiting for operator/);
+  assert.doesNotMatch(matchesPage, /fillPercentage|progress/i);
   assert.doesNotMatch(matchesPage, /Match timeline|InfoPanel|Everything you joined/);
+  assert.match(matchRoom, /const TABS = \["lobby", "chat", "dispute", "results"\]/);
+  assert.match(matchRoom, /Solo seats/);
+  assert.match(matchRoom, /Duo slots/);
+  assert.match(matchRoom, /fillTeamGroups\(match, teamSize, capacity\)/);
+  assert.match(matchRoom, /competitionUnitKey/);
+  assert.match(matchRoom, /Math\.ceil\(capacity \/ size\)/);
+  assert.match(matchRoom, /BgmiPlayerTile/);
+  assert.match(matchRoom, /lg:grid-cols-2/);
+  assert.match(matchRoom, /grid-cols-2 sm:grid-cols-4/);
+  assert.match(matchRoom, /CocPlayerRow/);
+  assert.match(matchRoom, /Team \{side \? "B" : "A"\}/);
+  assert.match(matchRoom, />VS</);
+  assert.match(matchRoom, /selectAuthUser/);
+  assert.match(matchRoom, /isCurrentUser/);
+  assert.match(matchRoom, /Your team/);
+  assert.match(matchRoom, /placementRanking/);
+  assert.match(matchRoom, /Start delayed · waiting for operator/);
+  assert.doesNotMatch(matchRoom, /Progress Rail|const FLOW/);
 });
 
 test("Quick Match details mirror the compact Event tab layout and reopen after full", async () => {

@@ -159,6 +159,15 @@ export const fetchEventPrizeRelease = createApiThunk(
   },
 );
 
+export const fetchManagedEventPrizeStatus = createApiThunk(
+  "eventStage/fetchManagedPrizeStatus",
+  {
+    path: ({ arg }) => `/api/staff/events/runs/${arg}/reward-status`,
+    selectData: (response) => response.data?.data?.release || null,
+    errorMessage: "Unable to load Event reward status.",
+  },
+);
+
 export const releaseEventPrizes = createApiThunk(
   "eventStage/releasePrizes",
   {
@@ -386,6 +395,18 @@ const eventStageSlice = createSlice({
         const runId = action.meta.arg;
         state.prizeStatusByRunId[runId] = action.meta.aborted ? "idle" : "failed";
         if (!action.meta.aborted) state.prizeErrorByRunId[runId] = action.payload?.message || action.error.message;
+      })
+      .addCase(fetchManagedEventPrizeStatus.pending, (state, action) => {
+        state.prizeErrorByRunId[action.meta.arg] = null;
+        state.prizeStatusByRunId[action.meta.arg] = "loading";
+      })
+      .addCase(fetchManagedEventPrizeStatus.fulfilled, (state, action) => {
+        state.prizeByRunId[action.meta.arg] = action.payload;
+        state.prizeStatusByRunId[action.meta.arg] = "succeeded";
+      })
+      .addCase(fetchManagedEventPrizeStatus.rejected, (state, action) => {
+        state.prizeStatusByRunId[action.meta.arg] = action.meta.aborted ? "idle" : "failed";
+        if (!action.meta.aborted) state.prizeErrorByRunId[action.meta.arg] = action.payload?.message || action.error.message;
       })
       .addCase(releaseEventPrizes.pending, (state, action) => {
         state.prizeActionByRunId[action.meta.arg] = "loading";

@@ -16,6 +16,13 @@ import {
 } from "react-icons/fi";
 import useSocket from "../context/useSocket";
 import MatchChat from "../components/competition/MatchChat.jsx";
+import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
+import StaffWorkspaceTabs from "../components/common/StaffWorkspaceTabs.jsx";
+import {
+  getCompetitionRankingGroups,
+  usesRankingKeys,
+  usesTeamRanking,
+} from "../utils/competitionUnits.js";
 import {
   claimOperatorMatch,
   executeOperatorMatchCommand,
@@ -139,21 +146,6 @@ const getRoomOperationalLabel = (room, percentage) => {
   if (["result_pending", "disputed"].includes(room.match.status)) return "Results pending";
   return "Match created";
 };
-const getTournamentRankingGroups = (match) => {
-  const teamMode = Number(match.quickMatchOffering?.teamSize || 1) > 1;
-  const groups = new Map();
-  (match.participants || []).forEach((participant) => {
-    const playerId = getParticipantId(participant);
-    const teamId = String(participant.team?._id || participant.team || "");
-    const key = teamMode ? teamId : playerId;
-    if (!key) return;
-    const group = groups.get(key) || { key, names: [] };
-    group.names.push(getParticipantName(participant));
-    groups.set(key, group);
-  });
-  return [...groups.values()];
-};
-
 const Operations = () => {
   const { competitionRevision, connected } = useSocket();
   const dispatch = useDispatch();
@@ -180,15 +172,19 @@ const Operations = () => {
     setResultDrafts((current) => Object.fromEntries(matches.map((match) => {
       const existing = current[match._id];
       const serverRanking = (match.resultSummary?.rankingIds || []).map((entry) => String(entry?._id || entry));
-      const tournamentRanking = (match.resultSummary?.placementRanking || []).map((row) => String(row.team?._id || row.team || row.playerIds?.[0]?._id || row.playerIds?.[0] || ""));
+      const keyRanking = (match.resultSummary?.placementRanking || []).map((row) => String(row.key || row.team?._id || row.team || row.playerIds?.[0]?._id || row.playerIds?.[0] || ""));
+      const rankingGroups = getCompetitionRankingGroups(match);
+      const keyBased = usesRankingKeys(match);
       return [match._id, existing || {
         proofNote: match.resultSummary?.proofNote || "",
-        rankingIds: serverRanking.length
+        rankingIds: !keyBased && serverRanking.length
           ? serverRanking
-          : (match.participants || []).map(getParticipantId).filter(Boolean),
-        rankingKeys: tournamentRanking.length
-          ? tournamentRanking
-          : getTournamentRankingGroups(match).map((group) => group.key),
+          : !keyBased ? (match.participants || []).map(getParticipantId).filter(Boolean) : [],
+        rankingKeys: keyBased
+          ? (keyRanking.length ? keyRanking : rankingGroups.map((group) => group.key))
+          : [],
+        rankingUnit: usesTeamRanking(match) ? "team" : "player",
+        usesRankingKeys: keyBased,
         score: match.resultSummary?.finalScore || "",
       }];
     })));
@@ -246,7 +242,7 @@ const Operations = () => {
   };
 
   const moveRankedPlayer = (matchId, playerId, direction) => {
-    const field = resultDrafts[matchId]?.rankingKeys ? "rankingKeys" : "rankingIds";
+    const field = resultDrafts[matchId]?.usesRankingKeys ? "rankingKeys" : "rankingIds";
     const rankingIds = [...(resultDrafts[matchId]?.[field] || [])];
     const currentIndex = rankingIds.indexOf(playerId);
     const nextIndex = currentIndex + direction;
@@ -292,38 +288,15 @@ const Operations = () => {
   ];
 
   return (
-    <main className="relative isolate space-y-5 overflow-hidden pb-8 text-slate-100">
-      <div className="pointer-events-none absolute -right-32 top-24 -z-10 h-80 w-80 rounded-full bg-cyan-400/10 blur-[100px]" />
-
-      <header className="relative overflow-hidden rounded-[30px] border border-slate-700/80 bg-[radial-gradient(circle_at_85%_20%,rgba(34,211,238,0.16),transparent_25%),linear-gradient(135deg,#101b2d_0%,#0b1322_55%,#080f1c_100%)] p-5 shadow-[0_24px_70px_rgba(2,8,23,0.38)] sm:p-7">
-        <div className="absolute right-8 top-1/2 hidden h-36 w-36 -translate-y-1/2 rounded-full border border-cyan-300/10 lg:block">
-          <div className="absolute inset-5 rounded-full border border-cyan-300/10" />
-          <div className="absolute inset-12 rounded-full bg-cyan-300/10 shadow-[0_0_45px_rgba(34,211,238,0.2)]" />
-        </div>
-
-        <div className="relative flex flex-wrap items-start justify-between gap-5">
-          <div className="max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_12px_#6ee7b7]" />
-                Shift active
-              </span>
-              <span className="inline-flex items-center gap-2 text-xs font-bold text-slate-400">
-                <FiWifi className={connected ? "text-cyan-300" : "text-rose-300"} />
-                {connected ? "Live updates on" : "Reconnecting"}
-              </span>
-            </div>
-            <h1 className="mt-5 text-4xl font-black tracking-[-0.045em] text-white sm:text-5xl">
-              Match <span className="text-cyan-300">Control</span>
-            </h1>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-slate-300">
-              Pick up ready matches, watch your shift, and keep every room
-              moving from one focused desk.
-            </p>
-          </div>
-
+    <main className="space-y-4 pb-8 text-slate-100">
+      <StaffWorkspaceHeader
+        actions={<>
+          <span className="inline-flex items-center gap-2 text-xs font-bold text-slate-400">
+            <FiWifi className={connected ? "text-emerald-300" : "text-rose-300"} />
+            {connected ? "Live" : "Reconnecting"}
+          </span>
           <button
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-900/70 px-4 py-3 text-sm font-black text-white transition hover:border-cyan-300/40 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200 hover:bg-slate-800 disabled:opacity-60"
             disabled={isRefreshing}
             onClick={() => dispatch(fetchOperatorWorkspace())}
             type="button"
@@ -331,8 +304,10 @@ const Operations = () => {
             <FiRefreshCw className={isRefreshing ? "animate-spin" : ""} />
             {isRefreshing ? "Syncing" : "Refresh"}
           </button>
-        </div>
-      </header>
+        </>}
+        description="Rooms, assigned matches and results."
+        title="Match Operator"
+      />
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {metrics.map((metric) => (
@@ -340,15 +315,11 @@ const Operations = () => {
         ))}
       </section>
 
-      <nav aria-label="Match Operator responsibilities" className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-700/80 bg-slate-950/55 p-2">
-        {[
-          ["rooms", "Active rooms", activeRooms.length],
-          ["queue", "Full rooms", unassignedMatches.length],
-          ["matches", "Assigned matches", matches.length],
-        ].map(([id, label, count]) => (
-          <button className={activeDesk === id ? "whitespace-nowrap rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950" : "whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white"} key={id} onClick={() => setActiveDesk(id)} type="button">{label} <span className="ml-2 opacity-70">{count}</span></button>
-        ))}
-      </nav>
+      <StaffWorkspaceTabs activeId={activeDesk} ariaLabel="Match Operator responsibilities" items={[
+        { count: activeRooms.length, id: "rooms", label: "Active rooms" },
+        { count: unassignedMatches.length, id: "queue", label: "Full rooms" },
+        { count: matches.length, id: "matches", label: "Assigned matches" },
+      ]} onChange={setActiveDesk} />
 
       {error ? (
         <StatusMessage
@@ -504,16 +475,16 @@ const MetricCard = ({ icon: Icon, label, tone, value }) => {
   };
 
   return (
-    <article className="group rounded-2xl border border-slate-700/80 bg-slate-900/75 p-4 transition hover:-translate-y-0.5 hover:border-slate-600 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <span className={`rounded-xl p-2.5 ${tones[tone]}`}>
+    <article className="rounded-xl border border-slate-800 bg-slate-950/45 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className={`rounded-lg p-2 ${tones[tone]}`}>
           <Icon />
         </span>
-        <span className="text-3xl font-black tracking-[-0.04em] text-white">
+        <span className="text-xl font-black text-white">
           {value}
         </span>
       </div>
-      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+      <p className="mt-2 text-xs font-bold text-slate-400">
         {label}
       </p>
     </article>
@@ -754,10 +725,12 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
   const participantById = new Map(
     (match.participants || []).map((participant) => [getParticipantId(participant), participant]),
   );
-  const groups = tournament ? getTournamentRankingGroups(match) : [];
+  const teamRanking = usesTeamRanking(match);
+  const keyBased = usesRankingKeys(match);
+  const groups = keyBased ? getCompetitionRankingGroups(match) : [];
   const groupById = new Map(groups.map((group) => [group.key, group]));
-  const rankingIds = tournament ? (resultDraft.rankingKeys || []) : (resultDraft.rankingIds || []);
-  const expectedSize = tournament ? groupById.size : participantById.size;
+  const rankingIds = keyBased ? (resultDraft.rankingKeys || []) : (resultDraft.rankingIds || []);
+  const expectedSize = keyBased ? groupById.size : participantById.size;
   const canSubmit =
     resultDraft.score.trim().length > 0 &&
     rankingIds.length === expectedSize &&
@@ -768,9 +741,9 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Ranked room result</p>
-          <h4 className="mt-1 font-black text-white">Order every {tournament && Number(match.quickMatchOffering?.teamSize || 1) > 1 ? "team" : "player"} from first to last</h4>
+          <h4 className="mt-1 font-black text-white">Order every {teamRanking ? "team" : "player"} from first to last</h4>
           <p className="mt-1 text-xs text-slate-400">
-            {tournament ? "Configured place rewards are applied only after governance verification and settlement." : `Top ${match.eventBatch?.stage?.advanceCount || 0} will qualify after verification and the dispute window.`}
+            {tournament ? "Configured place rewards are applied only after governance verification and settlement." : `Top ${match.eventBatch?.stage?.advanceCount || 0} ${teamRanking ? "teams" : "players"} will qualify after verification and the dispute window.`}
           </p>
         </div>
         <span className="rounded-full border border-emerald-300/20 px-3 py-1 text-xs font-bold text-emerald-100">
@@ -782,7 +755,7 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
         {rankingIds.map((playerId, index) => (
           <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2" key={playerId}>
             <span className="text-center text-sm font-black text-emerald-200">#{index + 1}</span>
-            <span className="truncate text-sm font-bold text-white">{tournament ? groupById.get(playerId)?.names.join(", ") : getParticipantName(participantById.get(playerId))}</span>
+            <span className="min-w-0 text-sm font-bold text-white">{keyBased ? <><span className="block truncate">{groupById.get(playerId)?.name || "Team"}</span>{teamRanking ? <small className="block truncate font-medium text-slate-500">{(groupById.get(playerId)?.participants || []).map(getParticipantName).join(", ")}</small> : null}</> : getParticipantName(participantById.get(playerId))}</span>
             <div className="flex gap-1">
               <button aria-label={`Move ${playerId} up`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === 0} onClick={() => onMove(match._id, playerId, -1)} type="button">Up</button>
               <button aria-label={`Move ${playerId} down`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === rankingIds.length - 1} onClick={() => onMove(match._id, playerId, 1)} type="button">Down</button>
@@ -801,7 +774,7 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
           <input className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm normal-case tracking-normal text-white" maxLength={1000} onChange={(event) => onUpdate(match._id, { proofNote: event.target.value })} placeholder="Observed scoreboard or evidence" value={resultDraft.proofNote} />
         </label>
       </div>
-      <button className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={isBusy || !canSubmit} onClick={() => onSubmit({ proofNote: resultDraft.proofNote, ...(tournament ? { rankingKeys: rankingIds } : { rankingIds }), score: resultDraft.score })} type="button">
+      <button className="mt-4 w-full rounded-xl bg-emerald-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={isBusy || !canSubmit} onClick={() => onSubmit({ proofNote: resultDraft.proofNote, ...(keyBased ? { rankingKeys: rankingIds } : { rankingIds }), score: resultDraft.score })} type="button">
         {isBusy ? "Saving ranking..." : "Save ranked result"}
       </button>
     </section>
@@ -847,11 +820,15 @@ const ResultEvidence = ({ match }) => {
           {result.proofNote}
         </p>
       ) : null}
-      {result.rankingIds?.length ? (
+      {result.placementRanking?.length || result.rankingIds?.length ? (
         <div className="mt-3 rounded-xl border border-orange-300/15 bg-slate-950/50 p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-200">Verified room order</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {result.rankingIds.map((entry, index) => {
+            {(result.placementRanking?.length ? result.placementRanking : result.rankingIds).map((entry, index) => {
+              if (result.placementRanking?.length) {
+                const key = String(entry.key || entry.team?._id || entry.team || entry.playerIds?.[0] || index);
+                return <span className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-slate-200" key={key}>#{entry.place || index + 1} {entry.name || "Team"}</span>;
+              }
               const playerId = String(entry?._id || entry);
               const participant = match.participants?.find((item) => getParticipantId(item) === playerId);
               return <span className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-slate-200" key={playerId}>#{index + 1} {getParticipantName(participant)}</span>;
@@ -874,11 +851,11 @@ const MatchFact = ({ icon, label, value }) => (
 );
 
 const OperationsSkeleton = () => (
-  <div className="animate-pulse space-y-5">
-    <div className="h-64 rounded-[30px] bg-slate-800/80" />
+  <div className="animate-pulse space-y-4">
+    <div className="h-20 rounded-2xl bg-slate-800/80" />
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       {Array.from({ length: 4 }, (_, index) => (
-        <div className="h-32 rounded-2xl bg-slate-800/80" key={index} />
+        <div className="h-20 rounded-xl bg-slate-800/80" key={index} />
       ))}
     </div>
     <div className="h-72 rounded-[28px] bg-slate-800/80" />
@@ -919,6 +896,7 @@ const matchPropType = PropTypes.shape({
         number: PropTypes.number,
         participantsPerMatch: PropTypes.number,
         qualificationRule: PropTypes.string,
+        teamSize: PropTypes.number,
       })]),
     }),
   ]),
@@ -938,6 +916,8 @@ const matchPropType = PropTypes.shape({
   participants: PropTypes.arrayOf(
     PropTypes.shape({
       checkedIn: PropTypes.bool,
+      competitionUnitKey: PropTypes.string,
+      competitionUnitName: PropTypes.string,
       displayName: PropTypes.string,
       team: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
       // Queue summaries intentionally keep participant identity as an ID,
@@ -958,6 +938,7 @@ const matchPropType = PropTypes.shape({
     disputeResolutionNote: PropTypes.string,
     finalScore: PropTypes.string,
     proofNote: PropTypes.string,
+    placementRanking: PropTypes.arrayOf(PropTypes.object),
     rankingIds: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.object])),
     submittedBy: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   }),
@@ -980,7 +961,9 @@ AssignedMatchCard.propTypes = {
     proofNote: PropTypes.string.isRequired,
     rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
     rankingKeys: PropTypes.arrayOf(PropTypes.string),
+    rankingUnit: PropTypes.oneOf(["player", "team"]),
     score: PropTypes.string.isRequired,
+    usesRankingKeys: PropTypes.bool,
   }).isRequired,
   onMoveRankedPlayer: PropTypes.func.isRequired,
   onToggle: PropTypes.func.isRequired,
@@ -998,7 +981,9 @@ RankedResultEditor.propTypes = {
     proofNote: PropTypes.string.isRequired,
     rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
     rankingKeys: PropTypes.arrayOf(PropTypes.string),
+    rankingUnit: PropTypes.oneOf(["player", "team"]),
     score: PropTypes.string.isRequired,
+    usesRankingKeys: PropTypes.bool,
   }).isRequired,
   tournament: PropTypes.bool,
 };

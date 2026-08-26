@@ -1,30 +1,64 @@
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import ChatBox from "../components/common/ChatBox";
 import { FiMessageSquare, FiUsers } from "react-icons/fi";
+import { fetchUserClan } from "../store/slices/clanSlice.js";
 
 const Chats = () => {
+  const dispatch = useDispatch();
   const { profile } = useSelector((store) => store.player);
+  const { userClanData, userClanStatus } = useSelector((store) => store.clan);
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatType, setChatType] = useState(null);
   const [chatName, setChatName] = useState(null);
   const [personalChats, setPersonalChats] = useState(profile?.activeChats || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const clanChat = profile?.clan || null;
+  // The profile carries only a clan reference. Chat visibility and identity
+  // come from the current membership endpoint so ordinary members receive the
+  // same canonical clan record as leaders.
+  const clanChat = userClanData?.data || null;
   const totalChats = (clanChat ? 1 : 0) + personalChats.length;
 
   useEffect(() => {
     setPersonalChats(profile?.activeChats || []);
   }, [profile?.activeChats]);
 
+  useEffect(() => {
+    if (chatType !== "personal" || !selectedChat) return;
+    const stillAvailable = personalChats.some((chat) =>
+      [chat.userId, chat.id, chat._id]
+        .map((value) => String(value || ""))
+        .includes(String(selectedChat))
+    );
+    if (!stillAvailable) {
+      setSelectedChat(null);
+      setChatType(null);
+      setChatName(null);
+    }
+  }, [chatType, personalChats, selectedChat]);
+
+  useEffect(() => {
+    if (userClanStatus === "idle") {
+      dispatch(fetchUserClan());
+    }
+  }, [dispatch, userClanStatus]);
+
   const helperStats = useMemo(
     () => [
       { label: "Open threads", value: totalChats },
       { label: "Direct chats", value: personalChats.length },
-      { label: "Clan room", value: clanChat ? "Live" : "Not joined" },
+      {
+        label: "Clan room",
+        value:
+          userClanStatus === "loading"
+            ? "Loading"
+            : clanChat
+              ? "Live"
+              : "Not joined",
+      },
     ],
-    [clanChat, personalChats.length, totalChats]
+    [clanChat, personalChats.length, totalChats, userClanStatus]
   );
 
   const openChat = ({ id, type, name }) => {

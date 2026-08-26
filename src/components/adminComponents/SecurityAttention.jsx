@@ -17,9 +17,9 @@ const SecurityAttention = () => {
   useEffect(() => { dispatch(fetchSecurityAttention({})); }, [dispatch]);
   return (
     <section className="space-y-5">
-      <header className="flex flex-col gap-4 rounded-3xl border border-cyan-300/15 bg-cyan-300/5 p-5 md:flex-row md:items-end md:justify-between">
-        <div><p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Security oversight</p><h1 className="mt-2 text-2xl font-black text-white">Security attention</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Review durable, privacy-preserving authentication risk signals. Raw credentials, tokens, IP addresses, and full identity hashes are never exposed.</p></div>
-        <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50" disabled={state.status === "loading"} onClick={() => dispatch(fetchSecurityAttention({}))} type="button"><FiRefreshCw />Refresh</button>
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
+        <p className="inline-flex items-center gap-2 text-sm font-bold text-slate-300"><FiShield className="text-cyan-300" />Retained authentication signals</p>
+        <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200 disabled:opacity-50" disabled={state.status === "loading"} onClick={() => dispatch(fetchSecurityAttention({}))} type="button"><FiRefreshCw />Refresh</button>
       </header>
       <div className="grid gap-3 sm:grid-cols-3"><Metric label="Signals in 24 hours" value={state.summary.last24Hours} /><Metric label="High severity" value={state.summary.highSeverityLast24Hours} warning /><Metric label="Retention" suffix=" days" value={state.summary.retentionDays} /></div>
       {state.error && <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{String(state.error)}</div>}
@@ -32,6 +32,6 @@ const SecurityAttention = () => {
     </section>
   );
 };
-const Metric = ({ label, suffix = "", value, warning = false }) => <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4"><p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{label}</p><p className={warning ? "mt-2 text-3xl font-black text-rose-300" : "mt-2 text-3xl font-black text-white"}>{value}{suffix}</p></div>;
+const Metric = ({ label, suffix = "", value, warning = false }) => <div className="rounded-xl border border-slate-800 bg-slate-950/45 p-3"><p className="text-xs font-bold text-slate-500">{label}</p><p className={warning ? "mt-1 text-xl font-black text-rose-300" : "mt-1 text-xl font-black text-white"}>{value}{suffix}</p></div>;
 Metric.propTypes = { label: PropTypes.string.isRequired, suffix: PropTypes.string, value: PropTypes.number.isRequired, warning: PropTypes.bool };
 export default SecurityAttention;

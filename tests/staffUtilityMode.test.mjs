@@ -101,7 +101,7 @@ test("staff workspaces share a player-style responsive shell", async () => {
     readFile(new URL("../src/routes/staffRoutes.jsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(layout, /md:grid-cols-\[18rem_minmax\(0,1fr\)\]/);
+  assert.match(layout, /md:grid-cols-\[14rem_minmax\(0,1fr\)\]/);
   assert.match(layout, /<StaffSideBar \/>/);
   assert.match(layout, /<Outlet \/>/);
   assert.match(sidebar, /getStaffWorkspaceNavigation/);
@@ -122,9 +122,9 @@ test("each operational role dashboard separates its responsibilities", async () 
   assert.match(events, /Event Manager sections/);
   assert.match(events, /Templates[\s\S]*Events/);
   assert.match(games, /Game Manager responsibilities/);
-  assert.match(games, /Overview[\s\S]*Events[\s\S]*Attention queue[\s\S]*Operator workload[\s\S]*History/);
+  assert.match(games, /Overview[\s\S]*Rooms & schedules[\s\S]*Events[\s\S]*Attention[\s\S]*Operators[\s\S]*Account verification[\s\S]*History/);
   assert.match(operations, /Match Operator responsibilities/);
-  assert.match(operations, /Assignment queue[\s\S]*Assigned matches/);
+  assert.match(operations, /Active rooms[\s\S]*Full rooms[\s\S]*Assigned matches/);
 });
 
 test("route ownership keeps safe staff views separate from participation-only pages", async () => {

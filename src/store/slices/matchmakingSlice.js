@@ -18,8 +18,10 @@ export const joinQuickMatchQueue = createApiThunk(
     path: ({ arg }) =>
       `/api/player/quick-matches/${arg.offeringId}/queue`,
     method: "post",
-    getBody: ({ attemptId, teamId }) => ({
+    getBody: ({ attemptId, paymentMode, rewardMode, teamId }) => ({
       attemptId: attemptId || createJoinAttemptId(),
+      ...(paymentMode ? { paymentMode } : {}),
+      ...(rewardMode ? { rewardMode } : {}),
       ...(teamId ? { teamId } : {}),
     }),
     // The response contains the queue position/status needed by future match
