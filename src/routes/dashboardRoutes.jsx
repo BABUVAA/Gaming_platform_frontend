@@ -53,7 +53,7 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.CHATS,
     componentKey: "Chats",
-    access: "verifiedDetailedPlayer",
+    access: "verifiedPlayer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.CLAN,
@@ -63,12 +63,12 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.PROFILE,
     componentKey: "Profile",
-    access: "detailedDashboardViewer",
+    access: "dashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.GAME_ACCOUNTS,
     componentKey: "GameAccounts",
-    access: "verifiedDetailedDashboardViewer",
+    access: "verifiedDashboardViewer",
   },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.ACCOUNT_SETTINGS,

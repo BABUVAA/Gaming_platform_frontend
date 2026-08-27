@@ -18,6 +18,14 @@ import {
   isStaffUtilitySummary,
 } from "../../../utils/staffUtilityMode";
 
+const formatAvailableBalance = (wallet) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: wallet?.currency || "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format((Number(wallet?.availableMinor) || 0) / 100);
+
 const HeaderBurgerMenu = () => {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(
@@ -92,7 +100,7 @@ const HeaderBurgerMenu = () => {
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-white">
-                  Rs {wallet?.realMoney || 0}
+                  {formatAvailableBalance(wallet)}
                 </p>
               </div>
             ) : null}

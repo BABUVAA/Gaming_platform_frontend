@@ -3006,6 +3006,7 @@ PlayerPreviewModal.propTypes = {
   player: PropTypes.shape({
     avatar: PropTypes.string,
     friendshipStatus: PropTypes.string,
+    identity: PropTypes.object,
     playerTag: PropTypes.string,
     stats: PropTypes.shape({
       bookmarkedClans: PropTypes.number,
@@ -3014,6 +3015,8 @@ PlayerPreviewModal.propTypes = {
       tournaments: PropTypes.number,
     }),
     username: PropTypes.string,
+    verifiedGames: PropTypes.array,
+    worth: PropTypes.object,
   }),
   playerTag: PropTypes.string.isRequired,
 };

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { Outlet } from "react-router-dom";
 import { SideBar } from "../components";
 import StaffReadOnlyNotice from "../components/common/StaffReadOnlyNotice";
@@ -17,7 +17,6 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const { isVerified, user } = useAuthStore();
   const { loadGames } = useCatalogStore();
-  const wallet = useSelector((state) => state.payment.wallet);
 
   useEffect(() => {
     // The dashboard shell owns only the shared Game catalog. Competition pages
@@ -46,9 +45,7 @@ const Dashboard = () => {
 
       // Clan data is now loaded only by the detailed Clan route.
       // The dashboard shell preloads only the compact wallet summary.
-      if (!wallet) {
-        requests.push(unwrapThunkRequest(dispatch(fetchWalletBalance())));
-      }
+      requests.push(unwrapThunkRequest(dispatch(fetchWalletBalance())));
     }
 
     if (requests.length === 0) return;
@@ -58,7 +55,7 @@ const Dashboard = () => {
       // diagnostic boundary without forcing unrelated dashboard data to fail.
       console.error("Dashboard bootstrap failed:", error);
     });
-  }, [dispatch, isVerified, user, wallet]);
+  }, [dispatch, isVerified, user]);
 
   return (
     <div className="min-w-0 w-full overflow-x-hidden min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.08),transparent_24%),#111827] md:min-h-[calc(100vh-80px)]">

@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -118,6 +118,36 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   advancement from a fixed knockout bracket or accept player IDs from clients.
 
 ## Current Verified State
+
+- Deployed player-page audit completed 2026-08-27. Compete, Clan, Matches,
+  Wallet, Account Settings and Quick Match details loaded against `e-gaming`
+  without console errors or horizontal overflow. Blank Profile, Chats and Game
+  Accounts routes were caused by obsolete full-profile route gates; each now
+  uses its owned Redux/API boundary, and Profile exposes loading/error/retry
+  states. The dashboard now fetches the canonical Wallet summary and both
+  header variants format `availableMinor` instead of retired money fields.
+  Frontend verification passes 135/135, ESLint, diff check and the 567-module
+  build. Recheck these four surfaces after Vercel publishes the commit.
+
+- Presentation database setup completed 2026-08-27. The local-only,
+  idempotent `scripts/seedPresentationDatabase.js` derives and hard-checks the
+  separate `e-gaming` database, never changes `node-auth`, and tracks no
+  credential. It prepared 1,000 verified players with exact INR 1,000 sandbox
+  Wallet balances, 20 clans, 940 ready teams, 500 friendships, five staff
+  identities and eight assignments using existing roles/scopes. It also owns
+  the complete test catalog: approved BGMI Solo/Erangal and COC 5v5/War monthly
+  Templates, two approved open paid September 2026 Events with INR 10 per-seat
+  entry/top-ten rewards, 14 active free place-reward Quick Matches covering
+  every configured BGMI/COC mode-map combination, and one active INR 10-per-seat
+  BGMI Squad/Erangal paid Quick Match with INR 500/300/200 place rewards. The
+  existing `bhoopi.patel.92372@gmail.com` player has verified BGMI and COC
+  identities, INR 1,000 sandbox funds, three accepted test friends, and ready
+  captain-owned Duo and Squad teams. `--join-only` presents the
+  available Event/Quick Match choices and uses canonical registration/queue
+  services without reseeding accounts. No deployed test-lab API or UI was
+  added. Obsolete hardcoded account, dummy-data and separate competition seed
+  scripts are removed. Database counts/balances and idempotent reruns passed;
+  backend aggregate passes 393/393 and diff check is clean.
 
 - Lean player-profile contract completed 2026-08-27: `GET /api/users/profile`
   returns only the signed-in player's identity, editable profile fields and

@@ -56,7 +56,9 @@ const safeSocialHref = (value) => {
 const Profile = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const { profile } = useSelector((store) => store.player);
+  const { error: profileError, profile, profileStatus } = useSelector(
+    (store) => store.player,
+  );
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
   const externalPlayer = useSelector(selectPublicPlayerProfile);
   const externalStatus = useSelector(selectPublicPlayerProfileStatus);
@@ -110,6 +112,42 @@ const Profile = () => {
       })).filter(({ href }) => href),
     [displaySocials]
   );
+
+  useEffect(() => {
+    if (
+      externalPlayerTag ||
+      profile ||
+      profileStatus === "loading" ||
+      profileStatus === "failed"
+    ) {
+      return;
+    }
+    dispatch(fetchPlayerProfile());
+  }, [dispatch, externalPlayerTag, profile, profileStatus]);
+
+  if (!externalPlayerTag && !profile) {
+    return (
+      <section className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-slate-950/85 p-5 text-center">
+        {profileStatus === "failed" ? (
+          <>
+            <h1 className="text-xl font-black text-white">Profile unavailable</h1>
+            <p className="mt-2 text-sm text-slate-400">
+              {profileError?.message || "Unable to load your player profile."}
+            </p>
+            <button
+              type="button"
+              onClick={() => dispatch(fetchPlayerProfile())}
+              className="mt-4 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950"
+            >
+              Retry
+            </button>
+          </>
+        ) : (
+          <p className="text-sm font-semibold text-slate-300">Loading profile...</p>
+        )}
+      </section>
+    );
+  }
 
   const openSocialEditor = () => {
     if (isStaffUtilityMode) return;

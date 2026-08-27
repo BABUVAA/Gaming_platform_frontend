@@ -2,7 +2,14 @@ import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { CiWallet } from "react-icons/ci";
 import { TbCoinRupeeFilled } from "react-icons/tb";
-import { RiCopperCoinLine } from "react-icons/ri";
+
+const formatAvailableBalance = (wallet) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: wallet?.currency || "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format((Number(wallet?.availableMinor) || 0) / 100);
 
 const HeaderWalletMenu = () => {
   const { wallet } = useSelector((store) => store.payment);
@@ -22,11 +29,7 @@ const HeaderWalletMenu = () => {
         <div className="mt-1 flex items-center gap-3 text-sm font-semibold">
           <span className="inline-flex items-center gap-1 text-emerald-300">
             <TbCoinRupeeFilled size={15} />
-            Rs {wallet?.realMoney || 0}
-          </span>
-          <span className="inline-flex items-center gap-1 text-amber-300">
-            <RiCopperCoinLine size={15} />
-            {wallet?.platformMoney || 0} coins
+            {formatAvailableBalance(wallet)}
           </span>
         </div>
       </div>

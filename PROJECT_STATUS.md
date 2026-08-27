@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -17,6 +17,18 @@ Use this section first. It is the shortest safe path for a single coding model
 to continue the project without reopening settled decisions.
 
 ### Current Truth
+
+- Deployed player-surface audit completed 2026-08-27 against the Vercel test
+  frontend and `e-gaming` presentation data. Compete, Clan, Matches, Wallet,
+  Account Settings and Quick Match details rendered without console errors or
+  horizontal overflow. The audit found three routes trapped behind the retired
+  detailed-profile gate (`Profile`, `Chats`, and `Game Accounts`) plus a stale
+  header wallet projection. Those routes now use their dedicated Redux/API
+  boundaries, Profile owns an explicit loading/error/retry state, the dashboard
+  fetches the compact Wallet summary once, and desktop/mobile headers render the
+  canonical currency plus `availableMinor`. Frontend passes 135/135, ESLint,
+  and the 567-module production build. A post-deploy browser confirmation is
+  still required after this commit reaches Vercel.
 
 - Lean player-profile contract completed 2026-08-27. The private profile
   endpoint now returns only player identity, editable presentation fields and
@@ -138,19 +150,30 @@ to continue the project without reopening settled decisions.
   Waitlisted/cancelled entries are excluded. Open/limited Events follow their
   spectator visibility, while invitation-only Events retain exact private
   visibility at the backend read boundary.
-- Local test catalog seeded 2026-08-23 through canonical services and audited
-  staff identities. The existing Event Manager assignment now covers BGMI and
-  COC. BGMI owns an active monthly Solo/Erangal Template and a scheduled,
-  registration-open September 2026 Run. COC owns an active monthly 5v5/War
-  Template and a submitted Run that remains `in_review`; it must not be
-  published by bypassing the server's explicit team-Event execution gate.
-  Free team admission now has an immutable server-derived roster foundation,
-  but team Match ranking, advancement, standings and rewards are not yet safe.
-  Quick Matches cover every configured capability combination: BGMI
-  Solo/Duo/Squad on Erangal/Miramar and COC 5v5 on War. The existing paid BGMI
-  Solo/Erangal offering was reused; the six newly created offerings are free,
-  active, on-demand test competitions. Creation is idempotent through
-  `scripts/createMonthlyTestCompetitions.js`.
+- The separate `e-gaming` presentation database was prepared 2026-08-27 without
+  changing the local `node-auth` database. One idempotent local command,
+  `scripts/seedPresentationDatabase.js`, owns setup and joining: 1,000 verified
+  funded players, 20 clans, 940 ready BGMI/COC teams, 500 accepted friend
+  pairs, five staff identities and eight assignments using only the existing
+  canonical roles/scopes. Every player has INR 1,000 of ledger-backed sandbox
+  funds. The same command creates independently reviewed BGMI Solo/Erangal and
+  COC 5v5/War monthly Templates plus two approved September 2026 open paid
+  Events with INR 10 per-seat entry and place-wise top-ten rewards. It also
+  creates 14 active free Quick Matches: BGMI Solo/Duo/Squad across all four
+  configured maps and COC 5v5/10v10 on War, each with place-wise rewards. A
+  fifteenth active BGMI Squad/Erangal Quick Match uses sandbox paid entry at
+  INR 10 per seat and place rewards of INR 500/300/200. The existing
+  `bhoopi.patel.92372@gmail.com` presentation player now has verified BGMI and
+  COC identities, INR 1,000 sandbox funds, three accepted test friends, and
+  captain-owned ready `Bhoopi Test Duo` and `Bhoopi Test Squad` rosters.
+  `--join-only` lists these choices and joins a bounded requested player count
+  through the canonical Event/Quick Match services without repeating account
+  or Wallet setup. No deployed API/UI test-lab route exists, credentials are
+  not tracked, and the command refuses any database other than exactly
+  `e-gaming`. The older hardcoded account/dummy/catalog seed scripts are
+  removed. Database verification matched every stated count and exact Wallet
+  balance; the featured setup and catalog are idempotent, and the backend
+  aggregate remains green at 393/393.
 - Open and limited-seat Events remain spectator-visible after registration
   closes through completion. Invitation-only Events remain private. Spectator
   reads expose schedules, safe round/Match status and sporting standings only;
