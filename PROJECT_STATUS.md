@@ -31,8 +31,11 @@ to continue the project without reopening settled decisions.
   (complete OAuth trio plus bot+guild), and leaves each unavailable capability
   fail-closed. The frontend rejects malformed Profile success payloads into a
   recoverable error instead of looping. Focused gates pass: backend 8/8 and
-  frontend 3/3 plus ESLint and the 567-module build. Deploy and authenticated
-  live confirmation remain the exit gate for this repair.
+  frontend 3/3 plus ESLint and the 567-module build. Backend commit `4a4d37e`
+  deployed `live` on Render and frontend commit `10a36ca` is `READY` on Vercel.
+  An authenticated production request now returns 200 with root keys
+  `success`, `message`, and `data`, including the expected private player
+  profile. The infinite Profile request loop is closed.
 
 - Deployed player-surface audit completed 2026-08-27 against the Vercel test
   frontend and `e-gaming` presentation data. Compete, Clan, Matches, Wallet,

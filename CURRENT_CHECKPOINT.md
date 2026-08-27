@@ -131,8 +131,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   The frontend validates the canonical private Profile envelope and fails into
   Retry instead of looping on a malformed 200 response. Backend focused gates
   pass 8/8; frontend focused gates pass 3/3 with ESLint, diff check and the
-  567-module build. Push both repos, wait for Render `live`, then repeat the
-  authenticated Profile/API audit.
+  567-module build. Backend `4a4d37e` is now `live` on Render and frontend
+  `10a36ca` is `READY` on Vercel. An authenticated production API proof returns
+  the canonical `{ success, message, data }` envelope with the expected private
+  profile, closing the repeated-load incident.
 
 - Deployed player-page audit completed 2026-08-27. Compete, Clan, Matches,
   Wallet, Account Settings and Quick Match details loaded against `e-gaming`
