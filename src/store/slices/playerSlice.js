@@ -41,14 +41,12 @@ export const fetchPlayerProfile = createApiThunk(
   },
   {
     condition: (_, { getState }) => {
-      const { auth, player } = getState();
+      const { player } = getState();
 
-      // Profile data is private and can only be requested for an authenticated
-      // session. Refuse only overlapping loads so explicit refreshes still work.
-      return (
-        auth.isAuthenticated &&
-        player.profileStatus !== "loading"
-      );
+      // Route guards and the server own authentication. Keeping the transport
+      // independent of auth bootstrap timing prevents an authenticated Profile
+      // page from remaining idle when session state settles in the same render.
+      return player.profileStatus !== "loading";
     },
   },
 );

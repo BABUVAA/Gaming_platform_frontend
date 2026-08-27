@@ -126,8 +126,11 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   uses its owned Redux/API boundary, and Profile exposes loading/error/retry
   states. The dashboard now fetches the canonical Wallet summary and both
   header variants format `availableMinor` instead of retired money fields.
-  Frontend verification passes 135/135, ESLint, diff check and the 567-module
-  build. Recheck these four surfaces after Vercel publishes the commit.
+  The first live recheck proved Game Accounts, Chats and the Wallet header, then
+  found Profile still idle during auth bootstrap. Its private thunk now blocks
+  only overlapping requests; route guards and the backend remain the auth
+  boundary. Frontend verification passes 136/136, ESLint, diff check and the
+  567-module build. Recheck Profile after the follow-up Vercel commit publishes.
 
 - Presentation database setup completed 2026-08-27. The local-only,
   idempotent `scripts/seedPresentationDatabase.js` derives and hard-checks the

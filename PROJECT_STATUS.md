@@ -26,9 +26,12 @@ to continue the project without reopening settled decisions.
   header wallet projection. Those routes now use their dedicated Redux/API
   boundaries, Profile owns an explicit loading/error/retry state, the dashboard
   fetches the compact Wallet summary once, and desktop/mobile headers render the
-  canonical currency plus `availableMinor`. Frontend passes 135/135, ESLint,
-  and the 567-module production build. A post-deploy browser confirmation is
-  still required after this commit reaches Vercel.
+  canonical currency plus `availableMinor`. The first production recheck also
+  exposed Profile transport being suppressed while authentication bootstrap
+  settled; the private request now depends only on its own overlap guard while
+  route and server authentication remain authoritative. Frontend passes
+  136/136, ESLint, and the 567-module production build. Recheck Profile after
+  the follow-up Vercel commit publishes.
 
 - Lean player-profile contract completed 2026-08-27. The private profile
   endpoint now returns only player identity, editable presentation fields and

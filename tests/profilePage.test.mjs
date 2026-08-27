@@ -3,9 +3,39 @@ import test from "node:test";
 import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import playerSlice, {
+  fetchPlayerProfile,
   fetchPublicPlayerProfile,
   playerActions,
 } from "../src/store/slices/playerSlice.js";
+
+test("private Profile loading is not suppressed by auth bootstrap timing", async () => {
+  const originalAdapter = api.defaults.adapter;
+  let request;
+  api.defaults.adapter = async (config) => {
+    request = config;
+    return {
+      config,
+      data: {
+        success: true,
+        data: { _id: "player-1", profile: { username: "Babu" } },
+      },
+      headers: {},
+      status: 200,
+      statusText: "OK",
+    };
+  };
+
+  try {
+    const store = configureStore({ reducer: { player: playerSlice.reducer } });
+    await store.dispatch(fetchPlayerProfile()).unwrap();
+
+    assert.equal(request.url, "/api/users/profile");
+    assert.equal(store.getState().player.profile.profile.username, "Babu");
+    assert.equal(store.getState().player.profileStatus, "succeeded");
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
 
 test("public player profiles load through the Redux boundary", async () => {
   const originalAdapter = api.defaults.adapter;
