@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -17,6 +17,22 @@ Use this section first. It is the shortest safe path for a single coding model
 to continue the project without reopening settled decisions.
 
 ### Current Truth
+
+- Deployment audit 2026-08-28 found the exact cause of the persistent Profile
+  loader. Vercel was current, but the last three Render backend deploys had
+  failed startup and Render was still serving commit `2459968` from August 24.
+  That legacy API returned Profile fields at the response root; the current
+  frontend expected the canonical `{ success, data }` envelope, stored `null`,
+  and retried continuously. Render logs identified missing PhonePe callback
+  credentials and an incomplete Discord OAuth group. Production validation now
+  treats signed PhonePe callbacks as optional only for the documented manual
+  sandbox-reconciliation mode, requires callback credentials as an exact pair,
+  separates Discord bot publication (bot+guild pair) from optional player OAuth
+  (complete OAuth trio plus bot+guild), and leaves each unavailable capability
+  fail-closed. The frontend rejects malformed Profile success payloads into a
+  recoverable error instead of looping. Focused gates pass: backend 8/8 and
+  frontend 3/3 plus ESLint and the 567-module build. Deploy and authenticated
+  live confirmation remain the exit gate for this repair.
 
 - Deployed player-surface audit completed 2026-08-27 against the Vercel test
   frontend and `e-gaming` presentation data. Compete, Clan, Matches, Wallet,

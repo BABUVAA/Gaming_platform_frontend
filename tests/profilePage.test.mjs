@@ -37,6 +37,28 @@ test("private Profile loading is not suppressed by auth bootstrap timing", async
   }
 });
 
+test("a malformed legacy Profile response fails instead of refetching forever", async () => {
+  const originalAdapter = api.defaults.adapter;
+  api.defaults.adapter = async (config) => ({
+    config,
+    data: { profile: { username: "Legacy Babu" } },
+    headers: {},
+    status: 200,
+    statusText: "OK",
+  });
+
+  try {
+    const store = configureStore({ reducer: { player: playerSlice.reducer } });
+    const action = await store.dispatch(fetchPlayerProfile());
+
+    assert.equal(fetchPlayerProfile.rejected.match(action), true);
+    assert.equal(store.getState().player.profile, null);
+    assert.equal(store.getState().player.profileStatus, "failed");
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
 test("public player profiles load through the Redux boundary", async () => {
   const originalAdapter = api.defaults.adapter;
   let request;

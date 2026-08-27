@@ -35,7 +35,13 @@ export const fetchPlayerProfile = createApiThunk(
   "player/fetchProfile",
   {
     path: "/api/users/profile",
-    selectData: (response) => response.data?.data || null,
+    selectData: (response) => {
+      const profile = response.data?.data;
+      if (!profile?._id || !profile.profile || typeof profile.profile !== "object") {
+        throw new Error("Player profile response is incomplete.");
+      }
+      return profile;
+    },
     errorMessage: "Unable to load player profile.",
     toast: { error: true },
   },

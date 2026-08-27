@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.
@@ -118,6 +118,21 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   advancement from a fixed knockout bracket or accept player IDs from clients.
 
 ## Current Verified State
+
+- Deployment repair prepared 2026-08-28. Vercel serves the current frontend,
+  but Render reports backend commits `24fcdef`, `2fecb78`, and `3aca2f5` as
+  `update_failed`; commit `2459968` remains live. Its legacy root-level Profile
+  response caused the current client to store `null` and refetch roughly once
+  per second. Render startup logs name the blockers: missing PhonePe callback
+  username/password and Discord client ID/secret/redirect. The validator now
+  permits both callback credentials to remain absent during documented manual
+  sandbox reconciliation, requires them as a pair when enabled, and treats the
+  configured Discord bot+guild publication pair separately from optional OAuth.
+  The frontend validates the canonical private Profile envelope and fails into
+  Retry instead of looping on a malformed 200 response. Backend focused gates
+  pass 8/8; frontend focused gates pass 3/3 with ESLint, diff check and the
+  567-module build. Push both repos, wait for Render `live`, then repeat the
+  authenticated Profile/API audit.
 
 - Deployed player-page audit completed 2026-08-27. Compete, Clan, Matches,
   Wallet, Account Settings and Quick Match details loaded against `e-gaming`
