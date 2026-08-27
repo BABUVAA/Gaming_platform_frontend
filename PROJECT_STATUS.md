@@ -18,6 +18,40 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Lean player-profile contract completed 2026-08-27. The private profile
+  endpoint now returns only player identity, editable presentation fields and
+  linked game-account data; it no longer populates friends, requests, teams,
+  bookmarks, active chats, clan, wallet or unrelated operational records.
+  Friends are read through the canonical social boundary, saved teams through
+  the clan-team boundary, and direct-chat shortcuts are transient Redux state.
+  The authenticated public-profile read exposes a safe player showcase only:
+  identity, HTTP(S)-only social links, verified game account display names
+  without account IDs, public clan summary, exact canonical public Event/Quick
+  Match metrics and the latest eight public results. Invitation-only Event
+  activity is excluded. The Clan friend-search route returns a separately
+  minimal actionable identity, keeping the showcase out of mutation lookup
+  flows. Profile renders compact worth, recent-competition and clan sections.
+  Backend aggregate passes 393/393, frontend passes 135/135 plus ESLint and
+  the 567-module build; generated API documentation covers 212/212. Authenticated
+  desktop and 390x844 mobile proof passed on 2026-08-27 using `bhupesh_player`
+  viewing the populated `babu` profile. The check exposed a stale Clan preview
+  serializer/UI mismatch, which is now Redux-backed by the public-profile
+  contract; identity, two verified accounts, social link, public clan and
+  competition metrics render without horizontal overflow or profile errors.
+
+- Player Profile refinement completed 2026-08-26. The page now keeps one
+  compact identity header plus concise Game Accounts and Social Links sections.
+  Redundant statistics, private email display, explanatory labels and the
+  obsolete embedded Tournament-history panel are removed; canonical Match and
+  Event collections remain the source of competition history. Players can edit
+  a bounded bio and social links together, while avatar/banner uploads advertise
+  only the backend-supported JPEG/PNG contract. Public profile reads now cross
+  the Redux boundary with stale-response protection, and rendered social links
+  accept only HTTP/HTTPS destinations. Staff utility mode remains read-only.
+  Frontend verification passes 135/135, full ESLint and the 567-module build.
+  The unauthenticated browser guard was clean; authenticated desktop/mobile
+  visual proof remains a presentation follow-up.
+
 - Event responsibility amendment completed 2026-08-25. Admin `Event
   Management` contains only independent Template/Event approval. The scoped
   Event Manager workspace now owns invitation-only Event rosters plus final
@@ -60,7 +94,8 @@ to continue the project without reopening settled decisions.
   the exact ledger-backed allocations. No result, settlement, or release
   request accepts client-owned money or recipient amounts.
 - Game Manager supervises operations for assigned games. Its mutations are
-  limited to approving/rejecting scoped game-account verification requests and
+  limited to approving/rejecting scoped game-account verification requests,
+  escalating supported initial or replacement evidence for independent fraud review, and
   setting the schedule plus lobby credentials for an assigned-game Match after
   a Match Operator owns it. Game/catalog configuration, competition definition,
   staff, result, dispute and money controls remain read-only.
@@ -69,6 +104,16 @@ to continue the project without reopening settled decisions.
   for assigned games. It excludes email, wallet, lobby credentials, private
   Match evidence and chat. Game-account review receives only the submitted UID,
   in-game name, bounded proof note and safe player identity.
+- A player may establish one Game identity per Game. A verified identity may
+  be replaced once for that Game after it has remained verified for 30 days,
+  provided the player has no active Room/Match/Event or pending financial
+  settlement. COC replacement repeats live owner-token verification. BGMI
+  first-time verification and replacement require one privately stored
+  PNG/JPEG screenshot plus a fraud warning acknowledgement; during replacement
+  the current verified identity stays active until a scoped Game Manager
+  approves it. Pending requests are unique, rejected
+  requests preserve the current identity, and approval atomically consumes the
+  one lifetime replacement.
 - Event Manager creates drafts inside assigned game scopes; Platform Admin
   reviews submitted Templates and Event Runs through an audited lifecycle.
   After a Run is approved, routine Event execution belongs to the scoped Event
@@ -2685,6 +2730,33 @@ to Completed and record any remaining risks under Required Future Flows.
   renders incoming messages immediately in both directions. The backend emits
   `session:ready` only after authenticated rooms and chat handlers exist; the
   client does not join or send before that signal.
+- Friend and Clan messages now expose the persisted message subdocument ID in
+  both realtime delivery and the send acknowledgement. The shared frontend
+  merge uses that canonical ID, with a stable content/time fallback that never
+  includes list position, so the two delivery paths render exactly one row.
+  Persisted room history and the browser-session live cache are merged rather
+  than replaced, so sending or receiving a new message cannot temporarily hide
+  older messages; switching conversations still resets to the selected thread.
+  Every live row is checked against the open Friend/Clan thread before render,
+  history-load payloads carry their owning thread ID, and Clan messages carry
+  their Clan ID. Delayed responses and simultaneous conversations therefore
+  cannot mix. A failed room load exits its joining state after ten seconds.
+  The Chats workspace is viewport-bounded with internal message/sidebar
+  scrolling, a restrained maximum width, wrapped message text, and a Back to
+  Chats control that remains present through mobile and tablet breakpoints.
+  The redundant Open threads, Direct chats and Clan room summary strip is
+  removed together with the duplicate page-level Chats heading; the page opens
+  directly with its conversation list and one sidebar title.
+- Player mobile bottom navigation keeps the full `Game Accounts` and `Account
+  Settings` labels on desktop, but renders compact `Games` and `Settings`
+  labels below the desktop breakpoint. Mobile items share the available width
+  with tighter tracking so labels cannot overlap adjacent tabs.
+- Account Settings no longer repeats its route title. Player password copy is
+  withdrawal-specific and contains no staff/governance explanation; staff use
+  the automatic protected-command dialog only within Staff workspaces.
+- Game Accounts removes the linked/verified/pending statistic cards and the
+  supported-game count badge. The page retains only actionable account status,
+  supported Games and verification-request history.
 - Unfriending is destructive for that direct conversation by product decision.
   One MongoDB transaction marks the Friendship removed, deletes every Personal
   Chat document for the pair, and removes both users' active-chat/sidebar rows.
@@ -2701,7 +2773,7 @@ to Completed and record any remaining risks under Required Future Flows.
 - Verification 2026-08-26: the prior backend aggregate baseline is 377/377,
   including a real MongoDB newest-200 Match retention test. After this fix,
   affected backend realtime passes 13/13 and transaction-capable Friendship
-  cleanup passes 1/1. Frontend passes 125/125, full ESLint and the 567-module
+  cleanup passes 1/1. Frontend passes 129/129, full ESLint and the 567-module
   production build. A broader backend rerun encountered transient in-memory
   Mongo startup timeouts in unrelated suites; the auth integration retry
   passed, while the later Event-advancement startup failure left that aggregate
@@ -2746,6 +2818,42 @@ to Completed and record any remaining risks under Required Future Flows.
 - Verification: backend aggregate 328/328 including three new replica-set cases;
   frontend 103/103, full lint and 557-module build; API docs 199/199; diff checks
   pass. Authenticated desktop/mobile visual proof remains pending.
+
+## Latest Refinement: Controlled Game-Account Replacement and Fraud Review
+
+- Verified game accounts remain locked against ordinary overwrite. The player
+  receives exactly one replacement per Game after a 30-day verified cooldown.
+  Active competition membership, pending prize/entry funds, or an active
+  withdrawal blocks submission and approval. COC re-verifies the provider
+  owner token; BGMI uses a separate multipart replacement request and keeps the
+  old verified identity authoritative until approval.
+- First-time and replacement BGMI verification accept one signature-checked
+  PNG/JPEG up to 5 MB with bounded dimensions. The request records a content
+  hash, hash-only request-device/network
+  correlation and deterministic duplicate/editing markers, then stores the
+  object privately with server-side encryption. Only an assigned-game Game
+  Manager can stream it through an authenticated no-store endpoint. Browser
+  uploads cannot prove the device that captured an image, and marker/AI signals
+  are review clues rather than automatic proof.
+- A Game Manager may approve, reject, or escalate supported initial or
+  replacement evidence with recent authentication. Escalation transactionally opens one
+  durable fraud case and temporarily freezes player mutations, prize release,
+  withdrawal approval and new provider submission. Platform/Super Admin makes
+  the independent final decision: clear restores access; confirm permanently
+  bans the account, increments auth version and revokes the session. Provider
+  outcomes already in flight are still reconciled truthfully. Legitimate
+  append-only ledger balances are never automatically confiscated.
+- Game Accounts keeps its compact cards and now shows `Change account`, the
+  eligibility date, or `Account change used`. Every BGMI manual request requires
+  the screenshot and explicit permanent-ban warning. Game Manager sees current vs
+  requested identity, private evidence and risk signals; Security Attention
+  owns the final clear/permanent-ban queue.
+- Verification 2026-08-26: backend aggregate passes 390/390, including
+  replacement, fraud-freeze, Match/Event prize and withdrawal integration
+  coverage. Frontend passes 134/134, full ESLint and the 567-module production
+  build. Generated API documentation covers 212/212 mounted operations. A live
+  authenticated S3 upload/review proof remains required in the configured test
+  environment before this workflow is considered deployment-verified.
 
 ## Latest Fix: PhonePe Sandbox Completion Binding
 

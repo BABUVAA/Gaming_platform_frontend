@@ -1,28 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import ChatBox from "../components/common/ChatBox";
 import { FiMessageSquare, FiUsers } from "react-icons/fi";
 import { fetchUserClan } from "../store/slices/clanSlice.js";
+import { fetchSocialConnections } from "../store/slices/socialSlice.js";
+import { playerActions } from "../store/slices/playerSlice.js";
 
 const Chats = () => {
   const dispatch = useDispatch();
-  const { profile } = useSelector((store) => store.player);
+  const activeChats = useSelector((store) => store.player.activeChats);
+  const { connections, connectionsStatus } = useSelector((store) => store.social);
   const { userClanData, userClanStatus } = useSelector((store) => store.clan);
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatType, setChatType] = useState(null);
   const [chatName, setChatName] = useState(null);
-  const [personalChats, setPersonalChats] = useState(profile?.activeChats || []);
+  const [personalChats, setPersonalChats] = useState(activeChats || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   // The profile carries only a clan reference. Chat visibility and identity
   // come from the current membership endpoint so ordinary members receive the
   // same canonical clan record as leaders.
   const clanChat = userClanData?.data || null;
-  const totalChats = (clanChat ? 1 : 0) + personalChats.length;
 
   useEffect(() => {
-    setPersonalChats(profile?.activeChats || []);
-  }, [profile?.activeChats]);
+    setPersonalChats(activeChats || []);
+  }, [activeChats]);
 
   useEffect(() => {
     if (chatType !== "personal" || !selectedChat) return;
@@ -44,22 +46,9 @@ const Chats = () => {
     }
   }, [dispatch, userClanStatus]);
 
-  const helperStats = useMemo(
-    () => [
-      { label: "Open threads", value: totalChats },
-      { label: "Direct chats", value: personalChats.length },
-      {
-        label: "Clan room",
-        value:
-          userClanStatus === "loading"
-            ? "Loading"
-            : clanChat
-              ? "Live"
-              : "Not joined",
-      },
-    ],
-    [clanChat, personalChats.length, totalChats, userClanStatus]
-  );
+  useEffect(() => {
+    if (connectionsStatus === "idle") dispatch(fetchSocialConnections());
+  }, [connectionsStatus, dispatch]);
 
   const openChat = ({ id, type, name }) => {
     setSelectedChat(id);
@@ -68,26 +57,15 @@ const Chats = () => {
     setIsModalOpen(false);
   };
 
-  return (
-    <div className="flex min-h-0 flex-col space-y-4">
-      <section className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-black text-white">Chats</h1>
-        <div className="flex flex-wrap gap-2">
-            {helperStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2"
-              >
-                <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                  {stat.label}: {" "}
-                </span>
-                <span className="text-xs font-black text-white">{stat.value}</span>
-              </div>
-            ))}
-        </div>
-      </section>
+  const closeChat = () => {
+    setSelectedChat(null);
+    setChatType(null);
+    setChatName(null);
+  };
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[19rem_minmax(0,1fr)] lg:[height:calc(100vh-9rem)]">
+  return (
+    <div className="mx-auto flex h-[calc(100dvh-10rem)] min-h-[28rem] max-h-[46rem] w-full max-w-6xl min-w-0 flex-col gap-4">
+      <div className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[18rem_minmax(0,1fr)]">
         <div
           className={`min-h-0 ${selectedChat ? "hidden lg:block" : "block"}`}
         >
@@ -108,7 +86,7 @@ const Chats = () => {
                 selectedChat={selectedChat}
                 chatType={chatType}
                 chatName={chatName}
-                onBack={() => setSelectedChat(null)}
+                onBack={closeChat}
               />
             </div>
           ) : (
@@ -123,8 +101,9 @@ const Chats = () => {
         <NewChatModal
           onClose={() => setIsModalOpen(false)}
           personalChats={personalChats}
-          setPersonalChats={setPersonalChats}
           onOpenChat={openChat}
+          friends={connections?.friends || []}
+          friendsStatus={connectionsStatus}
         />
       )}
     </div>
@@ -133,14 +112,8 @@ const Chats = () => {
 
 const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
   return (
-    <div className="h-full min-h-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90">
-      <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-            Match Feed
-          </p>
-          <h2 className="mt-1 text-xl font-black text-white">Chats</h2>
-        </div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90">
+      <div className="flex justify-end border-b border-slate-800 px-3 py-3">
         <button
           className="rounded-2xl bg-cyan-300 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-950"
           onClick={onNewChat}
@@ -149,7 +122,7 @@ const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
         </button>
       </div>
 
-      <div className="h-full space-y-2 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {clanChat && (
           <button
             type="button"
@@ -220,15 +193,14 @@ const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
   );
 };
 
-const NewChatModal = ({ onClose, personalChats, setPersonalChats, onOpenChat }) => {
-  const { profile } = useSelector((store) => store.player);
-  const friends = profile?.profile?.friends || [];
+const NewChatModal = ({ onClose, personalChats, onOpenChat, friends, friendsStatus }) => {
+  const dispatch = useDispatch();
   const [selectedUser, setSelectedUser] = useState(null);
 
   const startChat = () => {
     if (!selectedUser) return;
 
-    const friend = friends.find((entry) => entry._id === selectedUser);
+    const friend = friends.find((entry) => String(entry._id) === selectedUser);
     if (!friend) return;
 
     const existingChat = personalChats.find(
@@ -239,13 +211,18 @@ const NewChatModal = ({ onClose, personalChats, setPersonalChats, onOpenChat }) 
     );
 
     if (!existingChat) {
-      setPersonalChats([...personalChats, { ...friend, type: "personal" }]);
+      dispatch(
+        playerActions.upsertActiveChat({
+          userId: String(friend._id),
+          username: friend.username || "Player",
+        }),
+      );
     }
 
     onOpenChat({
       id: friend._id,
       type: "personal",
-      name: friend.profile?.username || "Player",
+      name: friend.username || "Player",
     });
   };
 
@@ -253,15 +230,19 @@ const NewChatModal = ({ onClose, personalChats, setPersonalChats, onOpenChat }) 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-[0_24px_60px_rgba(2,8,23,0.55)]">
         <h2 className="text-2xl font-black text-white">Start a New Chat</h2>
+        {friendsStatus === "loading" ? (
+          <p className="mt-3 text-sm text-slate-400">Loading friends...</p>
+        ) : null}
         <select
           className="mt-4 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100"
           value={selectedUser || ""}
           onChange={(event) => setSelectedUser(event.target.value)}
+          disabled={friendsStatus === "loading"}
         >
           <option value="">Select a friend</option>
           {friends.map((friend) => (
             <option key={friend._id} value={friend._id}>
-              {friend.profile.username}
+              {friend.username || "Player"}
             </option>
           ))}
         </select>
@@ -298,8 +279,9 @@ ChatSidebar.propTypes = {
 NewChatModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   personalChats: PropTypes.arrayOf(PropTypes.object).isRequired,
-  setPersonalChats: PropTypes.func.isRequired,
   onOpenChat: PropTypes.func.isRequired,
+  friends: PropTypes.arrayOf(PropTypes.object).isRequired,
+  friendsStatus: PropTypes.string.isRequired,
 };
 
 export default Chats;

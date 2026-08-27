@@ -28,32 +28,10 @@ import {
   isSupportedRealtimeEvent,
 } from "../realtime/eventContracts";
 import {
+  appendUniqueMessage,
   removeMessageThread,
   resolveMessageThreadId,
 } from "../utils/chatMessages";
-
-const getMessageSignature = (message = {}, fallbackIndex = 0) =>
-  message?._id ||
-  [
-    message?.senderId || "unknown",
-    message?.receiverId || message?.clanId || message?.chatId || "thread",
-    message?.message || "",
-    String(message?.timestamp || message?.createdAt || ""),
-    fallbackIndex,
-  ].join("::");
-
-const appendUniqueMessage = (messageList = [], newMessage) => {
-  const existingSignatures = new Set(
-    messageList.map((entry, index) => getMessageSignature(entry, index))
-  );
-  const newSignature = getMessageSignature(newMessage, messageList.length);
-
-  if (existingSignatures.has(newSignature)) {
-    return messageList;
-  }
-
-  return [...messageList, newMessage];
-};
 
 const getCurrentUserId = () => {
   const state = platformStore.getState();

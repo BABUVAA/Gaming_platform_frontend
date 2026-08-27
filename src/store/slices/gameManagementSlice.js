@@ -36,6 +36,19 @@ export const reviewManagedVerificationRequest = createApiThunk(
   },
 );
 
+export const fetchManagedVerificationEvidence = createApiThunk(
+  "gameManagement/fetchManagedVerificationEvidence",
+  {
+    path: ({ arg }) => `/api/staff/games/verification-requests/${arg.requestId}/evidence`,
+    getRequestConfig: () => ({ responseType: "blob" }),
+    // Keep the fulfilled Redux action serializable. Evidence bytes never enter
+    // application state; the browser owns and later revokes this private URL.
+    selectData: (response) => URL.createObjectURL(response.data),
+    errorMessage: "Unable to open the private verification evidence.",
+    toast: { error: true },
+  },
+);
+
 export const scheduleManagedMatch = createApiThunk(
   "gameManagement/scheduleManagedMatch",
   {

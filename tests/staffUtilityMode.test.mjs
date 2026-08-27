@@ -58,6 +58,41 @@ test("the player dashboard omits staff operation tabs from its utility navigatio
   assert.ok(!paths.includes("/staff/operations"));
 });
 
+test("mobile player navigation uses compact account labels", () => {
+  const navigation = getDashboardNavigation({ role: "player" });
+  const gameAccounts = navigation.find(
+    (item) => item.to === "/dashboard/game-accounts",
+  );
+  const accountSettings = navigation.find(
+    (item) => item.to === "/dashboard/account-settings",
+  );
+
+  assert.equal(gameAccounts?.label, "Game Accounts");
+  assert.equal(gameAccounts?.mobileLabel, "Games");
+  assert.equal(accountSettings?.label, "Account Settings");
+  assert.equal(accountSettings?.mobileLabel, "Settings");
+});
+
+test("Game Accounts omits dashboard statistics", async () => {
+  const source = await readFile(
+    new URL("../src/pages/GameAccounts.jsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    source,
+    /Linked Accounts|Pending Reviews|availableGames\.length\} Live/,
+  );
+  assert.doesNotMatch(source, /<h1[^>]*>Game Accounts<\/h1>/);
+  assert.doesNotMatch(source, /Reconnect Account|Resubmit for Review/);
+  assert.match(source, /status === "verified"/);
+  assert.match(source, /account\.replacement\?\.allowed/);
+  assert.match(source, /Change account/);
+  assert.match(source, /Account change used/);
+  assert.match(source, /status === "pending"/);
+  assert.match(source, /Under review/);
+});
+
 test("match operations is owned by the staff route tree", async () => {
   const [constants, staffRoutes, dashboardRoutes] = await Promise.all([
     readFile(new URL("../src/routes/routeConstants.js", import.meta.url), "utf8"),

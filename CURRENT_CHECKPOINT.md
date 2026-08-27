@@ -47,11 +47,21 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   safe spectator timelines and standings; invitation-only Events stay private.
 - Game Managers may inspect bounded registration identities, active Quick
   Match Rooms, Match/operator coverage and standings only for assigned games.
-  They may approve/reject a player game-account request and configure the
+  They may approve/reject a player game-account request, escalate supported
+  initial or replacement evidence for independent fraud review, and configure the
   pre-start schedule plus lobby credentials for an assigned-game Match. Lobby
   credentials are server-hidden from players until T-10 minutes. They retain
   no Match claim/start/result, wallet, email, private chat, Game configuration,
   competition-definition or staff mutation authority.
+- Player Game identities are one-per-Game. Ordinary overwrite remains locked,
+  but one replacement is available after 30 verified days when no competition
+  or financial obligation is active. COC repeats live owner-token validation;
+  Initial and replacement BGMI requests require privately stored screenshot
+  evidence and Game Manager review.
+  Suspicion creates an independent governance fraud case and temporary player,
+  prize-release and withdrawal freeze; only confirmed fraud becomes a permanent
+  ban. Provider truth is reconciled and legitimate ledger funds are not
+  automatically confiscated.
 - Quick Match entry is scoped to the current waiting Room. A player may occupy
   one waiting Room per offering; when it fills and becomes a Match, the next
   Room opens immediately and the player may join it while the prior Match is
@@ -109,6 +119,51 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 
 ## Current Verified State
 
+- Lean player-profile contract completed 2026-08-27: `GET /api/users/profile`
+  returns only the signed-in player's identity, editable profile fields and
+  linked game-account projection. Friends, requests, teams, bookmarks, active
+  chats, clan, wallet and other operational data are no longer loaded through
+  the profile API. Chats keep transient shortcuts in Redux and resolve friends
+  through the canonical social boundary; saved Team pickers load only the
+  dedicated clan-team boundary. `GET /api/users/public/:playerTag` is an
+  authenticated safe showcase: identity, HTTP(S)-only social links, verified
+  game names/account display names (never account IDs), public clan summary,
+  canonical completed Event/Quick Match worth metrics and the newest eight
+  public results. Invitation-only Event history never enters it. Clan friend
+  search retains a separate minimal actionable identity result. Profile UI now
+  presents that showcase with compact worth, recent competition and clan
+  sections. Backend passes 393/393, frontend 135/135, ESLint and the
+  567-module production build; API docs cover 212/212. Authenticated desktop
+  and 390x844 mobile proof passed 2026-08-27 using `bhupesh_player` viewing
+  the populated `babu` profile. A stale Clan preview serializer/UI mismatch
+  found during that proof now uses the Redux public-profile contract; identity,
+  two verified accounts, social link, public clan and metrics render cleanly
+  with no horizontal overflow.
+
+- Player Profile refinement 2026-08-26: Profile now uses a compact identity
+  header and two concise Game Accounts/Social Links sections. Statistics,
+  private email display, excessive labels and the obsolete embedded Tournament
+  history are removed. Bio and social editing share one mobile-scrollable
+  dialog; JPEG/PNG upload copy matches backend enforcement. Public player reads
+  now use Redux with request-ID stale protection, and only HTTP/HTTPS social
+  links render. Staff utility mode stays read-only. Frontend passes 135/135,
+  ESLint and the 567-module build. Authenticated desktop/mobile presentation
+  proof remains open; the browser reached the expected Login guard cleanly.
+
+- Controlled game-account replacement 2026-08-26: ordinary verified identity
+  overwrite remains blocked, but a player may use one replacement per Game
+  after 30 days and after active competition/financial obligations clear. COC
+  repeats owner-token verification. Initial and replacement BGMI review accept one private, encrypted,
+  signature/dimension/hash-checked PNG/JPEG; assigned Game Manager review can
+  approve, reject or escalate it. Escalation temporarily freezes player
+  mutations, Match/Event prize release, withdrawal approval and new provider
+  submission until Platform/Super Admin clears or permanently bans the account.
+  Automated image signals are not proof, browser upload cannot attest capture
+  device, in-flight provider truth still reconciles, and legitimate ledger
+  balances are never automatically confiscated. Backend passes 390/390;
+  frontend passes 134/134, ESLint and the 567-module build; API docs cover
+  212/212. Live authenticated S3 upload/review proof remains open.
+
 - Simple chat contract 2026-08-26: Friend, Clan and Match conversations retain
   only the newest 200 MongoDB messages; Friend/Clan Redis windows retain 100
   and initially load 50. Older messages disappear automatically, with no read/
@@ -122,14 +177,32 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   can open it; non-members and staff participation remain server-denied.
   Personal messages now map to the other player's User ID in the UI, and an
   explicit authenticated `session:ready` handshake prevents room joins before
-  backend chat handlers exist. Unfriend transactionally deletes the pair's
+  backend chat handlers exist. Persisted Friend/Clan messages now carry the
+  same canonical message ID through realtime delivery and acknowledgement;
+  shared position-independent merging renders those two copies once. Room
+  history and the live browser cache merge instead of replacing each other, so
+  older rows stay visible whenever a new message arrives. Live messages and
+  history loads are thread-ID checked, Clan events carry their Clan ID, and a
+  ten-second load timeout prevents a permanent Joining state. The Chat page is
+  viewport-bounded with internal scrolling and a mobile/tablet Back to Chats
+  control; its redundant summary strip and duplicate page heading are removed.
+  Unfriend
+  transactionally deletes the pair's
   Personal Chat plus both active-chat rows, clears Redis after commit, and
   removes the live thread from both clients; re-friend starts empty. A live
   `babu`/`bhupesh_player` proof verified two-way display/reload and complete
   unfriend cleanup, then restored their Friendship with no old history.
   Prior backend aggregate baseline is 377/377; affected realtime passes 13/13
-  and cleanup integration 1/1. Frontend passes 125/125, full ESLint and the
-  567-module build.
+  and cleanup integration 1/1. Affected realtime passes 14/14. Frontend passes
+  129/129, full ESLint and the 567-module build.
+- Mobile player bottom navigation uses `Games` and `Settings` for the two long
+  account labels and distributes compact items across available width; desktop
+  labels remain unchanged.
+- Account Settings omits its duplicate page header. Its manual password section
+  is player-only and described only as withdrawal confirmation; staff security
+  is handled by the automatic dialog inside Staff workspaces.
+- Game Accounts has no summary statistics or supported-game count badge; only
+  actionable per-Game account status and review history remain.
 
 - Staff sensitive-action confirmation 2026-08-25: protected staff commands no
   longer require a trip to Account Settings when the server returns

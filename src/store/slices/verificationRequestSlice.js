@@ -3,6 +3,17 @@ import createApiThunk from "../thunks/createApiThunk.js";
 
 const DEFAULT_PAGE = { limit: 25, hasMore: false, nextCursor: null };
 
+const gameAccountEvidenceBody = (arg, { includeGameKey = false } = {}) => {
+  const body = new FormData();
+  if (includeGameKey) body.append("gameKey", arg.gameKey);
+  body.append("accountId", arg.accountId);
+  body.append("accountUsername", arg.accountUsername);
+  body.append("evidenceNote", arg.evidenceNote || "");
+  body.append("fraudAcknowledged", String(arg.fraudAcknowledged === true));
+  body.append("evidence", arg.evidence);
+  return body;
+};
+
 export const fetchMyVerificationRequests = createApiThunk(
   "verificationRequests/fetchMine",
   {
@@ -23,6 +34,36 @@ export const fetchMyVerificationRequests = createApiThunk(
   },
 );
 
+export const submitGameAccountReplacement = createApiThunk(
+  "verificationRequests/submitReplacement",
+  {
+    method: "post",
+    path: ({ arg }) => `/api/users/game-accounts/${arg.gameKey}/replacement-requests`,
+    request: ({ api, arg, path, signal }) => {
+      return api.post(path, gameAccountEvidenceBody(arg), { signal });
+    },
+    selectData: (response) => response.data?.data?.request,
+    errorMessage: "Unable to submit the account replacement request.",
+    toast: { error: true },
+  },
+);
+
+export const submitGameAccountVerification = createApiThunk(
+  "verificationRequests/submitVerification",
+  {
+    method: "post",
+    path: "/api/users/verification-requests",
+    request: ({ api, arg, path, signal }) => api.post(
+      path,
+      gameAccountEvidenceBody(arg, { includeGameKey: true }),
+      { signal },
+    ),
+    selectData: (response) => response.data?.data,
+    errorMessage: "Unable to submit the game-account verification request.",
+    toast: { error: true },
+  },
+);
+
 const appendUnique = (current, incoming) => {
   const known = new Set(current.map((item) => item._id));
   return [...current, ...incoming.filter((item) => !known.has(item._id))];
@@ -36,6 +77,7 @@ const verificationRequestSlice = createSlice({
     status: "idle",
     error: null,
     latestRequestId: null,
+    replacementStatus: "idle",
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -61,7 +103,10 @@ const verificationRequestSlice = createSlice({
         if (!action.meta.aborted && !action.meta.condition) {
           state.error = action.payload || action.error?.message || "Unable to load verification history.";
         }
-      });
+      })
+      .addCase(submitGameAccountReplacement.pending, (state) => { state.replacementStatus = "loading"; })
+      .addCase(submitGameAccountReplacement.fulfilled, (state) => { state.replacementStatus = "succeeded"; })
+      .addCase(submitGameAccountReplacement.rejected, (state) => { state.replacementStatus = "failed"; });
   },
 });
 

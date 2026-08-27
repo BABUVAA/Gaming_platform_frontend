@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
-import { FaBolt, FaClock, FaLink, FaShieldAlt } from "react-icons/fa";
+import { FaBolt, FaExclamationTriangle, FaLock } from "react-icons/fa";
 import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
-import { fetchPlayerProfile } from "../store/slices/playerSlice";
-import { fetchMyVerificationRequests } from "../store/slices/verificationRequestSlice";
+import { fetchMyVerificationRequests, submitGameAccountReplacement, submitGameAccountVerification } from "../store/slices/verificationRequestSlice";
 import { showToast, types } from "../store/slices/toastSlice";
 import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
-import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
 
 const statusClasses = {
   verified: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
@@ -27,6 +25,8 @@ const emptyForm = {
   accountId: "",
   accountUsername: "",
   evidenceNote: "",
+  evidence: null,
+  fraudAcknowledged: false,
 };
 
 const GameAccounts = () => {
@@ -41,6 +41,7 @@ const GameAccounts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
+  const [selectedAction, setSelectedAction] = useState("connect");
   const [form, setForm] = useState(emptyForm);
   const availableGames = games || [];
 
@@ -84,14 +85,16 @@ const GameAccounts = () => {
     }, {});
   }, [linkedAccounts]);
 
-  const openConnectModal = (game) => {
+  const openConnectModal = (game, action = "connect") => {
     if (isStaffUtilityMode) return;
     setSelectedGame(game);
+    setSelectedAction(action);
     setForm(emptyForm);
   };
 
   const closeModal = () => {
     setSelectedGame(null);
+    setSelectedAction("connect");
     setForm(emptyForm);
   };
 
@@ -102,12 +105,31 @@ const GameAccounts = () => {
     setIsSubmitting(true);
 
     try {
-      if (selectedGame.verificationMethod === "api_token") {
+      if (selectedAction === "replacement" && selectedGame.verificationMethod === "manual_review") {
+        await dispatch(submitGameAccountReplacement({
+          gameKey: selectedGame.link,
+          accountId: form.accountId,
+          accountUsername: form.accountUsername,
+          evidenceNote: form.evidenceNote,
+          evidence: form.evidence,
+          fraudAcknowledged: form.fraudAcknowledged,
+        })).unwrap();
+      } else if (selectedGame.verificationMethod === "api_token") {
         await api.post("/api/users/game-accounts/connect", {
           gameKey: selectedGame.link,
           playerTag: form.playerTag,
           token: form.token,
+          replacement: selectedAction === "replacement",
         });
+      } else if (selectedGame.link === "bgmi") {
+        await dispatch(submitGameAccountVerification({
+          gameKey: selectedGame.link,
+          accountId: form.accountId,
+          accountUsername: form.accountUsername,
+          evidenceNote: form.evidenceNote,
+          evidence: form.evidence,
+          fraudAcknowledged: form.fraudAcknowledged,
+        })).unwrap();
       } else {
         await api.post("/api/users/verification-requests", {
           gameKey: selectedGame.link,
@@ -120,7 +142,9 @@ const GameAccounts = () => {
       dispatch(
         showToast({
           message:
-            selectedGame.verificationMethod === "api_token"
+            selectedAction === "replacement"
+              ? `${selectedGame.name} account change submitted.`
+              : selectedGame.verificationMethod === "api_token"
               ? `${selectedGame.name} connected successfully.`
               : `${selectedGame.name} verification request submitted.`,
           type: types.SUCCESS,
@@ -128,10 +152,7 @@ const GameAccounts = () => {
         })
       );
 
-      await Promise.all([
-        loadGameAccounts(),
-        dispatch(fetchPlayerProfile()),
-      ]);
+      await loadGameAccounts();
       closeModal();
     } catch (error) {
       dispatch(
@@ -149,74 +170,14 @@ const GameAccounts = () => {
     }
   };
 
-  const stats = [
-    {
-      label: "Linked Accounts",
-      value: linkedAccounts.length,
-      icon: <FaLink />,
-    },
-    {
-      label: "Verified",
-      value: linkedAccounts.filter(
-        (account) => account.verificationStatus === "verified"
-      ).length,
-      icon: <FaShieldAlt />,
-    },
-    {
-      label: "Pending Reviews",
-      value: verificationRequests.filter(
-        (request) => request.status === "pending"
-      ).length,
-      icon: <FaClock />,
-    },
-  ];
-
   return (
-    <div className="text-slate-100">
+    <div className="mx-auto max-w-6xl text-slate-100">
       <div className="space-y-4">
-        <section className="rounded-2xl border border-cyan-500/20 bg-slate-950/90 p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-white">
-                Game Accounts
-              </h1>
-            </div>
-
-            <div className="grid w-full gap-2 sm:grid-cols-3 lg:w-auto">
-              {stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2.5"
-                >
-                  <div className="flex items-center gap-2 text-cyan-300">
-                    {stat.icon}
-                    <span className="text-xs uppercase tracking-[0.25em]">
-                      {stat.label}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xl font-black text-white">
-                    {stat.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.8fr)]">
           <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  Supported Games
-                </h2>
-              </div>
-              <div className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">
-                {availableGames.length} Live
-              </div>
-            </div>
+            <h2 className="text-base font-bold text-white">Your games</h2>
 
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
               {availableGames.map((game) => {
                 const account = accountByGameKey[game.link];
                 const status = account?.verificationStatus || "unlinked";
@@ -224,73 +185,71 @@ const GameAccounts = () => {
                 return (
                   <article
                     key={game._id}
-                    className="overflow-hidden rounded-2xl border border-slate-800 bg-[linear-gradient(180deg,_rgba(15,23,42,0.86),_rgba(2,6,23,0.96))]"
+                    className="rounded-2xl border border-slate-800 bg-slate-900/65 p-4"
                   >
-                    <div className="border-b border-slate-800 px-4 py-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                            {game.link}
-                          </p>
-                          <h3 className="mt-1 text-xl font-black text-white">
-                            {game.name || game.title}
-                          </h3>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-black text-white">
+                          {game.name || game.title}
+                        </h3>
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                          <FaBolt className="text-cyan-300" />
+                          <span>{methodLabels[game.verificationMethod]}</span>
                         </div>
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
-                            statusClasses[status] ||
-                            "border border-slate-700 bg-slate-800 text-slate-300"
-                          }`}
-                        >
-                          {status === "unlinked" ? "Not Linked" : status}
-                        </span>
                       </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
+                          statusClasses[status] ||
+                          "border border-slate-700 bg-slate-800 text-slate-300"
+                        }`}
+                      >
+                        {status === "unlinked" ? "Not linked" : status}
+                      </span>
                     </div>
 
-                    <div className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-sm text-cyan-200">
-                        <FaBolt />
-                        <span>{methodLabels[game.verificationMethod]}</span>
-                      </div>
-
-                      <p className="mt-2 text-xs leading-5 text-slate-300">
-                        {game.verificationInstructions}
-                      </p>
-
-                      {account && (
-                        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                            Active Account
-                          </p>
-                          <p className="mt-2 text-lg font-semibold text-white">
-                            {account.accountUsername}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {account.accountId}
-                          </p>
-                        </div>
-                      )}
-
-                      {isStaffUtilityMode ? (
-                        <p className="mt-5 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm leading-6 text-amber-100">
-                          {STAFF_UTILITY_MESSAGE} Game-account changes are player-only.
+                    {account ? (
+                      <div className="mt-3 border-t border-slate-800 pt-3">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {account.accountUsername}
                         </p>
-                      ) : (
+                        <p className="truncate text-xs text-slate-500">
+                          {account.accountId}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {!isStaffUtilityMode ? (
+                      <div className="mt-3">
+                        {status === "verified" ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-2 text-xs font-bold text-emerald-300"><FaLock /> Verified</span>
+                            {account.replacement?.allowed ? (
+                              <button className="rounded-lg border border-cyan-400/40 px-3 py-1.5 text-xs font-bold text-cyan-200" onClick={() => openConnectModal(game, "replacement")} type="button">Change account</button>
+                            ) : account.replacement?.used ? (
+                              <span className="text-xs text-slate-500">Account change used</span>
+                            ) : account.replacement?.eligibleAt ? (
+                              <span className="text-xs text-slate-500">Change available {new Date(account.replacement.eligibleAt).toLocaleDateString("en-IN")}</span>
+                            ) : null}
+                          </div>
+                        ) : status === "pending" ? (
+                          <span className="text-xs font-bold text-amber-200">
+                            Under review
+                          </span>
+                        ) : (
                         <button
                           type="button"
                           onClick={() => openConnectModal(game)}
-                          className="mt-3 inline-flex items-center justify-center rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"
+                          className="inline-flex items-center justify-center rounded-xl bg-cyan-300 px-3.5 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
                         >
-                          {game.verificationMethod === "api_token"
-                            ? account
-                              ? "Reconnect Account"
-                              : "Verify Account"
-                            : account
-                              ? "Resubmit for Review"
-                              : "Request Review"}
+                          {status === "rejected"
+                            ? "Try again"
+                            : game.verificationMethod === "api_token"
+                              ? "Verify account"
+                              : "Request review"}
                         </button>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}
@@ -299,16 +258,9 @@ const GameAccounts = () => {
 
           <div>
             <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-xl font-bold text-white">
-                  Verification Queue
-                </h2>
-                <span className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Player View
-                </span>
-              </div>
+              <h2 className="text-base font-bold text-white">Requests</h2>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-2">
                 {verificationRequests.length === 0 && !isLoading ? (
                   <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
                     No manual review requests yet.
@@ -317,7 +269,7 @@ const GameAccounts = () => {
                   verificationRequests.map((request) => (
                     <article
                       key={request._id}
-                      className="rounded-xl border border-slate-800 bg-slate-900/70 p-4"
+                      className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -337,14 +289,8 @@ const GameAccounts = () => {
                         </span>
                       </div>
 
-                      {request.evidenceNote && (
-                        <p className="mt-3 text-sm leading-6 text-slate-300">
-                          {request.evidenceNote}
-                        </p>
-                      )}
-
                       {request.reviewNote && (
-                        <p className="mt-3 rounded-lg border border-slate-800 bg-slate-950/80 p-3 text-sm text-slate-300">
+                        <p className="mt-2 rounded-lg bg-slate-950/70 px-3 py-2 text-xs leading-5 text-slate-300">
                           {request.reviewNote}
                         </p>
                       )}
@@ -382,7 +328,9 @@ const GameAccounts = () => {
                   {selectedGame.link}
                 </p>
                 <h3 className="mt-2 text-2xl font-black text-white">
-                  {selectedGame.verificationMethod === "api_token"
+                  {selectedAction === "replacement"
+                    ? "Change Verified Account"
+                    : selectedGame.verificationMethod === "api_token"
                     ? "Verify Live Account"
                     : "Request Manual Verification"}
                 </h3>
@@ -458,6 +406,20 @@ const GameAccounts = () => {
                       className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
                     />
                   </div>
+                  {selectedGame.link === "bgmi" ? (
+                    <>
+                      <div>
+                        <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="game-account-evidence">Original BGMI screenshot</label>
+                        <input accept="image/png,image/jpeg" className="block w-full rounded-xl border border-slate-800 bg-slate-900 p-3 text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:font-bold file:text-slate-950" id="game-account-evidence" onChange={(event) => setForm((current) => ({ ...current, evidence: event.target.files?.[0] || null }))} required type="file" />
+                        <p className="mt-2 text-xs text-slate-500">PNG or JPEG, maximum 5 MB. Browser uploads cannot prove the physical capture device.</p>
+                      </div>
+                      <div className="rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-sm text-rose-100">
+                        <p className="flex items-start gap-2 font-bold"><FaExclamationTriangle className="mt-0.5 shrink-0" /> Permanent-ban warning</p>
+                        <p className="mt-2 text-xs leading-5 text-rose-100/80">Forged, edited, AI-generated, borrowed, or misleading evidence can freeze withdrawals and rewards during investigation. Confirmed fraud permanently bans the account and cancels fraudulent winnings under platform rules.</p>
+                        <label className="mt-3 flex items-start gap-2 text-xs font-semibold"><input checked={form.fraudAcknowledged} className="mt-0.5" onChange={(event) => setForm((current) => ({ ...current, fraudAcknowledged: event.target.checked }))} required type="checkbox" /> I confirm this is my account and understand the permanent-ban policy.</label>
+                      </div>
+                    </>
+                  ) : null}
                 </>
               )}
 
@@ -468,7 +430,9 @@ const GameAccounts = () => {
               >
                 {isSubmitting
                   ? "Submitting..."
-                  : selectedGame.verificationMethod === "api_token"
+                  : selectedAction === "replacement"
+                    ? "Submit Account Change"
+                    : selectedGame.verificationMethod === "api_token"
                     ? "Verify and Connect"
                     : "Submit for Review"}
               </button>

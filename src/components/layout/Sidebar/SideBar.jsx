@@ -54,7 +54,7 @@ const SideBar = () => {
         </nav>
       </aside>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex gap-2 overflow-x-auto border-t border-slate-700 bg-[#182235]/95 px-2 py-2 shadow-[0_-12px_30px_rgba(2,8,23,0.18)] backdrop-blur md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex gap-1 overflow-x-auto border-t border-slate-700 bg-[#182235]/95 px-2 py-2 shadow-[0_-12px_30px_rgba(2,8,23,0.18)] backdrop-blur md:hidden">
         {dashboardNavigation.map((item) => {
           const Icon = item.icon;
 
@@ -64,7 +64,7 @@ const SideBar = () => {
               to={item.to}
               end={item.to === "/dashboard"}
               className={({ isActive }) =>
-                `flex min-w-[84px] flex-col items-center justify-center rounded-xl px-1 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition ${
+                `flex min-w-[4.25rem] flex-1 flex-col items-center justify-center rounded-xl px-1 py-2 text-[9px] font-semibold uppercase tracking-[0.08em] transition ${
                   isActive
                     ? "bg-cyan-400/15 text-cyan-200"
                     : "text-slate-400 hover:bg-slate-700 hover:text-slate-100"
@@ -72,7 +72,9 @@ const SideBar = () => {
               }
             >
               <Icon size={18} />
-              <span className="mt-1 truncate">{item.label}</span>
+              <span className="mt-1 w-full truncate text-center">
+                {item.mobileLabel || item.label}
+              </span>
             </NavLink>
           );
         })}

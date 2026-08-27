@@ -5,6 +5,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import reducer, {
   fetchManagedGameOperations,
+  fetchManagedVerificationEvidence,
   fetchManagedVerificationRequests,
   reviewManagedVerificationRequest,
   scheduleManagedMatch,
@@ -33,6 +34,25 @@ test("Game Manager operations use only the assigned read endpoint", async () => 
     assert.equal(requests[0].method, "get");
     assert.equal(requests[0].url, "/api/staff/games/operations");
     assert.equal(store.getState().gameManagement.operations[0].game._id, "game-1");
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("Game Manager evidence uses the scoped private blob endpoint", async () => {
+  const originalAdapter = api.defaults.adapter;
+  let request;
+  api.defaults.adapter = async (config) => {
+    request = config;
+    return { config, data: new Blob(["evidence"], { type: "image/png" }), headers: {}, status: 200, statusText: "OK" };
+  };
+  try {
+    const store = configureStore({ reducer: { gameManagement: reducer.reducer } });
+    const objectUrl = await store.dispatch(fetchManagedVerificationEvidence({ requestId: "request-1" })).unwrap();
+    assert.equal(request.url, "/api/staff/games/verification-requests/request-1/evidence");
+    assert.equal(request.responseType, "blob");
+    assert.match(objectUrl, /^blob:/);
+    URL.revokeObjectURL(objectUrl);
   } finally {
     api.defaults.adapter = originalAdapter;
   }

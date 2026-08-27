@@ -1,36 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { useSelector } from "react-redux";
-import { FiAlertCircle, FiMessageCircle, FiSend } from "react-icons/fi";
+import {
+  FiAlertCircle,
+  FiArrowLeft,
+  FiMessageCircle,
+  FiSend,
+} from "react-icons/fi";
 import useSocket from "../../context/useSocket";
-
-const getMessageSignature = (message = {}, fallbackIndex = 0) =>
-  message?._id ||
-  [
-    message?.senderId || "unknown",
-    message?.receiverId || message?.clanId || message?.chatId || "thread",
-    message?.message || "",
-    String(message?.timestamp || message?.createdAt || ""),
-    fallbackIndex,
-  ].join("::");
-
-const dedupeMessages = (messageList = []) => {
-  const seenSignatures = new Set();
-
-  return messageList.filter((entry, index) => {
-    const signature = getMessageSignature(entry, index);
-    if (seenSignatures.has(signature)) return false;
-    seenSignatures.add(signature);
-    return true;
-  });
-};
+import {
+  appendUniqueMessage,
+  dedupeMessages,
+  getMessageSignature,
+  isMessageForThread,
+  mergeMessageLists,
+} from "../../utils/chatMessages";
 
 const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
-  const { profile } = useSelector((store) => store.player);
+  const { summary } = useSelector((store) => store.player);
   const { userClanData } = useSelector((store) => store.clan);
   const socket = useSocket();
   const chatDisplayRef = useRef(null);
   const shouldStickToBottomRef = useRef(true);
+  const activeChatIdRef = useRef(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isJoiningRoom, setIsJoiningRoom] = useState(false);
@@ -38,8 +30,8 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const [sendError, setSendError] = useState("");
 
   const chatId = chatType === "clan" ? userClanData?.data?._id : selectedChat;
-  const senderId = profile?._id;
-  const senderName = profile?.profile?.username || "unknown";
+  const senderId = summary?.userId;
+  const senderName = summary?.username || "Player";
   const cachedMessages = useMemo(
     () => socket?.messages?.[chatId] || [],
     [chatId, socket?.messages]
@@ -50,25 +42,49 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   );
 
   useEffect(() => {
-    setMessages(dedupeMessages(cachedMessages));
+    if (activeChatIdRef.current !== chatId) {
+      activeChatIdRef.current = chatId;
+      setMessages(dedupeMessages(cachedMessages));
+      return;
+    }
+
+    // SocketContext holds messages received during this browser session, while
+    // the room load owns persisted history. Merge the two projections so a new
+    // live message cannot replace the already rendered history.
+    setMessages((current) => mergeMessageLists(current, cachedMessages));
   }, [cachedMessages, chatId]);
 
   useEffect(() => {
     if (!socket?.socket || !isConnected || !chatId || !senderId) return;
 
     setIsJoiningRoom(true);
+    setSendError("");
+    const joinTimeout = window.setTimeout(() => {
+      setIsJoiningRoom(false);
+      setSendError("Unable to load this conversation. Go back and try again.");
+    }, 10000);
 
-    const loadMessagesListener = (loadedMessages) => {
-      setMessages(
-        dedupeMessages(Array.isArray(loadedMessages) ? loadedMessages : [])
+    const loadMessagesListener = (payload) => {
+      const loadedThreadId = payload?.threadId;
+      if (String(loadedThreadId || "") !== String(chatId)) return;
+
+      const loadedMessages = payload?.messages;
+      window.clearTimeout(joinTimeout);
+      setMessages((current) =>
+        mergeMessageLists(
+          Array.isArray(loadedMessages) ? loadedMessages : [],
+          current,
+        )
       );
       setIsJoiningRoom(false);
     };
 
     const messageListener = (newMessage) => {
-      setMessages((prevMessages) => {
-        return dedupeMessages([...prevMessages, newMessage]);
-      });
+      if (!isMessageForThread(newMessage, senderId, chatId)) return;
+
+      setMessages((prevMessages) =>
+        appendUniqueMessage(prevMessages, newMessage)
+      );
     };
 
     socket.socket.off(`${chatType}_load_messages`, loadMessagesListener);
@@ -78,6 +94,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
     socket.socket.emit(`join_${chatType}_room`, chatId);
 
     return () => {
+      window.clearTimeout(joinTimeout);
       setIsJoiningRoom(false);
       socket.socket.emit(`leave_${chatType}_room`, chatId);
       socket.socket.off(`${chatType}_message`, messageListener);
@@ -143,7 +160,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
         }
 
         setMessages((current) =>
-          dedupeMessages([...current, response.message]),
+          appendUniqueMessage(current, response.message),
         );
         // Do not erase text typed while the previous message was in flight.
         setMessage((current) =>
@@ -168,17 +185,20 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   }
 
   return (
-    <div className="relative mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-slate-950 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
+    <div className="relative mx-auto flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-[28px] border border-slate-800 bg-slate-950 shadow-[0_18px_50px_rgba(2,8,23,0.45)]">
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <button
-            className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 md:hidden"
+            type="button"
+            aria-label="Back to chats"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-100 lg:hidden"
             onClick={() => onBack()}
           >
-            Back
+            <FiArrowLeft />
+            Chats
           </button>
-          <div>
-            <h2 className="text-base font-medium text-white">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-medium text-white">
               {chatType === "clan" ? "Clan Chat" : chatName}
             </h2>
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
@@ -187,7 +207,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
           </div>
         </div>
         <div
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${
+          className={`ml-2 shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${
             isConnected
               ? "bg-emerald-500/15 text-emerald-300"
               : "bg-amber-500/15 text-amber-200"
@@ -244,7 +264,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
                     {msg.senderName || "Player"}
                   </span>
                 ) : null}
-                <p className="leading-6">{msg.message}</p>
+                <p className="break-words leading-6">{msg.message}</p>
               </div>
             </div>
           );
@@ -259,7 +279,7 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
                 ? "Type a message..."
                 : "Reconnect live services to send messages"
             }
-            className="flex-1 rounded-full border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="min-w-0 flex-1 rounded-full border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             onKeyDown={(event) => event.key === "Enter" && sendMessage()}

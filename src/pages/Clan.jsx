@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Form, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import api from "../api/axios-api";
 import {
   FiBookmark,
   FiMapPin,
@@ -39,6 +38,7 @@ import {
   updateClanSettings,
 } from "../store/slices/clanSlice";
 import {
+  fetchPublicPlayerProfile,
   searchPlayer,
 } from "../store/slices/playerSlice";
 import { fetchGames } from "../store/slices/gameSlice";
@@ -556,8 +556,8 @@ const Clan = () => {
     setPreviewLoading(true);
     setPreviewPlayer(null);
     try {
-      const response = await api.get(`/api/users/public/${encodeURIComponent(tag)}`);
-      setPreviewPlayer(response?.data?.data || null);
+      const player = await dispatch(fetchPublicPlayerProfile(tag)).unwrap();
+      setPreviewPlayer(player || null);
     } catch (error) {
       console.error("Profile preview failed:", error);
       setPreviewPlayer(null);
@@ -2653,7 +2653,14 @@ const PlayerPreviewModal = ({
   playerTag,
   onClose,
   onOpenFullProfile,
-}) => (
+}) => {
+  const identity = player?.identity || player || {};
+  const worth = player?.worth || {};
+  const gameCount = Array.isArray(player?.verifiedGames)
+    ? player.verifiedGames.length
+    : player?.stats?.linkedGames ?? 0;
+
+  return (
   <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
     <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-slate-950 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.55)]">
       <div className="flex items-center justify-between gap-3">
@@ -2677,13 +2684,13 @@ const PlayerPreviewModal = ({
         <div className="mt-6 space-y-5">
           <div className="flex items-center gap-4">
             <img
-              src={player.avatar || "/profile-pic.png"}
-              alt={player.username || "Player"}
+              src={identity.avatar || "/profile-pic.png"}
+              alt={identity.username || "Player"}
               className="h-16 w-16 rounded-2xl object-cover"
             />
             <div>
-              <p className="text-xl font-black text-white">{player.username}</p>
-              <p className="text-sm text-slate-400">{player.playerTag || playerTag}</p>
+              <p className="text-xl font-black text-white">{identity.username || "Player"}</p>
+              <p className="text-sm text-slate-400">{identity.playerTag || playerTag}</p>
               <p className="mt-1 text-xs uppercase tracking-[0.16em] text-cyan-300/80">
                 {player.friendshipStatus || "not_friends"}
               </p>
@@ -2691,22 +2698,16 @@ const PlayerPreviewModal = ({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-4">
-            <InfoBlock label="Friends" value={player.stats?.friends ?? 0} />
-            <InfoBlock label="Games" value={player.stats?.linkedGames ?? 0} />
-            <InfoBlock
-              label="Tournaments"
-              value={player.stats?.tournaments ?? 0}
-            />
-            <InfoBlock
-              label="Bookmarks"
-              value={player.stats?.bookmarkedClans ?? 0}
-            />
+            <InfoBlock label="Played" value={worth.competitionsCompleted ?? 0} />
+            <InfoBlock label="Wins" value={worth.wins ?? 0} />
+            <InfoBlock label="Podiums" value={worth.podiums ?? 0} />
+            <InfoBlock label="Games" value={gameCount} />
           </div>
 
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => onOpenFullProfile(player.playerTag || playerTag)}
+              onClick={() => onOpenFullProfile(identity.playerTag || playerTag)}
               className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
             >
               Open Full Profile
@@ -2716,7 +2717,8 @@ const PlayerPreviewModal = ({
       )}
     </div>
   </div>
-);
+  );
+};
 
 const entityReferenceType = PropTypes.oneOfType([
   PropTypes.string,

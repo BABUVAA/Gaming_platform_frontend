@@ -10,6 +10,10 @@ export const selectPlayerSummaryStatus = (state) =>
 export const selectPlayerProfile = (state) => state.player.profile;
 export const selectPlayerProfileStatus = (state) =>
   state.player.profileStatus;
+export const selectPublicPlayerProfile = (state) =>
+  state.player.publicProfile;
+export const selectPublicPlayerProfileStatus = (state) =>
+  state.player.publicProfileStatus;
 export const selectPlayerApiError = (state) => state.player.error;
 export const selectPlayerError = (state) =>
   getStoredErrorMessage(selectPlayerApiError(state));

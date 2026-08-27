@@ -37,7 +37,7 @@ const formatDate = (dateValue, includeTime = false) => {
 
 const AccountSettings = () => {
   const { account, accountStatus, error, loadAccount } = useAccountStore();
-  const { confirmSensitiveAction, isVerified, signOut } = useAuthStore();
+  const { confirmSensitiveAction, isVerified, signOut, user } = useAuthStore();
   const [password, setPassword] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
@@ -80,13 +80,6 @@ const AccountSettings = () => {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-8">
-      <header>
-        <h1 className="text-2xl font-black text-white">Account settings</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Your sign-in information and account security.
-        </p>
-      </header>
-
       <SettingsSection title="Account information">
         <SettingsRow icon={FiUser} label="Username" value={username} />
         <SettingsRow
@@ -143,19 +136,21 @@ const AccountSettings = () => {
           label="Recent sign in"
           value={lastLoginAt}
         />
-        <form className="border-t border-slate-700 p-4 md:p-5" onSubmit={confirmPassword}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-bold text-white"><FiShield className="text-cyan-300" /> Confirm sensitive actions</p>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Players need password confirmation only before requesting a withdrawal. Staff use it before governance changes. Confirmation expires after 15 minutes.</p>
+        {user?.role === "player" ? (
+          <form className="border-t border-slate-700 p-4 md:p-5" onSubmit={confirmPassword}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-bold text-white"><FiShield className="text-cyan-300" /> Withdrawal confirmation</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Confirm your current password before requesting a withdrawal. Confirmation expires after 15 minutes.</p>
+              </div>
+              <div className="flex w-full gap-2 sm:w-auto">
+                <input aria-label="Current password for withdrawal" autoComplete="current-password" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white sm:w-56" onChange={(event) => setPassword(event.target.value)} placeholder="Current password" required type="password" value={password} />
+                <button className="shrink-0 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200 disabled:opacity-60" disabled={confirming} type="submit">{confirming ? "Confirming..." : "Confirm"}</button>
+              </div>
             </div>
-            <div className="flex w-full gap-2 sm:w-auto">
-              <input aria-label="Current password for sensitive actions" autoComplete="current-password" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white sm:w-56" onChange={(event) => setPassword(event.target.value)} placeholder="Current password" required type="password" value={password} />
-              <button className="shrink-0 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200 disabled:opacity-60" disabled={confirming} type="submit">{confirming ? "Confirming..." : "Confirm"}</button>
-            </div>
-          </div>
-          {confirmationError ? <p className="mt-2 text-sm text-rose-300">{confirmationError}</p> : null}
-        </form>
+            {confirmationError ? <p className="mt-2 text-sm text-rose-300">{confirmationError}</p> : null}
+          </form>
+        ) : null}
         <div className="border-t border-slate-700 p-4 md:p-5">
           <button
             type="button"

@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { ROUTES } from "../../routes/routeConstants.js";
 import { selectAuthUser } from "../../store/selectors/authSelectors.js";
-import { fetchPlayerProfile } from "../../store/slices/playerSlice.js";
+import { fetchClanTeams } from "../../store/slices/socialSlice.js";
 import TeamPaymentChoice from "./TeamPaymentChoice.jsx";
 
 const normalize = (value) => {
@@ -19,12 +19,11 @@ const EventTeamPicker = ({ event, onClose, onSelect }) => {
   const [paymentMode, setPaymentMode] = useState("captain_pays");
   const [rewardMode, setRewardMode] = useState("captain_keeps");
   const authUser = useSelector(selectAuthUser);
-  const profile = useSelector((state) => state.player.profile);
-  const profileStatus = useSelector((state) => state.player.profileStatus);
-  const teams = profile?.profile?.teams || [];
+  const teams = useSelector((state) => state.social.teams);
+  const teamsStatus = useSelector((state) => state.social.teamsStatus);
   const currentUserId = identifier(authUser?.userId);
   const eventGameKey = event.game?.key || event.format?.gameKey;
-  const isProfilePending = !profile && ["idle", "loading"].includes(profileStatus);
+  const isTeamsPending = ["idle", "loading"].includes(teamsStatus);
   const available = teams.filter((team) =>
     team.status === "ready" &&
     identifier(team.createdBy) === currentUserId &&
@@ -33,10 +32,10 @@ const EventTeamPicker = ({ event, onClose, onSelect }) => {
     normalize(team.mode) === normalize(event.format?.mode));
 
   useEffect(() => {
-    if (profile || profileStatus === "loading") return undefined;
-    const request = dispatch(fetchPlayerProfile());
+    if (teamsStatus !== "idle") return undefined;
+    const request = dispatch(fetchClanTeams());
     return () => request.abort();
-  }, [dispatch, profile, profileStatus]);
+  }, [dispatch, teamsStatus]);
 
   return (
     <div className="fixed inset-0 z-[500] flex items-end justify-center bg-slate-950/75 p-3 backdrop-blur-sm sm:items-center">
@@ -46,15 +45,15 @@ const EventTeamPicker = ({ event, onClose, onSelect }) => {
           <button aria-label="Close team selection" className="text-slate-400 hover:text-white" onClick={onClose} type="button">✕</button>
         </div>
         <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
-          {isProfilePending ? <div aria-label="Loading saved teams" className="h-20 animate-pulse rounded-xl bg-slate-800" /> : null}
+          {isTeamsPending ? <div aria-label="Loading saved teams" className="h-20 animate-pulse rounded-xl bg-slate-800" /> : null}
           {available.map((team) => (
             <button className={`w-full rounded-xl border p-3 text-left ${teamId === team._id ? "border-cyan-300 bg-cyan-300/10" : "border-slate-800 bg-slate-900"}`} key={team._id} onClick={() => setTeamId(team._id)} type="button">
               <strong className="block text-sm text-white">{team.teamName}</strong>
               <span className="text-xs text-slate-400">{team.players.length} players · ready</span>
             </button>
           ))}
-          {profileStatus === "failed" && !profile ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-4 text-center text-sm text-rose-100">Unable to load your saved teams.<button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchPlayerProfile())} type="button">Retry</button></div> : null}
-          {profile && !available.length ? <div className="rounded-xl border border-dashed border-slate-700 p-4 text-center text-sm text-slate-400">No matching ready team you can register.<br/><Link className="mt-3 inline-block font-bold text-cyan-200" onClick={onClose} to={`${ROUTES.CLAN}?tab=teams`}>Create a team</Link></div> : null}
+          {teamsStatus === "failed" ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-4 text-center text-sm text-rose-100">Unable to load your saved teams.<button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchClanTeams())} type="button">Retry</button></div> : null}
+          {teamsStatus === "succeeded" && !available.length ? <div className="rounded-xl border border-dashed border-slate-700 p-4 text-center text-sm text-slate-400">No matching ready team you can register.<br/><Link className="mt-3 inline-block font-bold text-cyan-200" onClick={onClose} to={`${ROUTES.CLAN}?tab=teams`}>Create a team</Link></div> : null}
         </div>
         <TeamPaymentChoice
           currency={event.entryTerms?.currency || "INR"}

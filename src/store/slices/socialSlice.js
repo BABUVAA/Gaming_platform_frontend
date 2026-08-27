@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import createApiThunk from "../thunks/createApiThunk";
+import { sessionInvalidated } from "../actions/sessionActions.js";
 
 const socialMutationToast = {
   success: true,
@@ -215,6 +216,7 @@ const socialSlice = createSlice({
           state.error = action.payload;
         }
       })
+      .addCase(sessionInvalidated, () => createInitialState())
       .addMatcher(
         (action) =>
           socialMutationThunks.some((thunk) => thunk.pending.match(action)),
@@ -239,6 +241,13 @@ const socialSlice = createSlice({
             state.error = action.payload;
           }
         },
+      )
+      .addMatcher(
+        (action) =>
+          action.type === "auth/logout/pending" ||
+          action.type === "auth/login/pending" ||
+          action.type === "auth/signup/pending",
+        () => createInitialState(),
       );
   },
 });

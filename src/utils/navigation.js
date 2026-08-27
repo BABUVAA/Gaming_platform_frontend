@@ -118,6 +118,7 @@ const staffUtilityNavigation = [
   },
   {
     label: "Game Accounts",
+    mobileLabel: "Games",
     description: "View linked-account and request status",
     to: ROUTES.GAME_ACCOUNTS,
     icon: FaLink,
@@ -125,6 +126,7 @@ const staffUtilityNavigation = [
   },
   {
     label: "Account Settings",
+    mobileLabel: "Settings",
     description: "Email, password and sign-in security",
     to: ROUTES.ACCOUNT_SETTINGS,
     icon: FaShieldAlt,
@@ -177,6 +179,7 @@ const playerNavigation = [
   },
   {
     label: "Game Accounts",
+    mobileLabel: "Games",
     description: "Connect your game identities",
     to: ROUTES.GAME_ACCOUNTS,
     icon: FaLink,
@@ -184,6 +187,7 @@ const playerNavigation = [
   },
   {
     label: "Account Settings",
+    mobileLabel: "Settings",
     description: "Email, security and sign-in",
     to: ROUTES.ACCOUNT_SETTINGS,
     icon: FaShieldAlt,

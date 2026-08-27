@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  appendUniqueMessage,
+  dedupeMessages,
+  isMessageForThread,
+  mergeMessageLists,
   removeActiveChatByUserId,
   removeMessageThread,
   resolveMessageThreadId,
@@ -47,6 +51,47 @@ test("personal realtime messages use the other player's ID as the UI thread", ()
   );
 });
 
+test("an open chat accepts only messages owned by that thread", () => {
+  const forOpenFriend = {
+    senderId: "player-b",
+    receiverId: "player-a",
+    message: "correct thread",
+  };
+  const forAnotherFriend = {
+    senderId: "player-c",
+    receiverId: "player-a",
+    message: "different thread",
+  };
+
+  assert.equal(
+    isMessageForThread(forOpenFriend, "player-a", "player-b"),
+    true,
+  );
+  assert.equal(
+    isMessageForThread(forAnotherFriend, "player-a", "player-b"),
+    false,
+  );
+  assert.equal(
+    isMessageForThread({ clanId: "clan-1" }, "player-a", "clan-1"),
+    true,
+  );
+});
+
+test("chat layout stays viewport-bounded and keeps Back through tablet sizes", async () => {
+  const [chats, chatBox] = await Promise.all([
+    readFile(new URL("../src/pages/Chats.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/common/ChatBox.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(chats, /h-\[calc\(100dvh-10rem\)\]/);
+  assert.match(chats, /max-h-\[46rem\]/);
+  assert.match(chats, /min-h-0 flex-1 space-y-2 overflow-y-auto/);
+  assert.match(chatBox, /aria-label="Back to chats"/);
+  assert.match(chatBox, /lg:hidden/);
+  assert.doesNotMatch(chats, /Open threads|Direct chats|Clan room/);
+  assert.doesNotMatch(chats, /<h1[^>]*>Chats<\/h1>/);
+});
+
 test("chat room joins wait for authenticated socket readiness", async () => {
   const [chatBox, socketContext] = await Promise.all([
     readFile(new URL("../src/components/common/ChatBox.jsx", import.meta.url), "utf8"),
@@ -69,5 +114,42 @@ test("unfriending removes the direct thread from sidebar and live cache", () => 
   assert.deepEqual(
     removeMessageThread({ "player-a": [{ message: "gone" }], clan: [] }, "player-a"),
     { clan: [] },
+  );
+});
+
+test("realtime and acknowledgement copies render as one message", () => {
+  const delivered = {
+    senderId: "player-a",
+    receiverId: "player-b",
+    message: "one visible message",
+    timestamp: "2026-08-26T10:00:00.000Z",
+  };
+
+  assert.equal(dedupeMessages([delivered, { ...delivered }]).length, 1);
+  assert.equal(appendUniqueMessage([delivered], { ...delivered }).length, 1);
+});
+
+test("a live message merges with loaded history instead of replacing it", () => {
+  const history = [
+    {
+      _id: "message-1",
+      senderId: "player-a",
+      message: "older message",
+      createdAt: "2026-08-26T09:59:00.000Z",
+    },
+  ];
+  const liveMessage = {
+    _id: "message-2",
+    senderId: "player-b",
+    receiverId: "player-a",
+    message: "new message",
+    timestamp: "2026-08-26T10:00:00.000Z",
+  };
+
+  const merged = mergeMessageLists(history, [liveMessage]);
+
+  assert.deepEqual(
+    merged.map((message) => message._id),
+    ["message-1", "message-2"],
   );
 });

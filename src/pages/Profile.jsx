@@ -2,7 +2,6 @@ import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
-import api from "../api/axios-api";
 import {
   FaDiscord,
   FaFacebook,
@@ -18,14 +17,19 @@ import {
   FiEdit3,
   FiImage,
   FiSave,
-  FiUsers,
 } from "react-icons/fi";
 import {
+  fetchPublicPlayerProfile,
   fetchPlayerProfile,
+  playerActions,
   updatePlayerProfileData,
   updatePlayerProfileFile,
 } from "../store/slices/playerSlice";
-import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
+import {
+  selectIsStaffUtilityMode,
+  selectPublicPlayerProfile,
+  selectPublicPlayerProfileStatus,
+} from "../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
 
 const SOCIAL_PLATFORMS = [
@@ -38,18 +42,29 @@ const SOCIAL_PLATFORMS = [
   { key: "twitch", label: "Twitch", icon: FaTwitch, color: "text-violet-300" },
 ];
 
+const safeSocialHref = (value) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 const Profile = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const { profile } = useSelector((store) => store.player);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
+  const externalPlayer = useSelector(selectPublicPlayerProfile);
+  const externalStatus = useSelector(selectPublicPlayerProfileStatus);
   const externalPlayerTag = searchParams.get("playerTag");
   const playerProfile = profile?.profile || {};
   const internalPlayerTag = profile?.profileTag || playerProfile?.profileTag || "";
   const isViewingExternal =
     Boolean(externalPlayerTag) && externalPlayerTag !== internalPlayerTag;
-  const [externalPlayer, setExternalPlayer] = useState(null);
-  const [externalLoading, setExternalLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [selectedImageType, setSelectedImageType] = useState("");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -57,41 +72,27 @@ const Profile = () => {
   const [draftSocials, setDraftSocials] = useState(
     playerProfile.linkedAccounts || {}
   );
+  const [draftBio, setDraftBio] = useState(playerProfile.bio || "");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const loadExternalPlayer = async () => {
-      if (!isViewingExternal) {
-        setExternalPlayer(null);
-        return;
-      }
-      setExternalLoading(true);
-      try {
-        const response = await api.get(
-          `/api/users/public/${encodeURIComponent(externalPlayerTag)}`
-        );
-        setExternalPlayer(response?.data?.data || null);
-      } catch (error) {
-        console.error("Unable to load external profile:", error);
-        setExternalPlayer(null);
-      } finally {
-        setExternalLoading(false);
-      }
+    if (isViewingExternal) {
+      dispatch(fetchPublicPlayerProfile(externalPlayerTag));
+    } else {
+      dispatch(playerActions.clearPublicProfile());
+    }
+
+    return () => {
+      dispatch(playerActions.clearPublicProfile());
     };
+  }, [dispatch, externalPlayerTag, isViewingExternal]);
 
-    loadExternalPlayer();
-  }, [externalPlayerTag, isViewingExternal]);
-
-  const displayProfile = isViewingExternal ? externalPlayer || {} : playerProfile;
+  const publicIdentity = externalPlayer?.identity || {};
+  const displayProfile = isViewingExternal ? publicIdentity : playerProfile;
   const linkedGames = useMemo(() => playerProfile.games || [], [playerProfile.games]);
-  const tournaments = useMemo(
-    () => playerProfile.tournaments || [],
-    [playerProfile.tournaments]
-  );
-  const friendCount = playerProfile.friends?.length || 0;
   const displayLinkedGames = useMemo(
-    () => (isViewingExternal ? externalPlayer?.linkedGames || [] : linkedGames),
-    [externalPlayer?.linkedGames, isViewingExternal, linkedGames]
+    () => (isViewingExternal ? externalPlayer?.verifiedGames || [] : linkedGames),
+    [externalPlayer?.verifiedGames, isViewingExternal, linkedGames]
   );
   const displaySocials = useMemo(
     () =>
@@ -102,46 +103,24 @@ const Profile = () => {
   );
 
   const socialLinks = useMemo(
-    () => SOCIAL_PLATFORMS.filter(({ key }) => displaySocials?.[key]),
+    () =>
+      SOCIAL_PLATFORMS.map((platform) => ({
+        ...platform,
+        href: safeSocialHref(displaySocials?.[platform.key]),
+      })).filter(({ href }) => href),
     [displaySocials]
   );
-
-  const stats = [
-    {
-      label: "Linked Games",
-      value: isViewingExternal
-        ? externalPlayer?.stats?.linkedGames || 0
-        : linkedGames.length || 0,
-    },
-    {
-      label: "Tournaments",
-      value: isViewingExternal
-        ? externalPlayer?.stats?.tournaments || 0
-        : tournaments.length || 0,
-    },
-    {
-      label: "Friends",
-      value: isViewingExternal
-        ? externalPlayer?.stats?.friends || 0
-        : friendCount,
-    },
-    {
-      label: "Bookmarked Clans",
-      value: isViewingExternal
-        ? externalPlayer?.stats?.bookmarkedClans || 0
-        : playerProfile.bookmarkedClans?.length || 0,
-    },
-  ];
 
   const openSocialEditor = () => {
     if (isStaffUtilityMode) return;
     setDraftSocials(playerProfile.linkedAccounts || {});
+    setDraftBio(playerProfile.bio || "");
     setIsSocialModalOpen(true);
   };
 
   const copyProfileTag = async () => {
     const tagToCopy = isViewingExternal
-      ? externalPlayer?.playerTag || externalPlayerTag
+      ? publicIdentity?.playerTag || externalPlayerTag
       : internalPlayerTag;
     if (!tagToCopy) return;
     try {
@@ -184,6 +163,14 @@ const Profile = () => {
       const payload = Object.fromEntries(
         Object.entries(draftSocials || {}).map(([key, value]) => [key, value || null])
       );
+      if (draftBio.trim() !== (playerProfile.bio || "")) {
+        await dispatch(
+          updatePlayerProfileData({
+            field: "profile.bio",
+            data: draftBio.trim(),
+          })
+        ).unwrap();
+      }
       await dispatch(
         updatePlayerProfileData({
           field: "profile.linkedAccounts",
@@ -200,257 +187,233 @@ const Profile = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isViewingExternal ? (
-        <section className="rounded-[28px] border border-amber-500/20 bg-amber-500/10 px-5 py-4 text-sm text-amber-100">
-          {externalLoading
-            ? "Loading player profile preview..."
-            : "Viewing external player profile and public stats."}
+        <section className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {externalStatus === "loading"
+            ? "Loading player profile..."
+            : externalStatus === "failed"
+              ? "This player profile is unavailable."
+              : "Player profile"}
         </section>
       ) : null}
       {isStaffUtilityMode ? (
-        <section className="rounded-[28px] border border-amber-400/30 bg-amber-400/10 px-5 py-4 text-sm leading-6 text-amber-100">
-          {STAFF_UTILITY_MESSAGE} Profile media and social-link changes are unavailable here.
+        <section className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          {STAFF_UTILITY_MESSAGE}
         </section>
       ) : null}
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/85">
         <div
-          className="relative h-32 bg-cover bg-center md:h-40"
+          className="relative h-28 bg-cover bg-center md:h-36"
           style={{
             backgroundImage: `linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.82)), url(${displayProfile.banner || "/pubg_background.jpg"})`,
           }}
         >
-          <button
-            type="button"
-            disabled={isViewingExternal || isStaffUtilityMode}
-            onClick={() => {
-              setSelectedImageType("banner");
-              setIsImageModalOpen(true);
-            }}
-            className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/55 px-3 py-2 text-xs font-semibold text-white transition hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <FiImage />
-            Update Banner
-          </button>
+          {!isViewingExternal && !isStaffUtilityMode ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedImageType("banner");
+                setIsImageModalOpen(true);
+              }}
+              aria-label="Update banner"
+              className="absolute right-3 top-3 rounded-lg border border-white/10 bg-black/55 p-2.5 text-white transition hover:bg-black/70"
+            >
+              <FiImage />
+            </button>
+          ) : null}
         </div>
 
-        <div className="relative px-4 pb-4">
-          <div className="-mt-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+        <div className="relative px-4 pb-4 sm:px-5">
+          <div className="-mt-9 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-end gap-3">
               <div className="relative">
                 <img
                   src={
                     isViewingExternal
-                      ? externalPlayer?.avatar || "/profile-pic.png"
+                      ? publicIdentity?.avatar || "/profile-pic.png"
                       : playerProfile.avatar || "/profile-pic.png"
                   }
                   alt={
                     isViewingExternal
-                      ? externalPlayer?.username || "Player avatar"
+                      ? publicIdentity?.username || "Player avatar"
                       : playerProfile.username || "Player avatar"
                   }
                   className="h-20 w-20 rounded-2xl border-4 border-slate-950 object-cover shadow-xl md:h-24 md:w-24"
                 />
-                <button
-                  type="button"
-                  disabled={isViewingExternal || isStaffUtilityMode}
-                  onClick={() => {
-                    setSelectedImageType("profile");
-                    setIsImageModalOpen(true);
-                  }}
-                  className="absolute -bottom-2 -right-2 rounded-full border border-cyan-300/30 bg-cyan-300 p-2.5 text-slate-950 shadow-lg transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <FiCamera />
-                </button>
-              </div>
-
-              <div className="pt-2">
-                <p className="text-xs uppercase tracking-[0.26em] text-cyan-300/80">
-                  Player Identity
-                </p>
-                <h1 className="mt-1 text-2xl font-black text-white">
-                  {isViewingExternal
-                    ? externalPlayer?.username || "Player"
-                    : playerProfile.username || "Player"}
-                </h1>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                    {isViewingExternal
-                      ? externalPlayerTag || "Player preview"
-                      : profile?.email || "No email available"}
-                  </span>
+                {!isViewingExternal && !isStaffUtilityMode ? (
                   <button
                     type="button"
-                    onClick={copyProfileTag}
-                    className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-semibold transition hover:border-cyan-300/30 hover:text-cyan-200"
+                    onClick={() => {
+                      setSelectedImageType("profile");
+                      setIsImageModalOpen(true);
+                    }}
+                    aria-label="Update profile picture"
+                    className="absolute -bottom-1 -right-1 rounded-full border border-cyan-300/30 bg-cyan-300 p-2 text-slate-950 shadow-lg transition hover:bg-cyan-200"
                   >
-                    <FiCopy />
-                    {(isViewingExternal
-                      ? externalPlayer?.playerTag || externalPlayerTag
-                      : internalPlayerTag) || "No player tag"}
-                    {copied ? " Copied" : ""}
+                    <FiCamera />
                   </button>
-                </div>
+                ) : null}
+              </div>
+
+              <div className="min-w-0 pb-1">
+                <h1 className="truncate text-xl font-black text-white sm:text-2xl">
+                  {isViewingExternal
+                    ? publicIdentity?.username || "Player"
+                    : playerProfile.username || "Player"}
+                </h1>
+                <button
+                  type="button"
+                  onClick={copyProfileTag}
+                  className="mt-1 inline-flex max-w-full items-center gap-1.5 text-xs font-semibold text-slate-400 transition hover:text-cyan-200"
+                >
+                  <FiCopy />
+                  <span className="truncate">
+                    {(isViewingExternal
+                      ? publicIdentity?.playerTag || externalPlayerTag
+                      : internalPlayerTag) || "No player tag"}
+                  </span>
+                  {copied ? <span className="text-cyan-200">Copied</span> : null}
+                </button>
               </div>
             </div>
 
+            {!isViewingExternal && !isStaffUtilityMode ? (
+              <button
+                type="button"
+                onClick={openSocialEditor}
+                className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/15 sm:self-auto"
+              >
+                <FiEdit3 />
+                Edit profile
+              </button>
+            ) : null}
+          </div>
+          {displayProfile.bio ? (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+              {displayProfile.bio}
+            </p>
+          ) : !isViewingExternal && !isStaffUtilityMode ? (
             <button
               type="button"
-              disabled={isViewingExternal || isStaffUtilityMode}
               onClick={openSocialEditor}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2.5 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-3 text-sm text-slate-500 transition hover:text-cyan-200"
             >
-              <FiEdit3 />
-              Edit Social Links
+              Add a short bio
             </button>
-          </div>
+          ) : null}
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-2xl border border-white/10 bg-slate-950/80 p-3"
-          >
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              {stat.label}
-            </p>
-            <p className="mt-1 text-2xl font-black text-white">{stat.value}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
-                Competition Snapshot
-              </p>
-              <h2 className="mt-2 text-2xl font-black text-white">Linked game accounts</h2>
-            </div>
-            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
-              {displayLinkedGames.length} Connected
-            </span>
+            <h2 className="text-base font-black text-white">Game accounts</h2>
+            {isViewingExternal ? null : <span className="text-xs font-semibold text-slate-500">{displayLinkedGames.length} linked</span>}
           </div>
 
-          <div className="mt-6 grid gap-4">
+          <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10">
             {displayLinkedGames.length > 0 ? (
               displayLinkedGames.map((game, index) => (
                 <div
-                  key={`${game.accountId}-${index}`}
-                  className="rounded-[24px] border border-white/10 bg-black/20 p-5"
+                  key={`${game.game?.id || game.game?._id || game.accountUsername}-${index}`}
+                  className="flex items-center justify-between gap-3 bg-black/20 px-3 py-3"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                        {game.name || game.game?.name || "Game"}
-                      </p>
-                      <h3 className="mt-2 text-lg font-bold text-white">
-                        {game.accountUsername || game.accountId || "Unspecified account"}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-400">
-                        {game.accountId || "No account identifier saved"}
-                      </p>
-                    </div>
-                    <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-200">
-                      {game.verificationStatus || "linked"}
-                    </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white">
+                      {game.game?.name || game.name || "Game"}
+                    </p>
+                    <p className="truncate text-xs text-slate-400">
+                      {game.accountUsername || (isViewingExternal ? "Verified account" : game.accountId) || "Account linked"}
+                    </p>
                   </div>
+                  <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2.5 py-1 text-[11px] font-semibold capitalize text-cyan-200">
+                    {game.verificationStatus || "linked"}
+                  </span>
                 </div>
               ))
             ) : (
-              <EmptyPanel
-                title="No game accounts linked yet"
-                copy="Connect your game identities from Game Accounts to unlock tournament entry and match verification."
-              />
+              <EmptyPanel title="No game accounts linked" />
             )}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-cyan-300">
-                <FiUsers />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
-                  Social Reach
-                </p>
-                <h2 className="mt-1 text-2xl font-black text-white">Linked platforms</h2>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3">
-              {socialLinks.length > 0 ? (
-                socialLinks.map(({ key, label, icon: Icon, color }) => (
-                  <a
-                    key={key}
-                    href={displaySocials[key]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between rounded-[22px] border border-white/10 bg-black/20 px-4 py-3 transition hover:border-cyan-300/25 hover:bg-black/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`text-lg ${color}`} />
-                      <span className="font-semibold text-white">{label}</span>
-                    </div>
-                    <span className="text-sm text-slate-400">Open</span>
-                  </a>
-                ))
-              ) : (
-                <EmptyPanel
-                  title="No social links added"
-                  copy="Add socials to make your profile feel active and easier to recognize in tournaments and clans."
-                />
-              )}
-            </div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-black text-white">Social links</h2>
+            {!isViewingExternal && !isStaffUtilityMode ? (
+              <button
+                type="button"
+                onClick={openSocialEditor}
+                className="text-xs font-bold text-cyan-200 transition hover:text-cyan-100"
+              >
+                Edit
+              </button>
+            ) : null}
           </div>
 
-          <div className="rounded-[32px] border border-white/10 bg-slate-950/80 p-6 shadow-[0_18px_40px_rgba(2,8,23,0.35)]">
-            <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/70">
-              Activity
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white">Tournament history</h2>
-            <div className="mt-6 grid gap-3">
-              {!isViewingExternal && tournaments.length > 0 ? (
-                tournaments.slice(0, 5).map((tournament) => (
-                  <div
-                    key={tournament._id || tournament.tournamentName}
-                    className="rounded-[22px] border border-white/10 bg-black/20 px-4 py-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-white">
-                          {tournament.tournamentName || "Tournament"}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-400">
-                          {tournament.game || "Game"}{tournament.mode ? ` - ${tournament.mode}` : ""}
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
-                        {tournament.status || "active"}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : !isViewingExternal ? (
-                <EmptyPanel
-                  title="No tournaments joined yet"
-                  copy="As you register and play, your recent tournament activity will appear here."
-                />
-              ) : (
-                <EmptyPanel
-                  title="External tournament timeline"
-                  copy="Detailed external match history can be added as a dedicated API endpoint when needed."
-                />
-              )}
-            </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {socialLinks.length > 0 ? (
+              socialLinks.map(({ key, label, icon: Icon, color, href }) => (
+                <a
+                  key={key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 transition hover:border-cyan-300/25 hover:bg-black/30"
+                >
+                  <Icon className={`shrink-0 text-lg ${color}`} />
+                  <span className="truncate text-sm font-semibold text-white">{label}</span>
+                </a>
+              ))
+            ) : (
+              <EmptyPanel title="No social links added" />
+            )}
           </div>
         </div>
       </section>
+
+      {isViewingExternal && externalStatus === "succeeded" ? (
+        <>
+          <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <WorthStat label="Played" value={externalPlayer?.worth?.competitionsCompleted || 0} />
+            <WorthStat label="Wins" value={externalPlayer?.worth?.wins || 0} />
+            <WorthStat label="Podiums" value={externalPlayer?.worth?.podiums || 0} />
+            <WorthStat label="Best" value={externalPlayer?.worth?.bestPlacement ? `#${externalPlayer.worth.bestPlacement}` : "-"} />
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-black text-white">Recent competition</h2>
+                <span className="text-xs text-slate-500">{externalPlayer?.worth?.eventsCompleted || 0} Events · {externalPlayer?.worth?.quickMatchesCompleted || 0} Quick Matches</span>
+              </div>
+              <div className="mt-3 divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10">
+                {(externalPlayer?.recentHistory || []).length ? externalPlayer.recentHistory.map((item) => (
+                  <div key={`${item.type}-${item.id}`} className="flex items-center justify-between gap-3 bg-black/20 px-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-white">{item.title || (item.type === "event" ? "Event" : "Quick Match")}</p>
+                      <p className="truncate text-xs capitalize text-slate-500">{item.type === "quick_match" ? "Quick Match" : "Event"}{item.mode ? ` · ${item.mode}` : ""}</p>
+                    </div>
+                    <span className="shrink-0 text-sm font-black text-cyan-200">{item.placement ? `#${item.placement}` : "-"}</span>
+                  </div>
+                )) : <EmptyPanel title="No completed competition yet" />}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-950/80 p-4">
+              <h2 className="text-base font-black text-white">Clan</h2>
+              {externalPlayer?.clan ? (
+                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                  <p className="font-bold text-white">{externalPlayer.clan.name}</p>
+                  <p className="mt-1 text-xs text-slate-400">{externalPlayer.clan.tag} · {externalPlayer.clan.members} members</p>
+                  {externalPlayer.clan.league ? <p className="mt-2 text-xs font-semibold text-cyan-200">{externalPlayer.clan.league}</p> : null}
+                </div>
+              ) : <div className="mt-3"><EmptyPanel title="No clan" /></div>}
+            </div>
+          </section>
+        </>
+      ) : null}
 
       {isImageModalOpen && !isStaffUtilityMode ? (
         <ModalCard
@@ -460,12 +423,12 @@ const Profile = () => {
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-white/15 bg-white/5 px-6 py-10 text-center text-sm text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200">
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png"
               className="hidden"
               onChange={(event) => uploadAsset(event.target.files?.[0])}
             />
             <span className="text-base font-semibold text-white">Choose image</span>
-            <span className="mt-2">PNG, JPG, or WEBP work well here.</span>
+            <span className="mt-2">PNG or JPG, up to 512 KB.</span>
           </label>
           <button
             type="button"
@@ -478,8 +441,21 @@ const Profile = () => {
       ) : null}
 
       {isSocialModalOpen && !isStaffUtilityMode ? (
-        <ModalCard title="Edit social links" onClose={() => setIsSocialModalOpen(false)}>
+        <ModalCard title="Edit profile" onClose={() => setIsSocialModalOpen(false)}>
           <div className="grid gap-3">
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-300">
+                Bio
+              </span>
+              <textarea
+                value={draftBio}
+                maxLength={240}
+                rows={3}
+                onChange={(event) => setDraftBio(event.target.value)}
+                placeholder="A short introduction"
+                className="w-full resize-none rounded-xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+              />
+            </label>
             {SOCIAL_PLATFORMS.map(({ key, label, icon: Icon, color }) => (
               <label key={key} className="block">
                 <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-300">
@@ -495,7 +471,7 @@ const Profile = () => {
                     }))
                   }
                   placeholder={`Add your ${label} profile link`}
-                  className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400"
                 />
               </label>
             ))}
@@ -507,7 +483,7 @@ const Profile = () => {
             className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-300"
           >
             <FiSave />
-            Save Links
+            Save profile
           </button>
         </ModalCard>
       ) : null}
@@ -515,16 +491,22 @@ const Profile = () => {
   );
 };
 
-const EmptyPanel = ({ title, copy }) => (
-  <div className="rounded-[24px] border border-dashed border-white/10 bg-black/10 px-5 py-6">
-    <p className="font-semibold text-white">{title}</p>
-    <p className="mt-2 text-sm leading-6 text-slate-400">{copy}</p>
+const EmptyPanel = ({ title }) => (
+  <div className="col-span-full rounded-xl border border-dashed border-white/10 bg-black/10 px-4 py-5">
+    <p className="text-sm text-slate-400">{title}</p>
+  </div>
+);
+
+const WorthStat = ({ label, value }) => (
+  <div className="rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3">
+    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+    <p className="mt-1 text-lg font-black text-white">{value}</p>
   </div>
 );
 
 const ModalCard = ({ title, children, onClose }) => (
   <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
-    <div className="w-full max-w-xl rounded-[32px] border border-white/10 bg-slate-950 p-6 shadow-[0_24px_80px_rgba(2,8,23,0.55)]">
+    <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-slate-950 p-5 shadow-[0_24px_80px_rgba(2,8,23,0.55)] sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-2xl font-black text-white">{title}</h3>
         <button
@@ -542,7 +524,11 @@ const ModalCard = ({ title, children, onClose }) => (
 
 EmptyPanel.propTypes = {
   title: PropTypes.string.isRequired,
-  copy: PropTypes.string.isRequired,
+};
+
+WorthStat.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
 ModalCard.propTypes = {

@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { getStoredErrorMessage } from "../../api/apiError";
 import { ROUTES } from "../../routes/routeConstants";
 import { useMatchmakingStore } from "../../store/hooks/useStore";
 import TeamPaymentChoice from "../competition/TeamPaymentChoice.jsx";
+import { fetchClanTeams } from "../../store/slices/socialSlice.js";
 
 const normalizeGameKey = (game) =>
   String(game || "").toLowerCase() === "pubg"
@@ -25,15 +26,21 @@ const InviteModal = ({
   offeringId,
   teamSize,
 }) => {
+  const dispatch = useDispatch();
   const [errorMessage, setErrorMessage] = useState("");
   const [teamId, setTeamId] = useState("");
   const [paymentMode, setPaymentMode] = useState("captain_pays");
   const [rewardMode, setRewardMode] = useState("captain_keeps");
   const { joinQuickMatch, joinStatus, joiningOfferingId } =
     useMatchmakingStore();
-  const teams = useSelector(
-    (store) => store.player.profile?.profile?.teams || EMPTY_TEAMS
-  );
+  const teams = useSelector((store) => store.social.teams) || EMPTY_TEAMS;
+  const teamsStatus = useSelector((store) => store.social.teamsStatus);
+
+  useEffect(() => {
+    if (!isOpen || teamsStatus !== "idle") return undefined;
+    const request = dispatch(fetchClanTeams());
+    return () => request.abort();
+  }, [dispatch, isOpen, teamsStatus]);
 
   // Display only teams that can plausibly satisfy this offering. The server
   // repeats these checks because browser state is never a security boundary.
@@ -101,7 +108,14 @@ const InviteModal = ({
         </p>
 
         <div className="mt-5 max-h-64 space-y-2 overflow-y-auto">
-          {availableTeams.length === 0 ? (
+          {["idle", "loading"].includes(teamsStatus) ? (
+            <div aria-label="Loading saved teams" className="h-20 animate-pulse rounded-2xl bg-slate-800" />
+          ) : teamsStatus === "failed" ? (
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-center text-sm text-rose-100">
+              Unable to load your saved teams.
+              <button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchClanTeams())} type="button">Retry</button>
+            </div>
+          ) : availableTeams.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-center">
               <p className="text-sm text-slate-400">
                 No matching saved team is available yet.

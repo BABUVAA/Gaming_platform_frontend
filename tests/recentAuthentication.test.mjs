@@ -14,7 +14,10 @@ test("recent authentication remains password-only and protected staff commands o
   assert.match(authSlice, /path: "\/api\/auth\/reauthenticate"/);
   assert.match(authSlice, /method: "post"/);
   assert.match(accountSettings, /confirmSensitiveAction\(password\)/);
-  assert.match(accountSettings, /Current password for sensitive actions/);
+  assert.match(accountSettings, /Current password for withdrawal/);
+  assert.match(accountSettings, /user\?\.role === "player"/);
+  assert.doesNotMatch(accountSettings, /Staff use it|governance changes/);
+  assert.doesNotMatch(accountSettings, /<h1[^>]*>Account settings<\/h1>/);
   assert.match(accountSettings, /expires after 15 minutes/);
   assert.doesNotMatch(accountSettings, /recentAuthAt.*localStorage|localStorage.*recentAuthAt/);
   assert.match(apiThunk, /RECENT_AUTHENTICATION_REQUIRED/);

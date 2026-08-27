@@ -152,7 +152,12 @@ test("player dashboard tabs use the compact shell and omit promotional heroes", 
   assert.doesNotMatch(chats, /Coordinate clan traffic|text-5xl/);
   assert.doesNotMatch(gameAccounts, /Connect your game identities before match time/);
   assert.match(wallet, /text-2xl font-black text-white">Wallet/);
-  assert.match(profile, /relative h-32 bg-cover bg-center md:h-40/);
+  assert.match(profile, /relative h-28 bg-cover bg-center md:h-36/);
+  assert.match(profile, />Game accounts</);
+  assert.match(profile, />Social links</);
+  assert.match(profile, /fetchPublicPlayerProfile/);
+  assert.doesNotMatch(profile, /api\.get\(/);
+  assert.doesNotMatch(profile, /Tournament history|Competition Snapshot|const stats/);
   assert.match(clanStyles, /\.clan-hero \{[\s\S]*?min-height: 0/);
 });
 

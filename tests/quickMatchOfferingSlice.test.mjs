@@ -260,7 +260,7 @@ test("team picker keeps stable empty state and links to team creation", async ()
     "utf8",
   );
   assert.match(source, /const EMPTY_TEAMS = Object\.freeze\(\[\]\)/);
-  assert.match(source, /teams \|\| EMPTY_TEAMS/);
+  assert.match(source, /store\.social\.teams\) \|\| EMPTY_TEAMS/);
   assert.match(source, /to=\{`\$\{ROUTES\.CLAN\}\?tab=teams`\}/);
   assert.match(source, />\s*Create Team\s*<\/Link>/);
   assert.match(clanSource, /searchParams\.get\("tab"\)/);

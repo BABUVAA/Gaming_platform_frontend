@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { sessionInvalidated } from "../actions/sessionActions";
-import createApiThunk from "../thunks/createApiThunk";
-import { removeActiveChatByUserId } from "../../utils/chatMessages";
+import { sessionInvalidated } from "../actions/sessionActions.js";
+import createApiThunk from "../thunks/createApiThunk.js";
+import { removeActiveChatByUserId } from "../../utils/chatMessages.js";
 
 const selectPlayerSummaryData = (response) => {
   const summary = response.data?.data;
@@ -35,6 +35,7 @@ export const fetchPlayerProfile = createApiThunk(
   "player/fetchProfile",
   {
     path: "/api/users/profile",
+    selectData: (response) => response.data?.data || null,
     errorMessage: "Unable to load player profile.",
     toast: { error: true },
   },
@@ -49,6 +50,16 @@ export const fetchPlayerProfile = createApiThunk(
         player.profileStatus !== "loading"
       );
     },
+  },
+);
+
+export const fetchPublicPlayerProfile = createApiThunk(
+  "player/fetchPublicProfile",
+  {
+    path: ({ arg: playerTag }) =>
+      `/api/users/public/${encodeURIComponent(playerTag)}`,
+    selectData: (response) => response.data?.data || null,
+    errorMessage: "Unable to load this player profile.",
   },
 );
 
@@ -101,6 +112,13 @@ const createInitialState = () => ({
   // The request ID prevents an old session's response from entering a newer
   // player's state after logout or account replacement.
   profileRequestId: null,
+  // Personal thread shortcuts are browser-session state, not profile data.
+  // Relationships stay in the social slice and the server remains chat truth.
+  activeChats: [],
+  publicProfile: null,
+  publicProfileTag: null,
+  publicProfileStatus: "idle",
+  publicProfileRequestId: null,
   error: null,
 });
 
@@ -115,15 +133,21 @@ const playerSlice = createSlice({
     resetError: (state) => {
       state.error = null;
     },
+    clearPublicProfile: (state) => {
+      state.publicProfile = null;
+      state.publicProfileTag = null;
+      state.publicProfileStatus = "idle";
+      state.publicProfileRequestId = null;
+    },
     upsertActiveChat: (state, action) => {
       const incomingChat = action.payload;
-      if (!state.profile || !incomingChat?.userId) return;
+      if (!incomingChat?.userId) return;
 
-      if (!Array.isArray(state.profile.activeChats)) {
-        state.profile.activeChats = [];
+      if (!Array.isArray(state.activeChats)) {
+        state.activeChats = [];
       }
 
-      const existingIndex = state.profile.activeChats.findIndex(
+      const existingIndex = state.activeChats.findIndex(
         (chat) =>
           chat?.userId === incomingChat.userId ||
           chat?._id === incomingChat.userId ||
@@ -131,19 +155,19 @@ const playerSlice = createSlice({
       );
 
       if (existingIndex === -1) {
-        state.profile.activeChats.unshift(incomingChat);
+        state.activeChats.unshift(incomingChat);
         return;
       }
 
-      state.profile.activeChats[existingIndex] = {
-        ...state.profile.activeChats[existingIndex],
+      state.activeChats[existingIndex] = {
+        ...state.activeChats[existingIndex],
         ...incomingChat,
       };
     },
     removeActiveChat: (state, action) => {
-      if (!state.profile || !Array.isArray(state.profile.activeChats)) return;
-      state.profile.activeChats = removeActiveChatByUserId(
-        state.profile.activeChats,
+      if (!Array.isArray(state.activeChats)) return;
+      state.activeChats = removeActiveChatByUserId(
+        state.activeChats,
         action.payload,
       );
     },
@@ -189,6 +213,26 @@ const playerSlice = createSlice({
         state.profileStatus = "failed";
         state.profileRequestId = null;
         state.error = action.payload;
+      })
+      .addCase(fetchPublicPlayerProfile.pending, (state, action) => {
+        state.publicProfile = null;
+        state.publicProfileTag = action.meta.arg;
+        state.publicProfileStatus = "loading";
+        state.publicProfileRequestId = action.meta.requestId;
+      })
+      .addCase(fetchPublicPlayerProfile.fulfilled, (state, action) => {
+        if (state.publicProfileRequestId !== action.meta.requestId) return;
+
+        state.publicProfile = action.payload;
+        state.publicProfileStatus = "succeeded";
+        state.publicProfileRequestId = null;
+      })
+      .addCase(fetchPublicPlayerProfile.rejected, (state, action) => {
+        if (state.publicProfileRequestId !== action.meta.requestId) return;
+
+        state.publicProfile = null;
+        state.publicProfileStatus = "failed";
+        state.publicProfileRequestId = null;
       })
       .addCase(sessionInvalidated, resetPlayerState)
       .addMatcher(

@@ -9,9 +9,26 @@ export const fetchSecurityAttention = createApiThunk("securityAttention/fetch", 
   toast: { error: true },
 });
 
+export const fetchGameAccountFraudCases = createApiThunk("securityAttention/fetchFraudCases", {
+  path: "/api/admin/security-events/game-account-fraud-cases",
+  getParams: ({ status = "open" } = {}) => ({ status }),
+  selectData: (response) => response.data?.data || { cases: [] },
+  errorMessage: "Unable to load game-account fraud cases.",
+  toast: { error: true },
+});
+
+export const resolveGameAccountFraudCase = createApiThunk("securityAttention/resolveFraudCase", {
+  method: "patch",
+  path: ({ arg }) => `/api/admin/security-events/game-account-fraud-cases/${arg.caseId}`,
+  getBody: ({ decision, note }) => ({ decision, note }),
+  selectData: (response) => response.data?.data?.case,
+  errorMessage: "Unable to record the fraud decision.",
+  toast: { success: true, error: true },
+});
+
 const slice = createSlice({
   name: "securityAttention",
-  initialState: { error: null, events: [], page: { hasMore: false, nextCursor: null }, status: "idle", summary: { highSeverityLast24Hours: 0, last24Hours: 0, retentionDays: 90 } },
+  initialState: { error: null, events: [], fraudCases: [], fraudError: null, fraudStatus: "idle", page: { hasMore: false, nextCursor: null }, status: "idle", summary: { highSeverityLast24Hours: 0, last24Hours: 0, retentionDays: 90 } },
   reducers: {},
   extraReducers: (builder) => builder
     .addCase(fetchSecurityAttention.pending, (state, action) => {
@@ -31,7 +48,13 @@ const slice = createSlice({
     .addCase(fetchSecurityAttention.rejected, (state, action) => {
       state.error = action.payload || action.error.message;
       state.status = "failed";
-    }),
+    })
+    .addCase(fetchGameAccountFraudCases.pending, (state) => { state.fraudStatus = "loading"; state.fraudError = null; })
+    .addCase(fetchGameAccountFraudCases.fulfilled, (state, action) => { state.fraudCases = action.payload.cases || []; state.fraudStatus = "succeeded"; })
+    .addCase(fetchGameAccountFraudCases.rejected, (state, action) => { state.fraudError = action.payload || action.error.message; state.fraudStatus = "failed"; })
+    .addCase(resolveGameAccountFraudCase.pending, (state) => { state.fraudStatus = "deciding"; state.fraudError = null; })
+    .addCase(resolveGameAccountFraudCase.fulfilled, (state, action) => { state.fraudCases = state.fraudCases.filter((item) => item.id !== action.payload.id); state.fraudStatus = "succeeded"; })
+    .addCase(resolveGameAccountFraudCase.rejected, (state, action) => { state.fraudError = action.payload || action.error.message; state.fraudStatus = "failed"; }),
 });
 
 export default slice;
