@@ -18,6 +18,22 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Social profile entry points completed 2026-08-28. Friend avatars now fall
+  back to the tracked player image both when the URL is absent and when the
+  stored image fails. Friend rows, Clan roster members, pending Clan applicants,
+  and direct-chat rows can open the same authenticated public player showcase.
+  Visiting another player exposes server-derived `Add Friend`, `Accept Request`,
+  `Cancel Request`, or `Friends` state; mutations remain inside the social
+  Redux/API boundary and refresh public relationship truth after success.
+  Direct chat identity is enriched only from the caller's current accepted
+  friends. The Clan description card uses a neutral layered clan pattern and
+  no longer displays BGMI/PUBG artwork. Teams remain private player-owned
+  rosters: only creator/member/invitee access applies and no Clan Teams surface
+  was restored. Focused frontend social/profile passes 14/14; aggregate passes
+  139/139 with ESLint and the 569-module production build. The app browser
+  blocked localhost during attempted visual proof, so authenticated visual QA
+  remains a follow-up rather than an implementation blocker.
+
 - Deployment audit 2026-08-28 found the exact cause of the persistent Profile
   loader. Vercel was current, but the last three Render backend deploys had
   failed startup and Render was still serving commit `2459968` from August 24.

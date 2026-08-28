@@ -17,6 +17,7 @@ import { Button, Input } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { states } from "../utils/states";
 import { formData } from "../utils/utility";
+import { applyAvatarFallback } from "../utils/imageFallbacks";
 import {
   addClanBookmark,
   acceptClanJoinRequest,
@@ -544,6 +545,7 @@ const Clan = () => {
           onMemberRoleChange={handleMemberRoleChange}
           onKickMember={setKickCandidate}
           onReviewJoinRequest={handleReviewJoinRequest}
+          onViewProfile={openPlayerPreview}
         />
       ) : null}
 
@@ -884,6 +886,7 @@ const ClanOverviewPanel = ({
   onMemberRoleChange,
   onKickMember,
   onReviewJoinRequest,
+  onViewProfile,
 }) => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
@@ -1063,6 +1066,13 @@ const ClanOverviewPanel = ({
                   </span>
                   <div className="clan-join-request__actions">
                     <button
+                      disabled={!request.playerTag}
+                      onClick={() => onViewProfile(request.playerTag)}
+                      type="button"
+                    >
+                      Profile
+                    </button>
+                    <button
                       disabled={isBusy}
                       onClick={() =>
                         onReviewJoinRequest(playerId, "decline")
@@ -1112,6 +1122,7 @@ const ClanOverviewPanel = ({
               key={getEntityId(member.user)}
               member={member}
               onToggleActions={toggleMemberActions}
+              onViewProfile={onViewProfile}
             />
           ))}
         </div>
@@ -1165,6 +1176,7 @@ const ClanMemberRow = ({
   index,
   member,
   onToggleActions,
+  onViewProfile,
 }) => {
   const memberId = getEntityId(member.user);
   const isCurrentPlayer = memberId === String(currentUserId);
@@ -1206,6 +1218,14 @@ const ClanMemberRow = ({
         {member.role === "LEADER" ? <FaCrown /> : <FiShield />}
         {formatClanRole(member.role)}
       </span>
+      <button
+        className="clan-member-row__profile"
+        disabled={!member.clanMemberTag}
+        onClick={() => onViewProfile(member.clanMemberTag)}
+        type="button"
+      >
+        Profile
+      </button>
     </div>
   );
 };
@@ -2064,6 +2084,7 @@ const SocialPanel = ({
                 <div className="mt-6 flex items-center gap-4">
                   <img
                     src={playerCard.avatar || "/profile-pic.png"}
+                    onError={applyAvatarFallback}
                     alt={playerCard.username}
                     className="h-20 w-20 rounded-[24px] object-cover"
                   />
@@ -2079,6 +2100,15 @@ const SocialPanel = ({
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
+                {currentUserId !== playerCard._id && playerCard.playerTag ? (
+                  <button
+                    type="button"
+                    onClick={() => onViewProfile(playerCard.playerTag)}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100"
+                  >
+                    View Profile
+                  </button>
+                ) : null}
                 {playerCard.friendshipStatus === "not_friends" &&
                 currentUserId !== playerCard._id ? (
                   <ActionButton onClick={() => onAddFriend(playerCard._id)}>
@@ -2102,20 +2132,9 @@ const SocialPanel = ({
                 ) : null}
 
                 {playerCard.friendshipStatus === "friends" ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onViewProfile(playerCard.playerTag || playerQuery.trim())
-                      }
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100"
-                    >
-                      View Profile
-                    </button>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200">
-                      Already friends
-                    </div>
-                  </>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200">
+                    Already friends
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -2145,6 +2164,7 @@ const SocialPanel = ({
                   requester?.profile?.avatar ||
                   "/profile-pic.png"
                 }
+                onError={applyAvatarFallback}
                 alt={
                   requester.username ||
                   requester?.profile?.username ||
@@ -2232,6 +2252,10 @@ const SocialPanel = ({
             actionIcon={<FiUserMinus />}
             actionTone="danger"
             onAction={() => onCancelRequest(request._id)}
+            secondaryActionLabel="View Profile"
+            onSecondaryAction={() =>
+              onViewProfile(request.playerTag || request.profile?.profileTag)
+            }
           />
         ))}
       </RosterPanel>
@@ -2270,7 +2294,8 @@ const PersonRow = ({
   <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-white/10 bg-black/20 px-4 py-4">
     <div className="flex items-center gap-3">
       <img
-        src={avatar || "/default-avatar.png"}
+        src={avatar || "/profile-pic.png"}
+        onError={applyAvatarFallback}
         alt={name}
         className="h-12 w-12 rounded-2xl object-cover"
       />
@@ -2704,6 +2729,7 @@ ClanOverviewPanel.propTypes = {
   onMemberRoleChange: PropTypes.func.isRequired,
   onReviewJoinRequest: PropTypes.func.isRequired,
   onToggleBookmark: PropTypes.func.isRequired,
+  onViewProfile: PropTypes.func.isRequired,
 };
 
 ClanMemberRow.propTypes = {
@@ -2714,6 +2740,7 @@ ClanMemberRow.propTypes = {
   index: PropTypes.number.isRequired,
   member: clanMemberType.isRequired,
   onToggleActions: PropTypes.func.isRequired,
+  onViewProfile: PropTypes.func.isRequired,
 };
 
 ClanMemberActionsDialog.propTypes = {

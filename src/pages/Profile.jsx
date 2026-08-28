@@ -13,10 +13,13 @@ import {
 } from "react-icons/fa";
 import {
   FiCamera,
+  FiClock,
   FiCopy,
   FiEdit3,
   FiImage,
   FiSave,
+  FiUserCheck,
+  FiUserPlus,
 } from "react-icons/fi";
 import {
   fetchPublicPlayerProfile,
@@ -31,6 +34,12 @@ import {
   selectPublicPlayerProfileStatus,
 } from "../store/selectors/playerSelectors";
 import { STAFF_UTILITY_MESSAGE } from "../utils/staffUtilityMode";
+import { applyAvatarFallback } from "../utils/imageFallbacks";
+import {
+  acceptFriendRequest,
+  cancelFriendRequest,
+  sendFriendRequest,
+} from "../store/slices/socialSlice";
 
 const SOCIAL_PLATFORMS = [
   { key: "discord", label: "Discord", icon: FaDiscord, color: "text-indigo-300" },
@@ -76,6 +85,7 @@ const Profile = () => {
   );
   const [draftBio, setDraftBio] = useState(playerProfile.bio || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [friendActionPending, setFriendActionPending] = useState(false);
 
   useEffect(() => {
     if (isViewingExternal) {
@@ -224,6 +234,29 @@ const Profile = () => {
     }
   };
 
+  const updateFriendship = async (action) => {
+    const playerId = publicIdentity?.id;
+    if (!playerId || friendActionPending) return;
+
+    try {
+      setFriendActionPending(true);
+      if (action === "add") {
+        await dispatch(sendFriendRequest({ playerId })).unwrap();
+      } else if (action === "accept") {
+        await dispatch(acceptFriendRequest(playerId)).unwrap();
+      } else if (action === "cancel") {
+        await dispatch(cancelFriendRequest(playerId)).unwrap();
+      }
+      await dispatch(fetchPublicPlayerProfile(externalPlayerTag)).unwrap();
+    } catch {
+      // Mutation thunks already expose the API error through the global toast.
+    } finally {
+      setFriendActionPending(false);
+    }
+  };
+
+  const friendshipStatus = externalPlayer?.friendshipStatus || "not_friends";
+
   return (
     <div className="space-y-4">
       {isViewingExternal ? (
@@ -272,6 +305,7 @@ const Profile = () => {
                       ? publicIdentity?.avatar || "/profile-pic.png"
                       : playerProfile.avatar || "/profile-pic.png"
                   }
+                  onError={applyAvatarFallback}
                   alt={
                     isViewingExternal
                       ? publicIdentity?.username || "Player avatar"
@@ -325,6 +359,12 @@ const Profile = () => {
                 <FiEdit3 />
                 Edit profile
               </button>
+            ) : isViewingExternal && externalStatus === "succeeded" ? (
+              <FriendshipAction
+                disabled={friendActionPending}
+                onAction={updateFriendship}
+                status={friendshipStatus}
+              />
             ) : null}
           </div>
           {displayProfile.bio ? (
@@ -527,6 +567,46 @@ const Profile = () => {
       ) : null}
     </div>
   );
+};
+
+const FriendshipAction = ({ disabled, onAction, status }) => {
+  if (status === "friends") {
+    return (
+      <span className="inline-flex items-center gap-2 self-start rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200 sm:self-auto">
+        <FiUserCheck />
+        Friends
+      </span>
+    );
+  }
+
+  const isIncoming = status === "request_received";
+  const isOutgoing = status === "request_sent";
+  const action = isIncoming ? "accept" : isOutgoing ? "cancel" : "add";
+  const label = disabled
+    ? "Updating..."
+    : isIncoming
+      ? "Accept Request"
+      : isOutgoing
+        ? "Cancel Request"
+        : "Add Friend";
+
+  return (
+    <button
+      className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs font-bold text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-wait disabled:opacity-60 sm:self-auto"
+      disabled={disabled}
+      onClick={() => onAction(action)}
+      type="button"
+    >
+      {isOutgoing ? <FiClock /> : <FiUserPlus />}
+      {label}
+    </button>
+  );
+};
+
+FriendshipAction.propTypes = {
+  disabled: PropTypes.bool.isRequired,
+  onAction: PropTypes.func.isRequired,
+  status: PropTypes.string.isRequired,
 };
 
 const EmptyPanel = ({ title }) => (

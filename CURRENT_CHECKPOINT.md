@@ -1,6 +1,27 @@
 # Current Checkpoint
 
-## Completed Slice: Player-owned Teams
+## Completed Slice: Social Profile Entry Points
+
+- Friends now use the real `/profile-pic.png` fallback plus a guarded image
+  error fallback, so an absent or invalid stored avatar cannot render a broken
+  image. Friends retain their direct public-profile action.
+- Clan members and pending join requests expose a compact Profile action using
+  their canonical player tag. Direct-chat rows merge current friend identity,
+  show a resilient avatar, and expose Profile without opening the conversation.
+- A visited public Profile now derives `Add Friend`, `Accept Request`,
+  `Cancel Request`, or non-destructive `Friends` state from the server-returned
+  friendship status and performs every mutation through the social Redux/API
+  boundary before refreshing the showcase.
+- The Clan description card no longer depends on BGMI/PUBG artwork. Its identity
+  background is a neutral layered clan pattern. Teams remain independent and
+  visible only to their creator/accepted members/pending invitees; no Clan Team
+  surface or clan-wide roster access was restored.
+- Verification: focused social/profile passes 14/14, aggregate frontend passes
+  139/139, ESLint passes, and the 569-module production build succeeds. A live
+  visual check was attempted after starting Vite, but the app browser refused
+  localhost navigation; no runtime issue was observed by the code gates.
+
+## Previous Completed Slice: Player-owned Teams
 
 - Product decision 2026-08-28: Teams are a player feature, independent of
   Clans. Eligible players can create format-scoped rosters and invite accepted

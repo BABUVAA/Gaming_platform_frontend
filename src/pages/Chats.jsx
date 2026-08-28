@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import ChatBox from "../components/common/ChatBox";
-import { FiMessageSquare, FiUsers } from "react-icons/fi";
+import { FiUsers } from "react-icons/fi";
 import { fetchUserClan } from "../store/slices/clanSlice.js";
 import { fetchSocialConnections } from "../store/slices/socialSlice.js";
 import { playerActions } from "../store/slices/playerSlice.js";
+import { applyAvatarFallback } from "../utils/imageFallbacks.js";
 
 const Chats = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const activeChats = useSelector((store) => store.player.activeChats);
   const { connections, connectionsStatus } = useSelector((store) => store.social);
   const { userClanData, userClanStatus } = useSelector((store) => store.clan);
@@ -21,6 +24,20 @@ const Chats = () => {
   // come from the current membership endpoint so ordinary members receive the
   // same canonical clan record as leaders.
   const clanChat = userClanData?.data || null;
+  const friends = connections?.friends || [];
+  const visibleChats = personalChats.map((chat) => {
+    const chatId = String(chat.userId || chat.id || chat._id || "");
+    const friend = friends.find((entry) => String(entry._id) === chatId);
+    return {
+      ...chat,
+      avatar: chat.avatar || friend?.avatar || null,
+      playerTag:
+        chat.playerTag || chat.profileTag || friend?.playerTag || null,
+      username:
+        chat.username || chat.profile?.username || friend?.username || "Player",
+      userId: chatId || chat.userId,
+    };
+  });
 
   useEffect(() => {
     setPersonalChats(activeChats || []);
@@ -72,8 +89,11 @@ const Chats = () => {
           <ChatSidebar
             onOpenChat={openChat}
             clanChat={clanChat}
-            personalChats={personalChats}
+            personalChats={visibleChats}
             onNewChat={() => setIsModalOpen(true)}
+            onViewProfile={(playerTag) =>
+              navigate(`/dashboard/profile?playerTag=${encodeURIComponent(playerTag)}`)
+            }
           />
         </div>
 
@@ -102,7 +122,7 @@ const Chats = () => {
           onClose={() => setIsModalOpen(false)}
           personalChats={personalChats}
           onOpenChat={openChat}
-          friends={connections?.friends || []}
+          friends={friends}
           friendsStatus={connectionsStatus}
         />
       )}
@@ -110,7 +130,7 @@ const Chats = () => {
   );
 };
 
-const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
+const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat, onViewProfile }) => {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90">
       <div className="flex justify-end border-b border-slate-800 px-3 py-3">
@@ -155,32 +175,43 @@ const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat }) => {
         )}
 
         {personalChats.map((chat, index) => (
-          <button
+          <div
             key={chat._id || chat.userId || chat.id || `chat-${index}`}
-            type="button"
-            className="block w-full rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4 text-left transition hover:border-slate-700"
-            onClick={() => {
-              onOpenChat({
-                id: chat.userId || chat.id || chat._id || "unknown",
-                type: "personal",
-                name: chat.username || chat.profile?.username || "Unknown player",
-              });
-            }}
+            className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-2 transition hover:border-slate-700"
           >
-            <span className="flex items-start gap-3">
-              <span className="rounded-2xl bg-cyan-400/10 p-3 text-cyan-200">
-                <FiMessageSquare />
-              </span>
-              <span>
+            <button
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 text-left"
+              onClick={() => {
+                onOpenChat({
+                  id: chat.userId || chat.id || chat._id || "unknown",
+                  type: "personal",
+                  name: chat.username || chat.profile?.username || "Unknown player",
+                });
+              }}
+              type="button"
+            >
+              <img
+                alt={chat.username || chat.profile?.username || "Player"}
+                className="h-11 w-11 shrink-0 rounded-xl object-cover"
+                onError={applyAvatarFallback}
+                src={chat.avatar || chat.profile?.avatar || "/profile-pic.png"}
+              />
+              <span className="min-w-0">
                 <span className="block text-sm font-bold text-white">
                   {chat.username || chat.profile?.username}
                 </span>
-                <span className="mt-1 block text-xs text-slate-500">
-                  Direct player channel
-                </span>
               </span>
-            </span>
-          </button>
+            </button>
+            {chat.playerTag || chat.profileTag || chat.profile?.profileTag ? (
+              <button
+                className="shrink-0 rounded-lg border border-cyan-300/20 px-2 py-1.5 text-[11px] font-bold text-cyan-200"
+                onClick={() => onViewProfile(chat.playerTag || chat.profileTag || chat.profile?.profileTag)}
+                type="button"
+              >
+                Profile
+              </button>
+            ) : null}
+          </div>
         ))}
 
         {!clanChat && personalChats.length === 0 ? (
@@ -215,6 +246,8 @@ const NewChatModal = ({ onClose, personalChats, onOpenChat, friends, friendsStat
         playerActions.upsertActiveChat({
           userId: String(friend._id),
           username: friend.username || "Player",
+          avatar: friend.avatar || null,
+          playerTag: friend.playerTag || null,
         }),
       );
     }
@@ -274,6 +307,7 @@ ChatSidebar.propTypes = {
   }),
   personalChats: PropTypes.arrayOf(PropTypes.object).isRequired,
   onNewChat: PropTypes.func.isRequired,
+  onViewProfile: PropTypes.func.isRequired,
 };
 
 NewChatModal.propTypes = {
