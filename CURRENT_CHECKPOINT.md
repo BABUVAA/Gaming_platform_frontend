@@ -1,5 +1,27 @@
 # Current Checkpoint
 
+## Completed Slice: Player-owned Teams
+
+- Product decision 2026-08-28: Teams are a player feature, independent of
+  Clans. Eligible players can create format-scoped rosters and invite accepted
+  friends; friendship is rechecked on acceptance. A later unfriend does not
+  dissolve an already accepted roster. Clan
+  membership changes must have no effect on Team availability or membership.
+- Canonical ownership moved from `/api/clan/teams` and the Clan tab to
+  `/api/player/teams` and a dedicated Teams workspace. Existing Team records
+  remain readable during migration; no competition or money snapshot contract
+  changes.
+- The backend checks current player eligibility and an accepted Friendship on
+  invite and again on acceptance. Team list reads return only rosters where
+  the caller is accepted or invited. Clan leave/kick no longer inspect or
+  mutate Teams, and realtime refresh uses `player.team.updated`.
+- Replica proof covers players with no Clan: invitation is rejected before
+  friendship, rejected again if the friendship is removed before acceptance,
+  then succeeds and reaches a ready Duo after friendship is restored. Backend
+  social passes 23/23, social replica passes 2/2, competition policy passes
+  126/126 and API documentation covers 212/212 operations. Frontend passes
+  137/137, ESLint and the 568-module production build.
+
 Last updated: 2026-08-28
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
@@ -177,7 +199,8 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   idempotent `scripts/seedPresentationDatabase.js` derives and hard-checks the
   separate `e-gaming` database, never changes `node-auth`, and tracks no
   credential. It prepared 1,000 verified players with exact INR 1,000 sandbox
-  Wallet balances, 20 clans, 940 ready teams, 500 friendships, five staff
+  Wallet balances, 20 clans, 940 ready teams, baseline friendships plus the
+  accepted captain/member friendships required by those rosters, five staff
   identities and eight assignments using existing roles/scopes. It also owns
   the complete test catalog: approved BGMI Solo/Erangal and COC 5v5/War monthly
   Templates, two approved open paid September 2026 Events with INR 10 per-seat
@@ -199,7 +222,7 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   chats, clan, wallet and other operational data are no longer loaded through
   the profile API. Chats keep transient shortcuts in Redux and resolve friends
   through the canonical social boundary; saved Team pickers load only the
-  dedicated clan-team boundary. `GET /api/users/public/:playerTag` is an
+  dedicated player-team boundary. `GET /api/users/public/:playerTag` is an
   authenticated safe showcase: identity, HTTP(S)-only social links, verified
   game names/account display names (never account IDs), public clan summary,
   canonical completed Event/Quick Match worth metrics and the newest eight
@@ -420,12 +443,10 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   available for a live adapter probe, so deployed hit/miss observation remains
   an operational follow-up; Redis-down fallback is verified.
 
-- Team-entry recovery 2026-08-24: when a team Quick Match has no matching
-  saved roster, its picker now exposes `Create Team` and opens the Clan Teams
-  workspace directly. Players without a Clan land on Clan creation first; once
-  a Clan exists the same `?tab=teams` destination opens the team builder. The
-  existing server-owned roster eligibility and join command are unchanged.
-  Frontend 114/114, full lint and the 556-module production build pass.
+- Team-entry recovery 2026-08-24 originally opened a Clan-owned team builder.
+  Superseded 2026-08-28: `Create Team` now opens the independent Teams
+  workspace and never requires Clan membership. Server-owned roster
+  eligibility and competition join commands remain unchanged.
 
 - Test competition catalog 2026-08-23: the active Event Manager scope now
   includes BGMI and COC. BGMI Monthly Championship has an active monthly

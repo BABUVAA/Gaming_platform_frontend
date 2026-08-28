@@ -71,15 +71,15 @@ export const removeFriend = createApiThunk("social/removeFriend", {
   toast: socialMutationToast,
 });
 
-export const fetchClanTeams = createApiThunk("social/fetchClanTeams", {
-  path: "/api/clan/teams",
+export const fetchTeams = createApiThunk("social/fetchTeams", {
+  path: "/api/player/teams",
   selectData: (response) => response.data?.data?.teams || [],
-  errorMessage: "Unable to load clan teams.",
+  errorMessage: "Unable to load teams.",
   toast: { error: true },
 });
 
-export const createClanTeam = createApiThunk("social/createClanTeam", {
-  path: "/api/clan/teams",
+export const createTeam = createApiThunk("social/createTeam", {
+  path: "/api/player/teams",
   method: "post",
   errorMessage: "Unable to create this team.",
   toast: socialMutationToast,
@@ -88,10 +88,10 @@ export const createClanTeam = createApiThunk("social/createClanTeam", {
 export const inviteTeamMember = createApiThunk(
   "social/inviteTeamMember",
   {
-    path: ({ arg }) => `/api/clan/teams/${arg.teamId}/invitations`,
+    path: ({ arg }) => `/api/player/teams/${arg.teamId}/invitations`,
     method: "post",
     getBody: ({ playerId }) => ({ playerId }),
-    errorMessage: "Unable to invite this clan member.",
+    errorMessage: "Unable to invite this player.",
     toast: socialMutationToast,
   },
 );
@@ -99,7 +99,7 @@ export const inviteTeamMember = createApiThunk(
 export const acceptTeamInvitation = createApiThunk(
   "social/acceptTeamInvitation",
   {
-    path: ({ arg }) => `/api/clan/teams/${arg}/invitations/accept`,
+    path: ({ arg }) => `/api/player/teams/${arg}/invitations/accept`,
     method: "post",
     getBody: () => undefined,
     errorMessage: "Unable to accept this team invitation.",
@@ -110,7 +110,7 @@ export const acceptTeamInvitation = createApiThunk(
 export const declineTeamInvitation = createApiThunk(
   "social/declineTeamInvitation",
   {
-    path: ({ arg }) => `/api/clan/teams/${arg}/invitations`,
+    path: ({ arg }) => `/api/player/teams/${arg}/invitations`,
     method: "delete",
     getBody: () => undefined,
     errorMessage: "Unable to decline this team invitation.",
@@ -122,7 +122,7 @@ export const removeTeamMember = createApiThunk(
   "social/removeTeamMember",
   {
     path: ({ arg }) =>
-      `/api/clan/teams/${arg.teamId}/members/${arg.playerId}`,
+      `/api/player/teams/${arg.teamId}/members/${arg.playerId}`,
     method: "delete",
     getBody: () => undefined,
     errorMessage: "Unable to remove this team member.",
@@ -130,18 +130,18 @@ export const removeTeamMember = createApiThunk(
   },
 );
 
-export const leaveClanTeam = createApiThunk("social/leaveClanTeam", {
-  path: ({ arg }) => `/api/clan/teams/${arg}/leave`,
+export const leaveTeam = createApiThunk("social/leaveTeam", {
+  path: ({ arg }) => `/api/player/teams/${arg}/leave`,
   method: "post",
   getBody: () => undefined,
   errorMessage: "Unable to leave this team.",
   toast: socialMutationToast,
 });
 
-export const disbandClanTeam = createApiThunk(
-  "social/disbandClanTeam",
+export const disbandTeam = createApiThunk(
+  "social/disbandTeam",
   {
-    path: ({ arg }) => `/api/clan/teams/${arg}`,
+    path: ({ arg }) => `/api/player/teams/${arg}`,
     method: "delete",
     getBody: () => undefined,
     errorMessage: "Unable to disband this team.",
@@ -153,12 +153,12 @@ const socialMutationThunks = [
   acceptFriendRequest,
   acceptTeamInvitation,
   cancelFriendRequest,
-  createClanTeam,
+  createTeam,
   declineFriendRequest,
   declineTeamInvitation,
-  disbandClanTeam,
+  disbandTeam,
   inviteTeamMember,
-  leaveClanTeam,
+  leaveTeam,
   removeFriend,
   removeTeamMember,
   sendFriendRequest,
@@ -202,15 +202,15 @@ const socialSlice = createSlice({
           state.error = action.payload;
         }
       })
-      .addCase(fetchClanTeams.pending, (state) => {
+      .addCase(fetchTeams.pending, (state) => {
         state.teamsStatus = "loading";
         state.error = null;
       })
-      .addCase(fetchClanTeams.fulfilled, (state, action) => {
+      .addCase(fetchTeams.fulfilled, (state, action) => {
         state.teams = action.payload;
         state.teamsStatus = "succeeded";
       })
-      .addCase(fetchClanTeams.rejected, (state, action) => {
+      .addCase(fetchTeams.rejected, (state, action) => {
         state.teamsStatus = "failed";
         if (!action.meta.aborted && !action.meta.condition) {
           state.error = action.payload;

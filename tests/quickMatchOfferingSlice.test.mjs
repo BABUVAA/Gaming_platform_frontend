@@ -255,14 +255,15 @@ test("team picker keeps stable empty state and links to team creation", async ()
     new URL("../src/components/feature/InviteModal.jsx", import.meta.url),
     "utf8",
   );
-  const clanSource = await readFile(
-    new URL("../src/pages/Clan.jsx", import.meta.url),
+  const teamsSource = await readFile(
+    new URL("../src/pages/Teams.jsx", import.meta.url),
     "utf8",
   );
   assert.match(source, /const EMPTY_TEAMS = Object\.freeze\(\[\]\)/);
   assert.match(source, /store\.social\.teams\) \|\| EMPTY_TEAMS/);
-  assert.match(source, /to=\{`\$\{ROUTES\.CLAN\}\?tab=teams`\}/);
+  assert.match(source, /to=\{ROUTES\.TEAMS\}/);
   assert.match(source, />\s*Create Team\s*<\/Link>/);
-  assert.match(clanSource, /searchParams\.get\("tab"\)/);
-  assert.match(clanSource, /requestedTab === "teams"/);
+  assert.match(teamsSource, /fetchTeams\(\)/);
+  assert.match(teamsSource, /connections\.friends/);
+  assert.doesNotMatch(teamsSource, /searchPlayer/);
 });

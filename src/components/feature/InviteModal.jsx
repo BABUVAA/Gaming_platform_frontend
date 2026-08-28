@@ -6,7 +6,7 @@ import { getStoredErrorMessage } from "../../api/apiError";
 import { ROUTES } from "../../routes/routeConstants";
 import { useMatchmakingStore } from "../../store/hooks/useStore";
 import TeamPaymentChoice from "../competition/TeamPaymentChoice.jsx";
-import { fetchClanTeams } from "../../store/slices/socialSlice.js";
+import { fetchTeams } from "../../store/slices/socialSlice.js";
 
 const normalizeGameKey = (game) =>
   String(game || "").toLowerCase() === "pubg"
@@ -38,7 +38,7 @@ const InviteModal = ({
 
   useEffect(() => {
     if (!isOpen || teamsStatus !== "idle") return undefined;
-    const request = dispatch(fetchClanTeams());
+    const request = dispatch(fetchTeams());
     return () => request.abort();
   }, [dispatch, isOpen, teamsStatus]);
 
@@ -113,7 +113,7 @@ const InviteModal = ({
           ) : teamsStatus === "failed" ? (
             <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-center text-sm text-rose-100">
               Unable to load your saved teams.
-              <button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchClanTeams())} type="button">Retry</button>
+              <button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchTeams())} type="button">Retry</button>
             </div>
           ) : availableTeams.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-center">
@@ -123,7 +123,7 @@ const InviteModal = ({
               <Link
                 className="mt-4 inline-flex rounded-xl border border-cyan-300/60 px-4 py-2 text-sm font-bold text-cyan-200 transition hover:bg-cyan-300/10"
                 onClick={onClose}
-                to={`${ROUTES.CLAN}?tab=teams`}
+                to={ROUTES.TEAMS}
               >
                 Create Team
               </Link>

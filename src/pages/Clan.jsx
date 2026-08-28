@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { Form, useNavigate, useSearchParams } from "react-router-dom";
+import { Form, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FiBookmark,
@@ -41,29 +41,18 @@ import {
   fetchPublicPlayerProfile,
   searchPlayer,
 } from "../store/slices/playerSlice";
-import { fetchGames } from "../store/slices/gameSlice";
 import {
   acceptFriendRequest,
-  acceptTeamInvitation,
   cancelFriendRequest,
-  createClanTeam,
   declineFriendRequest,
-  declineTeamInvitation,
-  disbandClanTeam,
-  fetchClanTeams,
   fetchSocialConnections,
-  inviteTeamMember,
-  leaveClanTeam,
   removeFriend,
-  removeTeamMember,
   sendFriendRequest,
-  socialActions,
 } from "../store/slices/socialSlice";
 
 const Clan = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { summary } = useSelector((store) => store.player);
   const {
     bookmarkedClans = [],
@@ -79,13 +68,7 @@ const Clan = () => {
   const {
     connections,
     connectionsStatus,
-    mutationStatus,
-    teams,
-    teamsStatus,
   } = useSelector((store) => store.social);
-  const { data: catalogGames = [], status: gamesStatus } = useSelector(
-    (store) => store.games,
-  );
   const { globalLoading } = useSelector((store) => store.loading);
   const [activeTab, setActiveTab] = useState("myClan");
   const [isCreatingClan, setIsCreatingClan] = useState(false);
@@ -106,7 +89,6 @@ const Clan = () => {
   const clanData = userClanData?.data || null;
   const currentUserId = String(summary?.userId || "");
   const hasClan = Boolean(clanData);
-  const activeClanId = String(clanData?._id || "");
   const currentClanMember = clanData?.members?.find(
     (member) => getEntityId(member.user) === currentUserId,
   );
@@ -117,15 +99,8 @@ const Clan = () => {
 
   useEffect(() => {
     if (userClanStatus !== "succeeded") return;
-    const requestedTab = searchParams.get("tab");
-    setActiveTab(
-      hasClan && requestedTab === "teams"
-        ? "teams"
-        : hasClan
-          ? "myClan"
-          : "createClan",
-    );
-  }, [hasClan, searchParams, userClanStatus]);
+    setActiveTab(hasClan ? "myClan" : "createClan");
+  }, [hasClan, userClanStatus]);
 
   useEffect(() => {
     if (userClanStatus === "idle") {
@@ -156,18 +131,6 @@ const Clan = () => {
       dispatch(fetchSocialConnections());
     }
   }, [connectionsStatus, dispatch]);
-
-  useEffect(() => {
-    if (gamesStatus === "idle") dispatch(fetchGames());
-  }, [dispatch, gamesStatus]);
-
-  useEffect(() => {
-    if (activeClanId) {
-      dispatch(fetchClanTeams());
-    } else {
-      dispatch(socialActions.clearTeams());
-    }
-  }, [activeClanId, dispatch]);
 
   useEffect(() => {
     if (activeTab === "settings" && !canEditClanSettings) {
@@ -217,9 +180,8 @@ const Clan = () => {
       { label: "Clan", value: clanData ? "Joined" : "Not joined" },
       { label: "Friends", value: friends.length || 0 },
       { label: "Requests", value: friendRequests.length || 0 },
-      { label: "Teams", value: teams.length || 0 },
     ],
-    [clanData, friendRequests.length, friends.length, teams.length]
+    [clanData, friendRequests.length, friends.length]
   );
 
   // Keeping navigation metadata together makes new clan areas easy to add
@@ -228,12 +190,6 @@ const Clan = () => {
     ...(hasClan
       ? [
           { id: "myClan", label: "My Clan", icon: <FiShield /> },
-          {
-            id: "teams",
-            label: "Teams",
-            count: teams.length,
-            icon: <FiUsers />,
-          },
           ...(canEditClanSettings
             ? [
                 {
@@ -480,67 +436,6 @@ const Clan = () => {
     }
   };
 
-  const runTeamMutation = async (operation) => {
-    await dispatch(operation).unwrap();
-    await dispatch(fetchClanTeams()).unwrap();
-  };
-
-  const handleCreateTeam = async (teamData) => {
-    try {
-      await runTeamMutation(createClanTeam(teamData));
-    } catch (error) {
-      console.error("Create team failed:", error);
-    }
-  };
-
-  const handleInviteTeamMember = async (teamId, playerId) => {
-    try {
-      await runTeamMutation(inviteTeamMember({ teamId, playerId }));
-    } catch (error) {
-      console.error("Team invitation failed:", error);
-    }
-  };
-
-  const handleAcceptTeamInvitation = async (teamId) => {
-    try {
-      await runTeamMutation(acceptTeamInvitation(teamId));
-    } catch (error) {
-      console.error("Accept team invitation failed:", error);
-    }
-  };
-
-  const handleDeclineTeamInvitation = async (teamId) => {
-    try {
-      await runTeamMutation(declineTeamInvitation(teamId));
-    } catch (error) {
-      console.error("Decline team invitation failed:", error);
-    }
-  };
-
-  const handleRemoveTeamMember = async (teamId, playerId) => {
-    try {
-      await runTeamMutation(removeTeamMember({ teamId, playerId }));
-    } catch (error) {
-      console.error("Remove team member failed:", error);
-    }
-  };
-
-  const handleLeaveTeam = async (teamId) => {
-    try {
-      await runTeamMutation(leaveClanTeam(teamId));
-    } catch (error) {
-      console.error("Leave team failed:", error);
-    }
-  };
-
-  const handleDisbandTeam = async (teamId) => {
-    try {
-      await runTeamMutation(disbandClanTeam(teamId));
-    } catch (error) {
-      console.error("Disband team failed:", error);
-    }
-  };
-
   const copyTag = async (value) => {
     if (!value) return;
     try {
@@ -656,24 +551,6 @@ const Clan = () => {
         <CreateClanPanel
           onSubmit={handleCreateClan}
           isCreatingClan={isCreatingClan}
-        />
-      ) : null}
-
-      {hasClan && activeTab === "teams" ? (
-        <TeamPanel
-          catalogGames={catalogGames}
-          clanMembers={clanData?.members || []}
-          currentUserId={currentUserId}
-          isBusy={mutationStatus === "loading"}
-          isLoading={teamsStatus === "loading"}
-          onAcceptInvitation={handleAcceptTeamInvitation}
-          onCreateTeam={handleCreateTeam}
-          onDeclineInvitation={handleDeclineTeamInvitation}
-          onDisbandTeam={handleDisbandTeam}
-          onInviteMember={handleInviteTeamMember}
-          onLeaveTeam={handleLeaveTeam}
-          onRemoveMember={handleRemoveTeamMember}
-          teams={teams}
         />
       ) : null}
 
@@ -1499,9 +1376,9 @@ const suggestTeamSize = (mode) => {
 
 const getEntityId = (entity) => String(entity?._id || entity || "");
 
-const TeamPanel = ({
+export const TeamPanel = ({
   catalogGames,
-  clanMembers,
+  inviteCandidates,
   currentUserId,
   isBusy,
   isLoading,
@@ -1573,7 +1450,7 @@ const TeamPanel = ({
   if (isLoading) {
     return (
       <EmptyPanel
-        title="Loading clan teams"
+        title="Loading teams"
         copy="Syncing accepted players and pending invitations."
       />
     );
@@ -1586,10 +1463,10 @@ const TeamPanel = ({
           New Team
         </p>
         <h2 className="mt-2 text-2xl font-black text-white">
-          Start a clan lineup
+          Create a lineup
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-400">
-          Create the roster first, then invite clan members. A team becomes
+          Create the roster first, then invite friends. A team becomes
           ready only after every place is accepted.
         </p>
 
@@ -1667,8 +1544,8 @@ const TeamPanel = ({
       <section className="space-y-4">
         {teams.length === 0 ? (
           <EmptyPanel
-            title="No clan teams yet"
-            copy="Create the first lineup and invite players from your clan roster."
+            title="No teams yet"
+            copy="Create a lineup, then invite friends you want beside you."
           />
         ) : (
           teams.map((team) => {
@@ -1678,8 +1555,8 @@ const TeamPanel = ({
             const pendingIds = new Set(team.pendingInvites.map(getEntityId));
             const hasAccepted = acceptedIds.has(String(currentUserId));
             const hasPendingInvite = pendingIds.has(String(currentUserId));
-            const availableMembers = clanMembers.filter((member) => {
-              const memberId = getEntityId(member.user);
+            const availableMembers = inviteCandidates.filter((member) => {
+              const memberId = getEntityId(member);
               return (
                 memberId &&
                 !acceptedIds.has(memberId) &&
@@ -1813,13 +1690,13 @@ const TeamPanel = ({
                       }
                       value={selectedInvite}
                     >
-                      <option value="">Choose clan member</option>
+                      <option value="">Choose player</option>
                       {availableMembers.map((member) => (
                         <option
-                          key={getEntityId(member.user)}
-                          value={getEntityId(member.user)}
+                          key={getEntityId(member)}
+                          value={getEntityId(member)}
                         >
-                          {member.clanMemberName}
+                          {member.username || member.profile?.username || member.playerTag || "Player"}
                         </option>
                       ))}
                     </select>
@@ -1857,7 +1734,7 @@ const TeamPanel = ({
                     </button>
                   ) : hasPendingInvite ? null : (
                     <span className="text-xs text-slate-500">
-                      Clan roster
+                      Team roster
                     </span>
                   )}
                 </div>
@@ -2864,7 +2741,13 @@ TeamPanel.propTypes = {
       supportedModes: PropTypes.arrayOf(PropTypes.string).isRequired,
     }),
   ).isRequired,
-  clanMembers: PropTypes.arrayOf(clanMemberType).isRequired,
+  inviteCandidates: PropTypes.arrayOf(
+    PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+      playerTag: PropTypes.string,
+      username: PropTypes.string,
+    }),
+  ).isRequired,
   currentUserId: PropTypes.string,
   isBusy: PropTypes.bool.isRequired,
   isLoading: PropTypes.bool.isRequired,

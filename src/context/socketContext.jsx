@@ -16,7 +16,7 @@ import {
   fetchUserClan,
 } from "../store/slices/clanSlice";
 import {
-  fetchClanTeams,
+  fetchTeams,
   fetchSocialConnections,
 } from "../store/slices/socialSlice";
 import platformStore from "../store";
@@ -179,9 +179,9 @@ export const SocketProvider = ({ children }) => {
       ) {
         scheduleDomainRefresh("clan", fetchUserClan);
       } else if (
-        event.type === REALTIME_EVENT_TYPES.CLAN_TEAM_UPDATED
+        event.type === REALTIME_EVENT_TYPES.TEAM_UPDATED
       ) {
-        scheduleDomainRefresh("clan-teams", fetchClanTeams);
+        scheduleDomainRefresh("teams", fetchTeams);
       } else if (
         event.type ===
         REALTIME_EVENT_TYPES.SOCIAL_CONNECTIONS_UPDATED

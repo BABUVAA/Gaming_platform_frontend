@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { ROUTES } from "../../routes/routeConstants.js";
 import { selectAuthUser } from "../../store/selectors/authSelectors.js";
-import { fetchClanTeams } from "../../store/slices/socialSlice.js";
+import { fetchTeams } from "../../store/slices/socialSlice.js";
 import TeamPaymentChoice from "./TeamPaymentChoice.jsx";
 
 const normalize = (value) => {
@@ -33,7 +33,7 @@ const EventTeamPicker = ({ event, onClose, onSelect }) => {
 
   useEffect(() => {
     if (teamsStatus !== "idle") return undefined;
-    const request = dispatch(fetchClanTeams());
+    const request = dispatch(fetchTeams());
     return () => request.abort();
   }, [dispatch, teamsStatus]);
 
@@ -52,8 +52,8 @@ const EventTeamPicker = ({ event, onClose, onSelect }) => {
               <span className="text-xs text-slate-400">{team.players.length} players · ready</span>
             </button>
           ))}
-          {teamsStatus === "failed" ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-4 text-center text-sm text-rose-100">Unable to load your saved teams.<button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchClanTeams())} type="button">Retry</button></div> : null}
-          {teamsStatus === "succeeded" && !available.length ? <div className="rounded-xl border border-dashed border-slate-700 p-4 text-center text-sm text-slate-400">No matching ready team you can register.<br/><Link className="mt-3 inline-block font-bold text-cyan-200" onClick={onClose} to={`${ROUTES.CLAN}?tab=teams`}>Create a team</Link></div> : null}
+          {teamsStatus === "failed" ? <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-4 text-center text-sm text-rose-100">Unable to load your saved teams.<button className="mt-3 block w-full font-bold text-cyan-200" onClick={() => dispatch(fetchTeams())} type="button">Retry</button></div> : null}
+          {teamsStatus === "succeeded" && !available.length ? <div className="rounded-xl border border-dashed border-slate-700 p-4 text-center text-sm text-slate-400">No matching ready team you can register.<br/><Link className="mt-3 inline-block font-bold text-cyan-200" onClick={onClose} to={ROUTES.TEAMS}>Create a team</Link></div> : null}
         </div>
         <TeamPaymentChoice
           currency={event.entryTerms?.currency || "INR"}

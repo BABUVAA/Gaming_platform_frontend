@@ -57,7 +57,7 @@ to continue the project without reopening settled decisions.
   linked game-account data; it no longer populates friends, requests, teams,
   bookmarks, active chats, clan, wallet or unrelated operational records.
   Friends are read through the canonical social boundary, saved teams through
-  the clan-team boundary, and direct-chat shortcuts are transient Redux state.
+  the player-team boundary, and direct-chat shortcuts are transient Redux state.
   The authenticated public-profile read exposes a safe player showcase only:
   identity, HTTP(S)-only social links, verified game account display names
   without account IDs, public clan summary, exact canonical public Event/Quick
@@ -112,6 +112,16 @@ to continue the project without reopening settled decisions.
   proof remains a follow-up.
 
 - The platform is a modular monolith. Do not split services yet.
+- Player Teams are independent of Clans. Any verified, participation-eligible
+  player may create a Game/format-scoped roster and invite an accepted friend;
+  the invited player must still be an accepted friend when accepting.
+  The captain owns roster changes while forming; accepted members may leave,
+  and the captain may disband. A player may hold only one active membership or
+  pending invitation for the same Game/format/team-size combination. A later
+  unfriend does not silently destroy an already accepted Team roster. Clan join,
+  leave, role and membership changes never create, expose, restrict or destroy
+  Teams. The canonical backend boundary is `/api/player/teams`; Teams have a
+  dedicated player workspace and are not a Clan tab.
 - Platform Admin and Super Admin own game setup, staff assignment, and Event
   approval. Tournament Manager owns Quick Match/Tournament offering setup and
   lifecycle only inside assigned game scopes.
@@ -175,8 +185,8 @@ to continue the project without reopening settled decisions.
 - The separate `e-gaming` presentation database was prepared 2026-08-27 without
   changing the local `node-auth` database. One idempotent local command,
   `scripts/seedPresentationDatabase.js`, owns setup and joining: 1,000 verified
-  funded players, 20 clans, 940 ready BGMI/COC teams, 500 accepted friend
-  pairs, five staff identities and eight assignments using only the existing
+  funded players, 20 clans, 940 ready BGMI/COC teams, baseline accepted friend
+  pairs plus every friendship required by seeded Team rosters, five staff identities and eight assignments using only the existing
   canonical roles/scopes. Every player has INR 1,000 of ledger-backed sandbox
   funds. The same command creates independently reviewed BGMI Solo/Erangal and
   COC 5v5/War monthly Templates plus two approved September 2026 open paid
@@ -1412,7 +1422,7 @@ staff-classified account and the frontend must present it as view-only.
   Only canonical Quick Match and Event sources are accepted. Canonical partial
   indexes protect active membership and Match uniqueness, and Match Operator
   scope queries use the canonical game key.
-- Clan Team creation now resolves the active Game catalog instead of accepting
+- Team creation now resolves the active Game catalog instead of accepting
   a fixed game enum. New records store Game Object ID/key, canonical mode, and
   explicit roster size; legacy request keys remain a temporary alias and the
   dry-run-first `migrate:teams` command backfills compatible stored records.
@@ -2721,10 +2731,10 @@ to Completed and record any remaining risks under Required Future Flows.
 
 - A team-format Quick Match picker with no eligible saved roster now presents
   a direct `Create Team` action instead of a dead-end disabled join button.
-- The action closes the picker and opens `/dashboard/clan?tab=teams`. The Clan
-  workspace honors that destination after its membership read: existing Clan
-  members land on the team builder, while players without a Clan first receive
-  the existing Clan creation path and reach Teams after creation.
+- Superseded 2026-08-28: the action closes the picker and opens
+  `/dashboard/teams`. Team creation and membership are independent of Clan;
+  accepted friendship is required while forming a roster. The old Clan-tab
+  destination is retired.
 - No join, roster, game, format or financial authority moved into the browser;
   the backend continues to validate the completed selected team. Verification:
   frontend 114/114, full lint and 556-module production build.

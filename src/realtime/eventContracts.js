@@ -6,7 +6,7 @@ export const REALTIME_EVENT_TYPES = Object.freeze({
   CLAN_JOIN_REQUESTS_UPDATED: "clan.join_requests.updated",
   CLAN_JOIN_REQUEST_STATUS_UPDATED:
     "clan.join_request_status.updated",
-  CLAN_TEAM_UPDATED: "clan.team.updated",
+  TEAM_UPDATED: "player.team.updated",
   CLAN_UPDATED: "clan.updated",
   LEADERBOARD_UPDATED: "leaderboard.updated",
   MATCH_ASSIGNMENT_UPDATED: "match.assignment.updated",

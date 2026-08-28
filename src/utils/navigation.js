@@ -7,6 +7,7 @@ import {
   FaShieldAlt,
   FaTrophy,
   FaUser,
+  FaUsers,
   FaWallet,
   FaLink,
   FaDiscord,
@@ -148,6 +149,13 @@ const playerNavigation = [
     to: ROUTES.CLAN,
     icon: MdOutlineCastle,
     match: [ROUTES.CLAN],
+  },
+  {
+    label: "Teams",
+    description: "Create and manage your lineups",
+    to: ROUTES.TEAMS,
+    icon: FaUsers,
+    match: [ROUTES.TEAMS],
   },
   {
     label: "Matches",

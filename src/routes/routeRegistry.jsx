@@ -31,6 +31,7 @@ const LazyComponents = {
   Login: lazy(() => import("../pages/Login")),
   SignUp: lazy(() => import("../pages/SignUp")),
   Clan: lazy(() => import("../pages/Clan")),
+  Teams: lazy(() => import("../pages/Teams.jsx")),
   Coc: lazy(() => import("../pages/Coc.jsx")),
   Chats: lazy(() => import("../pages/Chats.jsx")),
 };

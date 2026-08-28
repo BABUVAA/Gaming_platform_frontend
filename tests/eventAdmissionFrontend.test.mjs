@@ -153,7 +153,7 @@ test("team Event registration sends only the selected team and captain payment c
 
     const pickerSource = await readFile(new URL("../src/components/competition/EventTeamPicker.jsx", import.meta.url), "utf8");
     assert.match(pickerSource, /team\.status === "ready"/);
-    assert.match(pickerSource, /fetchClanTeams/);
+    assert.match(pickerSource, /fetchTeams/);
     assert.doesNotMatch(pickerSource, /fetchPlayerProfile/);
     assert.match(pickerSource, /TeamPaymentChoice/);
     assert.match(pickerSource, /identifier\(team\.createdBy\) === currentUserId/);
