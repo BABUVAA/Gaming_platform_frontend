@@ -119,6 +119,30 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 
 ## Current Verified State
 
+- Transactional email branding completed locally 2026-08-28. Verification and
+  password-reset HTML share a compact, email-client-safe shell using the
+  platform's existing amber `EG` mark plus `EGAMING ESPORTS`; the mark does not
+  depend on remote image loading and plain-text alternatives remain intact.
+  Focused backend account-email tests pass 6/6, diff check is clean, and Resend
+  accepted a real branded preview to the confirmed owner address. Backend code
+  still requires the normal commit/push deployment step.
+
+- Transactional sender-domain activation started 2026-08-28. Resend contains
+  `mail.sweetmemoriesgift.com` in Tokyo, while Hostinger remains only the
+  registrar because `ns1.vercel-dns.com` and `ns2.vercel-dns.com` are
+  authoritative. The exact Resend DKIM TXT, return-path MX, and SPF TXT records
+  were added to Vercel DNS and independently resolve publicly. Resend accepted
+  a live 2026-08-28 message from `noreply@mail.sweetmemoriesgift.com`; the
+  account owner confirmed receipt and Resend reports the domain verified. Local
+  and deployed `RESEND_FROM_EMAIL` now use
+  `EGAMING ESPORTS <support@mail.sweetmemoriesgift.com>`, and Render deploy
+  `dep-da8gs58n74is73dtvul0` is live. The configured API key is intentionally
+  send-only. Vercel DNS now publishes `_dmarc.sweetmemoriesgift.com` as
+  `v=DMARC1; p=none;`, confirmed through public DNS, and Resend accepted a live
+  message from the support sender. Next prove the real verification/reset flows
+  plus delivery-failure monitoring; strengthen DMARC only after observing clean
+  alignment. No provider secret is tracked.
+
 - Deployment repair prepared 2026-08-28. Vercel serves the current frontend,
   but Render reports backend commits `24fcdef`, `2fecb78`, and `3aca2f5` as
   `update_failed`; commit `2459968` remains live. Its legacy root-level Profile

@@ -627,8 +627,17 @@ Acceleration rules:
      non-production `onboarding@resend.dev` sender are stored only in the
      ignored backend `.env`; the application email-service wrapper received a
      Resend delivery ID and the account owner confirmed receipt.
-   - Verify a dedicated account-email subdomain and set `RESEND_FROM_EMAIL`
-     before arbitrary-recipient or production delivery.
+   - Operational setup started 2026-08-28: Resend owns the dedicated
+     `mail.sweetmemoriesgift.com` sending domain in Tokyo, and its exact DKIM,
+     return-path MX, and SPF records resolve publicly from the authoritative
+     Vercel DNS zone. Resend accepted a real message from
+     `noreply@mail.sweetmemoriesgift.com` to the account owner on 2026-08-28;
+     the owner confirmed inbox receipt and Resend now reports the domain
+     verified. Local and deployed `RESEND_FROM_EMAIL` use the trust-oriented
+     `EGAMING ESPORTS <support@mail.sweetmemoriesgift.com>` sender, and the
+     Render configuration deploy is live. Vercel DNS also publishes the
+     monitoring-mode `_dmarc` TXT policy (`p=none`), and Resend accepted a
+     second live message from the new support sender.
    - Database-backed replica-set tests cover signup OTP promotion, resend
      cooldown, expired/incorrect codes, reset-link expiry, concurrent recovery
      requests, and single use. An isolated browser workflow against the real
@@ -1630,8 +1639,20 @@ State: Completed for local development and test on 2026-08-09. The backend
 service, endpoints, models, Redux thunks, and public verification/recovery
 interfaces are implemented. Environment-only provider delivery, six isolated
 MongoDB replica-set integration tests, and the full real-route browser workflow
-passed. Production still requires a verified account-email domain in
-`RESEND_FROM_EMAIL`, staging delivery/failure evidence, and bounce monitoring.
+passed. `mail.sweetmemoriesgift.com` now has publicly resolving Resend DKIM,
+return-path MX, and SPF records, and Resend accepted a live sender-domain test
+that the owner received. Resend reports the domain verified and the live Render
+service now uses `support@mail.sweetmemoriesgift.com`. A publicly resolving
+DMARC `p=none` policy is active. Production still requires staged
+delivery/failure evidence and bounce monitoring before strengthening DMARC to
+`quarantine` or `reject`.
+
+Email branding refinement completed locally 2026-08-28: verification and
+password-reset HTML now share an email-client-safe shell with the existing
+amber `EG` brand mark and `EGAMING ESPORTS` identity. The mark is HTML text,
+so it remains visible when remote images are blocked; plain-text alternatives
+are unchanged. Focused account-email tests pass 6/6, diff check is clean, and
+Resend accepted a real branded preview to the confirmed account owner.
 Those external deployment controls remain a P1 release gate.
 
 ### Current Next Slice: Legacy Competition Core Replacement
