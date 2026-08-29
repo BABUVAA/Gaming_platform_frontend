@@ -141,6 +141,7 @@ test("staff workspaces share a player-style responsive shell", async () => {
   assert.match(layout, /<Outlet \/>/);
   assert.match(sidebar, /getStaffWorkspaceNavigation/);
   assert.match(sidebar, /fixed inset-x-0 bottom-0/);
+  assert.match(sidebar, /md:sticky md:top-20/);
   assert.match(routes, /componentKey: "StaffLayout"[\s\S]*children:/);
 });
 

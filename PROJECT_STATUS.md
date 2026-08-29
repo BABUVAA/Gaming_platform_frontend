@@ -263,7 +263,12 @@ to continue the project without reopening settled decisions.
   the current verified identity stays active until a scoped Game Manager
   approves it. Pending requests are unique, rejected
   requests preserve the current identity, and approval atomically consumes the
-  one lifetime replacement.
+  one lifetime replacement. Repeating the exact initial BGMI submission after
+  an interrupted response restores the existing pending request without
+  uploading duplicate evidence or creating another identity claim. A different
+  UID/name remains blocked while review is active. Identity-attempt protection
+  allows 10 attempts per 15 minutes instead of trapping corrections for 24
+  hours; database uniqueness and review state remain authoritative.
 - Event Manager creates drafts inside assigned game scopes; Platform Admin
   reviews submitted Templates and Event Runs through an audited lifecycle.
   After a Run is approved, routine Event execution belongs to the scoped Event
@@ -840,6 +845,11 @@ Exit: a clean checkout has a reliable quality command in each repository.
    attempts, resend cooldown, and transactional promotion create the verified
    player account. Live provider delivery still requires environment setup and
    integration evidence before real-money participation is available.
+   Interrupted signup is recoverable: resubmitting the same email and original
+   password returns the existing safe pending-verification state rather than a
+   duplicate-registration conflict. The browser retains only that safe state
+   in session storage for up to the pending record's 48-hour lifetime; it never
+   stores the signup password, OTP, or credential hash.
 3. Login restores the protected player shell at `/dashboard`; session refresh,
    logout, banned-account handling, and account recovery remain server-owned.
 4. Player completes profile, game-account connection where a Game requires it,
@@ -1399,6 +1409,10 @@ staff-classified account and the frontend must present it as view-only.
   expire after 10 minutes, allow five failed attempts, and have a 60-second
   resend cooldown. Successful verification transactionally promotes the
   pending record to a verified `User` without creating a login session.
+- Pending signup recovery requires the original signup password, preserves the
+  first username/date/password hash, survives a same-tab reload, and exposes
+  only the familiar display email plus resend state. Concurrent duplicate
+  signup requests converge on that same pending record.
 - Password recovery uses a non-enumerating request response and a Resend email
   containing a 30-minute, HMAC-hashed, single-use reset credential. Successful
   reset changes the password, increments `authVersion`, consumes the token, and
@@ -1411,6 +1425,9 @@ staff-classified account and the frontend must present it as view-only.
   excluded from the whole-app loading overlay so its pending OTP state remains
   mounted while the request completes; the submit button owns its local loading
   state.
+- Player, staff and governance sidebars stay within the desktop viewport and
+  scroll independently when their navigation exceeds the available height;
+  mobile bottom navigation is unchanged.
 - Consistent API success/error envelope and frontend error toast normalization.
   Unmatched `/api/*` routes now return the JSON `API_ROUTE_NOT_FOUND`
   envelope, and frontend normalization rejects HTML/oversized transport bodies

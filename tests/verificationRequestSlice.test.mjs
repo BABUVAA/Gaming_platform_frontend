@@ -68,6 +68,38 @@ test("first-time BGMI verification uses the same private evidence contract", asy
   }
 });
 
+test("an interrupted BGMI submission can return its existing pending request", async () => {
+  const originalAdapter = api.defaults.adapter;
+  api.defaults.adapter = async (config) => ({
+    config,
+    data: {
+      data: {
+        recovered: true,
+        request: { id: "existing-request", status: "pending" },
+      },
+    },
+    headers: {},
+    status: 200,
+    statusText: "OK",
+  });
+  try {
+    const store = configureStore({
+      reducer: { verificationRequests: verificationRequestReducer },
+    });
+    const result = await store.dispatch(submitGameAccountVerification({
+      gameKey: "bgmi",
+      accountId: "987654321",
+      accountUsername: "FirstPlayer",
+      evidence: new Blob(["image"], { type: "image/jpeg" }),
+      fraudAcknowledged: true,
+    })).unwrap();
+    assert.equal(result.recovered, true);
+    assert.equal(result.request.id, "existing-request");
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
 test("BGMI replacement sends only bounded identity evidence and fraud acknowledgement", async () => {
   const originalAdapter = api.defaults.adapter;
   let request;

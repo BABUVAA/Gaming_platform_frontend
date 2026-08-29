@@ -56,7 +56,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_24%),#111827] text-slate-100">
       <div className="mx-auto grid min-h-screen w-full max-w-[1600px] grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)]">
-          <aside className="border-b border-slate-700 bg-[#182235]/90 p-3 backdrop-blur md:border-b-0 md:border-r md:py-4">
+          <aside className="border-b border-slate-700 bg-[#182235]/90 p-3 backdrop-blur md:sticky md:top-20 md:h-[calc(100vh-5rem)] md:self-start md:overflow-y-auto md:border-b-0 md:border-r md:py-4">
             <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-1">
               {ADMIN_AREAS.map((area) => <WorkspaceButton active={area.id === activeSection} area={area} key={area.id} onClick={() => setActiveSection(area.id)} />)}
             </nav>

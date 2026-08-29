@@ -1,6 +1,35 @@
 # Current Checkpoint
 
-## Completed Slice: Reusable Team Names
+## Completed Slice: Interrupted Verification Recovery and Sticky Sidebars
+
+- Retrying signup with the same email and original password restores the
+  existing `PendingRegistration` instead of returning a dead-end conflict.
+  Original signup identity/credential data is never overwritten, and only the
+  safe verification projection reaches the browser.
+- The pending email-verification screen survives reload in session storage for
+  at most 48 hours. No password, OTP, token or hash is stored; verification,
+  expiry and resend rules remain server-owned.
+- Repeating the exact initial BGMI UID/name after an interrupted response
+  restores its one pending review request. It creates no duplicate request,
+  identity claim or evidence upload. Different identity details remain blocked
+  until the active request receives a decision; rejected requests retain their
+  existing `Try again` path.
+- Game-account attempt protection is now 10 requests per 15 minutes rather
+  than 3 per 24 hours, allowing normal correction while Redis burst protection,
+  durable identity uniqueness and review authorization remain enforced. The
+  inspected local Redis namespace contained no remaining identity-limit key.
+- Player, staff and governance sidebars are sticky, viewport-bounded and
+  independently scrollable on desktop. Mobile bottom navigation is unchanged.
+- Verification passes: backend 405/405 across the complete groups, including
+  recovery/rate-limit 10/10, BGMI replica integration 13/13 and account-email
+  replica integration 8/8; frontend 142/142, ESLint and the 570-module
+  production build. During the combined backend run, the heavy 1,001-player
+  ranked-Event file had one process-level startup failure without an assertion;
+  its immediate isolated rerun passed 2/2 and every remaining group passed.
+  Browser navigation enforced the unauthenticated Login redirect; populated
+  authenticated sticky-sidebar visual proof remains a follow-up.
+
+## Previous Completed Slice: Reusable Team Names
 
 - Team names are display labels and are no longer globally unique. Different
   forming, ready or disbanded Teams may use the same name; immutable Team IDs

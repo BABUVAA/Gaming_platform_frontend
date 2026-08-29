@@ -10,12 +10,19 @@ import useNavigateHook from "../hooks/useNavigateHook";
 import validator from "validator";
 import { FiCalendar, FiLock, FiMail, FiUser } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
+import {
+  clearPendingSignup,
+  loadPendingSignup,
+  savePendingSignup,
+} from "../utils/pendingSignupRecovery";
 
 const SignUp = () => {
   const { goToLogin } = useNavigateHook();
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingRegistration, setPendingRegistration] = useState(null);
+  const [pendingRegistration, setPendingRegistration] = useState(() =>
+    loadPendingSignup(),
+  );
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [verificationError, setVerificationError] = useState("");
@@ -157,6 +164,7 @@ const SignUp = () => {
         // Stay on the pending state because no User or login session exists
         // until the future OTP verification flow promotes this registration.
         setPendingRegistration(registration);
+        savePendingSignup(registration);
       })
       .catch((err) => {
         const fieldErrors = err?.fieldErrors || {};
@@ -188,6 +196,7 @@ const SignUp = () => {
         }),
       ).unwrap();
       setVerificationComplete(true);
+      clearPendingSignup();
       // Verification creates the player account but never a session. Take the
       // player straight to the one credential/session entry point.
       goToLogin();
@@ -208,11 +217,15 @@ const SignUp = () => {
       const result = await dispatch(
         resendEmailVerification({ email: pendingRegistration.email }),
       ).unwrap();
-      setPendingRegistration((current) => ({
-        ...current,
-        resendAvailableAt: result.resendAvailableAt,
-        verificationEmailSent: true,
-      }));
+      setPendingRegistration((current) => {
+        const updated = {
+          ...current,
+          resendAvailableAt: result.resendAvailableAt,
+          verificationEmailSent: true,
+        };
+        savePendingSignup(updated);
+        return updated;
+      });
     } catch (error) {
       setVerificationError(error?.message || "Unable to resend the code.");
     }
@@ -325,6 +338,7 @@ const SignUp = () => {
             size="large"
             className="w-full"
             onClick={() => {
+              clearPendingSignup();
               setPendingRegistration(null);
               setVerificationCode("");
               setVerificationError("");

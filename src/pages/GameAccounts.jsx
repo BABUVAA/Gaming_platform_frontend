@@ -105,6 +105,7 @@ const GameAccounts = () => {
     setIsSubmitting(true);
 
     try {
+      let recoveredExistingRequest = false;
       if (selectedAction === "replacement" && selectedGame.verificationMethod === "manual_review") {
         await dispatch(submitGameAccountReplacement({
           gameKey: selectedGame.link,
@@ -122,7 +123,7 @@ const GameAccounts = () => {
           replacement: selectedAction === "replacement",
         });
       } else if (selectedGame.link === "bgmi") {
-        await dispatch(submitGameAccountVerification({
+        const result = await dispatch(submitGameAccountVerification({
           gameKey: selectedGame.link,
           accountId: form.accountId,
           accountUsername: form.accountUsername,
@@ -130,6 +131,16 @@ const GameAccounts = () => {
           evidence: form.evidence,
           fraudAcknowledged: form.fraudAcknowledged,
         })).unwrap();
+        if (result?.recovered) {
+          recoveredExistingRequest = true;
+          dispatch(
+            showToast({
+              message: "Your existing BGMI verification request was restored.",
+              type: types.SUCCESS,
+              position: "bottom-right",
+            }),
+          );
+        }
       } else {
         await api.post("/api/users/verification-requests", {
           gameKey: selectedGame.link,
@@ -139,8 +150,8 @@ const GameAccounts = () => {
         });
       }
 
-      dispatch(
-        showToast({
+      if (!recoveredExistingRequest) {
+        dispatch(showToast({
           message:
             selectedAction === "replacement"
               ? `${selectedGame.name} account change submitted.`
@@ -149,8 +160,8 @@ const GameAccounts = () => {
               : `${selectedGame.name} verification request submitted.`,
           type: types.SUCCESS,
           position: "bottom-right",
-        })
-      );
+        }));
+      }
 
       await loadGameAccounts();
       closeModal();
