@@ -24,7 +24,8 @@ test("Clan chat uses canonical current membership for every clan role", async ()
 });
 
 test("Friends, Clan roster, and direct chats expose resilient player profiles", async () => {
-  const [clan, chats, fallback, clanCss] = await Promise.all([
+  const [friends, clan, chats, fallback, clanCss] = await Promise.all([
+    readFile(new URL("../src/pages/Friends.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Clan.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Chats.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/utils/imageFallbacks.js", import.meta.url), "utf8"),
@@ -32,6 +33,8 @@ test("Friends, Clan roster, and direct chats expose resilient player profiles", 
   ]);
 
   assert.match(clan, /onViewProfile\(member\.clanMemberTag\)/);
+  assert.match(friends, /applyAvatarFallback/);
+  assert.match(friends, /ROUTES\.PROFILE/);
   assert.doesNotMatch(clan, /default-avatar\.png/);
   assert.match(chats, /onViewProfile\(chat\.playerTag/);
   assert.match(chats, /applyAvatarFallback/);

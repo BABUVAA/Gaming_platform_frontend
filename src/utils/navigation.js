@@ -11,6 +11,7 @@ import {
   FaWallet,
   FaLink,
   FaDiscord,
+  FaUserFriends,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
 import { ROUTES } from "../routes/routeConstants.js";
@@ -149,6 +150,13 @@ const playerNavigation = [
     to: ROUTES.CLAN,
     icon: MdOutlineCastle,
     match: [ROUTES.CLAN],
+  },
+  {
+    label: "Friends",
+    description: "Find players and manage connections",
+    to: ROUTES.FRIENDS,
+    icon: FaUserFriends,
+    match: [ROUTES.FRIENDS],
   },
   {
     label: "Teams",

@@ -33,8 +33,10 @@ const EventTeamPicker = ({ event, onClose, onSelect }) => {
 
   useEffect(() => {
     if (teamsStatus !== "idle") return undefined;
-    const request = dispatch(fetchTeams());
-    return () => request.abort();
+    // This shared read must survive the effect rerun caused by its own pending
+    // action. Aborting it there turns the first picker open into a false error.
+    dispatch(fetchTeams());
+    return undefined;
   }, [dispatch, teamsStatus]);
 
   return (

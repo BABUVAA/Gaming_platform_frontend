@@ -1,5 +1,44 @@
 # Current Checkpoint
 
+## Local Slice: Friends Main Dashboard Tab
+
+- Friends now has a dedicated verified-player route at
+  `/dashboard/friends`, visible in the main player sidebar, mobile navigation,
+  and account menu before Teams. The workspace owns player search,
+  incoming/outgoing requests, accepted friends, removal, refresh/retry, and
+  direct public-profile navigation through the existing Redux social/player
+  thunks.
+- Clan no longer fetches social connections or exposes Friends in its internal
+  navigation. Its no-clan summary now reports only clan-owned saved/join-request
+  state. Backend social authorization and staff read-only exclusions are
+  unchanged.
+- Frontend passes 149/149, full ESLint, route smoke, diff check, and the
+  573-module production build. The unauthenticated local Friends URL reached
+  Login with no browser console warnings/errors; populated authenticated
+  visual proof remains a follow-up.
+
+## Local Refinement: Clan Settings Edit Entry
+
+- Leader and Co-leader see a pencil edit icon beside the Clan name/tag inside
+  `My Clan`. It opens the existing Clan settings form for description,
+  location, and join policy. The duplicate top navigation Settings tab is
+  removed; Member and Elder permissions remain unchanged.
+- Frontend passes 148/148, focused Clan coverage 7/7, ESLint, diff check, and
+  the 572-module production build.
+
+## Local Fix: First-open Team Tournament Picker
+
+- Quick Match and Event team pickers no longer abort their shared
+  `fetchTeams` request during its own idle-to-loading Redux transition. A player
+  can log in and immediately open Join Now -> team selection without first
+  visiting Teams or pressing Retry.
+- The read remains Redux-owned and server Team/join eligibility is unchanged.
+  The Teams workspace adds a compact always-visible tip: add players as friends
+  first, then create the Team and invite them to the roster. Regression
+  coverage checks both picker implementations and the guidance. Frontend
+  passes 148/148, focused competition/picker coverage 12/12, ESLint, diff
+  check, and the 572-module production build.
+
 ## Deployment Cleanup: Active Tournament Registrations Cleared Again
 
 - The deployed `e-gaming` `BGMI QUICK MATCH SQUAD` offering remains active.

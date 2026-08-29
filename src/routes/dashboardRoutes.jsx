@@ -61,6 +61,11 @@ export const dashboardChildRoutes = [
     access: "verifiedPlayer",
   },
   {
+    path: DASHBOARD_ROUTE_SEGMENTS.FRIENDS,
+    componentKey: "Friends",
+    access: "verifiedPlayer",
+  },
+  {
     path: DASHBOARD_ROUTE_SEGMENTS.TEAMS,
     componentKey: "Teams",
     access: "verifiedPlayer",

@@ -8,6 +8,7 @@ import {
   FiSettings,
   FiShield,
   FiUser,
+  FiUserPlus,
   FiUsers,
 } from "react-icons/fi";
 import { logout } from "../../../store/slices/authSlice";
@@ -67,7 +68,8 @@ const HeaderProfileMenu = () => {
               label: "Account Settings",
               icon: FiSettings,
             },
-            { to: ROUTES.CLAN, label: "Clan & Social", icon: FiUsers },
+            { to: ROUTES.FRIENDS, label: "Friends", icon: FiUserPlus },
+            { to: ROUTES.CLAN, label: "Clan", icon: FiUsers },
             { to: ROUTES.REFER, label: "Refer a Friend", icon: FiUsers },
           ];
 

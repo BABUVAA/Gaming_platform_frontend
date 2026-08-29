@@ -171,6 +171,10 @@ test("Clan overview keeps its description and profile compact on phones", async 
   assert.match(clanPage, /clan-bookmark-strip/);
   assert.doesNotMatch(clanPage, />Your Clan</);
   assert.match(clanPage, /title="Copy clan tag"/);
+  assert.match(clanPage, /aria-label="Edit clan settings"/);
+  assert.match(clanPage, /canEditClanSettings \? \(\) => setActiveTab\("settings"\) : null/);
+  assert.doesNotMatch(clanPage, /id: "settings",\s*label: "Settings"/);
+  assert.doesNotMatch(clanPage, /id: "social",\s*label: "Friends"/);
   assert.doesNotMatch(clanPage, />Clan roster</);
   assert.match(clanPage, />Members<\/h2>/);
   assert.doesNotMatch(clanPage, /clan-role-summary/);

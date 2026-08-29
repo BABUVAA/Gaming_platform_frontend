@@ -18,6 +18,36 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Friends main-navigation ownership completed locally 2026-08-29. The player
+  dashboard now owns a dedicated `/dashboard/friends` tab before Teams for
+  player search, incoming/outgoing requests, accepted connections, removal,
+  and public-profile navigation. The former Friends subtab and social fetch
+  were removed from Clan, whose navigation now remains clan-specific. The new
+  page reuses the existing social/player Redux thunks and player-only backend
+  authorization; staff read-only player navigation still excludes social
+  participation. Frontend passes 149/149, full ESLint, route smoke, diff check,
+  and the 573-module production build. The unauthenticated local Friends URL
+  reached the Login boundary with no browser console warnings/errors;
+  populated authenticated visual proof remains a follow-up.
+
+- Clan settings edit entry completed locally 2026-08-29. Leader and Co-leader
+  now open the existing authorized Clan settings form from a pencil icon beside
+  the Clan identity inside `My Clan`; the redundant top-level Settings tab is
+  removed. Member/Elder visibility and the existing backend settings authority
+  are unchanged. Frontend passes 148/148, focused Clan/competition coverage
+  7/7, ESLint, and the 572-module production build.
+
+- First-open team tournament picker fix completed locally 2026-08-29. After a
+  fresh login, both Quick Match and Event team pickers now let the shared Redux
+  `fetchTeams` request finish instead of aborting it when its own pending action
+  changes `teamsStatus` from idle to loading. The prior false load error no
+  longer requires opening the Teams workspace or pressing Retry. The Teams
+  workspace now also gives new players a concise tip to add friends before
+  creating a roster and inviting them. Backend Team eligibility and join
+  authorization are unchanged. Frontend passes 148/148,
+  ESLint, focused picker/competition coverage 42/42, and the 572-module
+  production build.
+
 - Deployed active-tournament registration cleanup was repeated 2026-08-29. The
   exact active `BGMI QUICK MATCH SQUAD` offering remains active, but its one
   waiting Room was transactionally removed, clearing one squad entry and four
@@ -1447,7 +1477,7 @@ Rules currently enforced:
 | User / role | Entry route | Dashboard / UI |
 |---|---|---|
 | Visitor | `/home` | Marketing, signup, login. |
-| Player | `/dashboard` | Player shell: compete, tournaments, matches, clans, chats, wallet, profile, game accounts, account settings. |
+| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, profile, game accounts, account settings. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. |
 | Approved Host | Player dashboard | Host actions for existing games; no separate staff dashboard. |
 | Staff with any assignment | `/staff` | Role switcher. Shows one workspace card per active assignment and an explicit read-only player-dashboard utility link. Staff cannot participate from that dashboard. |
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |
@@ -1465,6 +1495,13 @@ staff-classified account and the frontend must present it as view-only.
 
 ## Completed
 
+- Player Friends route ownership is separated from Clan. Verified players use
+  `/dashboard/friends` from the main navigation to search players, manage
+  incoming/outgoing friend requests, inspect accepted connections, remove a
+  friendship, and open public profiles. All reads and mutations remain inside
+  the existing Redux/API social boundary, and the backend verified-player
+  participation policy remains final. Clan no longer loads social state or
+  exposes a Friends subtab.
 - Staff player-dashboard visibility is now a verified read-only utility. One
   shared backend participation policy rejects staff competition, social,
   game-account, profile, and money mutations with the stable

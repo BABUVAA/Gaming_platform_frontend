@@ -38,8 +38,11 @@ const InviteModal = ({
 
   useEffect(() => {
     if (!isOpen || teamsStatus !== "idle") return undefined;
-    const request = dispatch(fetchTeams());
-    return () => request.abort();
+    // Teams are shared Redux state. Let this read finish even if the picker
+    // closes; aborting during the idle -> loading transition rejects the very
+    // first request and makes a manual retry appear necessary.
+    dispatch(fetchTeams());
+    return undefined;
   }, [dispatch, isOpen, teamsStatus]);
 
   // Display only teams that can plausibly satisfy this offering. The server

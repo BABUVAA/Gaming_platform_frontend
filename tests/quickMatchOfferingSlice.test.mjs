@@ -282,6 +282,8 @@ test("team picker keeps stable empty state and links to team creation", async ()
   assert.match(source, />\s*Create Team\s*<\/Link>/);
   assert.match(teamsSource, /fetchTeams\(\)/);
   assert.match(teamsSource, /connections\.friends/);
+  assert.match(teamsSource, /Teams are created\s*with friends/);
+  assert.match(teamsSource, /Add players as friends first/);
   assert.match(teamsSource, /teamModesForGame\(game\)\.length > 0/);
   assert.match(teamsSource, /teamGroups\.map/);
   assert.match(teamsSource, /group\.teams\.map/);
@@ -297,4 +299,21 @@ test("team picker keeps stable empty state and links to team creation", async ()
   );
   assert.doesNotMatch(teamsSource, /TeamPanel/);
   assert.doesNotMatch(teamsSource, /searchPlayer/);
+});
+
+test("first-open team pickers do not abort their shared Teams request", async () => {
+  const [quickMatchPicker, eventPicker] = await Promise.all([
+    readFile(
+      new URL("../src/components/feature/InviteModal.jsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../src/components/competition/EventTeamPicker.jsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+  for (const source of [quickMatchPicker, eventPicker]) {
+    assert.match(source, /dispatch\(fetchTeams\(\)\)/);
+    assert.doesNotMatch(source, /request\.abort\(\)/);
+  }
 });

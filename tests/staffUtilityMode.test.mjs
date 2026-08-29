@@ -41,6 +41,7 @@ test("staff navigation keeps safe reads and assigned workspaces without particip
   assert.ok(paths.includes("/panelAdmin"));
   assert.ok(paths.includes("/staff/operations"));
   assert.ok(!paths.includes("/dashboard/clan"));
+  assert.ok(!paths.includes("/dashboard/friends"));
   assert.ok(!paths.includes("/dashboard/chats"));
   assert.ok(!paths.includes("/dashboard/refer"));
 });
@@ -60,6 +61,7 @@ test("the player dashboard omits staff operation tabs from its utility navigatio
 
 test("mobile player navigation uses compact account labels", () => {
   const navigation = getDashboardNavigation({ role: "player" });
+  const paths = navigation.map((item) => item.to);
   const gameAccounts = navigation.find(
     (item) => item.to === "/dashboard/game-accounts",
   );
@@ -71,6 +73,30 @@ test("mobile player navigation uses compact account labels", () => {
   assert.equal(gameAccounts?.mobileLabel, "Games");
   assert.equal(accountSettings?.label, "Account Settings");
   assert.equal(accountSettings?.mobileLabel, "Settings");
+  assert.ok(paths.includes("/dashboard/friends"));
+  assert.ok(
+    paths.indexOf("/dashboard/friends") < paths.indexOf("/dashboard/teams"),
+  );
+});
+
+test("Friends is a player-owned main route instead of a Clan subtab", async () => {
+  const [constants, routes, registry, clan, friends] = await Promise.all([
+    readFile(new URL("../src/routes/routeConstants.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/routes/dashboardRoutes.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/routes/routeRegistry.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/Clan.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/Friends.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(constants, /FRIENDS: "\/dashboard\/friends"/);
+  assert.match(
+    routes,
+    /DASHBOARD_ROUTE_SEGMENTS\.FRIENDS[\s\S]{0,120}componentKey: "Friends"[\s\S]{0,120}access: "verifiedPlayer"/,
+  );
+  assert.match(registry, /Friends: lazy\(\(\) => import\("\.\.\/pages\/Friends\.jsx"\)\)/);
+  assert.match(friends, /fetchSocialConnections/);
+  assert.match(friends, /searchPlayer/);
+  assert.doesNotMatch(clan, /fetchSocialConnections|id: "social"/);
 });
 
 test("Game Accounts omits dashboard statistics", async () => {
@@ -214,7 +240,7 @@ test("route ownership keeps safe staff views separate from participation-only pa
     );
   }
 
-  for (const segment of ["CHATS", "CLAN", "REFER"]) {
+  for (const segment of ["CHATS", "CLAN", "FRIENDS", "REFER"]) {
     assert.match(
       source,
       new RegExp(`DASHBOARD_ROUTE_SEGMENTS\\.${segment}[\\s\\S]{0,180}access: \"(?:verifiedDetailed|verified|detailed)Player\"`),

@@ -170,6 +170,15 @@ const Teams = () => {
         </button>
       </section>
 
+      <aside className="flex items-start gap-2 rounded-xl border border-cyan-300/15 bg-cyan-300/5 px-4 py-3 text-sm text-slate-300">
+        <FiUsers className="mt-0.5 shrink-0 text-cyan-300" aria-hidden="true" />
+        <p>
+          <strong className="text-cyan-100">Tip:</strong> Teams are created
+          with friends. Add players as friends first, then invite them to your
+          roster.
+        </p>
+      </aside>
+
       {!loading && teamGames.length === 0 ? (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
           <p className="text-sm font-semibold text-amber-100">
