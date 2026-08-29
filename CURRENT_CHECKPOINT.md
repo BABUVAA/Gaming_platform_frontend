@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-## Completed Slice: Interrupted Verification Recovery and Sticky Sidebars
+## Completed Slice: Interrupted Verification Recovery and Fixed Sidebars
 
 - Retrying signup with the same email and original password restores the
   existing `PendingRegistration` instead of returning a dead-end conflict.
@@ -18,8 +18,10 @@
   than 3 per 24 hours, allowing normal correction while Redis burst protection,
   durable identity uniqueness and review authorization remain enforced. The
   inspected local Redis namespace contained no remaining identity-limit key.
-- Player, staff and governance sidebars are sticky, viewport-bounded and
-  independently scrollable on desktop. Mobile bottom navigation is unchanged.
+- Player, staff and governance sidebars are fixed below the desktop header,
+  viewport-bounded and independently scrollable. Their grid column remains
+  reserved so normal page content never moves beneath them. Mobile bottom
+  navigation is unchanged.
 - Verification passes: backend 405/405 across the complete groups, including
   recovery/rate-limit 10/10, BGMI replica integration 13/13 and account-email
   replica integration 8/8; frontend 142/142, ESLint and the 570-module
@@ -27,7 +29,7 @@
   ranked-Event file had one process-level startup failure without an assertion;
   its immediate isolated rerun passed 2/2 and every remaining group passed.
   Browser navigation enforced the unauthenticated Login redirect; populated
-  authenticated sticky-sidebar visual proof remains a follow-up.
+  authenticated fixed-sidebar visual proof remains a follow-up.
 
 ## Previous Completed Slice: Reusable Team Names
 

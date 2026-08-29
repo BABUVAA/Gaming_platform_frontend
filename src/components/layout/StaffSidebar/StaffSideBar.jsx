@@ -43,7 +43,7 @@ const StaffSideBar = () => {
 
   return (
     <>
-      <aside className="hidden md:sticky md:top-20 md:flex md:h-[calc(100vh-5rem)] md:w-56 md:self-start md:flex-col md:overflow-y-auto md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-3 md:py-4 md:backdrop-blur">
+      <aside className="hidden md:fixed md:bottom-0 md:left-[max(0px,calc((100vw-1600px)/2))] md:top-20 md:z-30 md:flex md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-3 md:py-4 md:backdrop-blur">
         <nav className="space-y-1.5">{links}</nav>
       </aside>
 

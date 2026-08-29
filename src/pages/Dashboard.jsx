@@ -62,7 +62,7 @@ const Dashboard = () => {
       <div className="mx-auto grid w-full grid-cols-[minmax(0,1fr)] min-h-[calc(100vh-64px)] max-w-[1600px] md:grid-cols-[14rem_minmax(0,1fr)] md:px-0">
         <SideBar />
 
-        <div className="min-w-0 min-h-0 w-full max-w-full px-3 pb-24 pt-4 md:px-5 md:pb-8 md:pt-5">
+        <div className="min-w-0 min-h-0 w-full max-w-full px-3 pb-24 pt-4 md:col-start-2 md:px-5 md:pb-8 md:pt-5">
           <StaffReadOnlyNotice />
           <Outlet />
         </div>

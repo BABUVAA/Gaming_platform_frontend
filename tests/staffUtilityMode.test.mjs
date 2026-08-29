@@ -141,8 +141,34 @@ test("staff workspaces share a player-style responsive shell", async () => {
   assert.match(layout, /<Outlet \/>/);
   assert.match(sidebar, /getStaffWorkspaceNavigation/);
   assert.match(sidebar, /fixed inset-x-0 bottom-0/);
-  assert.match(sidebar, /md:sticky md:top-20/);
+  assert.match(sidebar, /md:fixed md:bottom-0/);
+  assert.match(sidebar, /md:left-\[max\(0px,calc\(\(100vw-1600px\)\/2\)\)\]/);
   assert.match(routes, /componentKey: "StaffLayout"[\s\S]*children:/);
+});
+
+test("desktop dashboard sidebars stay fixed while content keeps its grid column", async () => {
+  const [playerSidebar, playerLayout, staffLayout, adminLayout] =
+    await Promise.all([
+      readFile(
+        new URL(
+          "../src/components/layout/Sidebar/SideBar.jsx",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      readFile(new URL("../src/pages/Dashboard.jsx", import.meta.url), "utf8"),
+      readFile(new URL("../src/pages/StaffLayout.jsx", import.meta.url), "utf8"),
+      readFile(
+        new URL("../src/pages/AdminDashboard.jsx", import.meta.url),
+        "utf8",
+      ),
+    ]);
+
+  assert.match(playerSidebar, /md:fixed md:bottom-0/);
+  assert.match(playerLayout, /md:col-start-2/);
+  assert.match(staffLayout, /md:col-start-2/);
+  assert.match(adminLayout, /md:fixed md:bottom-0/);
+  assert.match(adminLayout, /md:col-start-2/);
 });
 
 test("each operational role dashboard separates its responsibilities", async () => {
