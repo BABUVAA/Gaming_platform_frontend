@@ -1,5 +1,19 @@
 # Current Checkpoint
 
+## Deployment Cleanup: Active Tournament Registrations Cleared Again
+
+- The deployed `e-gaming` `BGMI QUICK MATCH SQUAD` offering remains active.
+  On the latest repeat, its only waiting Room was deleted transactionally,
+  clearing one new squad entry and four registered players so the next entry
+  starts a fresh Room.
+- The guarded preflight found no Match, wallet hold, ledger entry, Match
+  message, notification, staff activity, or Discord job related to that Room.
+  Post-commit verification remains zero across all of those dependencies.
+- The latest operation preserved 2 Games, 1 Quick Match offering, 8 Teams, 15
+  Users, and 9 Wallets. Competition Redis namespaces were scanned and already
+  empty. Full backup:
+  `C:\Users\HP\Desktop\Gaming_platform_backups\e-gaming-before-active-quick-match-registration-cleanup-2026-08-29T16-04-43.847Z.ejson.gz`.
+
 ## Local Slice: Admin Player Management
 
 - `/panelAdmin` now defaults to a Player Management workspace for registered
@@ -43,16 +57,16 @@
   `TEAM_ROSTER_ALREADY_EXISTS`. A deterministic partial unique index protects
   concurrent final invitation acceptance, and startup backfills historical
   ready Teams before index creation.
-- Team disband now fails with `TEAM_ACTIVE_PARTICIPATION` while the Team owns an
-  active waiting/full Quick Match Room, a non-terminal Match, or a
-  registered/waitlisted entry in an Event that is not completed, cancelled, or
-  rejected. Terminal competition history no longer blocks disband.
+- Team disband and member leave now fail with `TEAM_ACTIVE_PARTICIPATION` while
+  the Team owns an active waiting/full Quick Match Room, a non-terminal Match,
+  or a registered/waitlisted entry in an Event that is not completed,
+  cancelled, or rejected. Terminal competition history releases both actions.
 - Team Quick Match leaderboards render each joined squad as one block with Team
   name, captain, and roster. Solo offerings retain the existing flat table.
   The API keeps the legacy safe `players` projection during rolling deployment
   and adds safe `teams` blocks without internal Team or player IDs.
-- Verification: backend 419/419, focused team/leaderboard/reward coverage
-  30/30; frontend 147/147, ESLint, 572-module production build, and both diff
+- Verification: backend 420/420 and focused Team coverage 14/14; frontend
+  147/147, ESLint, 572-module production build, and both diff
   checks pass.
 
 ## Local Slice: Team Formation and Free Quick Match Verification Waiver

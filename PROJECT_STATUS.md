@@ -18,6 +18,17 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Deployed active-tournament registration cleanup was repeated 2026-08-29. The
+  exact active `BGMI QUICK MATCH SQUAD` offering remains active, but its one
+  waiting Room was transactionally removed, clearing one squad entry and four
+  registered players. Preflight and post-commit checks found no generated
+  Match, wallet hold, competition ledger entry, Match message, notification,
+  staff activity, or Discord publication job. The latest repeat preserved 2
+  Games, 1 Quick Match offering, 8 Teams, 15 Users, and 9 Wallets, and
+  invalidated the competition Redis namespaces. A fresh complete
+  pre-cleanup EJSON gzip backup is stored outside both repositories under
+  `Gaming_platform_backups`.
+
 - Multi-team rosters, active-participation disband protection, and squad Quick
   Match leaderboards completed and verified 2026-08-29. A player may now
   belong to
@@ -26,13 +37,14 @@ to continue the project without reopening settled decisions.
   database-unique key rejects only another ready Team with the exact same Game,
   format, size, and accepted member set as `TEAM_ROSTER_ALREADY_EXISTS`,
   including concurrent acceptance. Startup backfills this key for historical
-  ready Teams before creating the unique index. Captains cannot disband a Team
-  while it owns an active waiting/full Quick Match Room, a non-terminal Match,
-  or a registered/waitlisted entry in a non-terminal Event; settled/cancelled
-  Matches and completed/cancelled/rejected Events release the lock. Team Quick
+  ready Teams before creating the unique index. Captains cannot disband and
+  accepted members cannot leave a Team while it owns an active waiting/full
+  Quick Match Room, a non-terminal Match, or a registered/waitlisted entry in
+  a non-terminal Event; settled/cancelled Matches and completed/cancelled/
+  rejected Events release the lock. Team Quick
   Match leaderboards now preserve each joined squad as one card with Team name,
   captain, and complete player block, while Solo keeps the compact player
-  table. Backend passes 419/419 and focused policy/leaderboard coverage 30/30;
+  table. Backend passes 420/420 and focused Team coverage 14/14;
   frontend passes 147/147, ESLint, and the 572-module production build.
 
 - Admin Player Management completed locally 2026-08-29. Platform Admin and
@@ -305,7 +317,7 @@ to continue the project without reopening settled decisions.
   Team names are non-unique display labels and may be reused; all ownership,
   membership, invitations, competition snapshots and money evidence reference
   immutable Team IDs instead.
-  The captain owns roster changes while forming; accepted members may leave,
+  The captain owns roster changes while forming. Accepted members may leave
   and the captain may disband only when no active Quick Match, Match, or Event
   participation exists. A player may hold multiple active memberships and
   pending invitations for the same Game/format/team-size combination. Only a
