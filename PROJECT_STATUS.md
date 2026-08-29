@@ -18,6 +18,17 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Reusable Team names completed 2026-08-29. Team names are display labels, not
+  platform identity, so different active or disbanded Teams may use the same
+  name. Immutable Team IDs remain authoritative for invitations, competition,
+  Match and financial references. The schema-level uniqueness and obsolete
+  `TEAM_NAME_TAKEN` branch are removed. API startup narrowly detects and drops
+  only the legacy unique single-field `teamName` index, preserving every other
+  Team index and making the change effective on already deployed databases.
+  Focused Team/startup coverage passes 13/13, including duplicate creation and
+  legacy-index removal; the complete backend suite passes 400/400 and the final
+  rolling-deploy idempotency refinement passes focused Team coverage 9/9.
+
 - Team-format roster sizing completed 2026-08-29. The player Team creator no
   longer exposes an editable player-count field or sends `teamSize`. Solo is
   excluded, and each supported team format is labelled with its associated
@@ -203,6 +214,9 @@ to continue the project without reopening settled decisions.
   backend owns the associated roster size and ignores client attempts to alter
   a known format's capacity. Arbitrary internal catalog formats retain bounded
   explicit-size compatibility until Game capabilities carry structured size.
+  Team names are non-unique display labels and may be reused; all ownership,
+  membership, invitations, competition snapshots and money evidence reference
+  immutable Team IDs instead.
   The captain owns roster changes while forming; accepted members may leave,
   and the captain may disband. A player may hold only one active membership or
   pending invitation for the same Game/format/team-size combination. A later

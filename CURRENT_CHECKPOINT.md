@@ -1,6 +1,19 @@
 # Current Checkpoint
 
-## Completed Slice: Server-derived Team Format Size
+## Completed Slice: Reusable Team Names
+
+- Team names are display labels and are no longer globally unique. Different
+  forming, ready or disbanded Teams may use the same name; immutable Team IDs
+  remain authoritative everywhere.
+- The schema uniqueness and retired `TEAM_NAME_TAKEN` branch are removed. API
+  startup drops only an existing unique single-field `teamName` index, so the
+  change applies to deployed databases without disturbing other Team indexes.
+- Focused Team/startup proof passes 13/13, including two active Teams sharing a
+  name and removal of a simulated legacy unique index. The complete backend
+  suite passes 400/400; the final rolling-deploy idempotency guard passes
+  focused Team coverage 9/9.
+
+## Previous Completed Slice: Server-derived Team Format Size
 
 - The Team creator no longer shows or sends a player-count input. Solo is
   excluded, and selectable formats display their associated roster size:
