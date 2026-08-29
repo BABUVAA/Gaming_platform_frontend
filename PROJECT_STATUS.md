@@ -18,6 +18,23 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Multi-team rosters, active-participation disband protection, and squad Quick
+  Match leaderboards completed and verified 2026-08-29. A player may now
+  belong to
+  or hold invitations for multiple Teams in the same Game/format. Overlapping
+  forming rosters are valid; when a roster becomes complete, a deterministic
+  database-unique key rejects only another ready Team with the exact same Game,
+  format, size, and accepted member set as `TEAM_ROSTER_ALREADY_EXISTS`,
+  including concurrent acceptance. Startup backfills this key for historical
+  ready Teams before creating the unique index. Captains cannot disband a Team
+  while it owns an active waiting/full Quick Match Room, a non-terminal Match,
+  or a registered/waitlisted entry in a non-terminal Event; settled/cancelled
+  Matches and completed/cancelled/rejected Events release the lock. Team Quick
+  Match leaderboards now preserve each joined squad as one card with Team name,
+  captain, and complete player block, while Solo keeps the compact player
+  table. Backend passes 419/419 and focused policy/leaderboard coverage 30/30;
+  frontend passes 147/147, ESLint, and the 572-module production build.
+
 - Admin Player Management completed locally 2026-08-29. Platform Admin and
   Super Admin now open a dedicated default workspace in `/panelAdmin` to find
   registered `player` accounts by username, profile tag, or email and filter
@@ -48,9 +65,9 @@ to continue the project without reopening settled decisions.
   complete locally as of 2026-08-29. Verified, non-banned player accounts may
   create a Team for any active Game team format and invite/accept eligible
   accepted friends without linking that Game account. Friendship, player-role,
-  security restriction, one-roster-per-format, capacity, captain ownership and
-  explicit invitation acceptance remain server-enforced. Tournament Managers
-  may set an exact game-account-verification waiver expiry on a free Quick Match
+  security restriction, exact-complete-roster uniqueness, capacity, captain
+  ownership and explicit invitation acceptance remain server-enforced.
+  Tournament Managers may set an exact game-account-verification waiver expiry on a free Quick Match
   offering; paid offerings reject the waiver, and discovery plus the queue
   command independently restore verification as soon as the timestamp passes.
   Other Quick Matches and every Event retain their existing game-account rules.
@@ -289,8 +306,10 @@ to continue the project without reopening settled decisions.
   membership, invitations, competition snapshots and money evidence reference
   immutable Team IDs instead.
   The captain owns roster changes while forming; accepted members may leave,
-  and the captain may disband. A player may hold only one active membership or
-  pending invitation for the same Game/format/team-size combination. A later
+  and the captain may disband only when no active Quick Match, Match, or Event
+  participation exists. A player may hold multiple active memberships and
+  pending invitations for the same Game/format/team-size combination. Only a
+  second complete Team with the exact same accepted roster is rejected. A later
   unfriend does not silently destroy an already accepted Team roster. Clan join,
   leave, role and membership changes never create, expose, restrict or destroy
   Teams. The canonical backend boundary is `/api/player/teams`; Teams have a

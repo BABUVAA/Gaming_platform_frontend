@@ -175,6 +175,17 @@ test("joined-player leaderboard uses the private offering route and stores only 
   }
 });
 
+test("team Quick Match details prefer squad blocks while retaining the solo fallback", async () => {
+  const source = await readFile(
+    new URL("../src/pages/QuickMatchDetails.jsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /<TeamLeaderboard teams=\{leaderboard\.teams\} \/>/);
+  assert.match(source, /aria-label="Team leaderboard"/);
+  assert.match(source, /Captain · \{team\.captain\}/);
+  assert.match(source, /leaderboard\?\.players/);
+});
+
 test("StrictMode remount keeps the replacement detail request authoritative", () => {
   const offeringId = "strict-offering";
   const firstPending = reduce(

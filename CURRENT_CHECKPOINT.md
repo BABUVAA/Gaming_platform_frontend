@@ -35,13 +35,33 @@
   refuses competition money, verifies preservation transactionally and clears
   competition Redis state after commit.
 
+## Completed Slice: Multi-Team Rosters and Squad Leaderboards
+
+- Players may belong to or be invited to multiple Teams in the same
+  Game/format. Forming Teams may overlap; only a second complete ready roster
+  with the exact same Game, format, size, and accepted members is rejected with
+  `TEAM_ROSTER_ALREADY_EXISTS`. A deterministic partial unique index protects
+  concurrent final invitation acceptance, and startup backfills historical
+  ready Teams before index creation.
+- Team disband now fails with `TEAM_ACTIVE_PARTICIPATION` while the Team owns an
+  active waiting/full Quick Match Room, a non-terminal Match, or a
+  registered/waitlisted entry in an Event that is not completed, cancelled, or
+  rejected. Terminal competition history no longer blocks disband.
+- Team Quick Match leaderboards render each joined squad as one block with Team
+  name, captain, and roster. Solo offerings retain the existing flat table.
+  The API keeps the legacy safe `players` projection during rolling deployment
+  and adds safe `teams` blocks without internal Team or player IDs.
+- Verification: backend 419/419, focused team/leaderboard/reward coverage
+  30/30; frontend 147/147, ESLint, 572-module production build, and both diff
+  checks pass.
+
 ## Local Slice: Team Formation and Free Quick Match Verification Waiver
 
 - Team formation no longer requires a connected or verified Game account.
   Verified, non-banned player accounts may create Teams for active catalog team
   formats and invite/accept eligible accepted friends. Captain authority,
-  friendship, security restrictions, format conflicts, capacity and explicit
-  member consent remain enforced by the backend.
+  friendship, security restrictions, exact-complete-roster uniqueness,
+  capacity and explicit member consent remain enforced by the backend.
 - `QuickMatchOffering` now accepts an exact
   `gameAccountVerificationWaiverEndsAt` only for free offerings. Player
   discovery and the actual queue command evaluate the expiry independently;

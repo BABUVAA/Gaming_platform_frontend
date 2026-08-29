@@ -184,11 +184,15 @@ const QuickMatchDetails = () => {
           </SimpleTable>
         ) : latestRoomId ? (
           <>
-            <SimpleTable headers={["Rank", "Player"]}>
-              {(leaderboard?.players || []).map((player) => (
-                <TableRow key={`${player.seat}-${player.username}`} left="-" right={player.username} />
-              ))}
-            </SimpleTable>
+            {offering.teamSize > 1 && leaderboard?.teams?.length ? (
+              <TeamLeaderboard teams={leaderboard.teams} />
+            ) : (
+              <SimpleTable headers={["Rank", "Player"]}>
+                {(leaderboard?.players || []).map((player) => (
+                  <TableRow key={`${player.seat}-${player.username}`} left="-" right={player.username} />
+                ))}
+              </SimpleTable>
+            )}
             {leaderboardStatus === "loading" && !leaderboard ? <p className="mt-3 text-sm text-slate-500">Loading players...</p> : null}
             {leaderboardError ? <p className="mt-3 text-sm text-rose-200">{leaderboardError}</p> : null}
           </>
@@ -250,8 +254,48 @@ const TableRow = ({ left, right }) => (
   </div>
 );
 
+const TeamLeaderboard = ({ teams }) => (
+  <div className="mt-3 grid gap-3 md:grid-cols-2" aria-label="Team leaderboard">
+    {teams.map((team) => (
+      <article className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/45" key={team.number}>
+        <header className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="truncate font-black text-white">{team.name}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">Captain · {team.captain}</p>
+          </div>
+          <span className="shrink-0 rounded-lg bg-cyan-300/10 px-2.5 py-1 text-xs font-black text-cyan-200">
+            Team {team.number}
+          </span>
+        </header>
+        <ol className="divide-y divide-slate-800">
+          {team.players.map((player) => (
+            <li className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm" key={`${team.number}:${player.slot}`}>
+              <span className="min-w-0 truncate font-bold text-slate-200">{player.username}</span>
+              <span className="shrink-0 text-xs text-slate-500">
+                {player.isCaptain ? "Captain" : `Player ${player.slot}`}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </article>
+    ))}
+  </div>
+);
+
 Fact.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired };
 SimpleTable.propTypes = { children: PropTypes.node.isRequired, headers: PropTypes.arrayOf(PropTypes.string).isRequired };
 TableRow.propTypes = { left: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired, right: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired };
+TeamLeaderboard.propTypes = {
+  teams: PropTypes.arrayOf(PropTypes.shape({
+    captain: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    number: PropTypes.number.isRequired,
+    players: PropTypes.arrayOf(PropTypes.shape({
+      isCaptain: PropTypes.bool.isRequired,
+      slot: PropTypes.number.isRequired,
+      username: PropTypes.string.isRequired,
+    })).isRequired,
+  })).isRequired,
+};
 
 export default QuickMatchDetails;
