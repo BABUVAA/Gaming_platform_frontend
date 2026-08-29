@@ -1,5 +1,22 @@
 # Current Checkpoint
 
+## Local Slice: Admin Player Management
+
+- `/panelAdmin` now defaults to a Player Management workspace for registered
+  `player` accounts. Platform/Super Admin can search username, profile tag, or
+  email; filter verified, pending-verification, under-review, and banned
+  states; inspect safe registration/last-login timing plus linked Game, Team,
+  and Clan indicators; and page through results 25 at a time.
+- `GET /api/admin/players` is bounded to 50 maximum, binds its opaque cursor to
+  the active search/status query, excludes staff and omits credentials,
+  sessions, IP history, wallet/ledger details, ban reasons, and private
+  security evidence. The old `/api/admin/findUsers` remains explicitly retired.
+  No generic ban/delete mutation was added; permanent ban authority stays in
+  the confirmed game-account fraud workflow.
+- Verification: backend 414/414 and generated API documentation 213/213;
+  frontend 146/146, ESLint, diff check, and the 572-module production build.
+  This slice is local only and has not been committed, pushed, or deployed.
+
 ## Deployment Cleanup: Competitions and Game Accounts Cleared
 
 - On 2026-08-29, a guarded transaction cleared the deployed `e-gaming`

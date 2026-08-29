@@ -1,10 +1,17 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUsers } from "react-icons/fi";
+import { FiCheckSquare, FiDollarSign, FiGrid, FiShield, FiUserCheck, FiUsers } from "react-icons/fi";
 import { EventReviewQueue, GameCatalog, PaymentReconciliationReview, PrizeReleaseReview, RoleManagement, SecurityAttention, WithdrawalReview } from "../components";
 import EventPrizeGovernanceReview from "../components/adminComponents/EventPrizeGovernanceReview.jsx";
+import PlayerManagement from "../components/adminComponents/PlayerManagement.jsx";
 
 const ADMIN_AREAS = [
+  {
+    description: "Registered player identity and account state.",
+    icon: FiUserCheck,
+    id: "players",
+    label: "Player Management",
+  },
   {
     description: "Staff ownership, roles, scopes, and hiring history.",
     icon: FiUsers,
@@ -50,7 +57,7 @@ const ADMIN_AREAS = [
 ];
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState("roles");
+  const [activeSection, setActiveSection] = useState("players");
   const activeArea = ADMIN_AREAS.find((area) => area.id === activeSection);
 
   return (
@@ -67,7 +74,9 @@ const AdminDashboard = () => {
               <div><h1 className="text-xl font-black text-white sm:text-2xl">{activeArea.label}</h1><p className="mt-1 text-sm text-slate-400">Platform governance</p></div>
               <span className="rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-bold text-slate-300">Admin</span>
             </header>
-            {activeSection === "roles" ? (
+            {activeSection === "players" ? (
+              <PlayerManagement />
+            ) : activeSection === "roles" ? (
               <RoleManagement />
             ) : activeSection === "games" ? (
               <GameCatalog />

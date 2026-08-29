@@ -18,6 +18,22 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Admin Player Management completed locally 2026-08-29. Platform Admin and
+  Super Admin now open a dedicated default workspace in `/panelAdmin` to find
+  registered `player` accounts by username, profile tag, or email and filter
+  verified, pending-verification, under-review, or banned states. The new
+  `/api/admin/players` read is cursor-bounded (25 default, 50 maximum), keeps
+  search/status inside the opaque cursor contract, excludes staff accounts,
+  and returns only operational identity, registration/login timing, account
+  state, and aggregate Game/Team/Clan participation indicators. Passwords,
+  session material, IP history, wallet/ledger data, ban reasons, and private
+  security evidence remain excluded. The legacy unbounded `/findUsers` route
+  stays retired with `410 ADMIN_LIST_ROUTE_RETIRED`; generic ban/delete actions
+  were not introduced because permanent bans remain owned by confirmed fraud
+  review. Frontend state rejects stale filter responses. Backend passes 414/414
+  plus API documentation coverage for 213/213 mounted operations; frontend
+  passes 146/146, ESLint, and the 572-module production build.
+
 - Deployed competition and Game-account cleanup completed 2026-08-29. The
   guarded `e-gaming` transaction removed 15 Quick Match offerings, 2 Rooms,
   all Match/Event state, 15 embedded Game links across 9 affected users, 15
