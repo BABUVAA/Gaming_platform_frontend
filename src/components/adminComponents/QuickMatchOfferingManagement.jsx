@@ -23,6 +23,7 @@ const createEmptyForm = () => ({
   entryFeeMinor: "0",
   entryPolicy: "free",
   gameId: "",
+  gameAccountVerificationWaiverEndsAt: "",
   map: "",
   maxParticipants: "",
   mode: "",
@@ -61,11 +62,22 @@ const formatOfferingFacts = (offering) => {
   return `${[...labels.values()].join(" / ")} / ${offering.maxParticipants} seats`;
 };
 
+const toLocalDateTimeInput = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+};
+
 const toForm = (offering) => ({
   currency: offering.currency,
   entryFeeMinor: String(offering.entryFeeMinor),
   entryPolicy: offering.entryPolicy,
   gameId: offering.game?._id || offering.game,
+  gameAccountVerificationWaiverEndsAt: toLocalDateTimeInput(
+    offering.gameAccountVerificationWaiverEndsAt,
+  ),
   map: offering.map || "",
   maxParticipants: String(offering.maxParticipants),
   mode: offering.mode,
@@ -224,6 +236,23 @@ const OfferingForm = ({
             onChange={(event) => onChange("entryFeeMinor", event.target.value)}
           />
         </Field>
+        <Field label="Allow unverified game accounts until (optional)">
+          <input
+            disabled={isPaid}
+            min={toLocalDateTimeInput(new Date())}
+            type="datetime-local"
+            value={form.gameAccountVerificationWaiverEndsAt}
+            onChange={(event) =>
+              onChange(
+                "gameAccountVerificationWaiverEndsAt",
+                event.target.value,
+              )
+            }
+          />
+          <small className="mt-2 block text-xs font-medium text-slate-500">
+            Free offerings only. Verification becomes required again automatically at this time.
+          </small>
+        </Field>
         <Field label="Reward rule">
           <select value={form.rewardPolicy} onChange={(event) => onChange("rewardPolicy", event.target.value)}>
             <option value="winner_split">Split one pool between winners</option>
@@ -347,6 +376,9 @@ const QuickMatchOfferingManagement = () => {
       ...(field === "entryPolicy" && value === "free"
         ? { entryFeeMinor: "0" }
         : {}),
+      ...(field === "entryPolicy" && value === "paid"
+        ? { gameAccountVerificationWaiverEndsAt: "" }
+        : {}),
     }));
   const closeForm = () => {
     setEditing(null);
@@ -361,6 +393,11 @@ const QuickMatchOfferingManagement = () => {
       ...form,
       entryFeeMinor:
         form.entryPolicy === "free" ? 0 : Number(form.entryFeeMinor),
+      gameAccountVerificationWaiverEndsAt:
+        form.entryPolicy === "free" &&
+        form.gameAccountVerificationWaiverEndsAt
+          ? new Date(form.gameAccountVerificationWaiverEndsAt).toISOString()
+          : null,
       maxParticipants: Number(form.maxParticipants),
       prizePoolMinor: Number(form.prizePoolMinor),
       placementRewards: form.rewardPolicy === "placement"
@@ -537,6 +574,15 @@ const QuickMatchOfferingManagement = () => {
                 value={offering.rewardPolicy === "placement"
                   ? `${offering.placementRewards?.length || 0} places / ${offering.prizePoolMinor} ${offering.currency} minor`
                   : `${offering.prizePoolMinor} ${offering.currency} minor`}
+              />
+              <Detail
+                label="Game account"
+                value={
+                  offering.gameAccountVerificationWaiverEndsAt &&
+                  new Date(offering.gameAccountVerificationWaiverEndsAt) > new Date()
+                    ? `Not required until ${new Date(offering.gameAccountVerificationWaiverEndsAt).toLocaleString()}`
+                    : "Verification required"
+                }
               />
             </dl>
             <div className="mt-4">

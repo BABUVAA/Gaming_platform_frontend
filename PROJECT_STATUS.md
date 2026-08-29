@@ -18,6 +18,60 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Deployed competition and Game-account cleanup completed 2026-08-29. The
+  guarded `e-gaming` transaction removed 15 Quick Match offerings, 2 Rooms,
+  all Match/Event state, 15 embedded Game links across 9 affected users, 15
+  Game identity claims and 3 verification requests. All 3 private evidence
+  objects were deleted after commit. The preflight proved zero competition
+  holds, prizes or ledger entries. It preserved all 14 Users, 2 Games, 4 Teams,
+  1 Clan, 4 Friendships, 8 Wallets, 7 payment Transactions, 7 reconciliation
+  jobs and 3 ledger entries. A complete compressed pre-cleanup EJSON backup is
+  stored outside both repositories under `Gaming_platform_backups`.
+
+- Game-account-independent Team formation and a scoped Quick Match waiver are
+  complete locally as of 2026-08-29. Verified, non-banned player accounts may
+  create a Team for any active Game team format and invite/accept eligible
+  accepted friends without linking that Game account. Friendship, player-role,
+  security restriction, one-roster-per-format, capacity, captain ownership and
+  explicit invitation acceptance remain server-enforced. Tournament Managers
+  may set an exact game-account-verification waiver expiry on a free Quick Match
+  offering; paid offerings reject the waiver, and discovery plus the queue
+  command independently restore verification as soon as the timestamp passes.
+  Other Quick Matches and every Event retain their existing game-account rules.
+  Backend focused coverage passes 38/38 and the complete backend suite passes
+  411/411. Frontend passes 144/144, ESLint and the 570-module production build.
+  The code is not deployed and no BGMI offering has been created by this slice.
+
+- Deployed `e-gaming` dummy-player cleanup completed 2026-08-29. The exact
+  seed population was 1,003 `player` accounts under the non-routable
+  `egaming.test` domain; a guarded, dry-run-first MongoDB transaction removed
+  them together with 503 Friendship records, 942 dependent Teams, 20
+  dummy-led Clans, their 1,003 Wallets and balanced seed ledger rows, and 2,003
+  private Game-account identity claims. The one surviving real Clan had dummy
+  members/requests/chat rows pulled rather than being deleted. All Event data
+  was cleared: 2 Templates, 2 Runs and 8 reviews, with every other Event
+  collection verified at zero. A complete pre-cleanup EJSON gzip backup was
+  written outside both repositories. Post-commit audits preserve all 5 staff
+  and 9 real players and leave 3 valid Friendships, 1 valid Clan, 3 valid Teams,
+  8 valid Wallets and 15 valid Game identities, with zero dangling references.
+  The deployed `/readyz` check remains green for MongoDB and Redis. The
+  operation-specific cleanup command refuses any database except `e-gaming`,
+  any candidate count other than 1,003, or any unexpected reference collection.
+  Redis verification checked all 3,533 derived dummy session, presence,
+  matchmaking, personal-chat and Clan-chat keys and found zero remaining.
+  The complete backend regression passes 407/407 and both repository diff
+  checks are clean after adding the guarded operator command.
+
+- Paid Event registration was enabled on the deployed Render testing API on
+  2026-08-29 with `PAID_EVENT_ENTRY_ENABLED=true`. The service rebuilt and
+  returned live on commit `104f6a9`; `/readyz` confirmed MongoDB and Redis
+  ready afterward. The release remains constrained by the existing
+  `PLATFORM_MONEY_MODE=sandbox` and PhonePe sandbox/uat checks, so it does not
+  enable live money or withdrawals. Automatic PhonePe deposit settlement still
+  requires the separately supervised payment-reconciliation worker; the
+  governance verification path remains the fallback until that worker is
+  provisioned.
+
 - Login rate-limit capacity increased 2026-08-29 from 5 to 10 requests per
   10-minute window. The existing public-auth protection remains an atomic
   Redis-backed, IP-scoped fixed window mounted before credential validation;
@@ -51,11 +105,9 @@ to continue the project without reopening settled decisions.
 
 - Batch Team invitations completed 2026-08-29. A captain can tick several
   accepted friends and send one invitation command up to the Team's remaining
-  places. The existing social-connections read now includes only each friend's
-  verified Game IDs through the same populated query, avoiding per-player API
-  or database reads; friends without the Team Game remain visible but disabled
-  as `No verified game account`. The backend rechecks all selected identities,
-  player eligibility, exact Game verification, accepted friendship, format
+  places. The 2026-08-29 Team-formation amendment removed connected Game
+  accounts as an invitation prerequisite. The backend rechecks all selected
+  identities, player eligibility, accepted friendship, format
   conflicts and remaining capacity in bounded bulk queries inside one MongoDB
   transaction. Any invalid selection rejects the complete batch with no partial
   invitations. The canonical endpoint and Redux client accept only `playerIds`;
@@ -88,15 +140,10 @@ to continue the project without reopening settled decisions.
 - Compact game-scoped Teams completed 2026-08-29. The dedicated player Teams
   workspace now uses one concise header, a collapsible single-row creator and
   compact two-column roster cards grouped under each Game instead of the former
-  large generic Team panel. Creation offers only Games for which the caller has
-  a currently verified game account and links an ineligible player directly to
-  Game Accounts. Existing Teams remain visible if verification later changes so
-  the player can still decline, leave, disband or manage an existing roster.
-  The server is authoritative: the captain must have a verified account for the
-  exact Team Game at creation, and every invited friend must have that Game
-  verified both when invited and when accepting. Stable
-  `TEAM_GAME_ACCOUNT_REQUIRED` errors reject invalid commands before roster
-  mutation. Frontend passes 139/139 plus ESLint and the 569-module production
+  large generic Team panel. Its original exact-Game verification prerequisite
+  was superseded on 2026-08-29: every active catalog Game with a supported team
+  format is available, and connected Game accounts are not checked during
+  creation, invitation, or acceptance. Frontend passes 139/139 plus ESLint and the 569-module production
   build; backend focused Team tests pass 8/8 and the aggregate passes 395/395.
   The local browser correctly reached Login for an unauthenticated Teams visit
   with no console errors; populated authenticated visual QA remains a follow-up.
@@ -212,10 +259,11 @@ to continue the project without reopening settled decisions.
 
 - The platform is a modular monolith. Do not split services yet.
 - Player Teams are independent of Clans. A verified, participation-eligible
-  player may create a Game/format-scoped roster only when their account for that
-  exact Game is verified. They may invite an accepted friend only when that
-  friend also has the exact Game verified; friendship and Game verification are
-  rechecked when the friend accepts.
+  player may create a Game/format-scoped roster without connecting an account
+  for that Game. They may invite another eligible player only through an
+  accepted friendship, and friendship is rechecked when the friend accepts.
+  Game-account eligibility belongs to each competition entry policy rather
+  than reusable Team formation.
   Team creation exposes only non-Solo formats whose roster size can be derived
   from the format label. The client sends Game, format and Team name only; the
   backend owns the associated roster size and ignores client attempts to alter

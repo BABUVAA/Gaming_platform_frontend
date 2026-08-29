@@ -1,12 +1,9 @@
 import PropTypes from "prop-types";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
 import { FiCheck, FiClock, FiPlus, FiUsers } from "react-icons/fi";
 import { Button } from "../components";
-import { ROUTES } from "../routes/routeConstants.js";
 import { fetchGames } from "../store/slices/gameSlice.js";
-import { fetchPlayerProfile } from "../store/slices/playerSlice.js";
 import {
   acceptTeamInvitation,
   createTeam,
@@ -37,12 +34,7 @@ const teamModesForGame = (game) =>
 
 const Teams = () => {
   const dispatch = useDispatch();
-  const {
-    error: profileError,
-    profile,
-    profileStatus,
-    summary,
-  } = useSelector((store) => store.player);
+  const { summary } = useSelector((store) => store.player);
   const { data: catalogGames = [], status: gamesStatus } = useSelector(
     (store) => store.games,
   );
@@ -63,30 +55,18 @@ const Teams = () => {
 
   useEffect(() => {
     if (gamesStatus === "idle") dispatch(fetchGames());
-    if (profileStatus === "idle") dispatch(fetchPlayerProfile());
     if (connectionsStatus === "idle") dispatch(fetchSocialConnections());
     if (teamsStatus === "idle") dispatch(fetchTeams());
-  }, [connectionsStatus, dispatch, gamesStatus, profileStatus, teamsStatus]);
+  }, [connectionsStatus, dispatch, gamesStatus, teamsStatus]);
 
-  const verifiedGameIds = useMemo(
-    () =>
-      new Set(
-        (profile?.profile?.games || [])
-          .filter((account) => account.verificationStatus === "verified")
-          .map((account) => idOf(account.game?.id || account.game?._id || account.game)),
-      ),
-    [profile?.profile?.games],
-  );
-  const verifiedGames = useMemo(
+  const teamGames = useMemo(
     () =>
       catalogGames.filter(
-        (game) =>
-          verifiedGameIds.has(String(game._id)) &&
-          teamModesForGame(game).length > 0,
+        (game) => teamModesForGame(game).length > 0,
       ),
-    [catalogGames, verifiedGameIds],
+    [catalogGames],
   );
-  const selectedGame = verifiedGames.find((game) => game._id === draft.gameId);
+  const selectedGame = teamGames.find((game) => game._id === draft.gameId);
   const inviteCandidates = useMemo(
     () =>
       (connections.friends || []).filter(
@@ -110,12 +90,12 @@ const Teams = () => {
   }, [teams]);
 
   useEffect(() => {
-    if (verifiedGames.length === 0) {
+    if (teamGames.length === 0) {
       setDraft((current) => ({ ...current, gameId: "", mode: "" }));
       return;
     }
     const game =
-      verifiedGames.find((item) => item._id === draft.gameId) || verifiedGames[0];
+      teamGames.find((item) => item._id === draft.gameId) || teamGames[0];
     const teamModes = teamModesForGame(game);
     if (game._id === draft.gameId && teamModes.includes(draft.mode)) return;
     const mode = teamModes[0] || "";
@@ -124,7 +104,7 @@ const Teams = () => {
       gameId: game._id,
       mode,
     }));
-  }, [draft.gameId, draft.mode, verifiedGames]);
+  }, [draft.gameId, draft.mode, teamGames]);
 
   const refreshTeamsAfter = async (operation) => {
     try {
@@ -139,7 +119,7 @@ const Teams = () => {
   const updateDraft = (field, value) => {
     setDraft((current) => {
       if (field === "gameId") {
-        const game = verifiedGames.find((item) => item._id === value);
+        const game = teamGames.find((item) => item._id === value);
         const mode = teamModesForGame(game)[0] || "";
         return { ...current, gameId: value, mode };
       }
@@ -166,7 +146,7 @@ const Teams = () => {
     }
   };
 
-  const loading = [gamesStatus, profileStatus, teamsStatus].some((status) =>
+  const loading = [gamesStatus, teamsStatus].some((status) =>
     ["idle", "loading"].includes(status),
   );
   const busy = mutationStatus === "loading";
@@ -182,7 +162,7 @@ const Teams = () => {
         </div>
         <button
           className="inline-flex items-center gap-2 rounded-lg bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40"
-          disabled={loading || verifiedGames.length === 0}
+          disabled={loading || teamGames.length === 0}
           onClick={() => setCreateOpen((current) => !current)}
           type="button"
         >
@@ -190,32 +170,15 @@ const Teams = () => {
         </button>
       </section>
 
-      {profileStatus === "failed" ? (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-300/5 px-4 py-3">
-          <p className="text-sm font-semibold text-rose-100">
-            {readableError(profileError) || "Unable to check your game accounts."}
-          </p>
-          <button className="text-xs font-black text-rose-100" onClick={() => dispatch(fetchPlayerProfile())} type="button">Retry</button>
-        </section>
-      ) : !loading && verifiedGames.length === 0 ? (
+      {!loading && teamGames.length === 0 ? (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
           <p className="text-sm font-semibold text-amber-100">
-            {verifiedGameIds.size > 0
-              ? "No team formats are available for your verified games."
-              : "Verify a game account before creating a team."}
+            No active games currently offer a team format.
           </p>
-          {verifiedGameIds.size === 0 ? (
-            <Link
-              className="rounded-lg border border-amber-200/20 px-3 py-2 text-xs font-bold text-amber-100"
-              to={ROUTES.GAME_ACCOUNTS}
-            >
-              Open game accounts
-            </Link>
-          ) : null}
         </section>
       ) : null}
 
-      {createOpen && verifiedGames.length > 0 ? (
+      {createOpen && teamGames.length > 0 ? (
         <form
           className="grid gap-3 rounded-xl border border-cyan-300/15 bg-slate-950/80 p-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_auto] xl:items-end"
           onSubmit={submitTeam}
@@ -230,7 +193,7 @@ const Teams = () => {
             value={draft.teamName}
           />
           <CompactSelect label="Game" onChange={(value) => updateDraft("gameId", value)} value={draft.gameId}>
-            {verifiedGames.map((game) => (
+            {teamGames.map((game) => (
               <option key={game._id} value={game._id}>{game.name}</option>
             ))}
           </CompactSelect>
@@ -327,7 +290,6 @@ const TeamCard = ({ busy, currentUserId, inviteCandidates, onAccept, onDecline, 
     const memberId = idOf(member);
     return memberId && !acceptedIds.has(memberId) && !pendingIds.has(memberId);
   });
-  const gameId = idOf(team.gameRef);
   const remainingSlots = Math.max(
     0,
     team.teamSize - team.players.length - team.pendingInvites.length,
@@ -407,22 +369,20 @@ const TeamCard = ({ busy, currentUserId, inviteCandidates, onAccept, onDecline, 
               <div className="max-h-44 divide-y divide-white/10 overflow-y-auto">
                 {availableMembers.map((member) => {
                   const playerId = idOf(member);
-                  const gameVerified = (member.verifiedGameIds || []).map(String).includes(gameId);
                   const selected = selectedIds.includes(playerId);
                   const selectionFull = selectedIds.length >= remainingSlots;
                   return (
-                    <label className={`flex items-center gap-3 px-3 py-2 ${gameVerified ? "cursor-pointer" : "cursor-not-allowed opacity-55"}`} key={playerId}>
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2" key={playerId}>
                       <input
                         checked={selected}
                         className="h-4 w-4 accent-cyan-300"
-                        disabled={!gameVerified || (!selected && selectionFull)}
+                        disabled={!selected && selectionFull}
                         onChange={() => toggleCandidate(playerId)}
                         type="checkbox"
                       />
                       <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200">
                         {member.username || member.profile?.username || member.playerTag || "Player"}
                       </span>
-                      {!gameVerified ? <span className="text-[10px] font-bold text-amber-200">No verified game account</span> : null}
                     </label>
                   );
                 })}

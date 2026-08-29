@@ -143,6 +143,11 @@ const QuickMatchCard = ({ offering, showDetails = true }) => {
               PhonePe sandbox / test money
             </span>
           ) : null}
+          {offering.gameAccountVerificationWaived ? (
+            <span className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1.5 text-cyan-100">
+              Game account verification temporarily waived
+            </span>
+          ) : null}
           {[offering.mode, offering.map, offering.region]
             .filter(Boolean)
             .map((fact, index) => (
@@ -288,6 +293,9 @@ QuickMatchCard.propTypes = {
     }),
     game: PropTypes.shape({ name: PropTypes.string }),
     gameKey: PropTypes.string.isRequired,
+    gameAccountVerificationRequired: PropTypes.bool,
+    gameAccountVerificationWaived: PropTypes.bool,
+    gameAccountVerificationWaiverEndsAt: PropTypes.string,
     map: PropTypes.string,
     joinProgress: PropTypes.shape({
       capacity: PropTypes.number.isRequired,

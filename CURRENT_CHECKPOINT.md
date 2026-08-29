@@ -1,5 +1,82 @@
 # Current Checkpoint
 
+## Deployment Cleanup: Competitions and Game Accounts Cleared
+
+- On 2026-08-29, a guarded transaction cleared the deployed `e-gaming`
+  competition state: 15 Quick Match offerings and 2 Rooms were removed; Match
+  and every Event collection verify at zero.
+- All 15 embedded user Game links were removed across 9 affected accounts,
+  together with 15 private identity claims, 3 verification requests and their
+  3 private evidence objects. Fraud cases verify at zero.
+- The cleanup preserved 14 Users, 2 Games, 4 Teams, 1 Clan, 4 Friendships, 8
+  Wallets, 7 payment Transactions, 7 reconciliation jobs and 3 ledger entries.
+  Competition money guards verified zero Quick Match/Event holds, prizes and
+  competition ledger entries before mutation.
+- Full pre-cleanup backup:
+  `C:\Users\HP\Desktop\Gaming_platform_backups\e-gaming-before-competition-game-account-cleanup-2026-08-29T14-27-18.998Z.ejson.gz`.
+  The new operator command is dry-run by default, hard-targets `e-gaming`,
+  refuses competition money, verifies preservation transactionally and clears
+  competition Redis state after commit.
+
+## Local Slice: Team Formation and Free Quick Match Verification Waiver
+
+- Team formation no longer requires a connected or verified Game account.
+  Verified, non-banned player accounts may create Teams for active catalog team
+  formats and invite/accept eligible accepted friends. Captain authority,
+  friendship, security restrictions, format conflicts, capacity and explicit
+  member consent remain enforced by the backend.
+- `QuickMatchOffering` now accepts an exact
+  `gameAccountVerificationWaiverEndsAt` only for free offerings. Player
+  discovery and the actual queue command evaluate the expiry independently;
+  verification resumes automatically when it passes. Paid offerings reject a
+  waiver, while other Quick Matches and all Events remain unchanged.
+- Tournament Manager UI exposes the optional expiry and shows its active state.
+  Players see a temporary-waiver badge, and the Teams workspace lists every
+  active catalog Game with a supported team format without loading Profile.
+- Verification passes: backend focused 38/38 and aggregate 411/411; frontend
+  144/144, ESLint and the 570-module production build. Diff checks are clean.
+  The slice remains local: it has not been deployed, and it did not create the
+  planned BGMI Squad/Erangel offering in the deployed database.
+
+## Deployment Cleanup: Dummy Players and Events Removed
+
+- The deployed `e-gaming` database no longer contains the 1,003 seeded dummy
+  players under `egaming.test`. Five staff accounts and nine real players were
+  preserved by exact identity comparison inside the cleanup transaction.
+- Cleanup removed 503 Friendships involving dummy players, 942 dependent
+  Teams, 20 dummy-led Clans, 1,003 dummy Wallets and their seed ledger rows,
+  and 2,003 dummy Game-account identity claims. The surviving real Clan was
+  retained with dummy member/request/chat references pulled.
+- All Event state is empty: 2 Templates, 2 Runs and 8 reviews were deleted;
+  every Event execution, registration, notification, finance and standing
+  collection verifies at zero. Quick Match definitions were outside this
+  cleanup and were not broadly reset.
+- A full compressed EJSON backup of all 50 pre-cleanup collections was written
+  to `C:\Users\HP\Desktop\Gaming_platform_backups` before mutation. The
+  guarded operation script is dry-run by default, targets only `e-gaming`,
+  expects exactly 1,003 dummy players, and rolls back on unexpected references
+  or preservation failures.
+- Post-cleanup deployed counts are 14 Users (5 staff, 9 real players), 3 valid
+  Friendships, 1 valid Clan, 3 valid Teams, 8 valid Wallets and 15 valid Game
+  identities. Referential audits found zero invalid Friendship, Clan, Team,
+  Wallet, Game-identity, User-Wallet or User-Clan references. Render `/readyz`
+  reports MongoDB and Redis ready. All 3,533 derived dummy session, presence,
+  matchmaking and chat cache keys are absent. The complete backend regression
+  passes 407/407 and both repository diff checks are clean.
+
+## Deployment Update: Paid Event Registration Enabled
+
+- The Render testing API now has `PAID_EVENT_ENTRY_ENABLED=true`. Render
+  rebuilt commit `104f6a9`, reported the deployment live, and the deployed
+  `/readyz` endpoint confirmed MongoDB and Redis ready.
+- This is sandbox-only because the backend additionally requires explicit
+  sandbox money mode and PhonePe sandbox/uat configuration. Withdrawals and
+  live-money operation remain disabled.
+- The payment reconciliation code is exactly-once and ledger-backed, but
+  automatic PhonePe deposit credit still depends on provisioning
+  `npm run worker:payments`. Until then, Platform Admin provider-status
+  verification remains the deployed fallback.
+
 ## Completed Fix: Login Rate-limit Capacity
 
 - Login now permits 10 requests per IP-scoped 10-minute Redis window instead
@@ -80,16 +157,15 @@
   backend Team tests pass 9/9 and the affected Quick Match integration passes
   17/17; the complete backend regression passes 400/400.
 
-## Previous Completed Slice: Batch Game-eligible Team Invitations
+## Previous Completed Slice: Batch Team Invitations
 
 - Team captains can tick multiple accepted friends and invite them with one
   action, bounded by the Team's remaining roster places.
-- The existing social-connections response carries each friend's verified Game
-  IDs from its existing populated read. The UI performs no per-friend lookup;
-  friends missing the Team Game stay visible but disabled with
-  `No verified game account`.
+- Superseded 2026-08-29: connected Game accounts are no longer part of Team
+  invitation eligibility, so all otherwise eligible accepted friends are
+  selectable without per-friend Game-account checks.
 - One transactional backend command bulk-loads selected players and friendships,
-  then rechecks player eligibility, exact Game verification, accepted friendship,
+  then rechecks player eligibility, accepted friendship,
   same-format Team conflicts and remaining capacity. A mixed invalid selection
   rolls back completely instead of creating partial invitations.
 - The canonical endpoint and Redux client accept only `playerIds`; the retired
@@ -124,15 +200,11 @@
 - The dedicated Teams workspace is compact: one small header, a collapsible
   single-row creator, and concise two-column roster cards grouped by Game.
   Oversized spacing and the reusable Clan-era Team panel are not used.
-- Team creation offers only Games with a currently verified account. With no
-  eligible Game, the player receives a compact error and direct Game Accounts
-  recovery action. Profile-load and Team API failures have visible recovery or
-  error states instead of silently appearing as empty eligibility.
-- Backend authorization owns eligibility. The captain needs a verified account
-  for the exact Team Game at creation; an invited friend needs the same at both
-  invitation and acceptance. Invalid commands return
-  `TEAM_GAME_ACCOUNT_REQUIRED` before roster mutation. Accepted friendship is
-  still independently required at invitation and acceptance.
+- Superseded 2026-08-29: the creator lists every active catalog Game with a
+  supported team format and no longer loads Profile to filter verified Games.
+- Backend authorization still owns player, friendship, capacity, captain,
+  conflict and invitation-consent eligibility. Connected Game accounts are no
+  longer checked during creation, invitation, or acceptance.
 - Existing Teams stay readable after later verification changes, preserving the
   ability to decline, leave, disband or manage a roster instead of trapping it.
 - Verification: frontend 139/139, ESLint and the 569-module production build;
@@ -356,26 +428,12 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   boundary. Frontend verification passes 136/136, ESLint, diff check and the
   567-module build. Recheck Profile after the follow-up Vercel commit publishes.
 
-- Presentation database setup completed 2026-08-27. The local-only,
-  idempotent `scripts/seedPresentationDatabase.js` derives and hard-checks the
-  separate `e-gaming` database, never changes `node-auth`, and tracks no
-  credential. It prepared 1,000 verified players with exact INR 1,000 sandbox
-  Wallet balances, 20 clans, 940 ready teams, baseline friendships plus the
-  accepted captain/member friendships required by those rosters, five staff
-  identities and eight assignments using existing roles/scopes. It also owns
-  the complete test catalog: approved BGMI Solo/Erangal and COC 5v5/War monthly
-  Templates, two approved open paid September 2026 Events with INR 10 per-seat
-  entry/top-ten rewards, 14 active free place-reward Quick Matches covering
-  every configured BGMI/COC mode-map combination, and one active INR 10-per-seat
-  BGMI Squad/Erangal paid Quick Match with INR 500/300/200 place rewards. The
-  existing `bhoopi.patel.92372@gmail.com` player has verified BGMI and COC
-  identities, INR 1,000 sandbox funds, three accepted test friends, and ready
-  captain-owned Duo and Squad teams. `--join-only` presents the
-  available Event/Quick Match choices and uses canonical registration/queue
-  services without reseeding accounts. No deployed test-lab API or UI was
-  added. Obsolete hardcoded account, dummy-data and separate competition seed
-  scripts are removed. Database counts/balances and idempotent reruns passed;
-  backend aggregate passes 393/393 and diff check is clean.
+- The 2026-08-27 presentation population is no longer deployed. Owner-requested
+  cleanup on 2026-08-29 removed all 1,003 `egaming.test` dummy players and all
+  Event state from `e-gaming`, while preserving every staff account and nine
+  real players. The local seed utility remains available for deliberate future
+  test-data setup, but its former account/Event counts must not be treated as
+  current database state.
 
 - Lean player-profile contract completed 2026-08-27: `GET /api/users/profile`
   returns only the signed-in player's identity, editable profile fields and

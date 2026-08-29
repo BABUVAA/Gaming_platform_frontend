@@ -246,6 +246,8 @@ test("Tournament Manager cards use concise team format labels", async () => {
   assert.match(source, /if \(size === 1\) return "Solo"/);
   assert.match(source, /if \(size === 2\) return "Duo"/);
   assert.match(source, /new Map\(\)/);
+  assert.match(source, /gameAccountVerificationWaiverEndsAt/);
+  assert.match(source, /Allow unverified game accounts until/);
   assert.doesNotMatch(source, /\{offering\.teamSize\}-player teams/);
   assert.doesNotMatch(source, /Publish fixed-seat tournaments/);
 });
@@ -268,16 +270,13 @@ test("team picker keeps stable empty state and links to team creation", async ()
   assert.match(source, /to=\{ROUTES\.TEAMS\}/);
   assert.match(source, />\s*Create Team\s*<\/Link>/);
   assert.match(teamsSource, /fetchTeams\(\)/);
-  assert.match(teamsSource, /fetchPlayerProfile\(\)/);
   assert.match(teamsSource, /connections\.friends/);
-  assert.match(teamsSource, /verificationStatus === "verified"/);
-  assert.match(teamsSource, /to=\{ROUTES\.GAME_ACCOUNTS\}/);
+  assert.match(teamsSource, /teamModesForGame\(game\)\.length > 0/);
   assert.match(teamsSource, /teamGroups\.map/);
   assert.match(teamsSource, /group\.teams\.map/);
   assert.match(teamsSource, /inviteTeamMembers\(\{ teamId: team\._id, playerIds \}\)/);
-  assert.match(teamsSource, /member\.verifiedGameIds/);
   assert.match(teamsSource, /type="checkbox"/);
-  assert.match(teamsSource, /No verified game account/);
+  assert.doesNotMatch(teamsSource, /No verified game account/);
   assert.match(teamsSource, /teamSizeForMode\(mode\) >= 2/);
   assert.match(teamsSource, /\{mode\} · \{teamSizeForMode\(mode\)\} players/);
   assert.doesNotMatch(teamsSource, /name="teamSize"/);
