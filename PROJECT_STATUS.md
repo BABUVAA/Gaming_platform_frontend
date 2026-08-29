@@ -1420,6 +1420,11 @@ staff-classified account and the frontend must present it as view-only.
   first username/date/password hash, survives a same-tab reload, and exposes
   only the familiar display email plus resend state. Concurrent duplicate
   signup requests converge on that same pending record.
+- Staff recent-authentication recovery is global to the authenticated app
+  shell. When a protected staff/governance Redux command returns
+  `RECENT_AUTHENTICATION_REQUIRED`, the server-loaded staff summary opens one
+  password dialog and a successful confirmation retries that command once.
+  The minimal auth identity does not carry or infer a role.
 - Password recovery uses a non-enumerating request response and a Resend email
   containing a 30-minute, HMAC-hashed, single-use reset credential. Successful
   reset changes the password, increments `authVersion`, consumes the token, and

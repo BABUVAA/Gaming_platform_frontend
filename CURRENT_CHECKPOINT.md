@@ -9,6 +9,18 @@
   IP resolution and fail-closed 503 behavior remain unchanged.
 - Focused backend rate-limiter verification passes 6/6.
 
+## Completed Fix: Staff Sensitive-action Password Dialog
+
+- `RECENT_AUTHENTICATION_REQUIRED` now identifies staff from the authenticated,
+  server-loaded player summary instead of the deliberately minimal auth
+  identity, which contains no role field.
+- One password-confirmation dialog is mounted in the authenticated app shell,
+  covering both `/staff` workspaces and the separate Platform/Super Admin
+  dashboard without duplicate portals. A confirmed password retries the
+  original protected Redux command once; cancellation remains non-mutating.
+- Frontend verification passes 144/144, full ESLint and the 570-module
+  production build.
+
 ## Completed Slice: Interrupted Verification Recovery and Fixed Sidebars
 
 - Retrying signup with the same email and original password restores the

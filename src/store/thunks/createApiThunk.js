@@ -11,6 +11,9 @@ import { requestSensitiveActionConfirmation } from "../slices/sensitiveActionSli
 
 const SUPPORTED_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
 
+export const isStaffSensitiveActionState = (state) =>
+  state?.player?.summary?.role === "staff";
+
 const resolveOption = (option, context) =>
   typeof option === "function" ? option(context) : option;
 
@@ -281,7 +284,7 @@ export const createApiThunk = (
 
         if (
           normalizedError.code === API_ERROR_CODE.RECENT_AUTHENTICATION_REQUIRED &&
-          thunkAPI.getState()?.auth?.user?.role === "staff" &&
+          isStaffSensitiveActionState(thunkAPI.getState()) &&
           !recentAuthenticationRetried
         ) {
           const confirmed = await requestSensitiveActionConfirmation(

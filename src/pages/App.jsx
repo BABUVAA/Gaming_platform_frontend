@@ -5,6 +5,7 @@ import {
   Toast,
 } from "../components";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import SensitiveActionDialog from "../components/common/SensitiveActionDialog.jsx";
 import { Outlet } from "react-router-dom";
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Outlet />
       </main>
       <Toast />
+      <SensitiveActionDialog />
     </div>
   );
 }

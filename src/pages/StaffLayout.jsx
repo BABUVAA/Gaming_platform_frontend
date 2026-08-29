@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import StaffSideBar from "../components/layout/StaffSidebar/StaffSideBar.jsx";
-import SensitiveActionDialog from "../components/common/SensitiveActionDialog.jsx";
 
 const StaffLayout = () => (
   <>
@@ -12,7 +11,6 @@ const StaffLayout = () => (
         </div>
       </div>
     </div>
-    <SensitiveActionDialog />
   </>
 );
 
