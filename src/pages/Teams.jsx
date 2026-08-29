@@ -14,19 +14,26 @@ import {
   disbandTeam,
   fetchSocialConnections,
   fetchTeams,
-  inviteTeamMember,
+  inviteTeamMembers,
   leaveTeam,
   removeTeamMember,
 } from "../store/slices/socialSlice.js";
 
 const idOf = (value) => String(value?._id || value || "");
 
-const suggestedSize = (mode) => {
+const teamSizeForMode = (mode) => {
   const normalized = String(mode || "").toLowerCase();
+  if (normalized === "solo") return 1;
   if (normalized === "duo") return 2;
   if (normalized === "squad") return 4;
-  return Number(normalized.match(/^(\d+)v\d+$/)?.[1]) || 2;
+  const versusMatch = normalized.match(/^(\d+)v(\d+)$/);
+  return versusMatch && versusMatch[1] === versusMatch[2]
+    ? Number(versusMatch[1])
+    : null;
 };
+
+const teamModesForGame = (game) =>
+  (game?.supportedModes || []).filter((mode) => teamSizeForMode(mode) >= 2);
 
 const Teams = () => {
   const dispatch = useDispatch();
@@ -52,9 +59,7 @@ const Teams = () => {
     gameId: "",
     mode: "",
     teamName: "",
-    teamSize: 2,
   });
-  const [inviteSelections, setInviteSelections] = useState({});
 
   useEffect(() => {
     if (gamesStatus === "idle") dispatch(fetchGames());
@@ -73,7 +78,12 @@ const Teams = () => {
     [profile?.profile?.games],
   );
   const verifiedGames = useMemo(
-    () => catalogGames.filter((game) => verifiedGameIds.has(String(game._id))),
+    () =>
+      catalogGames.filter(
+        (game) =>
+          verifiedGameIds.has(String(game._id)) &&
+          teamModesForGame(game).length > 0,
+      ),
     [catalogGames, verifiedGameIds],
   );
   const selectedGame = verifiedGames.find((game) => game._id === draft.gameId);
@@ -106,13 +116,13 @@ const Teams = () => {
     }
     const game =
       verifiedGames.find((item) => item._id === draft.gameId) || verifiedGames[0];
-    if (game._id === draft.gameId && game.supportedModes?.includes(draft.mode)) return;
-    const mode = game.supportedModes?.[0] || "";
+    const teamModes = teamModesForGame(game);
+    if (game._id === draft.gameId && teamModes.includes(draft.mode)) return;
+    const mode = teamModes[0] || "";
     setDraft((current) => ({
       ...current,
       gameId: game._id,
       mode,
-      teamSize: suggestedSize(mode),
     }));
   }, [draft.gameId, draft.mode, verifiedGames]);
 
@@ -130,11 +140,11 @@ const Teams = () => {
     setDraft((current) => {
       if (field === "gameId") {
         const game = verifiedGames.find((item) => item._id === value);
-        const mode = game?.supportedModes?.[0] || "";
-        return { ...current, gameId: value, mode, teamSize: suggestedSize(mode) };
+        const mode = teamModesForGame(game)[0] || "";
+        return { ...current, gameId: value, mode };
       }
       if (field === "mode") {
-        return { ...current, mode: value, teamSize: suggestedSize(value) };
+        return { ...current, mode: value };
       }
       return { ...current, [field]: value };
     });
@@ -145,9 +155,9 @@ const Teams = () => {
     if (!draft.teamName.trim() || !draft.gameId || !draft.mode) return;
     const created = await refreshTeamsAfter(
       createTeam({
-        ...draft,
+        gameId: draft.gameId,
+        mode: draft.mode,
         teamName: draft.teamName.trim(),
-        teamSize: Number(draft.teamSize),
       }),
     );
     if (created) {
@@ -190,20 +200,24 @@ const Teams = () => {
       ) : !loading && verifiedGames.length === 0 ? (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
           <p className="text-sm font-semibold text-amber-100">
-            Verify a game account before creating a team.
+            {verifiedGameIds.size > 0
+              ? "No team formats are available for your verified games."
+              : "Verify a game account before creating a team."}
           </p>
-          <Link
-            className="rounded-lg border border-amber-200/20 px-3 py-2 text-xs font-bold text-amber-100"
-            to={ROUTES.GAME_ACCOUNTS}
-          >
-            Open game accounts
-          </Link>
+          {verifiedGameIds.size === 0 ? (
+            <Link
+              className="rounded-lg border border-amber-200/20 px-3 py-2 text-xs font-bold text-amber-100"
+              to={ROUTES.GAME_ACCOUNTS}
+            >
+              Open game accounts
+            </Link>
+          ) : null}
         </section>
       ) : null}
 
       {createOpen && verifiedGames.length > 0 ? (
         <form
-          className="grid gap-3 rounded-xl border border-cyan-300/15 bg-slate-950/80 p-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_.7fr_auto] xl:items-end"
+          className="grid gap-3 rounded-xl border border-cyan-300/15 bg-slate-950/80 p-3 sm:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr_auto] xl:items-end"
           onSubmit={submitTeam}
         >
           <CompactInput
@@ -221,20 +235,10 @@ const Teams = () => {
             ))}
           </CompactSelect>
           <CompactSelect label="Format" onChange={(value) => updateDraft("mode", value)} value={draft.mode}>
-            {(selectedGame?.supportedModes || []).map((mode) => (
-              <option key={mode} value={mode}>{mode}</option>
+            {teamModesForGame(selectedGame).map((mode) => (
+              <option key={mode} value={mode}>{mode} · {teamSizeForMode(mode)} players</option>
             ))}
           </CompactSelect>
-          <CompactInput
-            label="Players"
-            max="100"
-            min="2"
-            name="teamSize"
-            onChange={(event) => updateDraft("teamSize", event.target.value)}
-            required
-            type="number"
-            value={draft.teamSize}
-          />
           <Button
             className="h-11 rounded-lg bg-cyan-300 px-4 text-xs font-black text-slate-950 sm:col-span-2 xl:col-span-1"
             disabled={!draft.gameId || !draft.mode}
@@ -269,15 +273,13 @@ const Teams = () => {
                   busy={busy}
                   currentUserId={String(summary?.userId || "")}
                   inviteCandidates={inviteCandidates}
-                  inviteSelection={inviteSelections[team._id] || ""}
                   key={team._id}
                   onAccept={() => refreshTeamsAfter(acceptTeamInvitation(team._id))}
                   onDecline={() => refreshTeamsAfter(declineTeamInvitation(team._id))}
                   onDisband={() => refreshTeamsAfter(disbandTeam(team._id))}
-                  onInvite={(playerId) => refreshTeamsAfter(inviteTeamMember({ teamId: team._id, playerId }))}
+                  onInvite={(playerIds) => refreshTeamsAfter(inviteTeamMembers({ teamId: team._id, playerIds }))}
                   onLeave={() => refreshTeamsAfter(leaveTeam(team._id))}
                   onRemove={(playerId) => refreshTeamsAfter(removeTeamMember({ teamId: team._id, playerId }))}
-                  onSelectInvite={(playerId) => setInviteSelections((current) => ({ ...current, [team._id]: playerId }))}
                   team={team}
                 />
               ))}
@@ -312,7 +314,9 @@ const CompactInput = ({ label, ...props }) => (
   </label>
 );
 
-const TeamCard = ({ busy, currentUserId, inviteCandidates, inviteSelection, onAccept, onDecline, onDisband, onInvite, onLeave, onRemove, onSelectInvite, team }) => {
+const TeamCard = ({ busy, currentUserId, inviteCandidates, onAccept, onDecline, onDisband, onInvite, onLeave, onRemove, team }) => {
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   const captainId = idOf(team.createdBy);
   const isCaptain = captainId === currentUserId;
   const acceptedIds = new Set(team.players.map(idOf));
@@ -323,6 +327,27 @@ const TeamCard = ({ busy, currentUserId, inviteCandidates, inviteSelection, onAc
     const memberId = idOf(member);
     return memberId && !acceptedIds.has(memberId) && !pendingIds.has(memberId);
   });
+  const gameId = idOf(team.gameRef);
+  const remainingSlots = Math.max(
+    0,
+    team.teamSize - team.players.length - team.pendingInvites.length,
+  );
+  const toggleCandidate = (playerId) => {
+    setSelectedIds((current) =>
+      current.includes(playerId)
+        ? current.filter((value) => value !== playerId)
+        : current.length < remainingSlots
+          ? [...current, playerId]
+          : current,
+    );
+  };
+  const submitInvites = async () => {
+    if (selectedIds.length === 0) return;
+    if (await onInvite(selectedIds)) {
+      setSelectedIds([]);
+      setInviteOpen(false);
+    }
+  };
 
   return (
     <article className="rounded-xl border border-white/10 bg-slate-900/55 p-3">
@@ -372,17 +397,42 @@ const TeamCard = ({ busy, currentUserId, inviteCandidates, inviteSelection, onAc
         })}
       </div>
 
-      {isCaptain && team.status === "forming" && availableMembers.length > 0 ? (
-        <div className="mt-3 flex gap-2">
-          <select className="h-9 min-w-0 flex-1 rounded-lg border border-slate-800 bg-slate-950 px-2 text-xs text-slate-200" onChange={(event) => onSelectInvite(event.target.value)} value={inviteSelection}>
-            <option value="">Invite friend</option>
-            {availableMembers.map((member) => (
-              <option key={idOf(member)} value={idOf(member)}>{member.username || member.profile?.username || member.playerTag || "Player"}</option>
-            ))}
-          </select>
-          <button className="inline-flex h-9 items-center gap-1 rounded-lg bg-white/10 px-3 text-xs font-bold text-white disabled:opacity-40" disabled={!inviteSelection || busy} onClick={() => onInvite(inviteSelection)} type="button">
-            <FiUsers /> Invite
+      {isCaptain && team.status === "forming" && remainingSlots > 0 && availableMembers.length > 0 ? (
+        <div className="mt-3">
+          <button className="inline-flex h-9 items-center gap-1 rounded-lg bg-white/10 px-3 text-xs font-bold text-white" onClick={() => setInviteOpen((current) => !current)} type="button">
+            <FiUsers /> Invite players
           </button>
+          {inviteOpen ? (
+            <div className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950/80">
+              <div className="max-h-44 divide-y divide-white/10 overflow-y-auto">
+                {availableMembers.map((member) => {
+                  const playerId = idOf(member);
+                  const gameVerified = (member.verifiedGameIds || []).map(String).includes(gameId);
+                  const selected = selectedIds.includes(playerId);
+                  const selectionFull = selectedIds.length >= remainingSlots;
+                  return (
+                    <label className={`flex items-center gap-3 px-3 py-2 ${gameVerified ? "cursor-pointer" : "cursor-not-allowed opacity-55"}`} key={playerId}>
+                      <input
+                        checked={selected}
+                        className="h-4 w-4 accent-cyan-300"
+                        disabled={!gameVerified || (!selected && selectionFull)}
+                        onChange={() => toggleCandidate(playerId)}
+                        type="checkbox"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200">
+                        {member.username || member.profile?.username || member.playerTag || "Player"}
+                      </span>
+                      {!gameVerified ? <span className="text-[10px] font-bold text-amber-200">No verified game account</span> : null}
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t border-white/10 px-3 py-2">
+                <span className="text-xs text-slate-500">{selectedIds.length}/{remainingSlots} selected</span>
+                <button className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40" disabled={selectedIds.length === 0 || busy} onClick={submitInvites} type="button">Invite selected</button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -412,17 +462,16 @@ TeamCard.propTypes = {
   busy: PropTypes.bool.isRequired,
   currentUserId: PropTypes.string.isRequired,
   inviteCandidates: PropTypes.arrayOf(PropTypes.object).isRequired,
-  inviteSelection: PropTypes.string.isRequired,
   onAccept: PropTypes.func.isRequired,
   onDecline: PropTypes.func.isRequired,
   onDisband: PropTypes.func.isRequired,
   onInvite: PropTypes.func.isRequired,
   onLeave: PropTypes.func.isRequired,
   onRemove: PropTypes.func.isRequired,
-  onSelectInvite: PropTypes.func.isRequired,
   team: PropTypes.shape({
     _id: PropTypes.string.isRequired,
     createdBy: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
+    gameRef: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
     mode: PropTypes.string.isRequired,
     pendingInvites: PropTypes.arrayOf(PropTypes.object).isRequired,
     players: PropTypes.arrayOf(PropTypes.object).isRequired,

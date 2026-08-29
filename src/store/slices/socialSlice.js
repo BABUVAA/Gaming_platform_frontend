@@ -81,17 +81,18 @@ export const fetchTeams = createApiThunk("social/fetchTeams", {
 export const createTeam = createApiThunk("social/createTeam", {
   path: "/api/player/teams",
   method: "post",
+  getBody: ({ gameId, mode, teamName }) => ({ gameId, mode, teamName }),
   errorMessage: "Unable to create this team.",
   toast: socialMutationToast,
 });
 
-export const inviteTeamMember = createApiThunk(
-  "social/inviteTeamMember",
+export const inviteTeamMembers = createApiThunk(
+  "social/inviteTeamMembers",
   {
     path: ({ arg }) => `/api/player/teams/${arg.teamId}/invitations`,
     method: "post",
-    getBody: ({ playerId }) => ({ playerId }),
-    errorMessage: "Unable to invite this player.",
+    getBody: ({ playerIds }) => ({ playerIds }),
+    errorMessage: "Unable to invite the selected players.",
     toast: socialMutationToast,
   },
 );
@@ -157,7 +158,7 @@ const socialMutationThunks = [
   declineFriendRequest,
   declineTeamInvitation,
   disbandTeam,
-  inviteTeamMember,
+  inviteTeamMembers,
   leaveTeam,
   removeFriend,
   removeTeamMember,

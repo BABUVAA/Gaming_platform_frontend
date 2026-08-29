@@ -18,6 +18,37 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Team-format roster sizing completed 2026-08-29. The player Team creator no
+  longer exposes an editable player-count field or sends `teamSize`. Solo is
+  excluded, and each supported team format is labelled with its associated
+  roster size, such as `Duo · 2 players`, `Squad · 4 players`, or `5v5 · 5
+  players`. The backend derives known format sizes authoritatively and ignores
+  conflicting client counts, so a modified client cannot create a 99-player
+  Duo. Existing internal catalog compatibility remains for arbitrary custom
+  formats with an explicit bounded size; those formats are not offered by the
+  player creator until the Game catalog stores a structured roster-size
+  association. Frontend passes 139/139, ESLint and the 569-module build;
+  focused backend Team tests pass 9/9 and the arbitrary-format Quick Match
+  integration passes 17/17; the complete backend suite passes 400/400.
+
+- Batch Team invitations completed 2026-08-29. A captain can tick several
+  accepted friends and send one invitation command up to the Team's remaining
+  places. The existing social-connections read now includes only each friend's
+  verified Game IDs through the same populated query, avoiding per-player API
+  or database reads; friends without the Team Game remain visible but disabled
+  as `No verified game account`. The backend rechecks all selected identities,
+  player eligibility, exact Game verification, accepted friendship, format
+  conflicts and remaining capacity in bounded bulk queries inside one MongoDB
+  transaction. Any invalid selection rejects the complete batch with no partial
+  invitations. The canonical endpoint and Redux client accept only `playerIds`;
+  the retired single-player request shape and service helper were removed.
+  Frontend passes 139/139, ESLint and the 569-module production build; backend
+  focused Team coverage passes 9/9, including atomic rollback and the enriched
+  safe social projection; the complete backend suite passes 400/400.
+  Browser smoke reached the protected Teams route, correctly redirected the
+  unauthenticated session to Login, and produced no console errors; populated
+  checkbox-panel visual proof remains an authenticated follow-up.
+
 - Unique game-account ownership completed 2026-08-29. A private durable
   identity registry now owns the unique `Game + normalized account ID` claim,
   so the same COC tag, BGMI UID or other catalog identity cannot belong to two
@@ -167,6 +198,11 @@ to continue the project without reopening settled decisions.
   exact Game is verified. They may invite an accepted friend only when that
   friend also has the exact Game verified; friendship and Game verification are
   rechecked when the friend accepts.
+  Team creation exposes only non-Solo formats whose roster size can be derived
+  from the format label. The client sends Game, format and Team name only; the
+  backend owns the associated roster size and ignores client attempts to alter
+  a known format's capacity. Arbitrary internal catalog formats retain bounded
+  explicit-size compatibility until Game capabilities carry structured size.
   The captain owns roster changes while forming; accepted members may leave,
   and the captain may disband. A player may hold only one active membership or
   pending invitation for the same Game/format/team-size combination. A later

@@ -1,6 +1,40 @@
 # Current Checkpoint
 
-## Completed Slice: Unique Game-account Ownership
+## Completed Slice: Server-derived Team Format Size
+
+- The Team creator no longer shows or sends a player-count input. Solo is
+  excluded, and selectable formats display their associated roster size:
+  `Duo · 2 players`, `Squad · 4 players`, `5v5 · 5 players`, and equivalent
+  symmetric `NvN` formats.
+- The backend derives known format sizes and ignores conflicting client input,
+  preventing a modified client from changing Duo/Squad capacity. Custom catalog
+  formats retain bounded explicit-size compatibility for internal services, but
+  are not offered by player Team creation until Game capabilities carry a
+  structured roster-size association.
+- Frontend passes 139/139, ESLint and the 569-module production build. Focused
+  backend Team tests pass 9/9 and the affected Quick Match integration passes
+  17/17; the complete backend regression passes 400/400.
+
+## Previous Completed Slice: Batch Game-eligible Team Invitations
+
+- Team captains can tick multiple accepted friends and invite them with one
+  action, bounded by the Team's remaining roster places.
+- The existing social-connections response carries each friend's verified Game
+  IDs from its existing populated read. The UI performs no per-friend lookup;
+  friends missing the Team Game stay visible but disabled with
+  `No verified game account`.
+- One transactional backend command bulk-loads selected players and friendships,
+  then rechecks player eligibility, exact Game verification, accepted friendship,
+  same-format Team conflicts and remaining capacity. A mixed invalid selection
+  rolls back completely instead of creating partial invitations.
+- The canonical endpoint and Redux client accept only `playerIds`; the retired
+  single-player request shape/helper were removed. Focused backend Team tests
+  pass 9/9 and the complete backend suite passes 400/400. Frontend passes
+  139/139, ESLint and the 569-module production build. Browser smoke correctly
+  redirected an unauthenticated Teams visit to Login without console errors;
+  populated visual proof remains an authenticated follow-up.
+
+## Previous Completed Slice: Unique Game-account Ownership
 
 - A private `GameAccountIdentity` registry now enforces one owner for each
   normalized `Game + account ID`. COC tags are canonicalized case-insensitively,

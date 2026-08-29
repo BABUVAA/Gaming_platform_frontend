@@ -259,6 +259,10 @@ test("team picker keeps stable empty state and links to team creation", async ()
     new URL("../src/pages/Teams.jsx", import.meta.url),
     "utf8",
   );
+  const socialSource = await readFile(
+    new URL("../src/store/slices/socialSlice.js", import.meta.url),
+    "utf8",
+  );
   assert.match(source, /const EMPTY_TEAMS = Object\.freeze\(\[\]\)/);
   assert.match(source, /store\.social\.teams\) \|\| EMPTY_TEAMS/);
   assert.match(source, /to=\{ROUTES\.TEAMS\}/);
@@ -270,6 +274,17 @@ test("team picker keeps stable empty state and links to team creation", async ()
   assert.match(teamsSource, /to=\{ROUTES\.GAME_ACCOUNTS\}/);
   assert.match(teamsSource, /teamGroups\.map/);
   assert.match(teamsSource, /group\.teams\.map/);
+  assert.match(teamsSource, /inviteTeamMembers\(\{ teamId: team\._id, playerIds \}\)/);
+  assert.match(teamsSource, /member\.verifiedGameIds/);
+  assert.match(teamsSource, /type="checkbox"/);
+  assert.match(teamsSource, /No verified game account/);
+  assert.match(teamsSource, /teamSizeForMode\(mode\) >= 2/);
+  assert.match(teamsSource, /\{mode\} · \{teamSizeForMode\(mode\)\} players/);
+  assert.doesNotMatch(teamsSource, /name="teamSize"/);
+  assert.match(
+    socialSource,
+    /getBody: \(\{ gameId, mode, teamName \}\) => \(\{ gameId, mode, teamName \}\)/,
+  );
   assert.doesNotMatch(teamsSource, /TeamPanel/);
   assert.doesNotMatch(teamsSource, /searchPlayer/);
 });
