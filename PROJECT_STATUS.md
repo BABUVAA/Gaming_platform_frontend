@@ -18,6 +18,13 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Login rate-limit capacity increased 2026-08-29 from 5 to 10 requests per
+  10-minute window. The existing public-auth protection remains an atomic
+  Redis-backed, IP-scoped fixed window mounted before credential validation;
+  request 11 is rejected with `429 RATE_LIMITED`, and unavailable protection
+  storage continues to fail closed with 503. Focused rate-limiter coverage
+  passes 6/6.
+
 - Reusable Team names completed 2026-08-29. Team names are display labels, not
   platform identity, so different active or disbanded Teams may use the same
   name. Immutable Team IDs remain authoritative for invitations, competition,

@@ -1,5 +1,14 @@
 # Current Checkpoint
 
+## Completed Fix: Login Rate-limit Capacity
+
+- Login now permits 10 requests per IP-scoped 10-minute Redis window instead
+  of 5. Because protection runs before credential validation, the first ten
+  requests consume the bucket and request 11 receives `429 RATE_LIMITED`.
+- The existing atomic fixed-window behavior, response headers, trusted proxy
+  IP resolution and fail-closed 503 behavior remain unchanged.
+- Focused backend rate-limiter verification passes 6/6.
+
 ## Completed Slice: Interrupted Verification Recovery and Fixed Sidebars
 
 - Retrying signup with the same email and original password restores the
