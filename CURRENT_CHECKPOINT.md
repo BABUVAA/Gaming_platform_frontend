@@ -1,6 +1,47 @@
 # Current Checkpoint
 
-## Completed Slice: Social Profile Entry Points
+## Completed Slice: Unique Game-account Ownership
+
+- A private `GameAccountIdentity` registry now enforces one owner for each
+  normalized `Game + account ID`. COC tags are canonicalized case-insensitively,
+  and the same boundary applies to manual BGMI/current catalog identities.
+- COC owner-token verification, initial manual requests, replacement requests
+  and Game Manager approval claim the identity transactionally. A competing
+  player receives `409 GAME_ACCOUNT_ALREADY_LINKED`; responses never reveal the
+  current owner.
+- Pending identities reserve the account during ordinary and fraud review.
+  Rejection or final fraud resolution releases only that pending claim.
+  Approval makes the claim permanent, and replacement never frees the old
+  verified account for another platform player.
+- API startup creates the unique compound index and backfills current embedded
+  pending/verified identities before listening. A historical cross-player
+  conflict fails startup for manual resolution instead of choosing an owner.
+- Read-only database audits: `node-auth` 1,101 active identities / 0 conflicts;
+  `e-gaming` 2,015 / 0 conflicts. Focused integration passes 12/12 and the
+  complete backend suite passes 399/399.
+
+## Previous Completed Slice: Compact Game-scoped Teams
+
+- The dedicated Teams workspace is compact: one small header, a collapsible
+  single-row creator, and concise two-column roster cards grouped by Game.
+  Oversized spacing and the reusable Clan-era Team panel are not used.
+- Team creation offers only Games with a currently verified account. With no
+  eligible Game, the player receives a compact error and direct Game Accounts
+  recovery action. Profile-load and Team API failures have visible recovery or
+  error states instead of silently appearing as empty eligibility.
+- Backend authorization owns eligibility. The captain needs a verified account
+  for the exact Team Game at creation; an invited friend needs the same at both
+  invitation and acceptance. Invalid commands return
+  `TEAM_GAME_ACCOUNT_REQUIRED` before roster mutation. Accepted friendship is
+  still independently required at invitation and acceptance.
+- Existing Teams stay readable after later verification changes, preserving the
+  ability to decline, leave, disband or manage a roster instead of trapping it.
+- Verification: frontend 139/139, ESLint and the 569-module production build;
+  backend focused Team tests 8/8 and aggregate 395/395. The local browser
+  correctly enforced the unauthenticated Login redirect with no console errors;
+  populated authenticated visual QA remains a presentation follow-up.
+
+## Earlier Completed Slice: Social Profile Entry Points
 
 - Friends now use the real `/profile-pic.png` fallback plus a guarded image
   error fallback, so an absent or invalid stored avatar cannot render a broken
@@ -21,7 +62,7 @@
   visual check was attempted after starting Vite, but the app browser refused
   localhost navigation; no runtime issue was observed by the code gates.
 
-## Previous Completed Slice: Player-owned Teams
+## Earlier Completed Slice: Player-owned Teams
 
 - Product decision 2026-08-28: Teams are a player feature, independent of
   Clans. Eligible players can create format-scoped rosters and invite accepted
@@ -43,7 +84,7 @@
   126/126 and API documentation covers 212/212 operations. Frontend passes
   137/137, ESLint and the 568-module production build.
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 Fast-resume index for the paired E-Gaming frontend/backend repositories.
 `PROJECT_STATUS.md` remains authoritative.

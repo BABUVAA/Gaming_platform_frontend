@@ -264,6 +264,12 @@ test("team picker keeps stable empty state and links to team creation", async ()
   assert.match(source, /to=\{ROUTES\.TEAMS\}/);
   assert.match(source, />\s*Create Team\s*<\/Link>/);
   assert.match(teamsSource, /fetchTeams\(\)/);
+  assert.match(teamsSource, /fetchPlayerProfile\(\)/);
   assert.match(teamsSource, /connections\.friends/);
+  assert.match(teamsSource, /verificationStatus === "verified"/);
+  assert.match(teamsSource, /to=\{ROUTES\.GAME_ACCOUNTS\}/);
+  assert.match(teamsSource, /teamGroups\.map/);
+  assert.match(teamsSource, /group\.teams\.map/);
+  assert.doesNotMatch(teamsSource, /TeamPanel/);
   assert.doesNotMatch(teamsSource, /searchPlayer/);
 });

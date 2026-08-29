@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -17,6 +17,40 @@ Use this section first. It is the shortest safe path for a single coding model
 to continue the project without reopening settled decisions.
 
 ### Current Truth
+
+- Unique game-account ownership completed 2026-08-29. A private durable
+  identity registry now owns the unique `Game + normalized account ID` claim,
+  so the same COC tag, BGMI UID or other catalog identity cannot belong to two
+  platform players even under concurrent requests. COC owner-token success,
+  initial manual submission, replacement submission and Game Manager approval
+  all claim through the same transactional service. Cross-player conflicts
+  return private `409 GAME_ACCOUNT_ALREADY_LINKED` without disclosing the
+  current owner. Pending manual identities stay reserved through review,
+  release after rejection or final fraud resolution, and become permanent on
+  approval. Verified claims remain permanently attached to their original
+  platform owner even after the one permitted account replacement, preventing
+  later sharing of the retired identity. API startup creates the unique index
+  and backfills existing pending/verified embedded accounts before listening;
+  any historical shared identity fails startup instead of selecting an owner.
+  Read-only audits found 1,101 active identities and zero conflicts in
+  `node-auth`, plus 2,015 and zero conflicts in `e-gaming`. Focused identity
+  integration passes 12/12 and the backend aggregate passes 399/399.
+
+- Compact game-scoped Teams completed 2026-08-29. The dedicated player Teams
+  workspace now uses one concise header, a collapsible single-row creator and
+  compact two-column roster cards grouped under each Game instead of the former
+  large generic Team panel. Creation offers only Games for which the caller has
+  a currently verified game account and links an ineligible player directly to
+  Game Accounts. Existing Teams remain visible if verification later changes so
+  the player can still decline, leave, disband or manage an existing roster.
+  The server is authoritative: the captain must have a verified account for the
+  exact Team Game at creation, and every invited friend must have that Game
+  verified both when invited and when accepting. Stable
+  `TEAM_GAME_ACCOUNT_REQUIRED` errors reject invalid commands before roster
+  mutation. Frontend passes 139/139 plus ESLint and the 569-module production
+  build; backend focused Team tests pass 8/8 and the aggregate passes 395/395.
+  The local browser correctly reached Login for an unauthenticated Teams visit
+  with no console errors; populated authenticated visual QA remains a follow-up.
 
 - Social profile entry points completed 2026-08-28. Friend avatars now fall
   back to the tracked player image both when the URL is absent and when the
@@ -128,9 +162,11 @@ to continue the project without reopening settled decisions.
   proof remains a follow-up.
 
 - The platform is a modular monolith. Do not split services yet.
-- Player Teams are independent of Clans. Any verified, participation-eligible
-  player may create a Game/format-scoped roster and invite an accepted friend;
-  the invited player must still be an accepted friend when accepting.
+- Player Teams are independent of Clans. A verified, participation-eligible
+  player may create a Game/format-scoped roster only when their account for that
+  exact Game is verified. They may invite an accepted friend only when that
+  friend also has the exact Game verified; friendship and Game verification are
+  rechecked when the friend accepts.
   The captain owns roster changes while forming; accepted members may leave,
   and the captain may disband. A player may hold only one active membership or
   pending invitation for the same Game/format/team-size combination. A later
@@ -164,7 +200,11 @@ to continue the project without reopening settled decisions.
   for assigned games. It excludes email, wallet, lobby credentials, private
   Match evidence and chat. Game-account review receives only the submitted UID,
   in-game name, bounded proof note and safe player identity.
-- A player may establish one Game identity per Game. A verified identity may
+- A player may establish one Game identity per Game. Every normalized account
+  ID is globally exclusive within its Game through the private identity
+  registry; it cannot be shared across platform players. A verified identity
+  remains permanently bound to its first platform owner, including after a
+  permitted replacement. A verified identity may
   be replaced once for that Game after it has remained verified for 30 days,
   provided the player has no active Room/Match/Event or pending financial
   settlement. COC replacement repeats live owner-token verification. BGMI
