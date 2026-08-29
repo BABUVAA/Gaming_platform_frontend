@@ -1,5 +1,18 @@
 # Current Checkpoint
 
+## Local Refinement: Compact Friends Workspace
+
+- `/dashboard/friends` now opens with one compact count header and inline
+  player-tag search instead of stacked oversized Clan-style cards. A search
+  result appears only after search, directly below the input.
+- Incoming, accepted, and sent sections use concise headings, small counters,
+  40px avatars, dense rows, and 32px actions. Repeated Social labels, the empty
+  player-result panel, 80px search avatar, large rounding, and excess padding
+  are removed. Social Redux/API behavior and backend authorization are
+  unchanged.
+- Frontend passes 149/149, full ESLint, diff check, and the 573-module
+  production build. Populated authenticated visual proof remains a follow-up.
+
 ## Local Slice: Friends Main Dashboard Tab
 
 - Friends now has a dedicated verified-player route at

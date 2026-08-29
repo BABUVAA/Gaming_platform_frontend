@@ -35,6 +35,15 @@ test("Friends, Clan roster, and direct chats expose resilient player profiles", 
   assert.match(clan, /onViewProfile\(member\.clanMemberTag\)/);
   assert.match(friends, /applyAvatarFallback/);
   assert.match(friends, /ROUTES\.PROFILE/);
+  assert.match(friends, /flex flex-col gap-2 sm:flex-row/);
+  assert.match(friends, /className="h-10 w-full rounded-lg/);
+  assert.match(friends, /className="h-10 w-10 shrink-0 rounded-lg/);
+  assert.match(friends, /aria-label="Friend lists"/);
+  assert.match(friends, /role="tablist"/);
+  assert.match(friends, /\["friends", "Friends"/);
+  assert.match(friends, /\["sent", "Sent requests"/);
+  assert.match(friends, /role="tabpanel"/);
+  assert.doesNotMatch(friends, /clan-surface|rounded-\[24px\]|h-20 w-20|text-2xl/);
   assert.doesNotMatch(clan, /default-avatar\.png/);
   assert.match(chats, /onViewProfile\(chat\.playerTag/);
   assert.match(chats, /applyAvatarFallback/);
