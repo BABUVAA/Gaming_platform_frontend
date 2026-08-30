@@ -18,6 +18,21 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Current and durable notifications are implemented locally as of 2026-08-30.
+  `GET /api/notifications` remains owner-only, newest-first, cursor-bounded to
+  50 maximum, and now returns the exact unread total independent of the loaded
+  page. Owners may durably mark one or all notifications read; canonical
+  private realtime read-state events synchronize active tabs. Redux preserves
+  live changes that race an HTTP refresh, and the dashboard reconciles on
+  socket readiness, foreground return, and bell open so offline gaps recover.
+  The notification bell is directly available on mobile with a responsive
+  panel, `99+` badge cap, older-page loading, and `Mark all read`. Frontend
+  passes 157/157, full ESLint, diff check, and the 578-module build. Backend
+  maintained aggregate passes 427/427, including social integration 10/10 and
+  realtime 15/15; API documentation covers 220/220 operations. The local
+  390px unauthenticated shell was console-clean; populated authenticated visual
+  proof remains a follow-up.
+
 - Global recruitment chat and durable Friend unread counts are implemented
   locally as of 2026-08-30. The existing verified-player `/dashboard/chats`
   route opens Global Chat first, retains only the newest 200 messages, loads 50,
@@ -1540,7 +1555,7 @@ Rules currently enforced:
 | User / role | Entry route | Dashboard / UI |
 |---|---|---|
 | Visitor | `/home` | Marketing, signup, login. |
-| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, Refer & Earn, profile, game accounts, account settings. Chats opens a verified-player Global Chat for discovery/recruitment, private Friend threads with owner-only unread counts, and the member's Clan channel. Global usernames link to public profiles; current Clan Leaders/Co-leaders may send consent-based Clan invitations. The mobile bottom bar is limited to Compete, Clan, Profile, Wallet, and Chat; the header hamburger exposes the complete player navigation as a compact icon grid. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. Refer & Earn is visible in the desktop sidebar and mobile hamburger menu and is verified-player-only; its INR 10.00 credit is earned once after the referred verified player completes a first Quick Match or Event and is spendable only through the non-withdrawable tournament-entry balance. |
+| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, Refer & Earn, profile, game accounts, account settings. The header bell is available on desktop and mobile and opens the owner-only, cursor-bounded notification history with the exact durable unread total and single/all read controls. Chats opens a verified-player Global Chat for discovery/recruitment, private Friend threads with owner-only unread counts, and the member's Clan channel. Global usernames link to public profiles; current Clan Leaders/Co-leaders may send consent-based Clan invitations. The mobile bottom bar is limited to Compete, Clan, Profile, Wallet, and Chat; the header hamburger exposes the complete player navigation as a compact icon grid. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. Refer & Earn is visible in the desktop sidebar and mobile hamburger menu and is verified-player-only; its INR 10.00 credit is earned once after the referred verified player completes a first Quick Match or Event and is spendable only through the non-withdrawable tournament-entry balance. |
 | Approved Host | Player dashboard | Host actions for existing games; no separate staff dashboard. |
 | Staff with any assignment | `/staff` | Role switcher. Shows one workspace card per active assignment and an explicit read-only player-dashboard utility link. Staff cannot participate from that dashboard. |
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |

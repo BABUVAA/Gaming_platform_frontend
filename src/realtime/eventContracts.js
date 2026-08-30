@@ -13,6 +13,7 @@ export const REALTIME_EVENT_TYPES = Object.freeze({
   MATCH_UPDATED: "match.updated",
   MATCHMAKING_QUEUE_UPDATED: "matchmaking.queue.updated",
   NOTIFICATION_CREATED: "notification.created",
+  NOTIFICATION_READ_STATE_UPDATED: "notification.read_state.updated",
   SOCIAL_CONNECTIONS_UPDATED: "social.connections.updated",
   TOURNAMENT_UPDATED: "tournament.updated",
 });

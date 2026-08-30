@@ -6,6 +6,8 @@ import { getStoredErrorMessage } from "../../api/apiError";
 export const selectNotificationState = (state) => state.notifications;
 export const selectNotifications = (state) => state.notifications.items;
 export const selectNotificationLoading = (state) => state.notifications.loading;
+export const selectNotificationUnreadCount = (state) =>
+  state.notifications.unreadCount;
 export const selectNotificationApiError = (state) =>
   state.notifications.error;
 export const selectNotificationError = (state) =>

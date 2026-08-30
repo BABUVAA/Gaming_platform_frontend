@@ -33,11 +33,10 @@ const HeaderBurgerMenu = () => {
   );
   const playerSummary = useSelector(selectPlayerSummary);
   const wallet = useSelector((store) => store.payment.wallet);
-  const notifications = useSelector((store) => store.notifications.items);
+  const unreadCount = useSelector((store) => store.notifications.unreadCount);
   const [menuOpen, setMenuOpen] = useState(false);
   const { goToLogin, goToSignUp } = useNavigateHook();
   const location = useLocation();
-  const unreadCount = (notifications || []).filter((item) => !item.isRead).length;
   const dashboardNavigation = getDashboardNavigation(playerSummary, {
     includeStaffWorkspaces: !location.pathname.startsWith(ROUTES.DASHBOARD),
   });
@@ -130,6 +129,7 @@ const HeaderBurgerMenu = () => {
               <p className="mt-2 text-sm font-semibold text-white">
                 {unreadCount} unread
               </p>
+              <p className="mt-1 text-xs text-slate-400">Use the bell above to review alerts.</p>
             </div>
           </div>
         </div>

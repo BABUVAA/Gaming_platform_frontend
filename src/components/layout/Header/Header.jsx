@@ -94,11 +94,13 @@ const Header = () => {
 
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
-            <div className="hidden items-center gap-3 md:flex">
+            <>
               <HeaderNotificationMenu />
-              <HeaderProfileMenu />
-              {showPlayerWallet ? <HeaderWalletMenu /> : null}
-            </div>
+              <div className="hidden items-center gap-3 md:flex">
+                <HeaderProfileMenu />
+                {showPlayerWallet ? <HeaderWalletMenu /> : null}
+              </div>
+            </>
           ) : (
             <div className="hidden items-center gap-3 md:flex">
               <Button

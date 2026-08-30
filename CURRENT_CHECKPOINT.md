@@ -1,5 +1,26 @@
 # Current Checkpoint
 
+## Local Slice: Current and Durable Notifications
+
+- Notification badges now use the server's exact owner-only unread total rather
+  than counting only the 25 loaded rows. The bounded newest-first history and
+  opaque cursor remain unchanged, and supporting owner/read and owner/time
+  indexes keep the count and feed queries bounded for active accounts.
+- A player can mark one alert or every alert read. Read state is durable and a
+  canonical private realtime event updates every active tab. Fresh-page reads
+  are race-safe against notifications or read changes arriving while the HTTP
+  request is in flight.
+- Notifications reconcile when the authenticated socket becomes ready, when
+  the app returns to the foreground, and whenever the bell opens, covering
+  reconnects and time spent offline. The bell is directly available on mobile;
+  its responsive panel caps the badge at `99+`, supports loading older rows,
+  and exposes `Mark all read`.
+- Verification: frontend 157/157, full ESLint, diff check, and the 578-module
+  production build; backend maintained aggregate 427/427, including social
+  integration 10/10 and realtime 15/15; API documentation covers 220/220
+  mounted operations. The local 390px shell reached Login without browser
+  warnings/errors; populated authenticated visual proof remains a follow-up.
+
 ## Local Slice: Global Recruitment Chat and Friend Unread Counts
 
 - Verified active players now open Chats directly into one player-only Global

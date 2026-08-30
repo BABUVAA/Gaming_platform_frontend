@@ -13,7 +13,10 @@ import {
   fetchMyClanInvitations,
   globalChatActions,
 } from "../store/slices/globalChatSlice";
-import { notificationActions } from "../store/slices/notificationSlice";
+import {
+  fetchNotifications,
+  notificationActions,
+} from "../store/slices/notificationSlice";
 import {
   clanAction,
   fetchClanJoinRequests,
@@ -236,6 +239,11 @@ export const SocketProvider = ({ children }) => {
         onNotification(event.data.notification);
       } else if (
         event.type ===
+        REALTIME_EVENT_TYPES.NOTIFICATION_READ_STATE_UPDATED
+      ) {
+        dispatch(notificationActions.applyReadState(event.data));
+      } else if (
+        event.type ===
           REALTIME_EVENT_TYPES.MATCHMAKING_QUEUE_UPDATED ||
         event.type ===
           REALTIME_EVENT_TYPES.MATCH_ASSIGNMENT_UPDATED
@@ -260,6 +268,9 @@ export const SocketProvider = ({ children }) => {
       // Reconnects may have missed events while offline, so every competition
       // screen performs one authoritative reconciliation.
       setCompetitionRevision((current) => current + 1);
+      // A fresh authoritative first page repairs notifications missed while
+      // this browser was offline or the access token was rotating.
+      dispatch(fetchNotifications());
 
       const state = platformStore.getState();
       const clan = state.clan?.userClanData?.data;

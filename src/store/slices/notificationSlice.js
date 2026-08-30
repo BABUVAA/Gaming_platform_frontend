@@ -10,6 +10,9 @@ const initialState = {
   loadingMore: false,
   hasMore: false,
   nextCursor: null,
+  unreadCount: 0,
+  lastSyncedAt: null,
+  localRevision: 0,
   error: null,
 };
 
@@ -37,12 +40,20 @@ export const fetchNotifications = createAsyncThunk(
   "notifications/fetch",
   async ({ cursor = null } = {}, thunkAPI) => {
     try {
+      const localRevision = thunkAPI.getState().notifications.localRevision;
       const response = await api.get("/api/notifications", {
         withCredentials: true,
         params: { limit: 25, ...(cursor ? { cursor } : {}) },
       });
       const data = response.data?.data || {};
-      return { items: Array.isArray(data.items) ? data.items : [], page: data.page || {}, cursor };
+      return {
+        items: Array.isArray(data.items) ? data.items : [],
+        page: data.page || {},
+        unreadCount: Number(data.unreadCount) || 0,
+        syncedAt: new Date().toISOString(),
+        localRevision,
+        cursor,
+      };
     } catch (error) {
       thunkAPI.dispatch(
         showToast({
@@ -104,12 +115,32 @@ export const markNotificationAsRead = createAsyncThunk(
   }
 );
 
+export const markAllNotificationsAsRead = createAsyncThunk(
+  "notifications/markAllAsRead",
+  async (_, thunkAPI) => {
+    try {
+      const response = await api.patch("/api/notifications/read-all", null, {
+        withCredentials: true,
+      });
+      return response.data?.data || response.data;
+    } catch (error) {
+      thunkAPI.dispatch(showToast({
+        message: getApiErrorMessage(error, "Failed to update notifications"),
+        type: types.DANGER,
+        position: "bottom-right",
+      }));
+      return rejectApiError(thunkAPI, error, "Failed to update notifications");
+    }
+  },
+);
+
 // ✅ Slice
 // Both requests report errors through the same slice field. Only the feed
 // request controls `loading`, so marking one item never hides the open list.
 const notificationThunks = [
   fetchNotifications,
   markNotificationAsRead,
+  markAllNotificationsAsRead,
 ];
 
 const notificationSlice = createSlice({
@@ -128,13 +159,42 @@ const notificationSlice = createSlice({
 
       if (existingIndex === -1) {
         state.items = dedupeNotifications([notification, ...state.items]);
+        if (notification.isRead !== true) state.unreadCount += 1;
+        state.localRevision += 1;
         return;
       }
 
+      const wasUnread = state.items[existingIndex].isRead !== true;
       state.items[existingIndex] = {
         ...state.items[existingIndex],
         ...notification,
       };
+      const isUnread = state.items[existingIndex].isRead !== true;
+      if (wasUnread !== isUnread) {
+        state.unreadCount = Math.max(0, state.unreadCount + (isUnread ? 1 : -1));
+      }
+      state.localRevision += 1;
+    },
+    applyReadState: (state, action) => {
+      const update = action.payload || {};
+      if (update.allRead === true) {
+        state.items.forEach((item) => {
+          item.isRead = true;
+          item.readAt = update.readAt || item.readAt;
+        });
+        state.unreadCount = 0;
+        state.localRevision += 1;
+        return;
+      }
+      const item = state.items.find(
+        (notification) => notification._id === update.notificationId,
+      );
+      if (item && item.isRead !== true) {
+        item.isRead = true;
+        item.readAt = update.readAt || item.readAt;
+        state.unreadCount = Math.max(0, state.unreadCount - 1);
+        state.localRevision += 1;
+      }
     },
   },
   extraReducers: (builder) => {
@@ -147,8 +207,28 @@ const notificationSlice = createSlice({
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.loading = false;
         state.loadingMore = false;
-        const { items, page, cursor } = action.payload;
-        state.items = dedupeNotifications(cursor ? [...state.items, ...items] : items);
+        const {
+          items,
+          page,
+          unreadCount,
+          syncedAt,
+          localRevision,
+          cursor,
+        } = action.payload;
+        if (localRevision === state.localRevision) {
+          state.items = dedupeNotifications(cursor ? [...state.items, ...items] : items);
+          state.unreadCount = unreadCount;
+        } else {
+          const existing = new Set(state.items.map(getNotificationSignature));
+          const unseenUnread = items.filter(
+            (item) => !existing.has(getNotificationSignature(item)) && item.isRead !== true,
+          ).length;
+          state.items = dedupeNotifications([...state.items, ...items]).sort(
+            (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+          );
+          state.unreadCount += unseenUnread;
+        }
+        state.lastSyncedAt = syncedAt;
         state.hasMore = page.hasMore === true;
         state.nextCursor = page.nextCursor || null;
       })
@@ -165,8 +245,21 @@ const notificationSlice = createSlice({
           (n) => n._id === action.payload._id
         );
         if (index !== -1) {
+          if (state.items[index].isRead !== true && action.payload.isRead === true) {
+            state.unreadCount = Math.max(0, state.unreadCount - 1);
+            state.localRevision += 1;
+          }
           state.items[index] = action.payload;
         }
+      })
+      .addCase(markAllNotificationsAsRead.fulfilled, (state, action) => {
+        const readAt = action.payload?.readAt || null;
+        state.items.forEach((item) => {
+          item.isRead = true;
+          item.readAt = readAt;
+        });
+        state.unreadCount = 0;
+        state.localRevision += 1;
       });
 
     addThunkLifecycleMatchers(builder, notificationThunks, {

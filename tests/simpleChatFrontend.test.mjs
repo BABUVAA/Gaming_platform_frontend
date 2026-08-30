@@ -60,6 +60,30 @@ test("personal chat rows show server-backed unread message counts", async () => 
   assert.match(socketContext, /socket\.emit\("personal_mark_read"/);
 });
 
+test("notifications reconcile missed alerts and use the server unread total", async () => {
+  const [slice, socketContext, dashboard, headerMenu, header, burgerMenu] = await Promise.all([
+    readFile(new URL("../src/store/slices/notificationSlice.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/context/socketContext.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/Dashboard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/layout/Header/HeaderNotificationMenu.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/layout/Header/Header.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/layout/Header/HeaderBurgerMenu.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(slice, /unreadCount: Number\(data\.unreadCount\)/);
+  assert.match(slice, /\/api\/notifications\/read-all/);
+  assert.match(slice, /applyReadState/);
+  assert.match(slice, /localRevision === state\.localRevision/);
+  assert.match(socketContext, /NOTIFICATION_READ_STATE_UPDATED/);
+  assert.match(socketContext, /dispatch\(fetchNotifications\(\)\)/);
+  assert.match(dashboard, /visibilitychange/);
+  assert.match(headerMenu, /Mark all read/);
+  assert.match(headerMenu, /99\+/);
+  assert.match(headerMenu, /fixed left-2 right-2/);
+  assert.match(header, /<HeaderNotificationMenu \/>/);
+  assert.match(burgerMenu, /store\.notifications\.unreadCount/);
+});
+
 test("Friends, Clan roster, and direct chats expose resilient player profiles", async () => {
   const [friends, clan, chats, fallback, clanCss] = await Promise.all([
     readFile(new URL("../src/pages/Friends.jsx", import.meta.url), "utf8"),
