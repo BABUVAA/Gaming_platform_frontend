@@ -5,8 +5,9 @@
 - `/dashboard/friends` now opens with one compact count header and inline
   player-tag search instead of stacked oversized Clan-style cards. A search
   result appears only after search, directly below the input.
-- Incoming, accepted, and sent sections use concise headings, small counters,
-  40px avatars, dense rows, and 32px actions. Repeated Social labels, the empty
+- Incoming requests remain visible above one compact tab panel. Accepted
+  Friends and Sent Requests are separate tabs with live counters, 40px
+  avatars, dense rows, and 32px actions. Repeated Social labels, the empty
   player-result panel, 80px search avatar, large rounding, and excess padding
   are removed. Social Redux/API behavior and backend authorization are
   unchanged.

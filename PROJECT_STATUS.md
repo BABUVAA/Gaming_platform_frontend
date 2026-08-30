@@ -20,10 +20,12 @@ to continue the project without reopening settled decisions.
 
 - Compact Friends workspace refinement completed locally 2026-08-29. The
   dedicated player route now uses one short identity/count header, one inline
-  player-tag search row, conditional inline search results, compact section
-  headers, 40px avatars, and 32px actions. The former oversized Clan surfaces,
-  two-card search layout, empty result card, large avatars, and repeated Social
-  labels are removed. Existing Redux social/player reads, mutations, profile
+  player-tag search row, conditional inline search results, and one compact
+  tab panel for accepted Friends and Sent Requests with live counters. Incoming
+  requests remain visible above the tabs when actionable. Rows use 40px avatars
+  and 32px actions. The former oversized Clan surfaces, two-card search layout,
+  empty result card, large avatars, and repeated Social labels are removed.
+  Existing Redux social/player reads, mutations, profile
   navigation, retry states, and backend player-only authorization are
   unchanged. Frontend passes 149/149, full ESLint, diff check, and the
   573-module production build; populated authenticated visual proof remains a
