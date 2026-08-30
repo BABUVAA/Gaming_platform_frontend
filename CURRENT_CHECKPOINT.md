@@ -1,5 +1,14 @@
 # Current Checkpoint
 
+## Local Fix: Mobile Referral Link Wrapping
+
+- The Refer & Earn share rows now wrap long referral URLs at any character on
+  narrow screens instead of truncating or widening the page. The copy action
+  still receives the complete, unchanged link value.
+- Focused referral coverage guards the wrapping classes and removal of the old
+  truncation behavior. Frontend passes 153/153, full ESLint, diff check, and
+  the 576-module production build. Deployment remains a follow-up.
+
 ## Local Fix: Compact Mobile Navigation and Refer & Earn Discovery
 
 - The mobile bottom bar now carries exactly five requested player actions:

@@ -120,7 +120,7 @@ const Rule = ({ children }) => (
 
 const ShareRow = ({ actionLabel, label, onAction, value }) => (
   <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/20 p-3 sm:flex-row sm:items-center sm:justify-between">
-    <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p><p className="mt-1 truncate text-sm font-semibold text-white">{value}</p></div>
+    <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p><p className="mt-1 whitespace-normal break-all text-sm font-semibold leading-5 text-white">{value}</p></div>
     <button className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-cyan-300/10 px-3 text-xs font-black text-cyan-200 disabled:opacity-40" disabled={!value || value === "Loading…"} onClick={onAction} type="button"><FiCopy />{actionLabel}</button>
   </div>
 );

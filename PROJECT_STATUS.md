@@ -32,7 +32,9 @@ to continue the project without reopening settled decisions.
   for the unique indexes. `/api/users/referrals` returns an owner-only bounded
   50-row progress view and aggregate counts/earnings. The player page shows the
   exact email-verification plus first-completion rule, one-time reward,
-  tournament-only use, and non-withdrawable/non-transferable terms. Backend
+  tournament-only use, and non-withdrawable/non-transferable terms. Long
+  referral links wrap within their share row on narrow screens without changing
+  the copied value or widening the page. Backend
   passes 422/422, referral proof 2/2, generated API documentation 214/214;
   frontend passes 152/152, ESLint, route smoke, diff check, and the 576-module
   production build. A local public referral link reached Signup with the code

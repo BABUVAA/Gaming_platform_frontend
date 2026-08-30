@@ -59,6 +59,8 @@ test("Refer and Earn presents exact qualification and spending rules", async () 
   assert.match(refer, /cannot be withdrawn, transferred, or converted to cash/);
   assert.match(refer, /window\.location\.origin/);
   assert.doesNotMatch(refer, /egaming\.example/);
+  assert.match(refer, /whitespace-normal break-all/);
+  assert.doesNotMatch(refer, /truncate text-sm font-semibold text-white/);
   assert.match(signup, /referralCode/);
   assert.match(signup, /Referral applied/);
   assert.match(signup, /Referral code \(optional\)/);
