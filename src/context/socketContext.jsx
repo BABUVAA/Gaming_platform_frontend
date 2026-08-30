@@ -9,6 +9,10 @@ import {
 import { sessionInvalidated } from "../store/actions/sessionActions";
 import { showToast, types } from "../store/slices/toastSlice";
 import { playerActions } from "../store/slices/playerSlice";
+import {
+  fetchMyClanInvitations,
+  globalChatActions,
+} from "../store/slices/globalChatSlice";
 import { notificationActions } from "../store/slices/notificationSlice";
 import {
   clanAction,
@@ -92,6 +96,23 @@ export const SocketProvider = ({ children }) => {
 
       if (!chatId) return;
 
+      dispatch(
+        globalChatActions.receivePersonalMessage({
+          currentUserId,
+          message: newMessage,
+        }),
+      );
+
+      const activePersonalThreadId = String(
+        platformStore.getState().globalChat?.activePersonalThreadId || "",
+      );
+      if (
+        String(newMessage?.receiverId) === String(currentUserId) &&
+        String(newMessage?.senderId) === activePersonalThreadId
+      ) {
+        socket.emit("personal_mark_read", newMessage.senderId);
+      }
+
       // Personal messages from another user also keep the chat roster warm.
       if (
         newMessage?.receiverId &&
@@ -111,6 +132,10 @@ export const SocketProvider = ({ children }) => {
         ...prev,
         [chatId]: appendUniqueMessage(prev[chatId] || [], newMessage),
       }));
+    };
+
+    const handleGlobalMessage = (message) => {
+      dispatch(globalChatActions.appendMessage(message));
     };
 
     const scheduleDomainRefresh = (domain, thunk) => {
@@ -314,6 +339,9 @@ export const SocketProvider = ({ children }) => {
         })
       );
       dispatch(notificationActions.addNotification(notification));
+      if (notification?.title === "Clan invitation") {
+        dispatch(fetchMyClanInvitations());
+      }
     };
 
     const onError = (data) => {
@@ -336,6 +364,7 @@ export const SocketProvider = ({ children }) => {
     socket.on("clan_message", handleNewMessage);
     socket.on(REALTIME_CHANNEL, handleRealtimeEvent);
     socket.on("personal_message", handleNewMessage);
+    socket.on("global_message", handleGlobalMessage);
     // Canonical Quick Match socket messages are invalidation signals handled
     // through REALTIME_CHANNEL. Legacy Tournament payloads are deliberately
     // not copied into active competition state.
@@ -356,6 +385,7 @@ export const SocketProvider = ({ children }) => {
       socket.off("clan_message", handleNewMessage);
       socket.off(REALTIME_CHANNEL, handleRealtimeEvent);
       socket.off("personal_message", handleNewMessage);
+      socket.off("global_message", handleGlobalMessage);
       socket.off("notification", onNotification);
       socket.off("ERROR", onError);
       socket.disconnect();

@@ -1,13 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import ChatBox from "../components/common/ChatBox";
-import { FiUsers } from "react-icons/fi";
+import GlobalChatBox from "../components/common/GlobalChatBox";
+import { FiGlobe, FiUsers } from "react-icons/fi";
 import { fetchUserClan } from "../store/slices/clanSlice.js";
 import { fetchSocialConnections } from "../store/slices/socialSlice.js";
 import { playerActions } from "../store/slices/playerSlice.js";
 import { applyAvatarFallback } from "../utils/imageFallbacks.js";
+import {
+  fetchChatThreads,
+  fetchMyClanInvitations,
+  invitePlayerToClan,
+} from "../store/slices/globalChatSlice.js";
+
+const EMPTY_LIST = Object.freeze([]);
 
 const Chats = () => {
   const dispatch = useDispatch();
@@ -15,33 +23,51 @@ const Chats = () => {
   const activeChats = useSelector((store) => store.player.activeChats);
   const { connections, connectionsStatus } = useSelector((store) => store.social);
   const { userClanData, userClanStatus } = useSelector((store) => store.clan);
-  const [selectedChat, setSelectedChat] = useState(null);
-  const [chatType, setChatType] = useState(null);
-  const [chatName, setChatName] = useState(null);
-  const [personalChats, setPersonalChats] = useState(activeChats || []);
+  const { summary } = useSelector((store) => store.player);
+  const { personalThreads, threadsStatus } = useSelector(
+    (store) => store.globalChat,
+  );
+  const [selectedChat, setSelectedChat] = useState("global");
+  const [chatType, setChatType] = useState("global");
+  const [chatName, setChatName] = useState("Global Chat");
   const [isModalOpen, setIsModalOpen] = useState(false);
   // The profile carries only a clan reference. Chat visibility and identity
   // come from the current membership endpoint so ordinary members receive the
   // same canonical clan record as leaders.
   const clanChat = userClanData?.data || null;
-  const friends = connections?.friends || [];
-  const visibleChats = personalChats.map((chat) => {
-    const chatId = String(chat.userId || chat.id || chat._id || "");
-    const friend = friends.find((entry) => String(entry._id) === chatId);
-    return {
-      ...chat,
-      avatar: chat.avatar || friend?.avatar || null,
-      playerTag:
-        chat.playerTag || chat.profileTag || friend?.playerTag || null,
-      username:
-        chat.username || chat.profile?.username || friend?.username || "Player",
-      userId: chatId || chat.userId,
-    };
-  });
-
-  useEffect(() => {
-    setPersonalChats(activeChats || []);
-  }, [activeChats]);
+  const friends = connections?.friends || EMPTY_LIST;
+  const currentClanMember = clanChat?.members?.find((member) =>
+    String(member.user?._id || member.user) === String(summary?.userId),
+  );
+  const canInviteToClan = ["LEADER", "COLEADER"].includes(
+    currentClanMember?.role,
+  );
+  const personalChats = useMemo(() => {
+    const byUserId = new Map();
+    [...personalThreads, ...(activeChats || [])].forEach((chat) => {
+      const userId = String(chat.userId || chat.id || chat._id || "");
+      if (userId && !byUserId.has(userId)) byUserId.set(userId, chat);
+    });
+    return [...byUserId.values()];
+  }, [activeChats, personalThreads]);
+  const visibleChats = useMemo(() => {
+    const friendsById = new Map(
+      friends.map((friend) => [String(friend._id), friend]),
+    );
+    return personalChats.map((chat) => {
+      const chatId = String(chat.userId || chat.id || chat._id || "");
+      const friend = friendsById.get(chatId);
+      return {
+        ...chat,
+        avatar: chat.avatar || friend?.avatar || null,
+        playerTag:
+          chat.playerTag || chat.profileTag || friend?.playerTag || null,
+        username:
+          chat.username || chat.profile?.username || friend?.username || "Player",
+        userId: chatId || chat.userId,
+      };
+    });
+  }, [friends, personalChats]);
 
   useEffect(() => {
     if (chatType !== "personal" || !selectedChat) return;
@@ -66,6 +92,11 @@ const Chats = () => {
   useEffect(() => {
     if (connectionsStatus === "idle") dispatch(fetchSocialConnections());
   }, [connectionsStatus, dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchMyClanInvitations());
+    if (threadsStatus === "idle") dispatch(fetchChatThreads());
+  }, [dispatch, threadsStatus]);
 
   const openChat = ({ id, type, name }) => {
     setSelectedChat(id);
@@ -94,6 +125,9 @@ const Chats = () => {
             onViewProfile={(playerTag) =>
               navigate(`/dashboard/profile?playerTag=${encodeURIComponent(playerTag)}`)
             }
+            onOpenGlobal={() =>
+              openChat({ id: "global", type: "global", name: "Global Chat" })
+            }
           />
         </div>
 
@@ -102,12 +136,29 @@ const Chats = () => {
         >
           {selectedChat ? (
             <div className="h-full min-h-0 rounded-2xl border border-slate-800 bg-slate-950/90 p-2">
-              <ChatBox
-                selectedChat={selectedChat}
-                chatType={chatType}
-                chatName={chatName}
-                onBack={closeChat}
-              />
+              {chatType === "global" ? (
+                <GlobalChatBox
+                  canInvite={canInviteToClan}
+                  onBack={closeChat}
+                  onInvite={async (playerTag) => {
+                    try {
+                      await dispatch(invitePlayerToClan({ playerTag })).unwrap();
+                    } catch {
+                      // Shared API feedback owns the visible failure.
+                    }
+                  }}
+                  onViewProfile={(playerTag) =>
+                    navigate(`/dashboard/profile?playerTag=${encodeURIComponent(playerTag)}`)
+                  }
+                />
+              ) : (
+                <ChatBox
+                  selectedChat={selectedChat}
+                  chatType={chatType}
+                  chatName={chatName}
+                  onBack={closeChat}
+                />
+              )}
             </div>
           ) : (
             <div className="flex h-full min-h-[20rem] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/70 p-5 text-center text-sm text-slate-400">
@@ -130,7 +181,7 @@ const Chats = () => {
   );
 };
 
-const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat, onViewProfile }) => {
+const ChatSidebar = ({ onOpenChat, onOpenGlobal, clanChat, personalChats, onNewChat, onViewProfile }) => {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90">
       <div className="flex justify-end border-b border-slate-800 px-3 py-3">
@@ -143,6 +194,23 @@ const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat, onViewPro
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+        <button
+          className="flex w-full items-center justify-between rounded-2xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-4 text-left transition hover:border-cyan-300/50"
+          onClick={onOpenGlobal}
+          type="button"
+        >
+          <span className="flex items-start gap-3">
+            <span className="rounded-2xl bg-cyan-300/10 p-3 text-cyan-200">
+              <FiGlobe />
+            </span>
+            <span>
+              <span className="block text-sm font-bold text-white">Global Chat</span>
+              <span className="block text-xs text-slate-400">Meet players and recruit</span>
+            </span>
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">Public</span>
+        </button>
+
         {clanChat && (
           <button
             type="button"
@@ -200,8 +268,21 @@ const ChatSidebar = ({ onOpenChat, clanChat, personalChats, onNewChat, onViewPro
                 <span className="block text-sm font-bold text-white">
                   {chat.username || chat.profile?.username}
                 </span>
+                {chat.latestMessage ? (
+                  <span className="block truncate text-xs text-slate-500">
+                    {chat.latestMessage}
+                  </span>
+                ) : null}
               </span>
             </button>
+            {Number(chat.unreadCount || 0) > 0 ? (
+              <span
+                aria-label={`${chat.unreadCount} new messages`}
+                className="inline-flex min-w-6 shrink-0 items-center justify-center rounded-full bg-cyan-300 px-2 py-1 text-[11px] font-black text-slate-950"
+              >
+                {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+              </span>
+            ) : null}
             {chat.playerTag || chat.profileTag || chat.profile?.profileTag ? (
               <button
                 className="shrink-0 rounded-lg border border-cyan-300/20 px-2 py-1.5 text-[11px] font-bold text-cyan-200"
@@ -301,6 +382,7 @@ const NewChatModal = ({ onClose, personalChats, onOpenChat, friends, friendsStat
 
 ChatSidebar.propTypes = {
   onOpenChat: PropTypes.func.isRequired,
+  onOpenGlobal: PropTypes.func.isRequired,
   clanChat: PropTypes.shape({
     _id: PropTypes.string,
     clanName: PropTypes.string,

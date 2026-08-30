@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   FiAlertCircle,
   FiArrowLeft,
@@ -8,6 +8,7 @@ import {
   FiSend,
 } from "react-icons/fi";
 import useSocket from "../../context/useSocket";
+import { globalChatActions } from "../../store/slices/globalChatSlice";
 import {
   appendUniqueMessage,
   dedupeMessages,
@@ -18,6 +19,7 @@ import {
 
 const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   const { summary } = useSelector((store) => store.player);
+  const dispatch = useDispatch();
   const { userClanData } = useSelector((store) => store.clan);
   const socket = useSocket();
   const chatDisplayRef = useRef(null);
@@ -57,6 +59,10 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
   useEffect(() => {
     if (!socket?.socket || !isConnected || !chatId || !senderId) return;
 
+    if (chatType === "personal") {
+      dispatch(globalChatActions.setActivePersonalThread(chatId));
+    }
+
     setIsJoiningRoom(true);
     setSendError("");
     const joinTimeout = window.setTimeout(() => {
@@ -76,6 +82,9 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
           current,
         )
       );
+      if (chatType === "personal") {
+        dispatch(globalChatActions.clearPersonalUnread(chatId));
+      }
       setIsJoiningRoom(false);
     };
 
@@ -99,8 +108,11 @@ const ChatBox = ({ chatType, selectedChat, chatName, onBack }) => {
       socket.socket.emit(`leave_${chatType}_room`, chatId);
       socket.socket.off(`${chatType}_message`, messageListener);
       socket.socket.off(`${chatType}_load_messages`, loadMessagesListener);
+      if (chatType === "personal") {
+        dispatch(globalChatActions.setActivePersonalThread(null));
+      }
     };
-  }, [chatType, chatId, senderId, socket?.socket, isConnected]);
+  }, [chatType, chatId, dispatch, senderId, socket?.socket, isConnected]);
 
   useEffect(() => {
     const container = chatDisplayRef.current;

@@ -1,5 +1,41 @@
 # Current Checkpoint
 
+## Local Slice: Global Recruitment Chat and Friend Unread Counts
+
+- Verified active players now open Chats directly into one player-only Global
+  Chat. Messages are identity-derived, limited to 500 characters, rate-limited,
+  retained to the newest 200 MongoDB rows, and initially load 50. The UI warns
+  that the room is public and keeps global state inside Redux.
+- Clicking another global sender's username opens actions to view the existing
+  public profile. A current Clan Leader or Co-leader also sees `Invite to clan`;
+  the server rechecks role, capacity, membership, verification, ban/security,
+  and Clan-open state. Invitations expire after seven days, never auto-enrol a
+  player, notify the recipient, and require explicit accept or decline from the
+  Chats pane.
+- Personal-chat sidebar rows now restore up to 50 durable conversations and
+  show a compact per-friend unread badge (capped visually at `99+`) plus the
+  latest message. Each PersonalChat stores participant last-read timestamps;
+  live messages update Redux immediately and only a successfully loaded thread
+  is marked read. No read receipt is exposed to the sender.
+- The Compete Refer & Earn banner is included in this same frontend delivery.
+  Current verification: frontend 156/156, full ESLint, and
+  the 578-module production build; backend maintained aggregate 426/426,
+  including social 25/25, social integration 9/9 and realtime 15/15; API
+  documentation covers 219/219 operations. The local Chats URL reached the
+  expected Login guard at exact viewport width with no browser warnings/errors;
+  authenticated desktop/mobile visual proof remains a follow-up.
+
+## Local Refinement: Refer & Earn Compete Banner
+
+- The player Compete page now opens with a compact responsive Refer & Earn
+  banner showing the exact ₹10 tournament-credit benefit, email-verification
+  plus first-tournament condition, and a direct CTA to `/dashboard/refer`.
+- The banner is hidden in staff read-only utility mode because staff accounts
+  cannot participate in the referral program. Referral qualification, ledger,
+  and spending rules are unchanged. Frontend passes 154/154, full ESLint, diff
+  check, and the 576-module production build. Authenticated visual proof and
+  deployment remain follow-ups.
+
 ## Local Fix: Mobile Referral Link Wrapping
 
 - The Refer & Earn share rows now wrap long referral URLs at any character on
@@ -640,10 +676,12 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   frontend passes 134/134, ESLint and the 567-module build; API docs cover
   212/212. Live authenticated S3 upload/review proof remains open.
 
-- Simple chat contract 2026-08-26: Friend, Clan and Match conversations retain
+- Simple chat contract 2026-08-26, revised 2026-08-30: Friend, Clan and Match conversations retain
   only the newest 200 MongoDB messages; Friend/Clan Redis windows retain 100
-  and initially load 50. Older messages disappear automatically, with no read/
-  unread, editing, deletion or permanent archive feature. Friend and Clan
+  and initially load 50. Older messages disappear automatically, with no read
+  receipt, editing, deletion or permanent archive feature. Friend threads now
+  keep owner-specific last-read timestamps and expose only that owner's unread
+  count in the Chats sidebar; Clan and Match unread tracking remains absent. Friend and Clan
   socket sends now wait for a 10-second delivery acknowledgement, keep failed
   text available to retry, and treat Redis cache failure as non-fatal after the
   authoritative MongoDB save. Match chat prunes beyond 200 without converting

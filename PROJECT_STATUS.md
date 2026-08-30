@@ -18,6 +18,25 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
+- Global recruitment chat and durable Friend unread counts are implemented
+  locally as of 2026-08-30. The existing verified-player `/dashboard/chats`
+  route opens Global Chat first, retains only the newest 200 messages, loads 50,
+  limits text to 500 characters, rate-limits sends, derives sender identity on
+  the server, and excludes staff, unverified, banned, and security-restricted
+  accounts. Clicking a username opens the existing public profile; only a
+  server-confirmed Clan Leader or Co-leader can send a separate seven-day Clan
+  invitation. The target must explicitly accept or decline, and acceptance
+  revalidates capacity, membership, and Clan-open state before atomically
+  reserving the player membership. Friend thread rows restore a bounded 50-row
+  list with latest-message text and owner-only unread counts backed by
+  per-participant last-read timestamps; loading the thread clears its count but
+  never exposes a sender-facing read receipt. Frontend passes 156/156, full
+  ESLint, and the 578-module build. Backend maintained aggregate passes 426/426,
+  including social 25/25, social integration 9/9 and realtime 15/15; API docs
+  cover 219/219 mounted operations. The local Chats URL reached the expected
+  Login guard at exact viewport width with no browser warnings/errors;
+  authenticated responsive visual proof remains a follow-up.
+
 - Refer & Earn completed 2026-08-30. Every verified player now owns a
   real-origin `/ref/:profileTag` link. A valid player referral is captured for
   seven days in the browser, submitted with signup, stored immutably on the
@@ -34,7 +53,9 @@ to continue the project without reopening settled decisions.
   exact email-verification plus first-completion rule, one-time reward,
   tournament-only use, and non-withdrawable/non-transferable terms. Long
   referral links wrap within their share row on narrow screens without changing
-  the copied value or widening the page. Backend
+  the copied value or widening the page. Player Compete surfaces a responsive
+  referral banner with the exact ₹10 qualification summary and a direct link;
+  staff utility mode omits it. Backend
   passes 422/422, referral proof 2/2, generated API documentation 214/214;
   frontend passes 152/152, ESLint, route smoke, diff check, and the 576-module
   production build. A local public referral link reached Signup with the code
@@ -1468,6 +1489,11 @@ Rules currently enforced:
 - Player participation commands require `User.role = player` in addition to
   normal authentication, verification, eligibility, and ownership checks.
   Active StaffAssignments never grant player participation.
+- Global/Friend/Clan chat and Clan invitation creation/response are player
+  participation. Global chat additionally requires a currently verified,
+  non-banned, unrestricted player. Clan recruitment authority is derived from
+  current Clan membership and only `LEADER`/`COLEADER` may invite; invitees
+  explicitly accept before membership changes.
 - Every privileged API verifies active staff assignments on the server.
 - `gameScopes` are Game Object IDs on a StaffAssignment.
 - Tournament Manager, Game Manager, Event Manager, and Match Operator
@@ -1514,7 +1540,7 @@ Rules currently enforced:
 | User / role | Entry route | Dashboard / UI |
 |---|---|---|
 | Visitor | `/home` | Marketing, signup, login. |
-| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, Refer & Earn, profile, game accounts, account settings. The mobile bottom bar is limited to Compete, Clan, Profile, Wallet, and Chat; the header hamburger exposes the complete player navigation as a compact icon grid. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. Refer & Earn is visible in the desktop sidebar and mobile hamburger menu and is verified-player-only; its INR 10.00 credit is earned once after the referred verified player completes a first Quick Match or Event and is spendable only through the non-withdrawable tournament-entry balance. |
+| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, Refer & Earn, profile, game accounts, account settings. Chats opens a verified-player Global Chat for discovery/recruitment, private Friend threads with owner-only unread counts, and the member's Clan channel. Global usernames link to public profiles; current Clan Leaders/Co-leaders may send consent-based Clan invitations. The mobile bottom bar is limited to Compete, Clan, Profile, Wallet, and Chat; the header hamburger exposes the complete player navigation as a compact icon grid. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. Refer & Earn is visible in the desktop sidebar and mobile hamburger menu and is verified-player-only; its INR 10.00 credit is earned once after the referred verified player completes a first Quick Match or Event and is spendable only through the non-withdrawable tournament-entry balance. |
 | Approved Host | Player dashboard | Host actions for existing games; no separate staff dashboard. |
 | Staff with any assignment | `/staff` | Role switcher. Shows one workspace card per active assignment and an explicit read-only player-dashboard utility link. Staff cannot participate from that dashboard. |
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |
@@ -3096,8 +3122,10 @@ to Completed and record any remaining risks under Required Future Flows.
 
 ## Latest Refinement: Bounded Simple Chat Delivery
 
-- The product intentionally keeps Friend, Clan and Match chat small: no read
-  receipts, unread tracking, editing, deletion controls or permanent archive.
+- The product intentionally keeps Friend, Clan and Match chat small: no sender-
+  visible read receipts, editing, deletion controls or permanent archive.
+  Friend threads now expose owner-only unread counts in the conversation list;
+  Clan and Match chat still have no unread tracking.
   MongoDB retains only the newest 200 messages per conversation. Friend and
   Clan Redis projections retain 100 and their socket room open loads 50.
 - Friend and Clan sends now use a bounded Socket.IO acknowledgement. The input

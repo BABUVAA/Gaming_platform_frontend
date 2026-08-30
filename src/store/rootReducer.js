@@ -37,6 +37,7 @@ import discordOperationsSlice from "./slices/discordOperationsSlice.js";
 import sensitiveActionSlice from "./slices/sensitiveActionSlice.js";
 import playerManagementSlice from "./slices/playerManagementSlice.js";
 import referralSlice from "./slices/referralSlice.js";
+import globalChatSlice from "./slices/globalChatSlice.js";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -80,6 +81,7 @@ const combinedReducer = combineReducers({
   playerManagement: playerManagementSlice.reducer,
   social: socialSlice.reducer,
   referrals: referralSlice.reducer,
+  globalChat: globalChatSlice,
 });
 
 const privateSliceKeys = [
@@ -113,6 +115,7 @@ const privateSliceKeys = [
   "discordOperations",
   "sensitiveAction",
   "playerManagement",
+  "globalChat",
 ];
 
 const clearPrivateSlices = (state) => {

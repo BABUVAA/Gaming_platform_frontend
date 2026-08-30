@@ -4,9 +4,11 @@ import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import {
   FaClock,
+  FaGift,
   FaGamepad,
 } from "react-icons/fa";
-import { buildTournamentOfferingPath } from "../routes/routeConstants";
+import { FaArrowRight } from "react-icons/fa6";
+import { buildTournamentOfferingPath, ROUTES } from "../routes/routeConstants";
 import { getStoredErrorMessage } from "../api/apiError";
 import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 import { useMatchmakingStore } from "../store/hooks/useStore";
@@ -240,6 +242,41 @@ const Game = () => {
 
   return (
     <div className="space-y-7 pb-8 text-slate-100">
+      {!isStaffUtilityMode ? (
+        <section
+          aria-label="Refer and earn"
+          className="relative overflow-hidden rounded-[22px] border border-emerald-300/25 bg-[linear-gradient(120deg,rgba(6,78,59,0.92),rgba(15,23,42,0.96)_58%,rgba(120,53,15,0.82))] p-4 shadow-[0_18px_48px_rgba(2,44,34,0.22)] sm:rounded-[26px] sm:p-5"
+        >
+          <div className="pointer-events-none absolute -right-10 -top-14 h-36 w-36 rounded-full bg-amber-300/15 blur-2xl" />
+          <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-emerald-300/15 blur-2xl" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3.5">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-200/25 bg-emerald-300/15 text-xl text-emerald-200 shadow-inner sm:h-12 sm:w-12">
+                <FaGift />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-200">
+                  Tournament entry credit
+                </p>
+                <h2 className="mt-1 text-lg font-black text-white sm:text-xl">
+                  Invite friends. Earn ₹10.
+                </h2>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-emerald-50/75 sm:text-sm">
+                  Get ₹10 after your invited friend verifies their email and completes their first tournament. Use it for paid entries.
+                </p>
+              </div>
+            </div>
+            <Link
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-black text-emerald-950 shadow-[0_10px_28px_rgba(2,8,23,0.22)] transition hover:bg-emerald-50"
+              to={ROUTES.REFER}
+            >
+              Refer & Earn
+              <FaArrowRight />
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-[22px] border border-slate-700 bg-slate-800/55 p-3 shadow-[0_18px_45px_rgba(2,8,23,0.16)] sm:rounded-[28px] sm:p-4 md:p-5">
         <div className="mb-3 flex items-end justify-between gap-3 sm:mb-5 sm:gap-4">
           <div>

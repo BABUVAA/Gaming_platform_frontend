@@ -20,7 +20,44 @@ test("Clan chat uses canonical current membership for every clan role", async ()
   assert.match(chats, /dispatch\(fetchUserClan\(\)\)/);
   assert.match(chats, /const clanChat = userClanData\?\.data \|\| null/);
   assert.doesNotMatch(chats, /const clanChat = profile\?\.clan/);
-  assert.doesNotMatch(chats, /LEADER|COLEADER|ELDER/);
+  assert.match(chats, /\["LEADER", "COLEADER"\]\.includes/);
+  assert.doesNotMatch(chats, /ELDER/);
+});
+
+test("global chat supports bounded public messaging and explicit recruitment actions", async () => {
+  const [chats, globalChat, slice, socketContext] = await Promise.all([
+    readFile(new URL("../src/pages/Chats.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/common/GlobalChatBox.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/store/slices/globalChatSlice.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/context/socketContext.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(chats, /Global Chat/);
+  assert.match(chats, /invitePlayerToClan\(\{ playerTag \}\)/);
+  assert.match(globalChat, /onViewProfile\(entry\.playerTag\)/);
+  assert.match(globalChat, /Invite to clan/);
+  assert.match(globalChat, /maxLength=\{500\}/);
+  assert.match(globalChat, /timeout\(10000\)\.emit/);
+  assert.match(globalChat, /Never share passwords, OTPs, or payment details/);
+  assert.match(slice, /slice\(-200\)/);
+  assert.match(socketContext, /socket\.on\("global_message", handleGlobalMessage\)/);
+});
+
+test("personal chat rows show server-backed unread message counts", async () => {
+  const [chats, chatBox, slice, socketContext] = await Promise.all([
+    readFile(new URL("../src/pages/Chats.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/common/ChatBox.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/store/slices/globalChatSlice.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/context/socketContext.jsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(slice, /path: "\/api\/users\/chats"/);
+  assert.match(slice, /receivePersonalMessage/);
+  assert.match(chats, /new messages/);
+  assert.match(chats, /chat\.unreadCount > 99 \? "99\+"/);
+  assert.match(chatBox, /clearPersonalUnread\(chatId\)/);
+  assert.match(slice, /activePersonalThreadId/);
+  assert.match(socketContext, /socket\.emit\("personal_mark_read"/);
 });
 
 test("Friends, Clan roster, and direct chats expose resilient player profiles", async () => {
@@ -65,7 +102,7 @@ test("simple socket chat waits for delivery acknowledgement", async () => {
   assert.match(chatBox, /timeout\(10000\)\.emit/);
   assert.match(chatBox, /response\?\.success !== true/);
   assert.match(chatBox, /maxLength=\{500\}/);
-  assert.doesNotMatch(chatBox, /read receipt|unread|delete message/i);
+  assert.doesNotMatch(chatBox, /read receipt|delete message/i);
 });
 
 test("personal realtime messages use the other player's ID as the UI thread", () => {

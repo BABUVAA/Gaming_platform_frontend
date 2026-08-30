@@ -81,6 +81,16 @@ test("Compete renders Events and Quick Matches as compact two-column poster card
   assert.doesNotMatch(gamePage, /SpotlightTournament/);
 });
 
+test("Compete promotes Refer and Earn without exposing it in staff utility mode", async () => {
+  const gamePage = await read("../src/pages/Game.jsx");
+
+  assert.match(gamePage, /aria-label="Refer and earn"/);
+  assert.match(gamePage, /Invite friends\. Earn ₹10\./);
+  assert.match(gamePage, /verifies their email and completes their first tournament/);
+  assert.match(gamePage, /to=\{ROUTES\.REFER\}/);
+  assert.match(gamePage, /!isStaffUtilityMode/);
+});
+
 test("player Matches separates live activity from completed history", async () => {
   const [matchesPage, matchRoom] = await Promise.all([
     read("../src/pages/Matches.jsx"),
