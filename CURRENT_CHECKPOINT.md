@@ -1,5 +1,20 @@
 # Current Checkpoint
 
+## Local Fix: Shared-Network Login and Signup Rate Limits
+
+- Public Login and Signup no longer place every anonymous request from one
+  mobile carrier, office, or shared Wi-Fi address into the same small bucket.
+  Keys remain SHA-256 fingerprints; no email or network address is stored in
+  Redis plaintext.
+- Login now permits 10 attempts per normalized email per 10 minutes and a
+  broader 100 attempts per network in that window. Signup permits 10 attempts
+  per normalized email per hour and 50 per network per hour. This preserves
+  account-focused and bot-burst protection while isolating legitimate users.
+- Other authentication, staff, money, gameplay, and realtime limits are
+  unchanged. Focused authentication coverage passes 61/61 and the complete
+  backend aggregate passes 430/430. Commit, push, deployment, and live proof
+  remain.
+
 ## Deployment Fix: Post-login Session Expiry Loop
 
 - Production diagnosis found that the public Vercel frontend and Render API are

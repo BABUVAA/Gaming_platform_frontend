@@ -221,12 +221,15 @@ to continue the project without reopening settled decisions.
   governance verification path remains the fallback until that worker is
   provisioned.
 
-- Login rate-limit capacity increased 2026-08-29 from 5 to 10 requests per
-  10-minute window. The existing public-auth protection remains an atomic
-  Redis-backed, IP-scoped fixed window mounted before credential validation;
-  request 11 is rejected with `429 RATE_LIMITED`, and unavailable protection
-  storage continues to fail closed with 503. Focused rate-limiter coverage
-  passes 6/6.
+- Login and Signup rate-limit partitioning was corrected locally on 2026-08-30.
+  Login keeps a strict 10-attempt normalized-email bucket per 10 minutes and a
+  broader 100-attempt shared-network bucket; Signup keeps 10 per normalized
+  email per hour and 50 per shared network. Atomic Redis fixed windows and
+  fail-closed 503 behavior remain, while legitimate accounts behind carrier
+  NAT, offices, or shared Wi-Fi no longer consume one small anonymous quota.
+  Redis keys contain only SHA-256 fingerprints. Other endpoint limits are
+  unchanged. Focused authentication coverage passes 61/61 and the complete
+  backend aggregate passes 430/430. Commit and deployment evidence remain.
 
 - Reusable Team names completed 2026-08-29. Team names are display labels, not
   platform identity, so different active or disbanded Teams may use the same
