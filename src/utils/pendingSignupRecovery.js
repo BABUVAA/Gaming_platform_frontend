@@ -39,10 +39,31 @@ export const savePendingSignup = (
   if (!registration?.email || registration.requiresEmailVerification !== true) {
     return;
   }
+
+  // Persist only the minimum non-secret recovery state. In particular, a
+  // replacement password must remain in component memory and never survive a
+  // reload or become readable from browser storage.
+  const safeRegistration = {
+    email: registration.email,
+    requiresEmailVerification: true,
+    ...(registration.verificationEmailSent === true
+      ? { verificationEmailSent: true }
+      : {}),
+    ...(registration.resendAvailableAt
+      ? { resendAvailableAt: registration.resendAvailableAt }
+      : {}),
+    ...(registration.referralApplied === true ? { referralApplied: true } : {}),
+    ...(registration.recovered === true ? { recovered: true } : {}),
+    ...(registration.recovered === true &&
+    typeof registration.recoveryUsername === "string" &&
+    registration.recoveryUsername
+      ? { recoveryUsername: registration.recoveryUsername }
+      : {}),
+  };
   try {
     storage?.setItem(
       STORAGE_KEY,
-      JSON.stringify({ registration, savedAt: now }),
+      JSON.stringify({ registration: safeRegistration, savedAt: now }),
     );
   } catch {
     // The live screen still works when browser storage is unavailable.

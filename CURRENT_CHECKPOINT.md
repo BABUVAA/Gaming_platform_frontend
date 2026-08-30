@@ -1,5 +1,44 @@
 # Current Checkpoint
 
+## Local Fix: Post-login Session Expiry Loop
+
+- Production diagnosis found that the public Vercel frontend and Render API are
+  different sites while auth cookies defaulted to `SameSite=Lax`. The current
+  deployed API also returned no credentialed CORS allowance for the stable
+  production alias, so a successful credential response could not reliably
+  carry its cookies into the immediate HTTP/Socket session checks.
+- Production auth cookies now default to `SameSite=None; Secure; HttpOnly`, and
+  the Render blueprint pins the exact stable Vercel origin plus the explicit
+  cross-site cookie policy. Preview deployment URLs remain untrusted by
+  default. The runbook records the same deployment contract.
+- Frontend auth tracks the active bootstrap request ID. Starting Login
+  supersedes an anonymous session check, so a delayed pre-login 401 can no
+  longer clear the newer authenticated identity or dispatch session
+  invalidation.
+- Verification passes locally: frontend 160/160, full ESLint, and the
+  578-module production build; backend aggregate 429/429, including auth
+  60/60; API docs 220/220; and both repositories' diff checks. Deployed
+  CORS/cookie/login proof remains after release.
+
+## Local Slice: OTP-authorized Pending Signup Recovery
+
+- Retrying signup for an email already in `PendingRegistration` now restores
+  the OTP step from any device without requiring the original password. The
+  player can choose a different valid username and a new strong password.
+- Replacement credentials are accepted only in the successful email-OTP
+  promotion transaction. An invalid OTP does not change the pending username
+  or password hash; the original date of birth and referral stay immutable.
+- Session storage retains only the safe pending email/resend projection and,
+  for recovery, the proposed username. Passwords, confirmation values, OTPs,
+  tokens, and hashes are explicitly excluded; after a reload the password must
+  be entered again.
+- Verification passes: frontend 159/159, full ESLint, diff check, and the
+  578-module production build; backend aggregate 428/428, including auth 59/59
+  and account-email integration 9/9; API documentation covers all 220 mounted
+  operations. The local desktop signup route rendered its complete public form
+  without console warnings/errors; the expected connection toast appeared
+  because the API was not running for that isolated visual check.
+
 ## Local Slice: Current and Durable Notifications
 
 - Notification badges now use the server's exact owner-only unread total rather
@@ -313,10 +352,10 @@
 
 ## Completed Slice: Interrupted Verification Recovery and Fixed Sidebars
 
-- Retrying signup with the same email and original password restores the
-  existing `PendingRegistration` instead of returning a dead-end conflict.
-  Original signup identity/credential data is never overwritten, and only the
-  safe verification projection reaches the browser.
+- Retrying signup with the same email restores the existing
+  `PendingRegistration` instead of returning a dead-end conflict. This was
+  later refined so a correct OTP may apply a username and password selected on
+  the recovery device; no pending data changes before verification.
 - The pending email-verification screen survives reload in session storage for
   at most 48 hours. No password, OTP, token or hash is stored; verification,
   expiry and resend rules remain server-owned.

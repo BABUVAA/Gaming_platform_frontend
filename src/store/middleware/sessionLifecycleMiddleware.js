@@ -19,7 +19,14 @@ const isProtectedRequestUnauthorized = (action, previousState) => {
 
   // Session verification is not part of the private request registry because
   // it establishes the session itself.
-  if (typePrefix === "auth/verifySession") return true;
+  if (typePrefix === "auth/verifySession") {
+    // A login attempt clears this ID. A late anonymous bootstrap 401 must not
+    // invalidate the newer authenticated session established afterward.
+    return (
+      previousState?.auth?.sessionVerificationRequestId ===
+      action.meta.requestId
+    );
+  }
 
   // Listener predicates receive the state from before this rejected action.
   // A missing ID means logout already cleared this old request, so its late

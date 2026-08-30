@@ -29,6 +29,16 @@ const SignUp = () => {
   const [pendingRegistration, setPendingRegistration] = useState(() =>
     loadPendingSignup(),
   );
+  const [recoveryDetails, setRecoveryDetails] = useState(() => ({
+    username: pendingRegistration?.recoveryUsername || "",
+    password: "",
+    confirmPassword: "",
+  }));
+  const [recoveryErrors, setRecoveryErrors] = useState({
+    username: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [verificationError, setVerificationError] = useState("");
@@ -174,8 +184,23 @@ const SignUp = () => {
       .then((registration) => {
         // Stay on the pending state because no User or login session exists
         // until the future OTP verification flow promotes this registration.
-        setPendingRegistration(registration);
-        savePendingSignup(registration);
+        const pendingState = registration.recovered
+          ? { ...registration, recoveryUsername: sanitized.username }
+          : registration;
+        setPendingRegistration(pendingState);
+        if (registration.recovered) {
+          setRecoveryDetails({
+            username: sanitized.username,
+            password: sanitized.password,
+            confirmPassword: sanitized.confirmPassword,
+          });
+          setRecoveryErrors({
+            username: "",
+            password: "",
+            confirmPassword: "",
+          });
+        }
+        savePendingSignup(pendingState);
         clearCapturedReferral();
       })
       .catch((err) => {
@@ -200,22 +225,68 @@ const SignUp = () => {
   const handleVerification = async (event) => {
     event.preventDefault();
     setVerificationError("");
+    const credentialErrors = {};
+
+    if (pendingRegistration.recovered) {
+      const username = validator.trim(recoveryDetails.username);
+      if (!validator.isLength(username, { min: 3, max: 20 })) {
+        credentialErrors.username = "Username must be 3-20 characters long.";
+      } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        credentialErrors.username =
+          "Username can only contain letters, numbers, and underscores.";
+      }
+      if (
+        !validator.isStrongPassword(recoveryDetails.password, {
+          minLength: 8,
+          minLowercase: 1,
+          minUppercase: 1,
+          minNumbers: 1,
+          minSymbols: 1,
+        })
+      ) {
+        credentialErrors.password =
+          "Password must be 8+ characters with uppercase, lowercase, number & symbol.";
+      }
+      if (recoveryDetails.password !== recoveryDetails.confirmPassword) {
+        credentialErrors.confirmPassword = "Passwords do not match.";
+      }
+    }
+
+    if (Object.keys(credentialErrors).length > 0) {
+      setRecoveryErrors(credentialErrors);
+      return;
+    }
+
+    setRecoveryErrors({ username: "", password: "", confirmPassword: "" });
     setIsVerifying(true);
     try {
       await dispatch(
         verifyEmailRegistration({
           code: verificationCode,
           email: pendingRegistration.email,
+          ...(pendingRegistration.recovered
+            ? {
+                username: validator.trim(recoveryDetails.username),
+                password: recoveryDetails.password,
+              }
+            : {}),
         }),
       ).unwrap();
       setVerificationComplete(true);
+      setRecoveryDetails({ username: "", password: "", confirmPassword: "" });
       clearPendingSignup();
       // Verification creates the player account but never a session. Take the
       // player straight to the one credential/session entry point.
       goToLogin();
     } catch (error) {
+      const fieldErrors = error?.fieldErrors || {};
+      setRecoveryErrors({
+        username: fieldErrors.username || "",
+        password: fieldErrors.password || "",
+        confirmPassword: "",
+      });
       setVerificationError(
-        error?.fieldErrors?.code ||
+        fieldErrors.code ||
           error?.message ||
           "Unable to verify this code.",
       );
@@ -315,6 +386,63 @@ const SignUp = () => {
               : "Email delivery was unavailable. Use resend to request a code."}
           </p>
           <form onSubmit={handleVerification} className="space-y-3">
+            {pendingRegistration.recovered ? (
+              <div className="space-y-3 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4">
+                <p className="text-sm leading-6 text-cyan-100">
+                  We found an unfinished signup for this email. Choose the
+                  username and password you want to use. They will only be
+                  saved after the email code is verified.
+                </p>
+                <Input
+                  name="recoveryUsername"
+                  type="text"
+                  label="Username"
+                  iconStart={<FiUser />}
+                  autoComplete="username"
+                  value={recoveryDetails.username}
+                  error={recoveryErrors.username}
+                  onChange={(event) => {
+                    const username = event.target.value;
+                    setRecoveryDetails((current) => ({ ...current, username }));
+                    setPendingRegistration((current) => {
+                      const updated = { ...current, recoveryUsername: username };
+                      savePendingSignup(updated);
+                      return updated;
+                    });
+                  }}
+                />
+                <Input
+                  name="recoveryPassword"
+                  type="password"
+                  label="New password"
+                  iconStart={<FiLock />}
+                  autoComplete="new-password"
+                  value={recoveryDetails.password}
+                  error={recoveryErrors.password}
+                  onChange={(event) =>
+                    setRecoveryDetails((current) => ({
+                      ...current,
+                      password: event.target.value,
+                    }))
+                  }
+                />
+                <Input
+                  name="recoveryConfirmPassword"
+                  type="password"
+                  label="Confirm new password"
+                  iconStart={<FiLock />}
+                  autoComplete="new-password"
+                  value={recoveryDetails.confirmPassword}
+                  error={recoveryErrors.confirmPassword}
+                  onChange={(event) =>
+                    setRecoveryDetails((current) => ({
+                      ...current,
+                      confirmPassword: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            ) : null}
             <Input
               name="verificationCode"
               type="text"
@@ -360,6 +488,16 @@ const SignUp = () => {
               setPendingRegistration(null);
               setVerificationCode("");
               setVerificationError("");
+              setRecoveryDetails({
+                username: "",
+                password: "",
+                confirmPassword: "",
+              });
+              setRecoveryErrors({
+                username: "",
+                password: "",
+                confirmPassword: "",
+              });
             }}
           >
             Use another email

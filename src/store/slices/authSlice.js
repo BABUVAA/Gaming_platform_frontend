@@ -48,6 +48,8 @@ const selectPendingRegistration = (responseData = {}) => {
   return {
     email: registration.email,
     isVerified: false,
+    referralApplied: registration.referralApplied === true,
+    recovered: registration.recovered === true,
     resendAvailableAt: registration.resendAvailableAt || null,
     requiresEmailVerification: true,
     verificationEmailSent: registration.verificationEmailSent === true,
@@ -225,6 +227,7 @@ const authSlice = createSlice({
     sessionStatus: hasUnauthenticatedSessionHint()
       ? SESSION_STATUS.UNAUTHENTICATED
       : SESSION_STATUS.UNKNOWN,
+    sessionVerificationRequestId: null,
     error: null,
   },
   reducers: {
@@ -235,19 +238,24 @@ const authSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-      .addCase(verifySession.pending, (state) => {
+      .addCase(verifySession.pending, (state, action) => {
         // Route guards wait during this state instead of redirecting a returning
         // user before the backend has checked the secure session cookie.
         state.sessionStatus = SESSION_STATUS.CHECKING;
+        state.sessionVerificationRequestId = action.meta.requestId;
         state.error = null;
       })
       .addCase(verifySession.fulfilled, (state, action) => {
+        if (state.sessionVerificationRequestId !== action.meta.requestId) return;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.sessionStatus = SESSION_STATUS.AUTHENTICATED;
+        state.sessionVerificationRequestId = null;
         state.error = null;
       })
       .addCase(verifySession.rejected, (state, action) => {
+        if (state.sessionVerificationRequestId !== action.meta.requestId) return;
+        state.sessionVerificationRequestId = null;
         if (action.meta.aborted || action.meta.condition) {
           state.sessionStatus = state.isAuthenticated
             ? SESSION_STATUS.AUTHENTICATED
@@ -270,6 +278,7 @@ const authSlice = createSlice({
         // Private frontend state is cleared immediately so sockets and guarded
         // screens close even while the backend invalidates the Redis session.
         clearAuthenticatedState(state);
+        state.sessionVerificationRequestId = null;
         state.sessionStatus = SESSION_STATUS.CHECKING;
       })
       .addCase(logout.fulfilled, (state) => {
@@ -283,6 +292,7 @@ const authSlice = createSlice({
       })
       .addCase(sessionInvalidated, (state, action) => {
         clearAuthenticatedState(state);
+        state.sessionVerificationRequestId = null;
         state.error = action.payload || null;
       })
       .addCase(register.pending, (state) => {
@@ -308,6 +318,9 @@ const authSlice = createSlice({
 
     addThunkLifecycleMatchers(builder, credentialThunks, {
       pending: (state) => {
+        // A credential attempt supersedes any anonymous bootstrap check that
+        // started before the player submitted Login.
+        state.sessionVerificationRequestId = null;
         state.sessionStatus = SESSION_STATUS.CHECKING;
         state.error = null;
       },

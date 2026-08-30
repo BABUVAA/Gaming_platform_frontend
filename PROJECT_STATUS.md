@@ -1051,11 +1051,15 @@ Exit: a clean checkout has a reliable quality command in each repository.
    attempts, resend cooldown, and transactional promotion create the verified
    player account. Live provider delivery still requires environment setup and
    integration evidence before real-money participation is available.
-   Interrupted signup is recoverable: resubmitting the same email and original
-   password returns the existing safe pending-verification state rather than a
-   duplicate-registration conflict. The browser retains only that safe state
-   in session storage for up to the pending record's 48-hour lifetime; it never
-   stores the signup password, OTP, or credential hash.
+   Interrupted signup is recoverable from any device: resubmitting the same
+   pending email returns its safe verification state, and the player may choose
+   a new valid username and password. Those replacements are applied only by
+   the successful email-OTP promotion transaction; an invalid OTP leaves the
+   original pending identity and credential hash unchanged. The browser retains
+   only the pending email, resend state, and proposed username in session
+   storage for up to the pending record's 48-hour lifetime; it never stores a
+   signup password, OTP, or credential hash. The original date of birth and
+   referral remain immutable.
 3. Login restores the protected player shell at `/dashboard`; session refresh,
    logout, banned-account handling, and account recovery remain server-owned.
 4. Player completes profile, game-account connection where a Game requires it,
@@ -1622,15 +1626,27 @@ staff-classified account and the frontend must present it as view-only.
 - Secure cookie-based authentication with short-lived access tokens, refresh
   rotation, Redis-backed session validation, session versioning, and logout
   revocation.
+- Post-login deployment recovery was corrected locally on 2026-08-30. The
+  stable Vercel frontend and Render API are cross-site, so production auth
+  cookies default to `SameSite=None; Secure; HttpOnly`; the Render blueprint
+  binds CORS/CSRF to the exact stable production frontend alias. Per-deployment
+  preview aliases stay denied. Frontend session bootstrap is request-ID-aware,
+  so a delayed anonymous 401 started before Login cannot invalidate a newer
+  successful session. Deployment plus a real post-signup login/session/socket
+  proof remain required before closing the production incident.
 - Player identity email flow: signup creates a pending registration and asks
   the backend Resend service to deliver a 6-digit OTP. Codes are HMAC-hashed,
   expire after 10 minutes, allow five failed attempts, and have a 60-second
   resend cooldown. Successful verification transactionally promotes the
   pending record to a verified `User` without creating a login session.
-- Pending signup recovery requires the original signup password, preserves the
-  first username/date/password hash, survives a same-tab reload, and exposes
-  only the familiar display email plus resend state. Concurrent duplicate
-  signup requests converge on that same pending record.
+- Pending signup recovery works from another device without the original
+  password. The player can choose a replacement username and strong password,
+  which become authoritative only after a correct email OTP; the original
+  pending date of birth and referral remain immutable. Recovery survives a
+  same-tab reload using only the display email, resend state, and non-secret
+  proposed username; passwords, OTPs, tokens, and hashes are never stored in
+  browser storage. Concurrent duplicate signup requests converge on the same
+  pending record.
 - Staff recent-authentication recovery is global to the authenticated app
   shell. When a protected staff/governance Redux command returns
   `RECENT_AUTHENTICATION_REQUIRED`, the server-loaded staff summary opens one
