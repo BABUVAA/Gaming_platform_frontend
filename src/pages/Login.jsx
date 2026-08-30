@@ -7,10 +7,6 @@ import { FiEye, FiEyeOff, FiLock, FiMail, FiShield } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
 import { useAuthStore } from "../store/useStore";
 import { API_ERROR_CODE } from "../api/apiError";
-import {
-  hasAuthCookieConsent,
-  saveAuthCookieConsent,
-} from "../utils/authCookieConsent";
 
 // Static presentation data lives outside the component so React does not need
 // to recreate or memoize it during every form-state update.
@@ -25,21 +21,12 @@ const Login = () => {
   const { signIn } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [cookieConsentAccepted, setCookieConsentAccepted] = useState(() =>
-    hasAuthCookieConsent(),
-  );
   const [errors, setErrors] = useState({
     email: "",
     password: "",
     form: "",
     cookiesBlocked: false,
   });
-
-  const handleCookieConsentChange = (event) => {
-    const accepted = event.target.checked;
-    setCookieConsentAccepted(accepted);
-    saveAuthCookieConsent(accepted);
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -66,11 +53,6 @@ const Login = () => {
 
     if (!credentials.password) {
       newErrors.password = "Password is required.";
-    }
-
-    if (!cookieConsentAccepted) {
-      newErrors.form =
-        "Allow the required login cookies before entering the platform.";
     }
 
     // Invalid local input never reaches the backend or starts loading state.
@@ -179,24 +161,6 @@ const Login = () => {
           error={errors.password}
           autoComplete="current-password"
         />
-
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-700/80 bg-slate-900/45 px-4 py-3 text-sm text-slate-300">
-          <input
-            type="checkbox"
-            checked={cookieConsentAccepted}
-            onChange={handleCookieConsentChange}
-            className="mt-0.5 h-4 w-4 shrink-0 accent-amber-300"
-          />
-          <span>
-            <span className="block font-semibold text-slate-100">
-              Allow required login cookies
-            </span>
-            <span className="mt-1 block text-xs leading-5 text-slate-400">
-              These secure cookies keep you signed in and are not used for
-              advertising.
-            </span>
-          </span>
-        </label>
 
         {errors.form ? (
           <div

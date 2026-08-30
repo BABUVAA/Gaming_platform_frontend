@@ -1649,17 +1649,18 @@ staff-classified account and the frontend must present it as view-only.
   canonical frontend, and an existing staff cookie restored its authenticated
   workspace console-clean. A fresh player post-signup login/session/socket
   journey remains the final credentialed incident proof.
-- The follow-up browser-specific recovery is complete locally. Login requires
-  explicit required-cookie consent, stores only that choice, and confirms the
-  new cookie with a raw session read before showing success or entering the
+- The follow-up browser-specific recovery is complete locally. Login remains
+  uncluttered with no required-cookie consent prompt or stored preference, and
+  confirms the new cookie silently with a raw session read before showing success or entering the
   dashboard. Failed delivery produces one `AUTH_COOKIE_BLOCKED` warning with
   iPhone/browser-setting guidance, so concurrent protected bootstrap requests
   cannot create the recorded double-expiry loop. Production cross-site auth
   cookies now add `Partitioned` to `HttpOnly; Secure; SameSite=None`; login,
   refresh, and logout clear both legacy and partitioned variants during the
-  rollout. Frontend passes 165/165, ESLint, diff check, and a 579-module build;
+  rollout. Frontend passes 164/164, ESLint, diff check, and a 578-module build;
   backend passes 430/430 and diff check. Local browser proof confirmed the
-  consent gate and inline warning. Deployment and affected-device proof remain.
+  original Email/Password form without a consent prompt. Deployment and
+  affected-device proof remain.
 - Player identity email flow: signup creates a pending registration and asks
   the backend Resend service to deliver a 6-digit OTP. Codes are HMAC-hashed,
   expire after 10 minutes, allow five failed attempts, and have a 60-second
