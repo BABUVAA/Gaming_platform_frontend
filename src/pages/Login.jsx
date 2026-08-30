@@ -6,6 +6,11 @@ import validator from "validator";
 import { FiEye, FiEyeOff, FiLock, FiMail, FiShield } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
 import { useAuthStore } from "../store/useStore";
+import { API_ERROR_CODE } from "../api/apiError";
+import {
+  hasAuthCookieConsent,
+  saveAuthCookieConsent,
+} from "../utils/authCookieConsent";
 
 // Static presentation data lives outside the component so React does not need
 // to recreate or memoize it during every form-state update.
@@ -20,11 +25,21 @@ const Login = () => {
   const { signIn } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [cookieConsentAccepted, setCookieConsentAccepted] = useState(() =>
+    hasAuthCookieConsent(),
+  );
   const [errors, setErrors] = useState({
     email: "",
     password: "",
     form: "",
+    cookiesBlocked: false,
   });
+
+  const handleCookieConsentChange = (event) => {
+    const accepted = event.target.checked;
+    setCookieConsentAccepted(accepted);
+    saveAuthCookieConsent(accepted);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -53,17 +68,28 @@ const Login = () => {
       newErrors.password = "Password is required.";
     }
 
+    if (!cookieConsentAccepted) {
+      newErrors.form =
+        "Allow the required login cookies before entering the platform.";
+    }
+
     // Invalid local input never reaches the backend or starts loading state.
     if (Object.keys(newErrors).length > 0) {
       setErrors({
         email: newErrors.email || "",
         password: newErrors.password || "",
-        form: "",
+        form: newErrors.form || "",
+        cookiesBlocked: false,
       });
       return;
     }
 
-    setErrors({ email: "", password: "", form: "" });
+    setErrors({
+      email: "",
+      password: "",
+      form: "",
+      cookiesBlocked: false,
+    });
     setIsSubmitting(true);
 
     try {
@@ -73,6 +99,8 @@ const Login = () => {
       goToDashboard();
     } catch (error) {
       const fieldErrors = error?.fieldErrors || {};
+      const cookiesBlocked =
+        error?.code === API_ERROR_CODE.AUTH_COOKIE_BLOCKED;
 
       setErrors({
         email: fieldErrors.email || "",
@@ -82,6 +110,7 @@ const Login = () => {
           fieldErrors.email ||
           fieldErrors.password ||
           "Unable to login. Please check your details.",
+        cookiesBlocked,
       });
     } finally {
       // A failed request re-enables the form; navigation unmounts the page
@@ -151,13 +180,43 @@ const Login = () => {
           autoComplete="current-password"
         />
 
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-700/80 bg-slate-900/45 px-4 py-3 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            checked={cookieConsentAccepted}
+            onChange={handleCookieConsentChange}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-amber-300"
+          />
+          <span>
+            <span className="block font-semibold text-slate-100">
+              Allow required login cookies
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-slate-400">
+              These secure cookies keep you signed in and are not used for
+              advertising.
+            </span>
+          </span>
+        </label>
+
         {errors.form ? (
           <div
             role="alert"
             aria-live="polite"
-            className="rounded-xl border border-rose-400/30 bg-rose-950/30 px-4 py-3 text-sm text-rose-100"
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              errors.cookiesBlocked
+                ? "border-amber-300/35 bg-amber-950/30 text-amber-100"
+                : "border-rose-400/30 bg-rose-950/30 text-rose-100"
+            }`}
           >
-            {errors.form}
+            <p className="font-semibold">
+              {errors.cookiesBlocked ? "Login cookies are blocked" : errors.form}
+            </p>
+            {errors.cookiesBlocked ? (
+              <p className="mt-1 leading-5">
+                {errors.form} On iPhone, check the browser privacy or
+                cross-site tracking setting before retrying.
+              </p>
+            ) : null}
           </div>
         ) : null}
 

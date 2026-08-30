@@ -8,6 +8,8 @@ import addThunkLifecycleMatchers from "../reducers/addThunkLifecycleMatchers";
 import { sessionInvalidated } from "../actions/sessionActions";
 import createApiThunk from "../thunks/createApiThunk";
 import { fetchAccount } from "./accountSlice";
+import { confirmAuthenticationCookies } from "../../api/axios-api";
+import { API_ERROR_CODE } from "../../api/apiError";
 
 // Session status represents what the frontend knows about the server session.
 // `unknown` is intentionally different from unauthenticated because the
@@ -120,8 +122,28 @@ export const logout = createApiThunk("auth/logout", {
 export const login = createApiThunk(
   "auth/login",
   {
-    path: "/api/auth/login",
-    method: "post",
+    request: async ({ api, arg, signal }) => {
+      const response = await api.post("/api/auth/login", arg, { signal });
+
+      try {
+        await confirmAuthenticationCookies({ signal });
+      } catch (error) {
+        if (error.response?.status === 401) {
+          throw {
+            status: 401,
+            code: API_ERROR_CODE.AUTH_COOKIE_BLOCKED,
+            message:
+              "Your browser blocked the required login cookies. Allow cross-site cookies for this site, then try again.",
+            fieldErrors: {},
+            requestId: null,
+            retryable: false,
+          };
+        }
+        throw error;
+      }
+
+      return response;
+    },
     selectData: (response) => selectAuthIdentity(response.data),
     errorMessage: "Login failed.",
     onSuccess: () => {

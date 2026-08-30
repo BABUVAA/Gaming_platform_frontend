@@ -9,6 +9,7 @@ export const API_ERROR_CODE = Object.freeze({
   VALIDATION: "VALIDATION_ERROR",
   RATE_LIMITED: "RATE_LIMITED",
   RECENT_AUTHENTICATION_REQUIRED: "RECENT_AUTHENTICATION_REQUIRED",
+  AUTH_COOKIE_BLOCKED: "AUTH_COOKIE_BLOCKED",
   SERVER: "SERVER_ERROR",
   NETWORK: "NETWORK_ERROR",
   TIMEOUT: "TIMEOUT",
@@ -176,6 +177,15 @@ export const getApiErrorToast = (error) => {
     ? error
     : normalizeApiError(error);
   const status = normalizedError.status;
+
+  if (normalizedError.code === API_ERROR_CODE.AUTH_COOKIE_BLOCKED) {
+    return {
+      duration: 10000,
+      message: normalizedError.message,
+      title: "Cookies blocked",
+      type: "warning",
+    };
+  }
 
   if (normalizedError.code === API_ERROR_CODE.RATE_LIMITED || status === 429) {
     return {

@@ -1,5 +1,24 @@
 # Current Checkpoint
 
+## Local Fix: Required Login Cookie Consent and Delivery Proof
+
+- Login now requires explicit acceptance of the two secure authentication
+  cookies and remembers only that non-sensitive consent choice. The page states
+  that the cookies keep the player signed in and are not advertising cookies.
+- Successful credentials are followed by a raw `/api/auth/session` check before
+  Redux authenticates, navigates, or displays the success toast. A browser that
+  rejects the cookie stays on Login and receives one actionable
+  `Cookies blocked` warning instead of success followed by duplicate session
+  expiry errors.
+- Cross-site production cookies now opt into partitioned storage while retaining
+  `HttpOnly`, `Secure`, and `SameSite=None`. Each successful login/refresh clears
+  both legacy unpartitioned and partitioned variants before setting the fresh
+  cookie, and logout clears both variants as well.
+- Verification passes locally: frontend 165/165, full ESLint, diff check, and
+  the 579-module production build; backend aggregate 430/430 and diff check.
+  Local browser proof confirmed the consent control and its pre-submit warning.
+  Commit, push, deployment, and a real affected-iPhone login remain pending.
+
 ## Local Refinement: Password Visibility Controls
 
 - Login, Signup, and recovered-signup password and confirmation fields now

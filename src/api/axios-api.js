@@ -26,6 +26,14 @@ const waitForCookiePropagation = () =>
     setTimeout(resolve, 100);
   });
 
+// Login uses the raw credentialed client so a missing cookie is observed
+// directly instead of entering the normal refresh interceptor and producing
+// multiple misleading session-expiry failures.
+export const confirmAuthenticationCookies = async ({ signal } = {}) => {
+  await waitForCookiePropagation();
+  return refreshClient.get("/api/auth/session", { signal });
+};
+
 export const refreshAuthentication = () => {
   if (activeRefreshRequest) return activeRefreshRequest;
 
