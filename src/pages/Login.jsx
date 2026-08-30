@@ -3,7 +3,7 @@ import { Form } from "react-router-dom";
 import useNavigateHook from "../hooks/useNavigateHook";
 import { AuthShell, Input, Button } from "../components";
 import validator from "validator";
-import { FiLock, FiMail, FiShield } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLock, FiMail, FiShield } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
 import { useAuthStore } from "../store/useStore";
 
@@ -19,6 +19,7 @@ const Login = () => {
   const { goToDashboard, goToForgetPWD, goToSignUp } = useNavigateHook();
   const { signIn } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({
     email: "",
     password: "",
@@ -138,11 +139,14 @@ const Login = () => {
         />
         <Input
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="Enter your password"
           label="Password"
           ariaLabel="Password"
           iconStart={<FiLock />}
+          iconEnd={showPassword ? <FiEyeOff /> : <FiEye />}
+          iconEndLabel={showPassword ? "Hide password" : "Show password"}
+          onIconEndClick={() => setShowPassword((current) => !current)}
           error={errors.password}
           autoComplete="current-password"
         />

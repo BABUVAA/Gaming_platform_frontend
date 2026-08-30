@@ -232,6 +232,13 @@ to continue the project without reopening settled decisions.
   backend aggregate passes 430/430. Backend commit `db77fb6` is pushed to
   `main`; deployment evidence remains.
 
+- Password visibility controls were completed locally on 2026-08-30. Login,
+  initial Signup, and recovered-signup password/confirmation fields expose
+  independent accessible eye buttons while remaining masked by default. The
+  shared Input uses a labelled non-submit button, and credential values,
+  autocomplete, validation, and transport are unchanged. Frontend verification
+  passes 163/163, full ESLint, diff check, and the 578-module production build.
+
 - Reusable Team names completed 2026-08-29. Team names are display labels, not
   platform identity, so different active or disbanded Teams may use the same
   name. Immutable Team IDs remain authoritative for invitations, competition,

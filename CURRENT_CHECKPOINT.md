@@ -1,5 +1,17 @@
 # Current Checkpoint
 
+## Local Refinement: Password Visibility Controls
+
+- Login, Signup, and recovered-signup password and confirmation fields now
+  include independent eye buttons. Credentials remain masked by default, and
+  toggling visibility does not change form values, validation, autocomplete,
+  or submission behavior.
+- The shared Input renders each interactive end icon as a labelled,
+  keyboard-focusable `type="button"`, so it cannot accidentally submit the
+  form. Static accessibility coverage protects the Login and Signup wiring.
+- Frontend verification passes 163/163, full ESLint, diff check, and the
+  578-module production build. Commit and push were requested for this slice.
+
 ## Local Fix: Shared-Network Login and Signup Rate Limits
 
 - Public Login and Signup no longer place every anonymous request from one

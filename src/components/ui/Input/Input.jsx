@@ -14,6 +14,8 @@ const Input = ({
   label,
   iconStart = null,
   iconEnd = null,
+  iconEndLabel,
+  onIconEndClick,
   className = "",
   ariaLabel,
   ...props
@@ -61,11 +63,21 @@ const Input = ({
           {...props}
         />
 
-        {iconEnd && (
+        {iconEnd && onIconEndClick ? (
+          <button
+            type="button"
+            aria-label={iconEndLabel}
+            onClick={onIconEndClick}
+            disabled={disabled}
+            className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 transition hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-300 disabled:cursor-not-allowed disabled:text-slate-600"
+          >
+            {iconEnd}
+          </button>
+        ) : iconEnd ? (
           <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500">
             {iconEnd}
           </span>
-        )}
+        ) : null}
       </div>
       {error && <p className="mt-2 text-sm text-rose-300">{error}</p>}
     </div>
@@ -96,6 +108,8 @@ Input.propTypes = {
   label: PropTypes.string,
   iconStart: PropTypes.node,
   iconEnd: PropTypes.node,
+  iconEndLabel: PropTypes.string,
+  onIconEndClick: PropTypes.func,
   className: PropTypes.string,
   ariaLabel: PropTypes.string,
 };

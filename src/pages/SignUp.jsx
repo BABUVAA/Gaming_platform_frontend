@@ -8,7 +8,15 @@ import {
 import { AuthShell, Button, Input } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
 import validator from "validator";
-import { FiCalendar, FiGift, FiLock, FiMail, FiUser } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiEye,
+  FiEyeOff,
+  FiGift,
+  FiLock,
+  FiMail,
+  FiUser,
+} from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
 import {
   clearPendingSignup,
@@ -24,6 +32,8 @@ const SignUp = () => {
   const { goToLogin } = useNavigateHook();
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [referralCode, setReferralCode] = useState(() => loadCapturedReferral());
   const [referralLocked, setReferralLocked] = useState(() => Boolean(loadCapturedReferral()));
   const [pendingRegistration, setPendingRegistration] = useState(() =>
@@ -413,9 +423,12 @@ const SignUp = () => {
                 />
                 <Input
                   name="recoveryPassword"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   label="New password"
                   iconStart={<FiLock />}
+                  iconEnd={showPassword ? <FiEyeOff /> : <FiEye />}
+                  iconEndLabel={showPassword ? "Hide password" : "Show password"}
+                  onIconEndClick={() => setShowPassword((current) => !current)}
                   autoComplete="new-password"
                   value={recoveryDetails.password}
                   error={recoveryErrors.password}
@@ -428,9 +441,18 @@ const SignUp = () => {
                 />
                 <Input
                   name="recoveryConfirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   label="Confirm new password"
                   iconStart={<FiLock />}
+                  iconEnd={showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                  iconEndLabel={
+                    showConfirmPassword
+                      ? "Hide confirmed password"
+                      : "Show confirmed password"
+                  }
+                  onIconEndClick={() =>
+                    setShowConfirmPassword((current) => !current)
+                  }
                   autoComplete="new-password"
                   value={recoveryDetails.confirmPassword}
                   error={recoveryErrors.confirmPassword}
@@ -573,19 +595,31 @@ const SignUp = () => {
         />
         <Input
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="Create a strong password"
           label="Password"
           iconStart={<FiLock />}
+          iconEnd={showPassword ? <FiEyeOff /> : <FiEye />}
+          iconEndLabel={showPassword ? "Hide password" : "Show password"}
+          onIconEndClick={() => setShowPassword((current) => !current)}
           error={errors.password}
           autoComplete="new-password"
         />
         <Input
           name="confirmPassword"
-          type="password"
+          type={showConfirmPassword ? "text" : "password"}
           placeholder="Confirm your password"
           label="Confirm password"
           iconStart={<FiLock />}
+          iconEnd={showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+          iconEndLabel={
+            showConfirmPassword
+              ? "Hide confirmed password"
+              : "Show confirmed password"
+          }
+          onIconEndClick={() =>
+            setShowConfirmPassword((current) => !current)
+          }
           error={errors.confirmPassword}
           autoComplete="new-password"
         />
