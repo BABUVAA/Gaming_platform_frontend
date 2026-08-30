@@ -30,6 +30,7 @@ const LazyComponents = {
   DiscordOperations: lazy(() => import("../pages/DiscordOperations.jsx")),
   Login: lazy(() => import("../pages/Login")),
   SignUp: lazy(() => import("../pages/SignUp")),
+  ReferralLanding: lazy(() => import("../pages/ReferralLanding.jsx")),
   Clan: lazy(() => import("../pages/Clan")),
   Friends: lazy(() => import("../pages/Friends.jsx")),
   Teams: lazy(() => import("../pages/Teams.jsx")),

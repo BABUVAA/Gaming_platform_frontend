@@ -7,6 +7,7 @@ export const ROUTES = {
   SIGNUP: "/signup",
   FORGOT_PASSWORD: "/forgotPWD",
   RESET_PASSWORD: "/reset-password",
+  REFERRAL_LANDING: "/ref/:referralCode",
   DASHBOARD: "/dashboard",
   ADMIN_PANEL: "/panelAdmin",
   STAFF: "/staff",

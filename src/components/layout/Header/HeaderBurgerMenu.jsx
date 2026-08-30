@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FiBell, FiMenu } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
@@ -45,6 +45,22 @@ const HeaderBurgerMenu = () => {
   const isStaffUtilityMode = isStaffUtilitySummary(playerSummary);
 
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
 
   // Authenticated navigation follows the light dashboard palette, while the
   // public menu retains the dark marketing presentation used on the home page.
@@ -132,16 +148,34 @@ const HeaderBurgerMenu = () => {
 
         {isAuthenticated ? (
           <>
-            {dashboardNavigation.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={closeMenu}
-                className="block rounded-2xl border border-slate-600 bg-slate-800 px-4 py-4 text-sm font-bold text-slate-100 shadow-[0_12px_26px_rgba(2,8,23,0.16)] transition hover:border-cyan-400/50 hover:bg-slate-700 hover:text-cyan-200"
-              >
-                {item.label}
-              </Link>
-            ))}
+            <p className="px-1 pb-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
+              All player areas
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {dashboardNavigation.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === ROUTES.DASHBOARD}
+                    onClick={closeMenu}
+                    className={({ isActive }) =>
+                      `flex min-h-20 items-center gap-3 rounded-xl border px-3 py-3 text-sm font-bold shadow-[0_10px_24px_rgba(2,8,23,0.14)] transition ${
+                        isActive
+                          ? "border-cyan-400/50 bg-cyan-400/15 text-cyan-100"
+                          : "border-slate-600 bg-slate-800 text-slate-200 hover:border-cyan-400/40 hover:bg-slate-700"
+                      }`
+                    }
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-cyan-300">
+                      <Icon size={17} />
+                    </span>
+                    <span className="min-w-0 leading-tight">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -188,11 +222,18 @@ const HeaderBurgerMenu = () => {
         onClick={() => setMenuOpen((current) => !current)}
         className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-2 text-slate-200 shadow-[0_10px_30px_rgba(2,8,23,0.18)] transition hover:border-cyan-400/50"
         aria-label="Open menu"
+        aria-expanded={menuOpen}
+        aria-controls="mobile-player-menu"
       >
         <FiMenu size={22} />
       </button>
 
-      {menuOpen ? createPortal(menuOverlay, document.body) : null}
+      {menuOpen
+        ? createPortal(
+            <div id="mobile-player-menu">{menuOverlay}</div>,
+            document.body,
+          )
+        : null}
     </nav>
   );
 };

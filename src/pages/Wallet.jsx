@@ -49,6 +49,7 @@ import {
 
 const ledgerTypeLabels = {
   adjustment: "Wallet adjustment",
+  referral_bonus: "Referral tournament credit",
   deposit: "Funds deposited",
   entry_capture: "Entry fee settled",
   entry_hold: "Entry fee held",

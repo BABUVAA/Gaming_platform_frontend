@@ -11,6 +11,7 @@ import {
   FaWallet,
   FaLink,
   FaDiscord,
+  FaGift,
   FaUserFriends,
 } from "react-icons/fa";
 import { MdOutlineCastle } from "react-icons/md";
@@ -139,6 +140,8 @@ const staffUtilityNavigation = [
 const playerNavigation = [
   {
     label: "Compete",
+    mobilePrimary: true,
+    mobileOrder: 1,
     description: "Find your next challenge",
     to: ROUTES.DASHBOARD,
     icon: FaGamepad,
@@ -146,6 +149,9 @@ const playerNavigation = [
   },
   {
     label: "Clans",
+    mobileLabel: "Clan",
+    mobilePrimary: true,
+    mobileOrder: 2,
     description: "Build and play together",
     to: ROUTES.CLAN,
     icon: MdOutlineCastle,
@@ -174,6 +180,9 @@ const playerNavigation = [
   },
   {
     label: "Chats",
+    mobileLabel: "Chat",
+    mobilePrimary: true,
+    mobileOrder: 5,
     description: "Talk with friends and teams",
     to: ROUTES.CHATS,
     icon: FaLayerGroup,
@@ -181,13 +190,25 @@ const playerNavigation = [
   },
   {
     label: "Wallet",
+    mobilePrimary: true,
+    mobileOrder: 4,
     description: "Balance, prizes and history",
     to: ROUTES.WALLET,
     icon: FaWallet,
     match: [ROUTES.WALLET],
   },
   {
+    label: "Refer & Earn",
+    mobileLabel: "Earn",
+    description: "Invite players and earn tournament credit",
+    to: ROUTES.REFER,
+    icon: FaGift,
+    match: [ROUTES.REFER],
+  },
+  {
     label: "Profile",
+    mobilePrimary: true,
+    mobileOrder: 3,
     description: "Gaming record and identity",
     to: ROUTES.PROFILE,
     icon: FaUser,

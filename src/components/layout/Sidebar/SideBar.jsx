@@ -10,6 +10,9 @@ const SideBar = () => {
   const dashboardNavigation = getDashboardNavigation(playerSummary, {
     includeStaffWorkspaces: false,
   });
+  const mobileNavigation = dashboardNavigation.filter(
+    (item) => item.mobilePrimary,
+  ).sort((left, right) => left.mobileOrder - right.mobileOrder);
   return (
     <>
       <aside className="hidden md:fixed md:bottom-0 md:left-[max(0px,calc((100vw-1600px)/2))] md:top-20 md:z-30 md:flex md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-3 md:py-4 md:backdrop-blur">
@@ -55,7 +58,7 @@ const SideBar = () => {
       </aside>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex gap-1 overflow-x-auto border-t border-slate-700 bg-[#182235]/95 px-2 py-2 shadow-[0_-12px_30px_rgba(2,8,23,0.18)] backdrop-blur md:hidden">
-        {dashboardNavigation.map((item) => {
+        {mobileNavigation.map((item) => {
           const Icon = item.icon;
 
           return (

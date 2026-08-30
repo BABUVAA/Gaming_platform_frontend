@@ -1,5 +1,47 @@
 # Current Checkpoint
 
+## Local Fix: Compact Mobile Navigation and Refer & Earn Discovery
+
+- The mobile bottom bar now carries exactly five requested player actions:
+  Compete, Clan, Profile, Wallet, and Chat. Every player destination remains in the
+  header hamburger menu, which now uses a compact two-column icon grid, marks
+  the active route, closes on Escape, and prevents background scrolling while
+  open.
+- Refer & Earn appears in the canonical player navigation immediately after
+  Wallet. The full `Refer & Earn` label and gift icon are easy to find in the
+  mobile hamburger menu and desktop sidebar; the existing verified-player
+  `/dashboard/refer` route is unchanged.
+- Navigation regression coverage confirms the five mobile primary actions,
+  the complete hamburger list, the Refer & Earn item, and staff exclusion.
+  Frontend passes 153/153, full ESLint, diff check, and the 576-module
+  production build. The local browser reached the responsive public shell, but
+  authenticated menu proof remains a follow-up because no local player session
+  was available. Deployment remains a follow-up.
+
+## Local Slice: Refer & Earn Tournament Credit
+
+- A player's real-origin `/ref/:profileTag` link now carries a valid referral
+  into Signup for seven days, displays the attached code, submits it through
+  the Redux auth boundary, and preserves it immutably through pending OTP
+  verification. OTP promotion creates one database-unique Referral for the new
+  player; invalid, self, staff, banned, security-restricted and duplicate
+  referred-user attribution fails closed.
+- When the referred verified player completes their first Quick Match or Event,
+  the eligible referrer receives INR 10.00 (1,000 minor units) exactly once via
+  an idempotent balanced ledger posting. It credits `available`, so existing
+  paid competition holds can spend it, but it never changes `withdrawable` and
+  cannot be transferred. The owner-only read returns aggregate progress plus a
+  bounded 50-row recent invite list.
+- Refer & Earn now shows the live code/link, successful and pending counts,
+  total earned, invite progress, and the exact verification, first-completion,
+  one-time, tournament-only and anti-abuse rules. Wallet history labels the
+  posting as referral tournament credit. Backend passes 422/422 and referral
+  proof 2/2; API documentation covers 214/214 operations. Frontend passes
+  152/152, ESLint, route smoke, diff check, and the 576-module production build.
+  A local referral link reached Signup with the code visibly applied and no
+  console warnings/errors. Authenticated populated visual proof and deployment
+  remain follow-ups; existing live-money gates are unchanged.
+
 ## Local Refinement: Compact Friends Workspace
 
 - `/dashboard/friends` now opens with one compact count header and inline
@@ -450,6 +492,11 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
   explicit `sandbox` money mode with PhonePe test credentials; every balance is
   labelled test money, withdrawals remain disabled, and live-money mode stays
   fail-closed until every documented release gate passes.
+- Referral rewards are fixed at INR 10.00 in server-owned minor units and post
+  once to the referrer's non-withdrawable `available` bucket only after the
+  referred verified player completes a first Quick Match or Event. The client
+  never submits an amount or qualification result; tournament completion and
+  the referral-owned idempotency key remain authoritative.
 - For a paid team Quick Match or Event, only the immutable ready-team captain
   may choose `captain_pays` or `split`. The server derives the complete roster,
   per-seat fee and payer for every hold. Captain payment charges the captain

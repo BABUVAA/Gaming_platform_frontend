@@ -8,18 +8,24 @@ import {
 import { AuthShell, Button, Input } from "../components";
 import useNavigateHook from "../hooks/useNavigateHook";
 import validator from "validator";
-import { FiCalendar, FiLock, FiMail, FiUser } from "react-icons/fi";
+import { FiCalendar, FiGift, FiLock, FiMail, FiUser } from "react-icons/fi";
 import { FaArrowRight } from "react-icons/fa6";
 import {
   clearPendingSignup,
   loadPendingSignup,
   savePendingSignup,
 } from "../utils/pendingSignupRecovery";
+import {
+  clearCapturedReferral,
+  loadCapturedReferral,
+} from "../utils/referralCapture";
 
 const SignUp = () => {
   const { goToLogin } = useNavigateHook();
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [referralCode, setReferralCode] = useState(() => loadCapturedReferral());
+  const [referralLocked, setReferralLocked] = useState(() => Boolean(loadCapturedReferral()));
   const [pendingRegistration, setPendingRegistration] = useState(() =>
     loadPendingSignup(),
   );
@@ -34,6 +40,7 @@ const SignUp = () => {
     confirmPassword: "",
     username: "",
     dob: "",
+    referralCode: "",
     form: "",
   });
   const authStats = useMemo(
@@ -143,6 +150,9 @@ const SignUp = () => {
         newErrors.dob = "You must be at least 13 years old to sign up.";
       }
     }
+    if (referralCode && !/^[A-Z0-9_-]{3,40}$/.test(referralCode)) {
+      newErrors.referralCode = "Enter a valid referral code.";
+    }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -156,6 +166,7 @@ const SignUp = () => {
       email: sanitized.email,
       password: sanitized.password,
       dob: sanitized.dob,
+      ...(referralCode ? { referralCode } : {}),
     };
 
     await dispatch(register(payload))
@@ -165,6 +176,7 @@ const SignUp = () => {
         // until the future OTP verification flow promotes this registration.
         setPendingRegistration(registration);
         savePendingSignup(registration);
+        clearCapturedReferral();
       })
       .catch((err) => {
         const fieldErrors = err?.fieldErrors || {};
@@ -173,6 +185,7 @@ const SignUp = () => {
           email: fieldErrors.email || "",
           password: fieldErrors.password || "",
           dob: fieldErrors.dob || "",
+          referralCode: fieldErrors.referralCode || "",
           form:
             err?.message ||
             Object.values(fieldErrors).find(Boolean) ||
@@ -290,6 +303,11 @@ const SignUp = () => {
             <p className="mt-1 break-all font-semibold text-white">
               {pendingRegistration.email}
             </p>
+            {pendingRegistration.referralApplied ? (
+              <p className="mt-2 text-xs font-semibold text-emerald-300">
+                Referral attached successfully
+              </p>
+            ) : null}
           </div>
           <p className="text-sm leading-6 text-slate-400">
             {pendingRegistration.verificationEmailSent
@@ -357,6 +375,46 @@ const SignUp = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-2">
+        {referralCode && referralLocked ? (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                Referral applied
+              </p>
+              <p className="mt-1 text-sm font-semibold text-white">{referralCode}</p>
+              {errors.referralCode ? (
+                <p className="mt-1 text-xs text-rose-200">{errors.referralCode}</p>
+              ) : null}
+            </div>
+            <button
+              className="text-xs font-bold text-slate-300 hover:text-white"
+              onClick={() => {
+                clearCapturedReferral();
+                setReferralCode("");
+                setReferralLocked(false);
+              }}
+              type="button"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <Input
+            autoComplete="off"
+            error={errors.referralCode}
+            iconStart={<FiGift />}
+            label="Referral code (optional)"
+            name="referralCode"
+            onChange={(event) =>
+              setReferralCode(
+                event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 40),
+              )
+            }
+            placeholder="Enter your friend's code"
+            type="text"
+            value={referralCode}
+          />
+        )}
         <Input
           name="username"
           type="text"

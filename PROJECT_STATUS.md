@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -17,6 +17,28 @@ Use this section first. It is the shortest safe path for a single coding model
 to continue the project without reopening settled decisions.
 
 ### Current Truth
+
+- Refer & Earn completed 2026-08-30. Every verified player now owns a
+  real-origin `/ref/:profileTag` link. A valid player referral is captured for
+  seven days in the browser, submitted with signup, stored immutably on the
+  pending registration, and promoted transactionally through OTP verification
+  into one database-unique Referral for the new player. After that player
+  completes their first Quick Match or Event, the eligible referrer receives
+  exactly INR 10.00 (1,000 minor units) once through the append-only balanced
+  ledger. The credit enters `available`, so existing paid Quick Match/Event
+  entry holds can consume it, while `withdrawable` remains unchanged. Self,
+  invalid, banned, staff, security-restricted, and duplicate referred-user
+  rewards fail closed; the idempotency key is referral-owned and startup waits
+  for the unique indexes. `/api/users/referrals` returns an owner-only bounded
+  50-row progress view and aggregate counts/earnings. The player page shows the
+  exact email-verification plus first-completion rule, one-time reward,
+  tournament-only use, and non-withdrawable/non-transferable terms. Backend
+  passes 422/422, referral proof 2/2, generated API documentation 214/214;
+  frontend passes 152/152, ESLint, route smoke, diff check, and the 576-module
+  production build. A local public referral link reached Signup with the code
+  visibly applied and no browser console warnings/errors. Authenticated
+  populated progress visual proof and deployment remain follow-ups; live-money
+  release gates are unchanged.
 
 - Compact Friends workspace refinement completed locally 2026-08-29. The
   dedicated player route now uses one short identity/count header, one inline
@@ -1490,7 +1512,7 @@ Rules currently enforced:
 | User / role | Entry route | Dashboard / UI |
 |---|---|---|
 | Visitor | `/home` | Marketing, signup, login. |
-| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, profile, game accounts, account settings. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. |
+| Player | `/dashboard` | Player shell: compete, matches, clans, friends, teams, chats, wallet, Refer & Earn, profile, game accounts, account settings. The mobile bottom bar is limited to Compete, Clan, Profile, Wallet, and Chat; the header hamburger exposes the complete player navigation as a compact icon grid. Friends is a dedicated player-only route at `/dashboard/friends`; it is not a Clan subtab. Refer & Earn is visible in the desktop sidebar and mobile hamburger menu and is verified-player-only; its INR 10.00 credit is earned once after the referred verified player completes a first Quick Match or Event and is spendable only through the non-withdrawable tournament-entry balance. |
 | Approved Host | Player dashboard | Host actions for existing games; no separate staff dashboard. |
 | Staff with any assignment | `/staff` | Role switcher. Shows one workspace card per active assignment and an explicit read-only player-dashboard utility link. Staff cannot participate from that dashboard. |
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |

@@ -114,7 +114,7 @@ export const dashboardChildRoutes = [
   {
     path: DASHBOARD_ROUTE_SEGMENTS.REFER,
     componentKey: "Refer",
-    access: "detailedPlayer",
+    access: "verifiedPlayer",
   },
 ];
 

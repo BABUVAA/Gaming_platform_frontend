@@ -36,6 +36,7 @@ import matchChatSlice from "./slices/matchChatSlice.js";
 import discordOperationsSlice from "./slices/discordOperationsSlice.js";
 import sensitiveActionSlice from "./slices/sensitiveActionSlice.js";
 import playerManagementSlice from "./slices/playerManagementSlice.js";
+import referralSlice from "./slices/referralSlice.js";
 
 // The root reducer is separated from store creation so reducer composition
 // stays readable and can grow independently from middleware/persistence setup.
@@ -78,6 +79,7 @@ const combinedReducer = combineReducers({
   sensitiveAction: sensitiveActionSlice.reducer,
   playerManagement: playerManagementSlice.reducer,
   social: socialSlice.reducer,
+  referrals: referralSlice.reducer,
 });
 
 const privateSliceKeys = [
@@ -89,6 +91,7 @@ const privateSliceKeys = [
   "payment",
   "player",
   "social",
+  "referrals",
   "matchmaking",
   "matchActivity",
   "matchChat",

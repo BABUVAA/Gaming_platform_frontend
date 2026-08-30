@@ -62,6 +62,9 @@ test("the player dashboard omits staff operation tabs from its utility navigatio
 test("mobile player navigation uses compact account labels", () => {
   const navigation = getDashboardNavigation({ role: "player" });
   const paths = navigation.map((item) => item.to);
+  const referAndEarn = navigation.find(
+    (item) => item.to === "/dashboard/refer",
+  );
   const gameAccounts = navigation.find(
     (item) => item.to === "/dashboard/game-accounts",
   );
@@ -73,10 +76,43 @@ test("mobile player navigation uses compact account labels", () => {
   assert.equal(gameAccounts?.mobileLabel, "Games");
   assert.equal(accountSettings?.label, "Account Settings");
   assert.equal(accountSettings?.mobileLabel, "Settings");
+  assert.equal(referAndEarn?.label, "Refer & Earn");
+  assert.equal(referAndEarn?.mobileLabel, "Earn");
   assert.ok(paths.includes("/dashboard/friends"));
+  assert.ok(paths.includes("/dashboard/refer"));
   assert.ok(
     paths.indexOf("/dashboard/friends") < paths.indexOf("/dashboard/teams"),
   );
+});
+
+test("mobile dashboard keeps five requested primary actions and moves the full list into the menu", async () => {
+  const navigation = getDashboardNavigation({ role: "player" });
+  const primaryPaths = navigation
+    .filter((item) => item.mobilePrimary)
+    .sort((left, right) => left.mobileOrder - right.mobileOrder)
+    .map((item) => item.to);
+  const [sidebar, burgerMenu] = await Promise.all([
+    readFile(
+      new URL("../src/components/layout/Sidebar/SideBar.jsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../src/components/layout/Header/HeaderBurgerMenu.jsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.deepEqual(primaryPaths, [
+    "/dashboard",
+    "/dashboard/clan",
+    "/dashboard/profile",
+    "/dashboard/wallet",
+    "/dashboard/chats",
+  ]);
+  assert.match(sidebar, /dashboardNavigation\.filter\([\s\S]{0,80}mobilePrimary/);
+  assert.match(burgerMenu, /All player areas/);
+  assert.match(burgerMenu, /dashboardNavigation\.map/);
+  assert.match(burgerMenu, /aria-expanded=\{menuOpen\}/);
 });
 
 test("Friends is a player-owned main route instead of a Clan subtab", async () => {
