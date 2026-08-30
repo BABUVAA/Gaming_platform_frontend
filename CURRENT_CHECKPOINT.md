@@ -1,6 +1,6 @@
 # Current Checkpoint
 
-## Local Fix: Post-login Session Expiry Loop
+## Deployment Fix: Post-login Session Expiry Loop
 
 - Production diagnosis found that the public Vercel frontend and Render API are
   different sites while auth cookies defaulted to `SameSite=Lax`. The current
@@ -8,7 +8,8 @@
   production alias, so a successful credential response could not reliably
   carry its cookies into the immediate HTTP/Socket session checks.
 - Production auth cookies now default to `SameSite=None; Secure; HttpOnly`, and
-  the Render blueprint pins the exact stable Vercel origin plus the explicit
+  the Render blueprint pins the exact stable
+  `https://gaming-platform-frontend-vert.vercel.app` origin plus the explicit
   cross-site cookie policy. Preview deployment URLs remain untrusted by
   default. The runbook records the same deployment contract.
 - Frontend auth tracks the active bootstrap request ID. Starting Login
@@ -18,7 +19,14 @@
 - Verification passes locally: frontend 160/160, full ESLint, and the
   578-module production build; backend aggregate 429/429, including auth
   60/60; API docs 220/220; and both repositories' diff checks. Deployed
-  CORS/cookie/login proof remains after release.
+  diff checks.
+- Deployed 2026-08-30: Vercel production commit `07e84d7` succeeded and its
+  canonical bundle contains both the session request guard and pending-signup
+  recovery path. Render commits `e57985c` and `dbff1b0` are live. `/readyz`
+  reports MongoDB and Redis ready; credentialed preflight and anonymous session
+  reads return the exact canonical origin; and an existing staff cookie restored
+  the authenticated workspace without console errors. A fresh player
+  signup/OTP/login journey remains the final user-credential proof.
 
 ## Local Slice: OTP-authorized Pending Signup Recovery
 

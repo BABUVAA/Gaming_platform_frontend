@@ -1626,14 +1626,18 @@ staff-classified account and the frontend must present it as view-only.
 - Secure cookie-based authentication with short-lived access tokens, refresh
   rotation, Redis-backed session validation, session versioning, and logout
   revocation.
-- Post-login deployment recovery was corrected locally on 2026-08-30. The
+- Post-login deployment recovery was released on 2026-08-30. The
   stable Vercel frontend and Render API are cross-site, so production auth
   cookies default to `SameSite=None; Secure; HttpOnly`; the Render blueprint
   binds CORS/CSRF to the exact stable production frontend alias. Per-deployment
   preview aliases stay denied. Frontend session bootstrap is request-ID-aware,
   so a delayed anonymous 401 started before Login cannot invalidate a newer
-  successful session. Deployment plus a real post-signup login/session/socket
-  proof remain required before closing the production incident.
+  successful session. Vercel commit `07e84d7` and Render commits `e57985c` plus
+  `dbff1b0` are live; the canonical bundle exposes the new guard, `/readyz`
+  reports MongoDB and Redis ready, credentialed CORS allows exactly the
+  canonical frontend, and an existing staff cookie restored its authenticated
+  workspace console-clean. A fresh player post-signup login/session/socket
+  journey remains the final credentialed incident proof.
 - Player identity email flow: signup creates a pending registration and asks
   the backend Resend service to deliver a 6-digit OTP. Codes are HMAC-hashed,
   expire after 10 minutes, allow five failed attempts, and have a 60-second
