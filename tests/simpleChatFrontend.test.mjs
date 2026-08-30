@@ -33,6 +33,8 @@ test("global chat supports bounded public messaging and explicit recruitment act
   ]);
 
   assert.match(chats, /Global Chat/);
+  assert.match(chats, /const \[selectedChat, setSelectedChat\] = useState\(null\)/);
+  assert.doesNotMatch(chats, /useState\("global"\)/);
   assert.match(chats, /invitePlayerToClan\(\{ playerTag \}\)/);
   assert.match(globalChat, /onViewProfile\(entry\.playerTag\)/);
   assert.match(globalChat, /Invite to clan/);

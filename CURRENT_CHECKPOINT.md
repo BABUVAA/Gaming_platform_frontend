@@ -23,10 +23,11 @@
 
 ## Local Slice: Global Recruitment Chat and Friend Unread Counts
 
-- Verified active players now open Chats directly into one player-only Global
-  Chat. Messages are identity-derived, limited to 500 characters, rate-limited,
-  retained to the newest 200 MongoDB rows, and initially load 50. The UI warns
-  that the room is public and keeps global state inside Redux.
+- Verified active players now open Chats on the conversation list and choose
+  Global Chat explicitly. Global messages are identity-derived, limited to 500
+  characters, rate-limited, retained to the newest 200 MongoDB rows, and
+  initially load 50. The UI warns that the room is public and keeps global
+  state inside Redux.
 - Clicking another global sender's username opens actions to view the existing
   public profile. A current Clan Leader or Co-leader also sees `Invite to clan`;
   the server rechecks role, capacity, membership, verification, ban/security,
@@ -39,7 +40,7 @@
   live messages update Redux immediately and only a successfully loaded thread
   is marked read. No read receipt is exposed to the sender.
 - The Compete Refer & Earn banner is included in this same frontend delivery.
-  Current verification: frontend 156/156, full ESLint, and
+  Current verification: frontend 157/157, full ESLint, and
   the 578-module production build; backend maintained aggregate 426/426,
   including social 25/25, social integration 9/9 and realtime 15/15; API
   documentation covers 219/219 operations. The local Chats URL reached the

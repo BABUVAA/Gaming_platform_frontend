@@ -35,17 +35,18 @@ to continue the project without reopening settled decisions.
 
 - Global recruitment chat and durable Friend unread counts are implemented
   locally as of 2026-08-30. The existing verified-player `/dashboard/chats`
-  route opens Global Chat first, retains only the newest 200 messages, loads 50,
-  limits text to 500 characters, rate-limits sends, derives sender identity on
-  the server, and excludes staff, unverified, banned, and security-restricted
-  accounts. Clicking a username opens the existing public profile; only a
+  route opens on the conversation list and offers Global Chat explicitly.
+  Global Chat retains only the newest 200 messages, loads 50, limits text to
+  500 characters, rate-limits sends, derives sender identity on the server,
+  and excludes staff, unverified, banned, and security-restricted accounts.
+  Clicking a username opens the existing public profile; only a
   server-confirmed Clan Leader or Co-leader can send a separate seven-day Clan
   invitation. The target must explicitly accept or decline, and acceptance
   revalidates capacity, membership, and Clan-open state before atomically
   reserving the player membership. Friend thread rows restore a bounded 50-row
   list with latest-message text and owner-only unread counts backed by
   per-participant last-read timestamps; loading the thread clears its count but
-  never exposes a sender-facing read receipt. Frontend passes 156/156, full
+  never exposes a sender-facing read receipt. Frontend passes 157/157, full
   ESLint, and the 578-module build. Backend maintained aggregate passes 426/426,
   including social 25/25, social integration 9/9 and realtime 15/15; API docs
   cover 219/219 mounted operations. The local Chats URL reached the expected

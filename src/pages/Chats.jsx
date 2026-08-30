@@ -27,9 +27,9 @@ const Chats = () => {
   const { personalThreads, threadsStatus } = useSelector(
     (store) => store.globalChat,
   );
-  const [selectedChat, setSelectedChat] = useState("global");
-  const [chatType, setChatType] = useState("global");
-  const [chatName, setChatName] = useState("Global Chat");
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [chatType, setChatType] = useState(null);
+  const [chatName, setChatName] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   // The profile carries only a clan reference. Chat visibility and identity
   // come from the current membership endpoint so ordinary members receive the
@@ -162,7 +162,7 @@ const Chats = () => {
             </div>
           ) : (
             <div className="flex h-full min-h-[20rem] items-center justify-center rounded-2xl border border-dashed border-slate-800 bg-slate-950/70 p-5 text-center text-sm text-slate-400">
-              Pick a clan or private thread to open the live communication pane.
+              Choose Global Chat, your clan channel, or a private thread to begin.
             </div>
           )}
         </div>
