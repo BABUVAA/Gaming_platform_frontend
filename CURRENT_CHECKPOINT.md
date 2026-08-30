@@ -12,8 +12,8 @@
   account-focused and bot-burst protection while isolating legitimate users.
 - Other authentication, staff, money, gameplay, and realtime limits are
   unchanged. Focused authentication coverage passes 61/61 and the complete
-  backend aggregate passes 430/430. Commit, push, deployment, and live proof
-  remain.
+  backend aggregate passes 430/430. Backend commit `db77fb6` and tracker commit
+  `4f2174a` are pushed to `main`; deployment and live proof remain.
 
 ## Deployment Fix: Post-login Session Expiry Loop
 

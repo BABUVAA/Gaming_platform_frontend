@@ -229,7 +229,8 @@ to continue the project without reopening settled decisions.
   NAT, offices, or shared Wi-Fi no longer consume one small anonymous quota.
   Redis keys contain only SHA-256 fingerprints. Other endpoint limits are
   unchanged. Focused authentication coverage passes 61/61 and the complete
-  backend aggregate passes 430/430. Commit and deployment evidence remain.
+  backend aggregate passes 430/430. Backend commit `db77fb6` is pushed to
+  `main`; deployment evidence remains.
 
 - Reusable Team names completed 2026-08-29. Team names are display labels, not
   platform identity, so different active or disbanded Teams may use the same
