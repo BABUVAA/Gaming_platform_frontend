@@ -18,8 +18,8 @@ to continue the project without reopening settled decisions.
 
 ### Current Truth
 
-- The 2026-08-31 audit hardening slice is complete locally but is not committed
-  or deployed. Team invitation decline is atomic and its duplicate-request
+- The 2026-08-31 audit hardening slice is committed in backend `c492f9a` and
+  frontend `18eb202`, but is not yet deployed. Team invitation decline is atomic and its duplicate-request
   regression passes; `TRUST_PROXY_HOPS=1` is Blueprint-managed; the frontend
   lockfile is no longer ignored and clean `npm ci` succeeds; and Vercel has
   narrow CSP, clickjacking, MIME, referrer, and permissions headers with a
@@ -45,7 +45,7 @@ to continue the project without reopening settled decisions.
   waiver. Payment state contains 2 completed, 3 pending and 2 failed
   Transactions plus 2 completed, 3 queued and 2 failed reconciliation jobs;
   live money and withdrawals remain closed.
-- New audit priorities are: commit/deploy and live-prove the local Team,
+- New audit priorities are: deploy and live-prove the committed Team,
   lockfile, proxy, and security-header repairs; complete affected-device
   signup/login/session proof; isolate Redis in the backend test harness; add
   graceful API web shutdown; and provision workers/monitoring only under the existing payment

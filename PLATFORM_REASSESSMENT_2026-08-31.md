@@ -273,9 +273,8 @@ above Vite's 500 kB warning threshold.
 
 The frontend workflow runs `npm ci`. `package-lock.json` is no longer ignored,
 has been regenerated from the current manifest, and a clean `npm ci` completed
-with zero dependency advisories. The lockfile must be included in the next
-commit for GitHub Actions to receive this repair. The backend lockfile is
-already tracked.
+with zero dependency advisories. The lockfile is tracked in frontend commit
+`18eb202`; the backend lockfile is already tracked.
 
 The tracked frontend `dump.rdb` is a valid but tiny (89-byte) Redis dump. It
 appears empty, but generated datastore artifacts should not be versioned;
@@ -293,7 +292,8 @@ remove it and ignore `*.rdb` after confirming no required fixture depends on it.
 3. Run one real production journey on the affected class of device:
    signup -> OTP -> login -> refresh -> Compete -> Team picker -> join ->
    socket reconnect. Confirm no duplicate session-expired notifications.
-4. Commit the frontend lockfile and confirm both GitHub Actions workflows pass.
+4. Confirm both GitHub Actions workflows pass with the committed frontend
+   lockfile.
 5. Deploy the Blueprint-managed `TRUST_PROXY_HOPS`, then test login/signup limits from two
    different client networks and two accounts.
 

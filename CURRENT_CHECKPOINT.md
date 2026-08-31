@@ -11,15 +11,16 @@
   proxy. The 4 Blueprint/runtime tests pass. Deployment and multi-network
   production proof remain open.
 - Frontend CI is reproducible locally: `package-lock.json` is no longer ignored,
-  was regenerated, and a clean `npm ci` succeeds with zero advisories. Include
-  the lockfile in the next commit.
+  was regenerated, and a clean `npm ci` succeeds with zero advisories. The
+  lockfile is tracked in frontend commit `18eb202`.
 - Vercel configuration now supplies narrow CSP anti-embedding/object/base
   protections plus frame, content-type, referrer, and permissions headers. A
   hosting regression test preserves the SPA rewrite. This needs deployment and
   live response-header verification.
 - Fresh post-change frontend gates pass: 165/165 tests, ESLint, 578-module
-  production build, route smoke, and API-error/toast smoke. No commit, push,
-  deployment, or production-data mutation has been performed in this slice.
+  production build, route smoke, and API-error/toast smoke. Backend commit
+  `c492f9a` and frontend commit `18eb202` contain the implementation. No
+  deployment or production-data mutation has been performed in this slice.
 
 ## Platform Reassessment: 2026-08-31
 
@@ -44,8 +45,8 @@
   verification waiver expired at 2026-08-31 12:00 IST, so new joins now require
   a verified game account unless the waiver is deliberately extended.
 - Highest remaining findings: the Team invitation repair, tracked frontend
-  lockfile, Vercel headers, and Blueprint proxy setting are locally complete
-  but not committed or deployed; Render has one free API service, no deployed
+  lockfile, Vercel headers, and Blueprint proxy setting are committed but not
+  yet deployed; Render has one free API service, no deployed
   workers, and
   non-persistent Redis; payment reconciliation has 3 queued and 2 failed jobs;
   the live frontend does not yet have the locally configured security headers;
