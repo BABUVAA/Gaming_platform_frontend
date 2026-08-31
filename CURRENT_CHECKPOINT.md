@@ -1,5 +1,57 @@
 # Current Checkpoint
 
+## Local Audit Hardening: 2026-08-31
+
+- Backend Team invitation decline is now an atomic `findOneAndUpdate` command.
+  A new concurrent integration regression proves two simultaneous declines
+  produce one success and one stable `TEAM_INVITATION_NOT_FOUND`, never a
+  Mongoose `VersionError`; all 7 Team integration tests pass.
+- The Render Blueprint now explicitly sets `TRUST_PROXY_HOPS=1` for the web
+  service so Express rate limits can distinguish client IPs behind Render's
+  proxy. The 4 Blueprint/runtime tests pass. Deployment and multi-network
+  production proof remain open.
+- Frontend CI is reproducible locally: `package-lock.json` is no longer ignored,
+  was regenerated, and a clean `npm ci` succeeds with zero advisories. Include
+  the lockfile in the next commit.
+- Vercel configuration now supplies narrow CSP anti-embedding/object/base
+  protections plus frame, content-type, referrer, and permissions headers. A
+  hosting regression test preserves the SPA rewrite. This needs deployment and
+  live response-header verification.
+- Fresh post-change frontend gates pass: 165/165 tests, ESLint, 578-module
+  production build, route smoke, and API-error/toast smoke. No commit, push,
+  deployment, or production-data mutation has been performed in this slice.
+
+## Platform Reassessment: 2026-08-31
+
+- The complete dated report is `PLATFORM_REASSESSMENT_2026-08-31.md`. Current
+  revisions are frontend `2273be3` and backend `f0e43bc`, both synchronized
+  with `origin/main`; no code or deployment mutation was made during the
+  audit.
+- Fresh green evidence: frontend 164/164, ESLint, 578-module production build,
+  route/API-error smoke, zero production dependency advisories, and diff
+  check; backend API documentation 220/220, zero production dependency
+  advisories, and diff check; live Vercel 200/deep-link fallback plus Render
+  live deployment, `healthz`, `readyz`, Mongo/Redis readiness and canonical
+  credentialed CORS.
+- A fresh backend aggregate did not complete because no local Redis daemon was
+  available and the shared client retried `ECONNREFUSED` indefinitely. The
+  current revision's earlier 430/430 pass remains recorded, but the test
+  harness must isolate/mock Redis or provide a documented service before the
+  aggregate is called freshly green again.
+- Current read-only `e-gaming` state: 5 staff, 24 players, 2 Games, 1 active
+  free BGMI Squad/Erangal offering, one waiting Room with 4/100 players, 0
+  Events, 0 Matches, and 0 linked/pending game accounts. The free offering's
+  verification waiver expired at 2026-08-31 12:00 IST, so new joins now require
+  a verified game account unless the waiver is deliberately extended.
+- Highest remaining findings: the Team invitation repair, tracked frontend
+  lockfile, Vercel headers, and Blueprint proxy setting are locally complete
+  but not committed or deployed; Render has one free API service, no deployed
+  workers, and
+  non-persistent Redis; payment reconciliation has 3 queued and 2 failed jobs;
+  the live frontend does not yet have the locally configured security headers;
+  API web shutdown is not graceful; affected-device auth proof remains open.
+  Keep withdrawals and live money disabled.
+
 ## Local Fix: Silent Login Cookie Delivery Proof
 
 - Login keeps its original compact form and does not ask ordinary players to

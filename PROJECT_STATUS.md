@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -17,6 +17,41 @@ Use this section first. It is the shortest safe path for a single coding model
 to continue the project without reopening settled decisions.
 
 ### Current Truth
+
+- The 2026-08-31 audit hardening slice is complete locally but is not committed
+  or deployed. Team invitation decline is atomic and its duplicate-request
+  regression passes; `TRUST_PROXY_HOPS=1` is Blueprint-managed; the frontend
+  lockfile is no longer ignored and clean `npm ci` succeeds; and Vercel has
+  narrow CSP, clickjacking, MIME, referrer, and permissions headers with a
+  hosting regression. Post-change evidence is 165/165 frontend tests, ESLint,
+  a 578-module build, both smoke checks, 7/7 Team integration tests, and 4/4
+  Render Blueprint/runtime tests.
+
+- Full platform reassessment completed 2026-08-31 and recorded in
+  `PLATFORM_REASSESSMENT_2026-08-31.md`. The public Vercel shell, SPA deep
+  links, Render `healthz`/`readyz`, MongoDB, Redis, canonical credentialed
+  CORS, latest backend deployment, frontend 164/164 tests, ESLint, 578-module
+  build, route/API-error smoke checks, both production dependency audits, API
+  documentation 220/220, and both diff checks are green. The fresh backend
+  aggregate was inconclusive because the imported local Redis client retries
+  indefinitely when no daemon is available; current HEAD's prior 430/430
+  result remains historical evidence, not a fresh rerun.
+- The read-only `e-gaming` snapshot contains 5 staff and 24 verified players,
+  2 Games, 1 active free BGMI Squad/Erangal offering, and one 4/100 waiting
+  Room. It contains no Events, Matches, game-account identities, or pending
+  game-account requests. The offering's temporary verification waiver expired
+  at 2026-08-31 12:00 IST, so new entries require restored game-account
+  verification unless a Tournament Manager deliberately extends the free-only
+  waiver. Payment state contains 2 completed, 3 pending and 2 failed
+  Transactions plus 2 completed, 3 queued and 2 failed reconciliation jobs;
+  live money and withdrawals remain closed.
+- New audit priorities are: commit/deploy and live-prove the local Team,
+  lockfile, proxy, and security-header repairs; complete affected-device
+  signup/login/session proof; isolate Redis in the backend test harness; add
+  graceful API web shutdown; and provision workers/monitoring only under the existing payment
+  release decision. Redis persistence is off and the current deployment is one
+  free API instance with no worker services, so it is appropriate for a
+  controlled free beta, not unrestricted paid scale.
 
 - Current and durable notifications are implemented locally as of 2026-08-30.
   `GET /api/notifications` remains owner-only, newest-first, cursor-bounded to
