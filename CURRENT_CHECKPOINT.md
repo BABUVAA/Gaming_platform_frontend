@@ -1,5 +1,22 @@
 # Current Checkpoint
 
+## Current Slice: Compact Tournament and Event Manager Dashboards — 2026-09-04
+
+- Implemented locally: Tournament Manager offerings and Event Manager
+  Templates/Events now use compact single-column operational rows instead of
+  oversized cards and repeated statistic panels. Essential capacity, lifecycle,
+  review and operations states remain visible in concise form.
+- Event creation and editing forms now open only when requested, hide the list
+  while active, close after a successful save, and provide a consistent cancel
+  path. Exact Event details retain registrations, generated Matches, invitations,
+  results and sequential-round controls; Tournament lifecycle actions remain
+  unchanged.
+- Roles, scopes, Redux/API contracts and authorization are unchanged. Frontend
+  tests pass 179/179; ESLint, the 581-module production build and diff check
+  pass. Authenticated populated visual proof remains open. Included in the
+  2026-09-04 frontend repository delivery; no deployment or production-data
+  mutation.
+
 ## Current Slice: Compact Game Manager Dashboard — 2026-09-04
 
 - Implemented locally: removed the four global statistic cards and the repeated

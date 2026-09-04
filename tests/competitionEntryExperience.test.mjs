@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const source = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("Quick Match and Event surfaces render server-owned live progress", async () => {
+test("Quick Match and Event surfaces render compact server-owned progress", async () => {
   const [quickCard, tournamentManager, compete, eventCard, eventManager] = await Promise.all([
     source("../src/components/ui/GameCard/QuickMatchCard.jsx"),
     source("../src/components/adminComponents/QuickMatchOfferingManagement.jsx"),
@@ -13,7 +13,7 @@ test("Quick Match and Event surfaces render server-owned live progress", async (
     source("../src/pages/EventManagerDashboard.jsx"),
   ]);
   assert.match(quickCard, /offering\.joinProgress\?\.joinedParticipants/);
-  assert.match(tournamentManager, /Live seat progress/);
+  assert.match(tournamentManager, /Room filling:/);
   assert.match(tournamentManager, /fetchQuickMatchOfferings\(\).*5000|5000/);
   assert.match(compete, /joinedCount: offering\.joinProgress\?\.joinedParticipants/);
   assert.match(eventCard, /Registration progress/);

@@ -15,7 +15,6 @@ import {
   fetchTournamentManagerGames,
   updateQuickMatchOffering,
 } from "../../store/slices/quickMatchOfferingSlice";
-import JoinProgress from "../competition/JoinProgress.jsx";
 import StaffWorkspaceHeader from "../common/StaffWorkspaceHeader.jsx";
 import useStaffWorkspaceTab from "../../hooks/useStaffWorkspaceTab.js";
 
@@ -69,7 +68,7 @@ const formatOfferingFacts = (offering) => {
       if (!unique.has(key)) unique.set(key, label);
       return unique;
     }, new Map());
-  return `${[...labels.values()].join(" / ")} / ${offering.maxParticipants} seats`;
+  return [...labels.values()].join(" / ");
 };
 
 const toLocalDateTimeInput = (value) => {
@@ -505,7 +504,7 @@ const QuickMatchOfferingManagement = () => {
           <h2 className="font-black text-white">Quick Matches</h2>
           <div className="flex gap-2">
             <button
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200"
               disabled={status === "loading"}
               onClick={() => dispatch(fetchQuickMatchOfferings())}
               type="button"
@@ -513,7 +512,7 @@ const QuickMatchOfferingManagement = () => {
               <FiRefreshCw /> Refresh
             </button>
             <button
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950"
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-sm font-black text-slate-950"
               onClick={() => openSection("create")}
               type="button"
             >
@@ -527,10 +526,10 @@ const QuickMatchOfferingManagement = () => {
           {error}
         </p>
       )}
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="space-y-2">
         {visibleOfferings.map((offering) => (
           <article
-            className="rounded-3xl border border-slate-800 bg-slate-950/70 p-5"
+            className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
             key={offering._id}
           >
             <div className="flex items-start justify-between gap-3">
@@ -538,62 +537,27 @@ const QuickMatchOfferingManagement = () => {
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
                   {offering.game?.name || offering.gameKey}
                 </p>
-                <h3 className="mt-2 text-lg font-black text-white">
+                <h3 className="mt-1 font-black text-white">
                   {offering.title}
                 </h3>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-xs text-slate-400">
                   {formatOfferingFacts(offering)}
                 </p>
               </div>
               <span
-                className={`rounded-full border px-3 py-1 text-xs font-bold ${statusStyles[offering.status]}`}
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-bold ${statusStyles[offering.status]}`}
               >
                 {offering.status}
               </span>
             </div>
-            <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-              <Detail
-                label="Start"
-                value={
-                  offering.schedulePolicy === "on_demand"
-                    ? "When full"
-                    : "Scheduled"
-                }
-              />
-              <Detail label="Region" value={offering.region} />
-              <Detail
-                label="Entry"
-                value={
-                  offering.entryPolicy === "free"
-                    ? "Free"
-                    : `${offering.entryFeeMinor} ${offering.currency} minor`
-                }
-              />
-              <Detail
-                label={offering.rewardPolicy === "placement" ? "Place rewards" : "Prize pool"}
-                value={offering.rewardPolicy === "placement"
-                  ? `${offering.placementRewards?.length || 0} places / ${offering.prizePoolMinor} ${offering.currency} minor`
-                  : `${offering.prizePoolMinor} ${offering.currency} minor`}
-              />
-              <Detail
-                label="Game account"
-                value={
-                  offering.gameAccountVerificationWaiverEndsAt &&
-                  new Date(offering.gameAccountVerificationWaiverEndsAt) > new Date()
-                    ? `Not required until ${new Date(offering.gameAccountVerificationWaiverEndsAt).toLocaleString()}`
-                    : "Verification required"
-                }
-              />
-            </dl>
-            <div className="mt-4">
-              <JoinProgress
-                capacity={offering.joinProgress?.capacity || offering.maxParticipants}
-                joined={offering.joinProgress?.joinedParticipants || 0}
-                label="Live seat progress"
-                status={offering.joinProgress?.isFull ? "Match generated" : "Queue open"}
-              />
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+              <span>{offering.schedulePolicy === "on_demand" ? "Starts when full" : "Scheduled start"}</span>
+              <span>{offering.entryPolicy === "free" ? "Free entry" : `${offering.entryFeeMinor} ${offering.currency} minor entry`}</span>
+              <span>{offering.rewardPolicy === "placement" ? "Place rewards" : "Winner pool"}</span>
+              <span>{offering.gameAccountVerificationWaiverEndsAt && new Date(offering.gameAccountVerificationWaiverEndsAt) > new Date() ? "Verification temporarily waived" : "Verification required"}</span>
+              <span className="font-bold text-cyan-200">Room filling: {offering.joinProgress?.joinedParticipants || 0}/{offering.joinProgress?.capacity || offering.maxParticipants}</span>
             </div>
-            <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-800 pt-4">
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-800 pt-3">
               {["draft", "paused"].includes(offering.status) && (
                 <Action
                   icon={FiEdit3}
@@ -651,18 +615,6 @@ const QuickMatchOfferingManagement = () => {
   );
 };
 
-const Detail = ({ label, value }) => (
-  <div>
-    <dt className="text-xs uppercase tracking-[0.14em] text-slate-500">
-      {label}
-    </dt>
-    <dd className="mt-1 font-bold text-slate-200">{value}</dd>
-  </div>
-);
-Detail.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-};
 const Action = ({ icon: Icon, label, onClick, tone = "default" }) => (
   <button
     className={

@@ -11,6 +11,19 @@ repositories:
 Update this file whenever a feature changes state, a security decision is made,
 or a new platform dependency is introduced.
 
+- Compact Tournament and Event Manager dashboards implemented locally
+  2026-09-04. Tournament offerings and Event Templates/Events now render as
+  dense single-column operational rows without repeated statistic panels.
+  Essential capacity, lifecycle, review and operations states remain visible.
+  Event create/edit forms open on demand, temporarily replace their list, close
+  after successful saves and have a consistent cancel path. Exact Event details
+  retain registrations, generated Matches, invitations, results and sequential
+  rounds; Tournament lifecycle actions are unchanged. Roles, scopes, Redux/API
+  contracts and authorization are unchanged. Frontend tests pass 179/179;
+  ESLint, the 581-module production build and diff check pass. Authenticated
+  populated visual proof remains open. Included in the 2026-09-04 frontend
+  repository delivery; no deployment or production-data mutation.
+
 - Compact Game Manager dashboard implemented locally 2026-09-04. Global and
   repeated per-game statistic tiles are removed. Each assigned Game now shows
   one prioritized operational next action; compact Room, Event and operator

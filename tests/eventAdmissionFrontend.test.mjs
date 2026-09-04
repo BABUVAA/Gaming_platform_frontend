@@ -476,6 +476,11 @@ test("Event Manager separates reusable Templates from dated Events", async () =>
   assert.doesNotMatch(source, /Create\s+Events from it/);
   assert.doesNotMatch(source, /Competition operations/);
   assert.match(source, /activeTab === "templates"/);
+  assert.match(source, /templateFormOpen/);
+  assert.match(source, /runFormOpen/);
+  assert.match(source, /New template/);
+  assert.match(source, /New Event/);
+  assert.doesNotMatch(source, /JoinProgress/);
   assert.match(source, /Template name/);
   assert.match(source, /Event name/);
   assert.match(source, /View details/);
@@ -1031,9 +1036,9 @@ test("ranked Event UI exposes promoted and eliminated lists without client-owned
   assert.match(stage, /Eliminated round/);
   assert.match(stage, /eliminatedInStage/);
   assert.doesNotMatch(`${manager}\n${roundPlan}\n${stage}`, /seedingSeed|setWinner|eliminatePlayer|playerIds/);
-  assert.match(manager, /Operations handoff/);
-  assert.match(manager, /awaiting operator/);
-  assert.match(manager, /result attention/);
+  assert.match(manager, /Operations:/);
+  assert.doesNotMatch(manager, /executionHandoff\.awaitingOperator/);
+  assert.doesNotMatch(manager, /executionHandoff\.resultAttention/);
 });
 test("independent Super Admin can review a Platform Admin Event proposal", () => {
   const item = {

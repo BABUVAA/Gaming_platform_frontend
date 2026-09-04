@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import EventManagerOperations from "../components/eventManagement/EventManagerOperations.jsx";
 import SequentialRoundControl from "../components/eventManagement/SequentialRoundControl.jsx";
-import JoinProgress from "../components/competition/JoinProgress.jsx";
 import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
 import EventInvitationManagement from "../components/adminComponents/EventInvitationManagement.jsx";
 import EventManagerResults from "../components/eventManagement/EventManagerResults.jsx";
@@ -82,6 +81,8 @@ const EventManagerDashboard = () => {
   const [run, setRun] = useState(initialRun);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [editingRunId, setEditingRunId] = useState(null);
+  const [templateFormOpen, setTemplateFormOpen] = useState(false);
+  const [runFormOpen, setRunFormOpen] = useState(false);
   const [activeSubmission, setActiveSubmission] = useState(null);
   const [activeTab, setActiveTab] = useStaffWorkspaceTab(
     EVENT_MANAGER_WORKSPACE_TABS,
@@ -141,6 +142,7 @@ const EventManagerDashboard = () => {
       await dispatch(action).unwrap();
       setTemplate(initialTemplate);
       setEditingTemplateId(null);
+      setTemplateFormOpen(false);
     } catch {
       // createApiThunk already normalizes and displays the backend error.
     }
@@ -187,6 +189,7 @@ const EventManagerDashboard = () => {
       await dispatch(action).unwrap();
       setRun(initialRun);
       setEditingRunId(null);
+      setRunFormOpen(false);
     } catch {
       // Keep the form intact so the manager can correct the rejected values.
     }
@@ -194,6 +197,7 @@ const EventManagerDashboard = () => {
 
   const editTemplate = (item) => {
     setActiveTab("templates");
+    setTemplateFormOpen(true);
     setEditingTemplateId(item._id);
     setTemplate({
       cadence: item.cadence || "one_time",
@@ -209,6 +213,7 @@ const EventManagerDashboard = () => {
 
   const editRun = (item) => {
     setActiveTab("events");
+    setRunFormOpen(true);
     setEditingRunId(item._id);
     setRun({
       admissionPolicy: item.admissionPolicy || "open",
@@ -284,7 +289,7 @@ const EventManagerDashboard = () => {
         <StaffWorkspaceHeader description="Templates, Events, registrations and rounds." title="Event Manager" />
         <div className="min-w-0 space-y-6">
           <section>
-            {activeTab === "templates" ? (
+            {activeTab === "templates" && templateFormOpen ? (
               <form
                 className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5"
                 onSubmit={saveTemplate}
@@ -417,22 +422,21 @@ const EventManagerDashboard = () => {
                     <button className="flex-1 rounded-xl bg-cyan-300 p-3 font-bold text-slate-950">
                       {editingTemplateId ? "Save changes" : "Save draft"}
                     </button>
-                    {editingTemplateId && (
-                      <button
-                        className="rounded-xl border border-slate-700 px-4 text-slate-300"
-                        onClick={() => {
-                          setEditingTemplateId(null);
-                          setTemplate(initialTemplate);
-                        }}
-                        type="button"
-                      >
-                        Cancel
-                      </button>
-                    )}
+                    <button
+                      className="rounded-xl border border-slate-700 px-4 text-slate-300"
+                      onClick={() => {
+                        setEditingTemplateId(null);
+                        setTemplate(initialTemplate);
+                        setTemplateFormOpen(false);
+                      }}
+                      type="button"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
               </form>
-            ) : activeTab === "events" ? (
+            ) : activeTab === "events" && runFormOpen ? (
               <form
                 className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5"
                 onSubmit={saveRun}
@@ -693,60 +697,58 @@ const EventManagerDashboard = () => {
                     >
                       {editingRunId ? "Save changes" : "Save draft"}
                     </button>
-                    {editingRunId && (
-                      <button
-                        className="rounded-xl border border-slate-700 px-4 text-slate-300"
-                        onClick={() => {
-                          setEditingRunId(null);
-                          setRun(initialRun);
-                        }}
-                        type="button"
-                      >
-                        Cancel
-                      </button>
-                    )}
+                    <button
+                      className="rounded-xl border border-slate-700 px-4 text-slate-300"
+                      onClick={() => {
+                        setEditingRunId(null);
+                        setRun(initialRun);
+                        setRunFormOpen(false);
+                      }}
+                      type="button"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
               </form>
             ) : null}
           </section>
 
-          {activeTab === "templates" ? (
-            <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5">
-              <div>
+          {activeTab === "templates" && !templateFormOpen ? (
+            <section className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
                   Reusable library
                 </p>
                 <h2 className="mt-1 font-bold text-white">Your Templates</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Approved Templates remain available for future Events. Editing
-                  a reviewed format creates another governed revision.
-                </p>
+                </div>
+                <button className="rounded-xl bg-cyan-300 px-3 py-2 text-sm font-black text-slate-950" onClick={() => { setEditingTemplateId(null); setTemplate(initialTemplate); setTemplateFormOpen(true); }} type="button">New template</button>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-3 space-y-2">
                 {templates.map((item) => (
                   <article
-                    className="rounded-2xl border border-slate-800 p-4"
+                    className="rounded-xl border border-slate-800 bg-slate-950/50 p-3"
                     key={item._id}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold">{item.title}</p>
-                        <p className="mt-1 text-sm text-slate-400">
+                        <p className="mt-1 text-xs text-slate-400">
                           {gameNameFor(item)} / {item.mode} / revision{" "}
                           {item.revision || 1}
                         </p>
                       </div>
-                      <span className="rounded-full bg-slate-800 px-3 py-1 text-xs capitalize text-cyan-200">
+                      <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-1 text-xs capitalize text-cyan-200">
                         {formatStatus(item.status)}
                       </span>
                     </div>
                     {item.latestReviewNote && (
-                      <p className="mt-3 rounded-xl border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-100">
+                      <p className="mt-2 rounded-lg border border-amber-800/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
                         Reviewer note: {item.latestReviewNote}
                       </p>
                     )}
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       {editableStatuses.has(item.status) && (
                         <button
                           className="rounded-lg border border-slate-700 px-3 py-2 text-sm"
@@ -778,29 +780,28 @@ const EventManagerDashboard = () => {
                 )}
               </div>
             </section>
-          ) : activeTab === "events" ? (
+          ) : activeTab === "events" && !runFormOpen ? (
             <>
-              <section className="rounded-3xl border border-slate-800 bg-slate-950/90 p-5">
-                <div>
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/75 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
                     Scheduled competitions
                   </p>
                   <h2 className="mt-1 font-bold text-white">Your Events</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    Round setup becomes available after registration closes and
-                    the final player count is known.
-                  </p>
+                  </div>
+                  <button className="rounded-xl bg-cyan-300 px-3 py-2 text-sm font-black text-slate-950 disabled:opacity-50" disabled={!approvedTemplates.length} onClick={() => { setEditingRunId(null); setRun(initialRun); setRunFormOpen(true); }} type="button">New Event</button>
                 </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="mt-3 space-y-2">
                   {runs.map((item) => (
                     <article
-                      className="rounded-2xl border border-slate-800 p-4"
+                      className="rounded-xl border border-slate-800 bg-slate-950/50 p-3"
                       key={item._id}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-semibold">{item.title}</p>
-                          <p className="mt-1 text-sm text-slate-400">
+                          <p className="mt-1 text-xs text-slate-400">
                             {new Date(item.startsAt).toLocaleString()} /
                             revision {item.revision || 1}
                           </p>
@@ -809,91 +810,22 @@ const EventManagerDashboard = () => {
                               ? `Paid entry / INR ${(item.entryTerms.entryFeeMinor / 100).toFixed(2)} per player`
                               : "Free entry"}
                           </p>
-                          {item.roundPlanStatus === "approved" &&
-                          item.executionPlan ? (
-                            <div className="mt-2 space-y-1 text-xs text-slate-500">
-                              <p className="font-bold capitalize text-cyan-100/70">
-                                {formatStatus(item.executionPlan.format)}
-                              </p>
-                              {item.executionPlan.format === "ranked_stages" ? (
-                                item.executionPlan.stages?.map((stage) => (
-                                  <p key={stage.number}>
-                                    Round {stage.number} /{" "}
-                                    {stage.participantsPerMatch} per room /
-                                    {stage.qualificationRule === "final_ranking"
-                                      ? " final ranking"
-                                      : ` top ${stage.advanceCount} qualify`}
-                                  </p>
-                                ))
-                              ) : (
-                                <p>Two-player matches / one winner advances</p>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="mt-2 text-xs font-bold capitalize text-amber-200">
-                              Round plan:{" "}
-                              {(
-                                item.roundPlanStatus || "after registration"
-                              ).replaceAll("_", " ")}
-                            </p>
-                          )}
+                          <p className="mt-2 text-xs font-bold capitalize text-amber-200">Round plan: {formatStatus(item.roundPlanStatus || "after registration")}</p>
                           {item.executionHandoff ? (
-                            <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-                              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-cyan-300">
-                                Operations handoff /{" "}
-                                {formatStatus(item.executionHandoff.state)}
-                              </p>
-                              <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-300">
-                                <span>
-                                  {item.executionHandoff.stageCount} stages
-                                </span>
-                                <span>
-                                  / {item.executionHandoff.roomCount} rooms
-                                </span>
-                                <span>
-                                  / {item.executionHandoff.awaitingOperator}{" "}
-                                  awaiting operator
-                                </span>
-                                <span>
-                                  / {item.executionHandoff.inProgress} live
-                                </span>
-                                <span>
-                                  / {item.executionHandoff.resultAttention}{" "}
-                                  result attention
-                                </span>
-                                <span>
-                                  / {item.executionHandoff.completed} completed
-                                </span>
-                              </div>
-                            </div>
+                            <p className="mt-1 text-xs font-bold capitalize text-cyan-200">Operations: {formatStatus(item.executionHandoff.state)}</p>
                           ) : null}
+                          {item.registrationCapacity > 0 ? <p className="mt-1 text-xs text-slate-400">Registration: {item.registrationSummary?.registeredCount || 0}/{item.registrationCapacity}</p> : null}
                         </div>
-                        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs capitalize text-cyan-200">
+                        <span className="shrink-0 rounded-full bg-slate-800 px-2.5 py-1 text-xs capitalize text-cyan-200">
                           {formatStatus(item.status)}
                         </span>
                       </div>
                       {item.latestReviewNote && (
-                        <p className="mt-3 rounded-xl border border-amber-800/60 bg-amber-950/30 p-3 text-sm text-amber-100">
+                        <p className="mt-2 rounded-lg border border-amber-800/60 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
                           Reviewer note: {item.latestReviewNote}
                         </p>
                       )}
-                      {item.registrationCapacity > 0 ? (
-                        <div className="mt-3">
-                          <JoinProgress
-                            capacity={item.registrationCapacity}
-                            joined={
-                              item.registrationSummary?.registeredCount || 0
-                            }
-                            label="Registration progress"
-                            status={
-                              item.status === "registration_open"
-                                ? "Registration open"
-                                : formatStatus(item.status)
-                            }
-                          />
-                        </div>
-                      ) : null}
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         {editableStatuses.has(item.status) && (
                           <button
                             className="rounded-lg border border-slate-700 px-3 py-2 text-sm"

@@ -34,6 +34,16 @@ test("offering mutations use only the Tournament Manager API", async () => {
   assert.doesNotMatch(components, /TournamentManagement/);
 });
 
+test("Tournament Manager uses compact operational offering rows", async () => {
+  const management = await source(
+    "../src/components/adminComponents/QuickMatchOfferingManagement.jsx",
+  );
+
+  assert.match(management, /Room filling:/);
+  assert.match(management, /space-y-2/);
+  assert.doesNotMatch(management, /JoinProgress|const Detail/);
+});
+
 test("Tournament place rewards are configured once and result commands send ranking only", async () => {
   const [management, operations, prizeReview, playerCard] = await Promise.all([
     source("../src/components/adminComponents/QuickMatchOfferingManagement.jsx"),
