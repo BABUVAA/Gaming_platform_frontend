@@ -26,6 +26,7 @@ const createEmptyForm = () => ({
   gameAccountVerificationWaiverEndsAt: "",
   map: "",
   maxParticipants: "",
+  minimumParticipants: "",
   mode: "",
   prizePoolMinor: "0",
   rewardPolicy: "winner_split",
@@ -80,6 +81,7 @@ const toForm = (offering) => ({
   ),
   map: offering.map || "",
   maxParticipants: String(offering.maxParticipants),
+  minimumParticipants: offering.minimumParticipants == null ? "" : String(offering.minimumParticipants),
   mode: offering.mode,
   prizePoolMinor: String(offering.prizePoolMinor),
   rewardPolicy: offering.rewardPolicy || "winner_split",
@@ -200,6 +202,20 @@ const OfferingForm = ({
               onChange("maxParticipants", event.target.value)
             }
           />
+        </Field>
+        <Field label="Minimum seats for early room closure (optional)">
+          <input
+            min={Math.max(2, Number(form.teamSize) * 2)}
+            max={form.maxParticipants || undefined}
+            step={Number(form.teamSize) || 1}
+            type="number"
+            value={form.minimumParticipants}
+            onChange={(event) => onChange("minimumParticipants", event.target.value)}
+          />
+          <p className="mt-2 text-xs font-normal text-slate-400">
+            Leave blank for two complete teams (or all rewarded places, if greater).
+            A manager may close a room early; every team must remain complete and prizes stay unchanged.
+          </p>
         </Field>
         <Field label="Region">
           <input
@@ -399,6 +415,7 @@ const QuickMatchOfferingManagement = () => {
           ? new Date(form.gameAccountVerificationWaiverEndsAt).toISOString()
           : null,
       maxParticipants: Number(form.maxParticipants),
+      minimumParticipants: form.minimumParticipants === "" ? null : Number(form.minimumParticipants),
       prizePoolMinor: Number(form.prizePoolMinor),
       placementRewards: form.rewardPolicy === "placement"
         ? form.placementRewards.map((row, index) => ({ place: index + 1, amountMinor: Number(row.amountMinor) }))

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,6 +9,11 @@ import {
   FiCheckCircle,
   FiChevronDown,
   FiClock,
+  FiCopy,
+  FiEye,
+  FiEyeOff,
+  FiMessageSquare,
+  FiX,
   FiRadio,
   FiRefreshCw,
   FiShield,
@@ -146,6 +152,52 @@ const getRoomOperationalLabel = (room, percentage) => {
   if (["result_pending", "disputed"].includes(room.match.status)) return "Results pending";
   return "Match created";
 };
+
+const operatorActionPriority = Object.freeze({
+  result_pending: 0,
+  live: 1,
+  lobby_ready: 2,
+  scheduled: 3,
+  operator_assigned: 4,
+  disputed: 5,
+});
+
+const formatCountdown = (scheduledFor, nowMs) => {
+  if (!scheduledFor) return "Schedule pending";
+  const scheduledMs = new Date(scheduledFor).getTime();
+  if (Number.isNaN(scheduledMs)) return "Schedule pending";
+  const difference = scheduledMs - nowMs;
+  const absoluteMinutes = Math.max(1, Math.ceil(Math.abs(difference) / 60_000));
+  const hours = Math.floor(absoluteMinutes / 60);
+  const minutes = absoluteMinutes % 60;
+  const days = Math.floor(hours / 24);
+  const duration = days ? `${days}d ${hours % 24}h` : hours ? `${hours}h ${minutes}m` : `${minutes}m`;
+  return difference > 0 ? `Starts in ${duration}` : `Start overdue by ${duration}`;
+};
+
+const formatMatchSchedule = (match, nowMs) => {
+  if (!match.scheduledFor) return "Schedule pending";
+  const schedule = formatDateTime(match.scheduledFor);
+  if (["scheduled", "lobby_ready"].includes(match.status)) {
+    return `${schedule} · ${formatCountdown(match.scheduledFor, nowMs)}`;
+  }
+  if (match.status === "live") return `${schedule} · Match live`;
+  return schedule;
+};
+
+const getNextActionCopy = (match, nowMs) => {
+  if (match.status === "result_pending") return "Review the saved ranking and verify the result.";
+  if (match.status === "live") return "Record the complete room ranking when play finishes.";
+  if (["scheduled", "lobby_ready"].includes(match.status)) {
+    if (nowMs - new Date(match.scheduledFor).getTime() >= 86_400_000) {
+      return `${formatCountdown(match.scheduledFor, nowMs)}. Confirm the schedule with the Game Manager before starting this delayed match.`;
+    }
+    return `${formatCountdown(match.scheduledFor, nowMs)}. Open the lobby details before starting.`;
+  }
+  if (match.status === "operator_assigned") return "Waiting for the Game Manager to publish the schedule and lobby.";
+  return "A dispute is open for governance review. Monitor the evidence and Match chat.";
+};
+
 const Operations = () => {
   const { competitionRevision, connected } = useSocket();
   const dispatch = useDispatch();
@@ -162,6 +214,24 @@ const Operations = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeDesk, setActiveDesk] = useState("rooms");
   const [expandedMatchId, setExpandedMatchId] = useState("");
+  const [matchTabs, setMatchTabs] = useState({});
+  const [openRequest, setOpenRequest] = useState(null);
+  const lastScrolledRequest = useRef(null);
+  const [chatMatchId, setChatMatchId] = useState("");
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [revealedLobbyIds, setRevealedLobbyIds] = useState({});
+  const [copiedLobbyValue, setCopiedLobbyValue] = useState("");
+
+  useEffect(() => {
+    if (!openRequest || lastScrolledRequest.current === openRequest || activeDesk !== "matches") return;
+    const card = document.getElementById(`assigned-match-${openRequest.matchId}`);
+    // Wait for React to mount the selected desk and expanded card before navigating.
+    if (card) {
+      lastScrolledRequest.current = openRequest;
+      card.scrollIntoView({ block: "start", behavior: "smooth" });
+      card.focus({ preventScroll: true });
+    }
+  }, [openRequest, activeDesk, matches]);
 
   useEffect(() => {
     const request = dispatch(fetchOperatorWorkspace());
@@ -190,6 +260,17 @@ const Operations = () => {
     })));
   }, [matches]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!copiedLobbyValue) return undefined;
+    const timer = window.setTimeout(() => setCopiedLobbyValue(""), 2_000);
+    return () => window.clearTimeout(timer);
+  }, [copiedLobbyValue]);
+
   const orderedMatches = useMemo(
     () =>
       [...matches].sort(
@@ -211,6 +292,17 @@ const Operations = () => {
     }
     return orderedMatches;
   }, [activeFilter, orderedMatches]);
+
+  const nextActionMatch = useMemo(
+    () => [...orderedMatches]
+      .filter((match) => Object.hasOwn(operatorActionPriority, match.status))
+      .sort((first, second) => {
+        const priorityDifference = operatorActionPriority[first.status] - operatorActionPriority[second.status];
+        if (priorityDifference) return priorityDifference;
+        return new Date(first.scheduledFor || first.createdAt) - new Date(second.scheduledFor || second.createdAt);
+      })[0] || null,
+    [orderedMatches],
+  );
 
   const claimMatch = async (matchId) => {
     const action = await dispatch(claimOperatorMatch(matchId));
@@ -249,6 +341,43 @@ const Operations = () => {
     if (currentIndex < 0 || nextIndex < 0 || nextIndex >= rankingIds.length) return;
     [rankingIds[currentIndex], rankingIds[nextIndex]] = [rankingIds[nextIndex], rankingIds[currentIndex]];
     updateResultDraft(matchId, { [field]: rankingIds });
+  };
+
+  const moveRankedPlayerToPosition = (matchId, playerId, position) => {
+    const field = resultDrafts[matchId]?.usesRankingKeys ? "rankingKeys" : "rankingIds";
+    const rankingIds = [...(resultDrafts[matchId]?.[field] || [])];
+    const currentIndex = rankingIds.indexOf(playerId);
+    const nextIndex = Number(position) - 1;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= rankingIds.length || currentIndex === nextIndex) return;
+    rankingIds.splice(currentIndex, 1);
+    rankingIds.splice(nextIndex, 0, playerId);
+    updateResultDraft(matchId, { [field]: rankingIds });
+  };
+
+  const openAssignedMatch = (matchId) => {
+    const id = String(matchId);
+    const selected = matches.find((match) => String(match._id) === id);
+    setActiveDesk("matches");
+    setActiveFilter("all");
+    setExpandedMatchId(id);
+    setMatchTabs((current) => ({ ...current, [id]: ["scheduled", "lobby_ready"].includes(selected?.status) ? "lobby" : ["live", "result_pending", "disputed"].includes(selected?.status) ? "results" : "overview" }));
+    // A fresh request also scrolls when the same already-open Match is selected again.
+    setOpenRequest({ matchId: id });
+  };
+
+  const openRoomWork = (room) => {
+    if (room.match?.assignedToViewer) openAssignedMatch(room.match.id);
+    else if (room.match?.status === "awaiting_operator") setActiveDesk("queue");
+  };
+
+  const copyLobbyValue = async (matchId, field, value) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedLobbyValue(`${matchId}:${field}`);
+    } catch {
+      setCopiedLobbyValue("");
+    }
   };
 
   if (
@@ -315,6 +444,14 @@ const Operations = () => {
         ))}
       </section>
 
+      {nextActionMatch ? (
+        <NextActionCard
+          match={nextActionMatch}
+          nowMs={nowMs}
+          onOpen={() => openAssignedMatch(nextActionMatch._id)}
+        />
+      ) : null}
+
       <StaffWorkspaceTabs activeId={activeDesk} ariaLabel="Match Operator responsibilities" items={[
         { count: activeRooms.length, id: "rooms", label: "Active rooms" },
         { count: unassignedMatches.length, id: "queue", label: "Full rooms" },
@@ -336,7 +473,12 @@ const Operations = () => {
             return <article className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4" key={room.id}>
               <div className="flex items-start justify-between gap-3"><div><h2 className="font-black text-white">{room.title}</h2><p className="mt-1 text-xs capitalize text-slate-400">{room.gameKey} / {room.mode} / {room.map}</p></div><span className="text-sm font-black text-cyan-200">{room.joinedCount}/{room.capacity}</span></div>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-cyan-300" style={{ width: `${percentage}%` }} /></div>
-              <p className="mt-3 text-xs font-bold text-slate-400">{getRoomOperationalLabel(room, percentage)}</p>
+              <p className="mt-3 text-xs font-bold text-slate-400">{room.earlyClosed && room.status === "full" ? "Entry closed · " : ""}{getRoomOperationalLabel(room, percentage)}</p>
+              {room.match?.assignedToViewer || room.match?.status === "awaiting_operator" ? (
+                <button className="mt-4 w-full rounded-xl border border-cyan-300/25 px-3 py-2 text-xs font-black text-cyan-100 hover:bg-cyan-300/10" onClick={() => openRoomWork(room)} type="button">
+                  {room.match.assignedToViewer ? "Open assigned match" : "View assignment queue"}
+                </button>
+              ) : null}
             </article>;
           })}
           {!activeRooms.length ? <p className="text-sm text-slate-500">No active rooms in your assigned games.</p> : null}
@@ -417,6 +559,11 @@ const Operations = () => {
         </div>
 
         <div className="space-y-3 p-4 sm:p-6">
+          {openRequest && !matches.some((match) => String(match._id) === openRequest.matchId) ? (
+            <p role="status" className="rounded-xl bg-amber-300/10 p-3 text-sm text-amber-100">
+              This assigned match is not in the loaded page. Load more assigned matches below, or refresh if its assignment has changed.
+            </p>
+          ) : null}
           {filteredMatches.map((match) => (
             <AssignedMatchCard
               activeAction={activeAction}
@@ -431,7 +578,16 @@ const Operations = () => {
               }
               onUpdateResultDraft={updateResultDraft}
               onMoveRankedPlayer={moveRankedPlayer}
+              onMoveRankedPlayerToPosition={moveRankedPlayerToPosition}
               onExecuteCommand={executeCommand}
+              copiedLobbyValue={copiedLobbyValue}
+              lobbyRevealed={Boolean(revealedLobbyIds[match._id])}
+              nowMs={nowMs}
+              activeTab={matchTabs[match._id] || "overview"}
+              onTabChange={(tab) => setMatchTabs((current) => ({ ...current, [match._id]: tab }))}
+              onOpenChat={() => setChatMatchId(String(match._id))}
+              onCopyLobbyValue={copyLobbyValue}
+              onToggleLobby={() => setRevealedLobbyIds((current) => ({ ...current, [match._id]: !current[match._id] }))}
             />
           ))}
 
@@ -462,9 +618,32 @@ const Operations = () => {
           ) : null}
         </div>
       </section> : null}
+      {chatMatchId && matches.some((match) => String(match._id) === chatMatchId) ? (
+        <OperatorChatWindow
+          match={matches.find((match) => String(match._id) === chatMatchId)}
+          onClose={() => setChatMatchId("")}
+        />
+      ) : null}
     </main>
   );
 };
+
+const NextActionCard = ({ match, nowMs, onOpen }) => (
+  <section className="overflow-hidden rounded-2xl border border-cyan-300/25 bg-[linear-gradient(120deg,rgba(8,145,178,0.16),rgba(15,23,42,0.92)_55%)] shadow-[0_16px_44px_rgba(2,8,23,0.24)]">
+    <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
+          <FiRadio /> Next action
+        </p>
+        <h2 className="mt-2 truncate text-lg font-black text-white">{match.title || "Assigned match"}</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-300">{getNextActionCopy(match, nowMs)}</p>
+      </div>
+      <button className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 hover:bg-cyan-200" onClick={onOpen} type="button">
+        Open match <FiArrowRight />
+      </button>
+    </div>
+  </section>
+);
 
 const MetricCard = ({ icon: Icon, label, tone, value }) => {
   const tones = {
@@ -561,7 +740,7 @@ const AssignmentEmptyState = () => (
     </div>
     <h3 className="mt-5 text-xl font-black text-white">Queue is clear</h3>
     <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">
-      New full rooms will appear here automatically while your shift is
+      New rooms ready for play will appear here automatically while your shift is
       active.
     </p>
   </div>
@@ -569,13 +748,22 @@ const AssignmentEmptyState = () => (
 
 const AssignedMatchCard = ({
   activeAction,
+  activeTab,
+  copiedLobbyValue,
   expanded,
+  lobbyRevealed,
   match,
+  nowMs,
+  onCopyLobbyValue,
   resultDraft,
   onMoveRankedPlayer,
+  onMoveRankedPlayerToPosition,
   onToggle,
+  onToggleLobby,
   onUpdateResultDraft,
   onExecuteCommand,
+  onTabChange,
+  onOpenChat,
 }) => {
   const participantCount = match.participants?.length || 0;
   const presentation =
@@ -585,8 +773,10 @@ const AssignedMatchCard = ({
   const rankedEvent = match.eventBatch?.format === "ranked_stages";
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/65">
+    <article id={`assigned-match-${match._id}`} tabIndex={-1} className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/65 focus:outline-none focus:ring-2 focus:ring-cyan-300/60">
       <button
+        aria-expanded={expanded}
+        aria-controls={`match-details-${match._id}`}
         className="flex w-full flex-wrap items-center justify-between gap-4 p-4 text-left sm:p-5"
         onClick={onToggle}
         type="button"
@@ -620,12 +810,25 @@ const AssignedMatchCard = ({
       </button>
 
       {expanded ? (
-        <div className="border-t border-slate-700/80 p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-3">
+        <div id={`match-details-${match._id}`} className="border-t border-slate-700/80 p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <StaffWorkspaceTabs
+                activeId={activeTab}
+                ariaLabel={`Match sections for ${match.title}`}
+                items={[{ id: "overview", label: "Overview" }, { id: "players", label: "Players", count: participantCount }, { id: "lobby", label: "Lobby" }, { id: "results", label: "Results" }]}
+                onChange={onTabChange}
+              />
+            </div>
+            <button type="button" onClick={onOpenChat} className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 px-3 py-3 text-sm font-bold text-cyan-200">
+              <FiMessageSquare /> Open chat
+            </button>
+          </div>
+          {activeTab === "overview" ? <div className="grid gap-3 sm:grid-cols-3">
             <MatchFact
               icon={<FiClock />}
               label="Schedule"
-              value={formatDateTime(match.scheduledFor)}
+              value={formatMatchSchedule(match, nowMs)}
             />
             <MatchFact
               icon={<FiUsers />}
@@ -637,10 +840,10 @@ const AssignedMatchCard = ({
               label="Match ID"
               value={String(match._id).slice(-8).toUpperCase()}
             />
-          </div>
+          </div> : null}
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-            <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
+          <div className="mt-4 space-y-4">
+            {activeTab === "overview" || (activeTab === "lobby" && availableCommand?.command === "start") || (activeTab === "results" && availableCommand?.command === "verify_result") ? <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                 Current stage
               </p>
@@ -673,7 +876,9 @@ const AssignedMatchCard = ({
                 </p>
               )}
 
-              <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+            </div> : null}
+            {activeTab === "players" ? <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
                 Player lineup
               </p>
               <div className="mt-2 max-h-52 space-y-2 overflow-y-auto pr-1">
@@ -690,20 +895,26 @@ const AssignedMatchCard = ({
                   </div>
                 ))}
               </div>
-            </div>
+            </div> : null}
 
-            <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-5">
-              <FiClock className="text-2xl text-cyan-300" />
-              <h4 className="mt-4 font-black text-white">Game Manager schedule</h4>
-              <p className="mt-2 text-sm leading-6 text-slate-400">{match.scheduledFor ? `${formatDateTime(match.scheduledFor)} / lobby opens ten minutes before start.` : "Schedule and lobby access are pending."}</p>
-            </div>
+            {activeTab === "lobby" ? <div className="rounded-2xl border border-slate-700 bg-slate-950/45 p-5">
+              <LobbyAccess
+                copiedValue={copiedLobbyValue}
+                match={match}
+                nowMs={nowMs}
+                onCopy={onCopyLobbyValue}
+                onToggle={onToggleLobby}
+                revealed={lobbyRevealed}
+              />
+            </div> : null}
           </div>
 
-          {(rankedEvent || match.quickMatchOffering) && match.status === "live" ? (
+          {activeTab === "results" && (rankedEvent || match.quickMatchOffering) && match.status === "live" ? (
             <RankedResultEditor
               isBusy={isCommandBusy}
               match={match}
               onMove={onMoveRankedPlayer}
+              onMoveToPosition={onMoveRankedPlayerToPosition}
               onSubmit={(body) => onExecuteCommand(match._id, "record_result", body)}
               onUpdate={onUpdateResultDraft}
               resultDraft={resultDraft}
@@ -711,17 +922,96 @@ const AssignedMatchCard = ({
             />
           ) : null}
 
-          {match.resultSummary?.submittedBy || match.status === "disputed" ? (
+          {activeTab === "results" && (match.resultSummary?.submittedBy || match.status === "disputed") ? (
             <ResultEvidence match={match} />
           ) : null}
-          <MatchChat audience="operator" matchId={String(match._id)} />
+          {activeTab === "results" && !match.resultSummary?.submittedBy && match.status !== "disputed" && !((rankedEvent || match.quickMatchOffering) && match.status === "live") ? (
+            <p className="py-6 text-sm text-slate-400">No result has been submitted. Ranking entry becomes available for supported matches once play is live.</p>
+          ) : null}
         </div>
       ) : null}
     </article>
   );
 };
 
-const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultDraft, tournament = false }) => {
+const OperatorChatWindow = ({ match, onClose }) => {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, []);
+  return createPortal(
+    <dialog ref={dialogRef} onCancel={onClose} aria-labelledby="operator-chat-title" className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 p-4 text-white shadow-2xl backdrop:bg-black/70 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="operator-chat-title" className="break-words font-black">{match.title} — Match chat</h2>
+          <p className="mt-1 text-xs text-slate-400">Private conversation with this Match’s participants</p>
+        </div>
+        <button type="button" aria-label="Close match chat" onClick={onClose} className="shrink-0 rounded-lg border border-slate-700 p-2"><FiX /></button>
+      </div>
+      <MatchChat audience="operator" matchId={String(match._id)} />
+    </dialog>, document.body,
+  );
+};
+
+OperatorChatWindow.propTypes = { match: PropTypes.object.isRequired, onClose: PropTypes.func.isRequired };
+
+const LobbyAccess = ({ copiedValue, match, nowMs, onCopy, onToggle, revealed }) => {
+  const roomCode = match.lobby?.roomCode || "";
+  const roomPassword = match.lobby?.roomPassword || "";
+  const hasLobby = Boolean(roomCode || roomPassword || match.lobby?.instructions);
+  const copied = (field) => copiedValue === `${match._id}:${field}`;
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Lobby access</p>
+          <h4 className="mt-1 font-black text-white">Game Manager schedule</h4>
+        </div>
+        {roomPassword ? (
+          <button aria-label={revealed ? "Hide lobby password" : "Reveal lobby password"} className="rounded-lg border border-slate-700 p-2 text-slate-300 hover:text-white" onClick={onToggle} type="button">
+            {revealed ? <FiEyeOff /> : <FiEye />}
+          </button>
+        ) : null}
+      </div>
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        {match.scheduledFor ? formatMatchSchedule(match, nowMs) : "Schedule and lobby access are pending."}
+      </p>
+      {hasLobby ? (
+        <div className="mt-4 space-y-2">
+          <LobbyCredential label="Room ID" onCopy={() => onCopy(match._id, "room", roomCode)} value={roomCode} copied={copied("room")} />
+          <LobbyCredential label="Password" onCopy={() => onCopy(match._id, "password", roomPassword)} value={roomPassword ? (revealed ? roomPassword : "••••••••") : "Not provided"} copied={copied("password")} copyDisabled={!roomPassword} />
+          {match.lobby?.instructions ? <p className="rounded-xl bg-slate-900 px-3 py-2 text-xs leading-5 text-slate-300"><strong className="text-white">Instructions:</strong> {match.lobby.instructions}</p> : null}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-xl border border-dashed border-slate-700 px-3 py-3 text-xs text-slate-500">Lobby ID and password will appear here after the Game Manager publishes them.</p>
+      )}
+    </>
+  );
+};
+
+const LobbyCredential = ({ copied, copyDisabled = false, label, onCopy, value }) => (
+  <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-900 px-3 py-2">
+    <div className="min-w-0">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
+      <p className="mt-1 truncate font-mono text-sm font-bold text-white">{value || "Not provided"}</p>
+    </div>
+    <button className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-bold text-slate-300 disabled:opacity-40" disabled={copyDisabled || !value} onClick={onCopy} type="button">
+      <FiCopy /> {copied ? "Copied" : "Copy"}
+    </button>
+  </div>
+);
+
+const RankedResultEditor = ({ isBusy, match, onMove, onMoveToPosition, onSubmit, onUpdate, resultDraft, tournament = false }) => {
   const participantById = new Map(
     (match.participants || []).map((participant) => [getParticipantId(participant), participant]),
   );
@@ -756,7 +1046,11 @@ const RankedResultEditor = ({ isBusy, match, onMove, onSubmit, onUpdate, resultD
           <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2" key={playerId}>
             <span className="text-center text-sm font-black text-emerald-200">#{index + 1}</span>
             <span className="min-w-0 text-sm font-bold text-white">{keyBased ? <><span className="block truncate">{groupById.get(playerId)?.name || "Team"}</span>{teamRanking ? <small className="block truncate font-medium text-slate-500">{(groupById.get(playerId)?.participants || []).map(getParticipantName).join(", ")}</small> : null}</> : getParticipantName(participantById.get(playerId))}</span>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-1">
+              <label className="sr-only" htmlFor={`rank-${match._id}-${playerId}`}>Placement for {keyBased ? groupById.get(playerId)?.name || "team" : getParticipantName(participantById.get(playerId))}</label>
+              <select className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-white" id={`rank-${match._id}-${playerId}`} onChange={(event) => onMoveToPosition(match._id, playerId, event.target.value)} value={index + 1}>
+                {rankingIds.map((_, position) => <option key={position + 1} value={position + 1}>#{position + 1}</option>)}
+              </select>
               <button aria-label={`Move ${playerId} up`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === 0} onClick={() => onMove(match._id, playerId, -1)} type="button">Up</button>
               <button aria-label={`Move ${playerId} down`} className="rounded-lg border border-slate-700 px-2 py-1 text-xs disabled:opacity-30" disabled={index === rankingIds.length - 1} onClick={() => onMove(match._id, playerId, 1)} type="button">Down</button>
             </div>
@@ -862,6 +1156,18 @@ const OperationsSkeleton = () => (
   </div>
 );
 
+NextActionCard.propTypes = {
+  match: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
+    createdAt: PropTypes.string,
+    scheduledFor: PropTypes.string,
+    status: PropTypes.string.isRequired,
+    title: PropTypes.string,
+  }).isRequired,
+  nowMs: PropTypes.number.isRequired,
+  onOpen: PropTypes.func.isRequired,
+};
+
 MetricCard.propTypes = {
   icon: PropTypes.elementType.isRequired,
   label: PropTypes.string.isRequired,
@@ -954,9 +1260,16 @@ AssignmentCard.propTypes = {
 };
 
 AssignedMatchCard.propTypes = {
+  activeTab: PropTypes.string.isRequired,
+  onTabChange: PropTypes.func.isRequired,
+  onOpenChat: PropTypes.func.isRequired,
   activeAction: PropTypes.string.isRequired,
+  copiedLobbyValue: PropTypes.string.isRequired,
   expanded: PropTypes.bool.isRequired,
+  lobbyRevealed: PropTypes.bool.isRequired,
   match: matchPropType.isRequired,
+  nowMs: PropTypes.number.isRequired,
+  onCopyLobbyValue: PropTypes.func.isRequired,
   resultDraft: PropTypes.shape({
     proofNote: PropTypes.string.isRequired,
     rankingIds: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -966,15 +1279,35 @@ AssignedMatchCard.propTypes = {
     usesRankingKeys: PropTypes.bool,
   }).isRequired,
   onMoveRankedPlayer: PropTypes.func.isRequired,
+  onMoveRankedPlayerToPosition: PropTypes.func.isRequired,
   onToggle: PropTypes.func.isRequired,
+  onToggleLobby: PropTypes.func.isRequired,
   onUpdateResultDraft: PropTypes.func.isRequired,
   onExecuteCommand: PropTypes.func.isRequired,
+};
+
+LobbyAccess.propTypes = {
+  copiedValue: PropTypes.string.isRequired,
+  match: matchPropType.isRequired,
+  nowMs: PropTypes.number.isRequired,
+  onCopy: PropTypes.func.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  revealed: PropTypes.bool.isRequired,
+};
+
+LobbyCredential.propTypes = {
+  copied: PropTypes.bool.isRequired,
+  copyDisabled: PropTypes.bool,
+  label: PropTypes.string.isRequired,
+  onCopy: PropTypes.func.isRequired,
+  value: PropTypes.string.isRequired,
 };
 
 RankedResultEditor.propTypes = {
   isBusy: PropTypes.bool.isRequired,
   match: matchPropType.isRequired,
   onMove: PropTypes.func.isRequired,
+  onMoveToPosition: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
   onUpdate: PropTypes.func.isRequired,
   resultDraft: PropTypes.shape({

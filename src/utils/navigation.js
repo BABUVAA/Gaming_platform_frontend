@@ -74,6 +74,14 @@ const staffNavigation = [
     match: [ROUTES.TOURNAMENT_MANAGER],
     requiredStaffRoles: ["tournament_manager"],
   },
+  {
+    label: "Game Manager",
+    description: "Supervise rooms, schedules and game accounts",
+    to: ROUTES.GAME_MANAGER,
+    icon: FaGamepad,
+    match: [ROUTES.GAME_MANAGER],
+    requiredStaffRoles: ["game_manager"],
+  },
 ];
 
 const staffUtilityNavigation = [
@@ -240,17 +248,78 @@ const allNavigation = [
   ...staffNavigation,
 ];
 
-export const getStaffWorkspaceNavigation = (summary) => {
-  const staffRoles = new Set(
-    summary?.staffAssignments?.map((assignment) => assignment.role) || [],
-  );
-  return [
-    staffUtilityNavigation[0],
-    staffUtilityNavigation[1],
-    ...staffNavigation.filter((item) =>
-      item.requiredStaffRoles.some((role) => staffRoles.has(role)),
-    ),
+export const getStaffWorkspaceNavigation = (
+  summary,
+  pathname = ROUTES.STAFF,
+) => {
+  if (summary?.role && summary.role !== "staff") return [];
+  const workspaceSwitcher = {
+    ...staffUtilityNavigation[1],
+    navigationKind: "switcher",
+  };
+  const destinations = [
+    {
+      label: "Admin dashboard",
+      description: "Platform administration",
+      to: ROUTES.ADMIN_PANEL,
+      icon: FaCrown,
+      match: [ROUTES.ADMIN_PANEL],
+    },
+    {
+      label: "Access control",
+      description: "Review staff access and assignments",
+      to: ROUTES.STAFF_ACCESS_CONTROL,
+      icon: FaShieldAlt,
+      match: [ROUTES.STAFF_ACCESS_CONTROL],
+    },
+    {
+      label: "Match Operator dashboard",
+      description: "Assigned rooms and matches",
+      to: ROUTES.OPERATIONS,
+      icon: FaSatelliteDish,
+      match: [ROUTES.OPERATIONS],
+    },
+    {
+      label: "Event Manager dashboard",
+      description: "Templates, Events, registrations and rounds",
+      to: ROUTES.EVENT_MANAGER,
+      icon: FaTrophy,
+      match: [ROUTES.EVENT_MANAGER],
+    },
+    {
+      label: "Tournament Manager dashboard",
+      description: "Quick Match offerings and lifecycle",
+      to: ROUTES.TOURNAMENT_MANAGER,
+      icon: FaTrophy,
+      match: [ROUTES.TOURNAMENT_MANAGER],
+    },
+    {
+      label: "Game Manager dashboard",
+      description: "Rooms, schedules and account verification",
+      to: ROUTES.GAME_MANAGER,
+      icon: FaGamepad,
+      match: [ROUTES.GAME_MANAGER],
+    },
+    {
+      label: "Discord workspace",
+      description: "Connect and sync staff roles",
+      to: ROUTES.DISCORD_OPERATIONS,
+      icon: FaDiscord,
+      match: [ROUTES.DISCORD_OPERATIONS],
+    },
   ];
+  const selectedWorkspace = destinations.find((item) =>
+    item.match.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    ),
+  );
+
+  return selectedWorkspace
+    ? [
+        workspaceSwitcher,
+        { ...selectedWorkspace, navigationKind: "dashboard" },
+      ]
+    : [workspaceSwitcher];
 };
 
 export const getDefaultRouteForRole = (role) => {

@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
 import { getStaffWorkspaceNavigation } from "../../../utils/navigation";
@@ -6,9 +6,16 @@ import { ROUTES } from "../../../routes/routeConstants.js";
 
 const StaffSideBar = () => {
   const summary = useSelector(selectPlayerSummary);
-  const navigation = getStaffWorkspaceNavigation(summary);
+  const location = useLocation();
+  const navigation = getStaffWorkspaceNavigation(summary, location.pathname);
+  const workspaceSwitcher = navigation.find(
+    (item) => item.navigationKind === "switcher",
+  );
+  const workspaceDashboard = navigation.find(
+    (item) => item.navigationKind === "dashboard",
+  );
 
-  const links = navigation.map((item) => {
+  const renderDesktopLink = (item) => {
     const Icon = item.icon;
     return (
       <NavLink
@@ -39,12 +46,29 @@ const StaffSideBar = () => {
         )}
       </NavLink>
     );
-  });
+  };
 
   return (
     <>
       <aside className="hidden md:fixed md:bottom-0 md:left-[max(0px,calc((100vw-1600px)/2))] md:top-20 md:z-30 md:flex md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-slate-700 md:bg-[#182235]/90 md:px-3 md:py-4 md:backdrop-blur">
-        <nav className="space-y-1.5">{links}</nav>
+        <nav aria-label="Staff workspace navigation" className="space-y-4">
+          {workspaceSwitcher ? (
+            <div>
+              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                Staff workspace
+              </p>
+              {renderDesktopLink(workspaceSwitcher)}
+            </div>
+          ) : null}
+          {workspaceDashboard ? (
+            <div className="border-t border-slate-700/80 pt-4">
+              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300/80">
+                Selected workspace
+              </p>
+              {renderDesktopLink(workspaceDashboard)}
+            </div>
+          ) : null}
+        </nav>
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 flex gap-2 overflow-x-auto border-t border-slate-700 bg-[#182235]/95 px-2 py-2 shadow-[0_-12px_30px_rgba(2,8,23,0.18)] backdrop-blur md:hidden">

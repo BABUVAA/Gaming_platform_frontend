@@ -78,6 +78,40 @@ const eventReadThunk = (type, suffix, fallback) => createApiThunk(
 );
 
 export const fetchGameManagerEventOperations = eventReadThunk("fetchEventOperations", "operations", null);
+export const fetchManagedRoom = createApiThunk("gameManagement/fetchManagedRoom", {
+  path: ({ arg }) => `/api/staff/games/rooms/${arg.roomId}`,
+  selectData: (response) => response.data?.data?.room,
+  errorMessage: "Unable to load room details.",
+});
+const roomCommand = (type, command, success) => createApiThunk(`gameManagement/${type}`, {
+  method: "post",
+  path: ({ arg }) => `/api/staff/games/rooms/${arg.roomId}/${command}`,
+  getBody: ({ reason }) => ({ reason }),
+  selectData: (response) => response.data?.data?.room,
+  errorMessage: "Unable to update this room. Refresh its current status and try again.",
+  toast: { success, error: true },
+}, { condition: ({ roomId }, { getState }) => getState().gameManagement.roomDetails?.[roomId]?.actionStatus !== "loading" });
+export const closeManagedRoomEarly = roomCommand("closeManagedRoomEarly", "close-early", "Room entry closed. Assign an operator and schedule the match next.");
+export const cancelManagedRoom = roomCommand("cancelManagedRoom", "cancel", "Room cancelled.");
+export const fetchManagedMatch = createApiThunk("gameManagement/fetchManagedMatch", {
+  path: ({ arg }) => `/api/staff/games/matches/${arg.matchId}`,
+  selectData: (response) => response.data?.data?.match,
+  errorMessage: "Unable to load Match details.",
+});
+export const fetchManagedMatchOperators = createApiThunk("gameManagement/fetchManagedMatchOperators", {
+  path: ({ arg }) => `/api/staff/games/matches/${arg.matchId}/operators`,
+  getParams: ({ cursor }) => cursor ? { cursor } : {},
+  selectData: (response) => response.data?.data?.operators,
+  errorMessage: "Unable to load eligible operators.",
+});
+export const assignManagedMatchOperator = createApiThunk("gameManagement/assignManagedMatchOperator", {
+  method: "patch",
+  path: ({ arg }) => `/api/staff/games/matches/${arg.matchId}/operator`,
+  getBody: ({ operatorId }) => ({ operatorId }),
+  selectData: (response) => response.data?.data?.match,
+  errorMessage: "Unable to assign this operator.",
+  toast: { success: "Match Operator assigned.", error: true },
+}, { condition: ({ matchId }, { getState }) => getState().gameManagement.matchDetails?.[matchId]?.assignStatus !== "loading" });
 export const fetchGameManagerEventRegistrations = eventReadThunk("fetchEventRegistrations", "registrations", { items: [], page: {} });
 export const fetchGameManagerEventMatches = eventReadThunk("fetchEventMatches", "matches", { items: [], page: {} });
 export const fetchGameManagerEventStandings = eventReadThunk("fetchEventStandings", "standings", { standings: [] });
@@ -90,21 +124,70 @@ const appendUnique = (current = [], additions = [], getKey = (item) => item.id) 
 
 const gameManagementSlice = createSlice({
   name: "gameManagement",
-  initialState: { error: null, eventMatches: {}, eventOperations: {}, eventRegistrations: {}, eventStandings: {}, operations: [], schedule: { error: null, matchId: null, status: "idle" }, status: "idle", verification: { actionError: null, actionStatus: "idle", error: null, items: [], page: {}, status: "idle" } },
+  initialState: { roomDetails: {}, matchDetails: {}, error: null, eventMatches: {}, eventOperations: {}, eventRegistrations: {}, eventStandings: {}, operations: [], schedule: { error: null, matchId: null, status: "idle" }, status: "idle", verification: { actionError: null, actionStatus: "idle", error: null, items: [], page: {}, status: "idle" } },
   reducers: {},
   extraReducers: (builder) => {
+    for (const thunk of [fetchManagedRoom, closeManagedRoomEarly, cancelManagedRoom]) {
+      const prefix = thunk === fetchManagedRoom ? "detail" : "action";
+      builder.addCase(thunk.pending, (state, action) => {
+        const entry = state.roomDetails[action.meta.arg.roomId] ||= {};
+        entry[`${prefix}RequestId`] = action.meta.requestId;
+        entry[`${prefix}Status`] = "loading";
+        entry[`${prefix}Error`] = null;
+        // An earlier read must not restore an actionable state after a command.
+        if (prefix === "action") entry.detailRequestId = null;
+      }).addCase(thunk.fulfilled, (state, action) => {
+        const entry = state.roomDetails[action.meta.arg.roomId];
+        if (entry?.[`${prefix}RequestId`] !== action.meta.requestId) return;
+        entry.room = action.payload;
+        // Reopened panels can start a read while this write is in flight.
+        // Its pre-commit snapshot must not restore the old room controls.
+        if (prefix === "action") entry.detailRequestId = null;
+        entry[`${prefix}Status`] = "succeeded";
+        entry.detailStatus = "succeeded";
+      }).addCase(thunk.rejected, (state, action) => {
+        const entry = state.roomDetails[action.meta.arg.roomId];
+        if (entry?.[`${prefix}RequestId`] !== action.meta.requestId) return;
+        entry[`${prefix}Status`] = action.meta.aborted ? "idle" : "failed";
+        entry[`${prefix}Error`] = action.meta.aborted ? null : action.payload || action.error.message;
+      });
+    }
+    for (const [thunk, prefix, field] of [[fetchManagedMatch, "detail", "match"], [fetchManagedMatchOperators, "operators", "operators"], [assignManagedMatchOperator, "assign", "assignment"]]) {
+      builder.addCase(thunk.pending, (state, action) => {
+        const id = action.meta.arg.matchId;
+        const entry = state.matchDetails[id] ||= {};
+        entry[`${prefix}RequestId`] = action.meta.requestId;
+        entry[`${prefix}Status`] = "loading";
+        entry[`${prefix}Error`] = null;
+      }).addCase(thunk.fulfilled, (state, action) => {
+        const entry = state.matchDetails[action.meta.arg.matchId];
+        if (entry?.[`${prefix}RequestId`] !== action.meta.requestId) return;
+        entry[field] = prefix === "operators" && action.meta.arg.cursor
+          ? { ...action.payload, items: appendUnique(entry.operators?.items, action.payload.items) }
+          : action.payload;
+        entry[`${prefix}Status`] = "succeeded";
+      }).addCase(thunk.rejected, (state, action) => {
+        const entry = state.matchDetails[action.meta.arg.matchId];
+        if (entry?.[`${prefix}RequestId`] !== action.meta.requestId) return;
+        entry[`${prefix}Status`] = action.meta.aborted ? "idle" : "failed";
+        entry[`${prefix}Error`] = action.meta.aborted ? null : action.payload || action.error.message;
+      });
+    }
     builder
-      .addCase(fetchManagedGameOperations.pending, (state) => {
+      .addCase(fetchManagedGameOperations.pending, (state, action) => {
+        state.operationsRequestId = action.meta.requestId;
         state.status = "loading";
         state.error = null;
       })
       .addCase(fetchManagedGameOperations.fulfilled, (state, action) => {
+        if (state.operationsRequestId !== action.meta.requestId) return;
         state.operations = action.payload;
         state.status = "succeeded";
       })
       .addCase(fetchManagedGameOperations.rejected, (state, action) => {
-        state.error = action.payload || action.error.message;
-        state.status = "failed";
+        if (state.operationsRequestId !== action.meta.requestId) return;
+        state.error = action.meta.aborted ? null : action.payload || action.error.message;
+        state.status = action.meta.aborted ? "idle" : "failed";
       })
       .addCase(fetchGameManagerEventOperations.fulfilled, (state, action) => {
         state.eventOperations[action.meta.arg.runId] = action.payload;

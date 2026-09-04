@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { FiAlertTriangle, FiClock, FiRadio, FiRefreshCw, FiUsers } from "react-icons/fi";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchManagedGameOperations, scheduleManagedMatch } from "../store/slices/gameManagementSlice";
+import { fetchManagedGameOperations, fetchManagedMatch, scheduleManagedMatch } from "../store/slices/gameManagementSlice";
+import ManagedMatchDetails from "../components/gameManagement/ManagedMatchDetails.jsx";
+import ManagedRoomDetails from "../components/gameManagement/ManagedRoomDetails.jsx";
+import { getStoredErrorMessage } from "../api/apiError";
 import GameManagerEventDetails from "../components/gameManagement/GameManagerEventDetails.jsx";
 import GameAccountVerificationQueue from "../components/gameManagement/GameAccountVerificationQueue.jsx";
 import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
@@ -46,11 +49,30 @@ const GameManagerDashboard = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeSection, setActiveSection] = useState("overview");
   const [scheduleDrafts, setScheduleDrafts] = useState({});
+  const [selectedMatchId, setSelectedMatchId] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
+  const [nowMs, setNowMs] = useState(Date.now);
 
   useEffect(() => {
     // This read model contains only games inside the active assignment scope.
     dispatch(fetchManagedGameOperations());
   }, [dispatch]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+      if (document.visibilityState === "visible") dispatch(fetchManagedGameOperations());
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [dispatch]);
+
+  const openMatch = (id) => { setSelectedRoomId(""); setSelectedMatchId(String(id)); };
+  const openRoom = (id) => { setSelectedMatchId(""); setSelectedRoomId(String(id)); };
+  const delayLabel = (match) => {
+    const minutes = Math.floor((nowMs - new Date(match.scheduledFor).getTime()) / 60_000);
+    if (!["scheduled", "lobby_ready"].includes(match.status) || !Number.isFinite(minutes) || minutes < 1) return "";
+    return minutes >= 1440 ? `Start delayed ${Math.floor(minutes / 1440)}d ${Math.floor(minutes % 1440 / 60)}h` : `Start delayed ${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  };
 
   const updateScheduleDraft = (matchId, field, value) => setScheduleDrafts((current) => ({
     ...current,
@@ -66,7 +88,11 @@ const GameManagerDashboard = () => {
       roomPassword: draft.roomPassword || "",
       scheduledFor: draft.scheduledFor ? new Date(draft.scheduledFor).toISOString() : "",
     }));
-    if (scheduleManagedMatch.fulfilled.match(action)) dispatch(fetchManagedGameOperations());
+    if (scheduleManagedMatch.fulfilled.match(action)) {
+      dispatch(fetchManagedGameOperations());
+      if (selectedMatchId === matchId) dispatch(fetchManagedMatch({ matchId }));
+      setScheduleDrafts((current) => { const next = { ...current }; delete next[matchId]; return next; });
+    }
   };
 
   const total = operations.reduce(
@@ -105,7 +131,9 @@ const GameManagerDashboard = () => {
           { id: "history", label: "History" },
         ]} onChange={setActiveSection} />
 
-        {error && <section className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{error}</section>}
+        {error && <section className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{getStoredErrorMessage(error)}</section>}
+        {selectedMatchId ? <ManagedMatchDetails key={selectedMatchId} matchId={selectedMatchId} onClose={() => setSelectedMatchId("")} onOpenRoom={openRoom} renderSchedule={(match) => <ScheduleRoomForm draft={scheduleDrafts[match.id] || {}} match={match} onChange={updateScheduleDraft} onSave={saveSchedule} />} /> : null}
+        {selectedRoomId ? <ManagedRoomDetails key={selectedRoomId} roomId={selectedRoomId} onClose={() => setSelectedRoomId("")} onOpenMatch={openMatch} /> : null}
         {status === "loading" && operations.length === 0 && <section className="rounded-3xl border border-slate-800 bg-[#07111f] p-8 text-slate-400">Loading assigned game operations...</section>}
         {status !== "loading" && operations.length === 0 && !error && <section className="rounded-3xl border border-slate-800 bg-[#07111f] p-8 text-slate-400">No active game scope is available for this assignment. Ask a Platform Admin to review the assignment.</section>}
 
@@ -130,10 +158,11 @@ const GameManagerDashboard = () => {
               {activeSection === "rooms" ? <div className="mt-5 space-y-3">
                 {(item.activeRooms || []).map((room) => (
                   <article className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4" key={room.id}>
-                    <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-white">{room.title}</h3><p className="mt-1 text-xs capitalize text-slate-500">{room.mode} / {room.map} / {room.status}</p></div><span className="text-sm font-black text-cyan-200">{room.joinedCount}/{room.capacity}</span></div>
+                    <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-white">{room.title}</h3><p className="mt-1 text-xs capitalize text-slate-500">{room.mode} / {room.map} / {room.earlyClosed && room.status === "full" ? "Entry closed" : room.status}</p></div><span className="text-sm font-black text-cyan-200">{room.joinedCount}/{room.capacity}</span></div>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-cyan-300" style={{ width: `${Math.min(100, Math.round((room.joinedCount / room.capacity) * 100))}%` }} /></div>
                     <div className="mt-3 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">{room.lineup.map((player) => <span className="rounded-lg bg-slate-900 px-2 py-1 text-xs text-slate-300" key={`${room.id}:${player.seat}`}>#{player.seat} {player.username}</span>)}</div>
-                    {room.match?.assignedOperator ? <ScheduleRoomForm draft={scheduleDrafts[room.match.id] || {}} match={room.match} onChange={updateScheduleDraft} onSave={saveSchedule} /> : room.status === "full" ? <p className="mt-4 text-sm font-bold text-amber-200">Waiting for a Match Operator to claim this room.</p> : null}
+                    <button type="button" onClick={() => openRoom(room.id)} className="mt-3 rounded-lg border border-slate-700 px-3 py-2 text-sm font-bold text-cyan-200">Open room controls</button>
+                    {room.match ? <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-amber-200">{delayLabel(room.match) || (room.match.assignedOperator ? room.match.assignedOperator.username : "Needs operator assignment")}</span><button type="button" onClick={() => openMatch(room.match.id)} className="rounded-lg border border-cyan-300/30 px-3 py-2 text-sm font-bold text-cyan-200">Open match details</button></div> : room.status === "full" ? <p className="mt-4 text-sm font-bold text-amber-200">Preparing Match for operator assignment.</p> : null}
                   </article>
                 ))}
                 {!(item.activeRooms || []).length ? <p className="text-sm text-slate-500">No active rooms.</p> : null}
@@ -162,6 +191,8 @@ const GameManagerDashboard = () => {
                       <p className="mt-2 text-xs text-slate-500">
                         {formatSchedule(match.scheduledFor)} / {match.assignedOperator?.username || "Unassigned"}
                       </p>
+                      {delayLabel(match) ? <p className="mt-2 text-xs font-bold text-amber-200">{delayLabel(match)}</p> : null}
+                      <button type="button" onClick={() => openMatch(match._id)} className="mt-3 rounded-lg border border-cyan-300/30 px-3 py-2 text-sm font-bold text-cyan-200">Review match</button>
                     </div>
                   ))}
                   {(item.attention || []).length === 0 && <p className="text-sm text-slate-500">No delayed or disputed work needs attention.</p>}
@@ -208,16 +239,21 @@ const GameManagerDashboard = () => {
   );
 };
 
-const ScheduleRoomForm = ({ draft, match, onChange, onSave }) => (
+const ScheduleRoomForm = ({ draft, match, onChange, onSave }) => {
+  const schedule = useSelector((state) => state.gameManagement.schedule);
+  const busy = schedule.status === "loading";
+  return (
   <div className="mt-4 grid gap-2 border-t border-slate-800 pt-4 sm:grid-cols-2">
-    <input className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" min={toLocalDateTimeInput(Date.now() + 10 * 60_000)} onChange={(event) => onChange(match.id, "scheduledFor", event.target.value)} type="datetime-local" value={draft.scheduledFor || ""} />
+    <p className="text-sm text-slate-400 sm:col-span-2">Schedule at least ten minutes ahead. Enter the full lobby details again when rescheduling; existing passwords are not exposed here.</p>
+    <input aria-label="Scheduled start" className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" min={toLocalDateTimeInput(Date.now() + 10 * 60_000)} onChange={(event) => onChange(match.id, "scheduledFor", event.target.value)} type="datetime-local" value={draft.scheduledFor || ""} />
     <input className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" onChange={(event) => onChange(match.id, "roomCode", event.target.value)} placeholder="Room ID" value={draft.roomCode || ""} />
-    <input className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" onChange={(event) => onChange(match.id, "roomPassword", event.target.value)} placeholder="Password" value={draft.roomPassword || ""} />
+    <input aria-label="Lobby password" type="password" autoComplete="new-password" maxLength={100} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" onChange={(event) => onChange(match.id, "roomPassword", event.target.value)} placeholder="Password" value={draft.roomPassword || ""} />
     <input className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" onChange={(event) => onChange(match.id, "instructions", event.target.value)} placeholder="Lobby note (optional)" value={draft.instructions || ""} />
-    <button className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950 disabled:opacity-50 sm:col-span-2" disabled={!draft.scheduledFor || !draft.roomCode || !draft.roomPassword} onClick={() => onSave(match.id)} type="button">Save schedule / lobby opens at T-10</button>
+    <button className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950 disabled:opacity-50 sm:col-span-2" disabled={busy || !draft.scheduledFor || !draft.roomCode || !draft.roomPassword} onClick={() => onSave(match.id)} type="button">{busy ? "Saving…" : "Save schedule / lobby opens at T-10"}</button>
     {match.scheduledFor ? <p className="text-xs text-slate-500 sm:col-span-2">Current: {formatSchedule(match.scheduledFor)}</p> : null}
   </div>
-);
+  );
+};
 
 ScheduleRoomForm.propTypes = {
   draft: PropTypes.shape({ instructions: PropTypes.string, roomCode: PropTypes.string, roomPassword: PropTypes.string, scheduledFor: PropTypes.string }).isRequired,

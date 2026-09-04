@@ -7,7 +7,10 @@ import {
   STAFF_UTILITY_MESSAGE,
 } from "../src/utils/staffUtilityMode.js";
 import { selectIsStaffUtilityMode } from "../src/store/selectors/playerSelectors.js";
-import { getDashboardNavigation } from "../src/utils/navigation.js";
+import {
+  getDashboardNavigation,
+  getStaffWorkspaceNavigation,
+} from "../src/utils/navigation.js";
 
 const staffSummary = {
   role: "staff",
@@ -57,6 +60,31 @@ test("the player dashboard omits staff operation tabs from its utility navigatio
   assert.ok(!paths.includes("/dashboard/tournament"));
   assert.ok(!paths.includes("/panelAdmin"));
   assert.ok(!paths.includes("/staff/operations"));
+});
+
+test("staff workspace navigation shows only the chooser and selected dashboard", () => {
+  const multiRoleStaff = {
+    role: "staff",
+    staffAssignments: [
+      { role: "event_manager" },
+      { role: "game_manager" },
+      { role: "match_operator" },
+    ],
+  };
+  const chooser = getStaffWorkspaceNavigation(multiRoleStaff, "/staff");
+  const gameWorkspace = getStaffWorkspaceNavigation(
+    multiRoleStaff,
+    "/staff/games",
+  );
+
+  assert.deepEqual(chooser.map((item) => item.to), ["/staff"]);
+  assert.deepEqual(gameWorkspace.map((item) => item.to), [
+    "/staff",
+    "/staff/games",
+  ]);
+  assert.equal(gameWorkspace[1].label, "Game Manager dashboard");
+  assert.ok(!gameWorkspace.some((item) => item.to === "/staff/events"));
+  assert.ok(!gameWorkspace.some((item) => item.to === "/staff/operations"));
 });
 
 test("mobile player navigation uses compact account labels", () => {

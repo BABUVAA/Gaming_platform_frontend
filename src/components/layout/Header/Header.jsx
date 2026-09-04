@@ -14,6 +14,7 @@ import { USER_ROLES } from "../../../utils/accessControl";
 import {
   getDashboardNavigation,
   getNavigationTitle,
+  getStaffWorkspaceNavigation,
 } from "../../../utils/navigation";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
 import { ROUTES } from "../../../routes/routeConstants";
@@ -27,9 +28,15 @@ const Header = () => {
   const location = useLocation();
   const currentArea = getNavigationTitle(location.pathname);
   const isPlayerDashboardArea = location.pathname.startsWith(ROUTES.DASHBOARD);
-  const dashboardNavigation = getDashboardNavigation(playerSummary, {
-    includeStaffWorkspaces: !isPlayerDashboardArea,
-  });
+  const isStaffWorkspaceArea =
+    playerSummary?.role === "staff" &&
+    (location.pathname.startsWith(ROUTES.STAFF) ||
+      location.pathname.startsWith(ROUTES.ADMIN_PANEL));
+  const dashboardNavigation = isStaffWorkspaceArea
+    ? getStaffWorkspaceNavigation(playerSummary, location.pathname)
+    : getDashboardNavigation(playerSummary, {
+        includeStaffWorkspaces: !isPlayerDashboardArea,
+      });
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
 
   return (

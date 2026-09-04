@@ -1,6 +1,6 @@
 # Project Status
 
-Last updated: 2026-08-31
+Last updated: 2026-09-04
 
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
@@ -11,12 +11,92 @@ repositories:
 Update this file whenever a feature changes state, a security decision is made,
 or a new platform dependency is introduced.
 
+- Staff workspace navigation isolation implemented locally 2026-09-04. The
+  desktop staff sidebar, desktop header and mobile hamburger now expose the
+  Staff Workspace chooser plus only the dashboard for the workspace currently
+  open; dashboards belonging to the account's other active assignments are no
+  longer mixed into that navigation. Returning to `/staff` shows the chooser
+  alone, while each selected role keeps only its existing role-specific
+  responsibility tabs. The assignment, route-guard and backend authorization
+  contracts are unchanged. Game Manager is also restored to the canonical
+  assigned-workspace navigation metadata. Frontend tests pass 178/178, ESLint,
+  the 580-module production build and diff check pass. Authenticated populated
+  desktop/mobile visual proof remains open. Included in the 2026-09-04
+  repository delivery; deployment remains open.
+
 ## Sole Model Quick Start
 
 Use this section first. It is the shortest safe path for a single coding model
 to continue the project without reopening settled decisions.
 
 ### Current Truth
+
+- Tournament Room controls implemented locally 2026-09-04: a scoped Game
+  Manager may close an underfilled Quick Match Room after its configurable
+  complete-team minimum is met, or cancel that one unstarted Room/linked Match
+  with a required reason. Early closure freezes the actual roster, preserves
+  published entry/prize terms and creates one awaiting-operator Match; the
+  operator still starts only after assignment and a Game Manager schedule with
+  the full T-10 notice. Cancellation retains Room/Match history and atomically
+  returns paid holds to their immutable original payers. Both commands recheck
+  role, Game scope, lifecycle and roster/payment evidence inside transactions,
+  and create durable player notices plus staff audit. Event and live-Match
+  cancellation remain excluded. Tournament Manager configuration now supports
+  an optional minimum; blank derives at least two complete units and enough
+  entrants for every rewarded place. Room controls use Redux and distinguish
+  actual `8/100` occupancy from sealed entry. New room integration passes 9/9;
+  frontend passes 177/177, ESLint and the 580-module build; API docs cover
+  226/226. Backend unit/policy, payment and realtime groups pass; the complete
+  competition replica group passes 148/148 on a clean rerun. The preceding
+  aggregate attempt had one process-level load failure in the unrelated Event
+  sequential-round file, whose immediate isolated retry passed. Desktop/mobile
+  fixture browser proof is console-clean with no 390px overflow; authenticated
+  deployed proof remains open. Included in the 2026-09-04 repository delivery;
+  no production data mutation or deployment.
+
+- Game Manager Match coverage implemented locally 2026-09-04: Rooms and
+  Attention open exact scoped details, roster and lobby readiness, with overdue
+  badges and visible-page minute refresh. Managers can assign eligible same-game
+  operators to unclaimed, unstarted Quick Matches, then configure the schedule.
+  Backend rechecks scope/eligibility and commits conditional assignment plus
+  staff audit transactionally. Event assignment, reassignment/live replacement,
+  private chat, result decisions and money remain outside this command.
+  Focused integration passes 7/7, role/operations policy 10/10, full backend
+  `npm test`, frontend 171/171, ESLint, diff checks and 579-module build pass.
+  API docs cover 223/223 operations. Isolated desktop/mobile browser checks
+  verify detail navigation, operator selection and post-assignment scheduling;
+  390x844 has no horizontal overflow or browser errors. Browser used fixture
+  responses; backend authorization and races used an isolated replica set.
+  Authenticated deployed proof remains open. Preview files/server were removed.
+  Included in the 2026-09-04 repository delivery; no production data mutation
+  or deployment.
+
+- Assigned-Match navigation refinement implemented locally 2026-09-04:
+  Overview, Players, Lobby and Results now have separate internal sections;
+  private operator Match chat opens on demand in a dedicated native dialog
+  with bounded scrolling, keyboard containment, Escape/Close and focus return.
+  `Open match` expands the target, chooses its Lobby/Results work and scrolls
+  plus focuses after render, including repeat clicks without refresh-driven
+  focus stealing. A Room target outside the loaded page receives an explicit
+  Load more/refresh explanation. Long overdue schedules display days/hours and
+  request Game Manager confirmation after a day; no automatic reschedule or
+  status mutation is introduced. Existing Redux/API, roles, scopes and result/
+  money authority remain unchanged. Tests pass 170/170; ESLint, diff check and
+  the 578-module build pass. Browser proof remains open: the CLI was unresponsive and the in-app
+  browser did not render the isolated preview over either local address. The
+  temporary preview is removed. Included in the 2026-09-04 repository delivery;
+  deployment remains open.
+
+- Match Operator workflow refinement is complete locally as of 2026-09-02.
+  `/staff/operations` now provides an urgency-ranked `Next action`, refreshed
+  schedule/overdue countdowns, direct active-Room navigation, masked lobby
+  credentials with reveal/copy controls, and direct placement selection for
+  large solo or Team rankings. Existing Game Manager lobby authority,
+  Match-ownership/game-scope enforcement, immutable ranking validation,
+  governance disputes/settlement and money boundaries are unchanged. Frontend
+  evidence is 167/167 tests, ESLint, a 578-module build and a console-clean,
+  overflow-free 390x844 protected-route guard; populated authenticated visual
+  proof remains open.
 
 - The 2026-08-31 audit hardening slice is committed in backend `c492f9a` and
   frontend `18eb202`, but is not yet deployed. Team invitation decline is atomic and its duplicate-request
@@ -492,7 +572,8 @@ to continue the project without reopening settled decisions.
   the exact ledger-backed allocations. No result, settlement, or release
   request accepts client-owned money or recipient amounts.
 - Game Manager supervises operations for assigned games. Its mutations are
-  limited to approving/rejecting scoped game-account verification requests,
+  limited to assigning eligible operators to unclaimed Quick Matches,
+  approving/rejecting scoped game-account verification requests,
   escalating supported initial or replacement evidence for independent fraud review, and
   setting the schedule plus lobby credentials for an assigned-game Match after
   a Match Operator owns it. Game/catalog configuration, competition definition,
@@ -722,9 +803,11 @@ to continue the project without reopening settled decisions.
   Event Manager, and Match Operator.
 - Platform Admin-only authority over game configuration and staff access.
 - Game Manager has no write route for Game configuration. Its scoped writes
-  are the audited game-account verification decision and pre-start Match
-  schedule/lobby configuration for assigned games. It cannot claim or operate
-  Matches, verify results, resolve disputes, settle money, or release prizes.
+  are audited game-account decisions, pre-start Match schedule/lobby setup,
+  unclaimed Quick Match operator assignment, and bounded pre-start Quick Match
+  Room early closure/cancellation. It cannot claim or start Matches, cancel
+  live/Event Matches, verify results, resolve disputes, settle money, or release
+  prizes. Room cancellation can only release the exact existing entry holds.
 - Event Manager cannot approve/publish its own Templates or Event Runs, resolve
   financial governance, or release ledger-backed prizes. It does own scoped
   invitation rosters and sporting result/reward-status views after approval.
@@ -1528,6 +1611,54 @@ Rules currently enforced:
 
 ## User, Role, Scope, and UI Contract
 
+### Tournament Room controls amendment — 2026-09-04 (Implemented locally; deployed proof pending)
+
+The user approved room-level cancellation and early closure for the on-demand
+Tournament/Quick Match product, not cancellation of an offering or Event Run.
+Active Game Managers may act only on Rooms whose offering Game is in their
+current scope, with recent authentication, rate limiting and a bounded reason.
+POST `/api/staff/games/rooms/:roomId/close-early` freezes a waiting Room's
+complete server-owned entries and creates one awaiting-operator Match. It does
+not start gameplay. A configurable offering minimum defaults to at least two
+complete competing units and all rewarded places; squad entries remain exactly
+four. Published per-seat fees and the full prize table remain unchanged.
+POST `/api/staff/games/rooms/:roomId/cancel` cancels that Room and its linked
+unstarted Match only. It releases original entry holds to immutable payers
+through the ledger, once, and never accepts amounts or participant IDs. Started,
+settled, disputed and Event Matches remain outside this routine command.
+GET `/api/staff/games/rooms/:roomId` exposes safe scoped readiness/actions.
+Room/Match state, hold releases, player notifications and staff audit commit in
+one transaction; joins and closure share the offering lock with database version
+checks as fallback. Retrying cannot create another Match or refund. Room records
+and roster history are retained. Managers may move an unstarted schedule earlier
+using existing schedule/lobby controls, with at least ten minutes' player notice;
+the assigned Match Operator alone starts at the confirmed time. This grants no
+general wallet, prize, Event, offering-definition or live-match authority.
+Exit gates: scope/lifecycle denials, complete-team/minimum enforcement, concurrent
+join/close/cancel rollback, exact paid release, durable notification evidence,
+Redux transport, frontend build and responsive browser checks.
+
+### Game Manager coverage amendment — 2026-09-04 (Implemented locally; deployed proof pending)
+
+Game Managers may assign an eligible active, verified, non-banned staff Match
+Operator to an unclaimed Quick Match in their own game scopes. The command
+requires recent authentication, rate limiting, an active same-game operator
+assignment, `awaiting_operator`, no current operator and no started play. Match
+assignment and staff audit must commit atomically; competing manager assignment
+and operator claim converge on one owner. Event assignment stays exclusively
+with Event Manager. Reassignment, live replacement, Match chat, result commands,
+dispute decisions, staff-role changes and financial actions are not granted.
+
+The existing `/staff/games` workspace opens exact scoped Match details from
+Rooms and Attention. Safe detail reads expose schedule, readiness, display-name
+roster and operator identity, not lobby passwords, email, wallet, private chat
+or raw result evidence. Eligible operator reads are cursor-bounded. New endpoints
+under `/api/staff/games/matches/:matchId` are GET detail, GET `/operators` and
+PATCH `/operator` accepting only `operatorId`. Completion requires scope, Event,
+eligibility, concurrency/audit, transport and responsive UI checks. Existing
+Game Manager scheduling and account review remain unchanged. Dashboard delay
+indicators are informational, not automatic cancellation or rescheduling.
+
 ### User Types
 
 | Type | Identity state | What it means |
@@ -1545,7 +1676,7 @@ Rules currently enforced:
 | Super Admin | `StaffAssignment` | Platform governance. One active/suspended assignment maximum. |
 | Platform Admin | `StaffAssignment` | Staff, catalog, and platform administration. One active/suspended assignment maximum. |
 | Tournament Manager | `StaffAssignment` | Creates and manages Game-backed Quick Match/Tournament offerings inside assigned game scopes. |
-| Game Manager | `StaffAssignment` | Read-only operational supervision for assigned games. |
+| Game Manager | `StaffAssignment` | Assigned-game supervision, account review, pre-start scheduling and unclaimed Quick Match operator assignment. |
 | Event Manager | `StaffAssignment` | Creates scoped Event proposals requiring initial Platform Admin approval, then operates approved Event rounds in scope. |
 | Match Operator | `StaffAssignment` | Operates explicitly assigned matches inside assigned game scopes. |
 
@@ -1612,7 +1743,7 @@ Rules currently enforced:
 | Staff access participant | `/staff/access-control` | Search candidates by email, recommend permitted roles, review subordinate recommendations, inspect assignments and history. Backend policy decides available actions. |
 | Super Admin | `/panelAdmin` | Platform administration and governance controls. |
 | Platform Admin | `/panelAdmin` | Staff management, game catalog, verification, finance, and platform oversight. |
-| Game Manager | `/staff/games` | Scoped operations plus assigned-game player account verification. No Game configuration, competition, staff, or money mutations. |
+| Game Manager | `/staff/games` | Scoped readiness/details, schedules, account review and unclaimed Quick Match operator assignment. No Event assignment, reassignment, Match result/chat, Game configuration, staff-role or money authority. |
 | Event Manager | `/staff/events` | Creates scoped draft Template/Run proposals; after initial approval, manages registration closure, round rooms, operator handoff, and promoted/eliminated lists. |
 | Match Operator | `/staff/operations` | Assigned-match operational console. |
 

@@ -1,5 +1,103 @@
 # Current Checkpoint
 
+## Current Slice: Selected Staff Workspace Navigation — 2026-09-04
+
+- Implemented locally: staff navigation now starts with the Staff Workspace
+  chooser and shows only the dashboard belonging to the workspace currently
+  open. Other assigned role dashboards are hidden from the sidebar, desktop
+  header and mobile hamburger until the staff member returns to the chooser.
+- Existing Match Operator/Game Manager top tabs and Event Manager/Tournament
+  Manager work tabs remain isolated inside their own dashboards. Roles,
+  assignments, route guards and backend authorization are unchanged.
+- Verification: frontend 178/178, ESLint, the 580-module production build and
+  diff check pass. Authenticated populated desktop/mobile visual proof remains
+  open. Included in the 2026-09-04 repository delivery; no deployment or
+  production-data mutation.
+
+## Current Slice: Tournament Room Controls — 2026-09-04 (Implemented locally)
+
+- Implemented room-only Game Manager cancellation and early closure for scoped
+  Quick Match Rooms. Preserve complete teams, configurable minimum, immutable
+  prizes/entry fees, operator-owned start and the ten-minute lobby notice.
+- Cancellation atomically releases exact original holds, notifies players and
+  retains audit/history; started/Event execution is rejected. The configurable
+  minimum defaults to two complete units and enough entrants for every rewarded
+  place. Early closure creates one awaiting-operator Match and never changes the
+  published prize or entry terms.
+- Verification: room replica integration 9/9; frontend 177/177, ESLint and the
+  580-module build; API docs 226/226. Backend unit/policy, payment and realtime
+  groups pass, and a clean complete competition replica rerun passes 148/148.
+  The prior aggregate attempt had one process-level unrelated Event test load
+  failure; its immediate isolated retry passed. Desktop/mobile fixture browser
+  proof has no errors or 390px overflow.
+  Authenticated deployed proof remains open. Included in the 2026-09-04
+  repository delivery; no production data mutation or deployment.
+
+## Current Slice: Game Manager Match Coverage — 2026-09-04
+
+- Implemented locally: exact scoped Match details from Rooms and Attention,
+  delay badges and visible-page minute refresh, display-name rosters, lobby
+  readiness, and post-assignment schedule controls. Redux owns reads/commands
+  and rejects stale detail responses. Passwords remain hidden in schedule entry.
+- Game Manager may assign an eligible active same-game Match Operator only to
+  an unclaimed, unstarted Quick Match. Recent auth, rate limiting, manager scope,
+  target eligibility, conditional assignment and transactional staff audit are
+  enforced. Event assignment stays with Event Manager. Reassignment requests,
+  live replacement, private chat, results and financial authority are excluded.
+- New API: GET `/api/staff/games/matches/:matchId`, GET `/operators` beneath
+  that Match (25-row cursor pages), and PATCH `/operator` with only operatorId.
+  Safe detail serialization excludes lobby secrets, emails, money and evidence.
+- Focused backend integration passes 7/7, role/operations policy passes 10/10,
+  frontend passes 171/171 plus ESLint, diff check and the 579-module build;
+  API documentation covers 223/223 operations. Full backend `npm test` passes.
+  Isolated browser checks pass for Attention-to-detail navigation, eligible
+  operator selection, assignment-to-scheduling transition and mobile layout
+  (390x844, no horizontal overflow or browser errors). Browser API responses
+  were fixtures; authorization/concurrency were tested separately in an isolated
+  replica-set database. Authenticated deployed proof remains open. Temporary
+  preview files and server were removed. Included in the 2026-09-04 repository
+  delivery; no production data mutation or deployment.
+
+
+## Local Slice: Action-first Match Operator Dashboard
+
+- Follow-up 2026-09-04: assigned Matches now separate Overview, Players, Lobby,
+  and Results with compact internal navigation. Private Match chat opens only
+  on demand in its own viewport-bounded modal, with native keyboard containment,
+  Escape/Close, background scroll locking and focus restoration.
+- `Open match` now selects the relevant Lobby/Results section, expands the exact
+  loaded Match and scrolls/focuses it after render, including repeated clicks.
+  Refresh does not repeatedly steal focus. Room links outside the loaded page
+  explicitly request Load more/refresh instead of silently appearing to succeed.
+- Long overdue schedules use days/hours; delays of at least a day prompt Game
+  Manager schedule confirmation. No schedule or lifecycle data is changed.
+- Follow-up checks: 170/170 frontend tests, ESLint, diff check and the 578-module
+  production build pass. Browser verification remains open: the browser CLI did not respond and
+  the in-app browser could not render the isolated local preview at either
+  network or localhost address. Temporary preview files/server were removed.
+  No deployed data was touched. Included in the 2026-09-04 repository delivery;
+  deployment remains open.
+
+- `/staff/operations` now promotes one server-owned assigned Match as the
+  operator's `Next action`, prioritizing result verification, live result
+  entry, ready/scheduled starts, schedule handoff and disputed evidence. The
+  card opens the exact Match, while active Quick Match Rooms can jump directly
+  to the assigned Match or assignment queue.
+- Scheduled Matches show a refreshed start/overdue countdown. Expanded Match
+  cards now expose the Game Manager-published Room ID, masked-by-default
+  password, instructions, explicit reveal/hide control and independent copy
+  actions. Game Manager schedule/lobby authority and T-10 player disclosure are
+  unchanged.
+- Large solo and Team result lists retain keyboard-accessible Up/Down controls
+  and add a direct placement selector, while the existing complete immutable
+  ranking validation and operator command transport remain authoritative.
+- Verification: focused operator/staff/Tournament coverage passes 23/23; the
+  complete frontend suite passes 167/167; ESLint and the 578-module production
+  build pass. The local protected route reached its Login guard without console
+  warnings/errors and had no horizontal overflow at 390x844. Populated
+  authenticated operator visual proof and deployment remain open. Included in
+  the 2026-09-04 repository delivery.
+
 ## Local Audit Hardening: 2026-08-31
 
 - Backend Team invitation decline is now an atomic `findOneAndUpdate` command.
@@ -639,8 +737,9 @@ Fast-resume index for the paired E-Gaming frontend/backend repositories.
 - Platform Admin owns Game configuration, staff access, initial Event approval,
   disputes/recovery and financial governance.
   Tournament Manager owns Quick Match/Tournament offering creation and
-  lifecycle only within assigned game scopes. Game Manager is operationally
-  read-only except for one assigned-game account-verification decision. Event
+  lifecycle only within assigned game scopes. Game Manager owns scoped account
+  review, schedule/lobby setup and unclaimed Quick Match operator assignment;
+  room-only cancellation/early closure is the in-progress amendment above. Event
   Manager proposes scoped drafts and, after initial approval, owns registration
   closure, sequential round setup, room generation/handoff, operator assignment,
   and promoted/eliminated operational views for assigned games. Match Operator

@@ -9,7 +9,10 @@ import { RiCloseFill } from "react-icons/ri";
 import Button from "../../ui/Button/Button";
 import useNavigateHook from "../../../hooks/useNavigateHook";
 import { logout } from "../../../store/slices/authSlice";
-import { getDashboardNavigation } from "../../../utils/navigation";
+import {
+  getDashboardNavigation,
+  getStaffWorkspaceNavigation,
+} from "../../../utils/navigation";
 import { USER_ROLES } from "../../../utils/accessControl";
 import { selectPlayerSummary } from "../../../store/selectors/playerSelectors";
 import { ROUTES } from "../../../routes/routeConstants";
@@ -37,9 +40,15 @@ const HeaderBurgerMenu = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { goToLogin, goToSignUp } = useNavigateHook();
   const location = useLocation();
-  const dashboardNavigation = getDashboardNavigation(playerSummary, {
-    includeStaffWorkspaces: !location.pathname.startsWith(ROUTES.DASHBOARD),
-  });
+  const isStaffWorkspaceArea =
+    playerSummary?.role === "staff" &&
+    (location.pathname.startsWith(ROUTES.STAFF) ||
+      location.pathname.startsWith(ROUTES.ADMIN_PANEL));
+  const dashboardNavigation = isStaffWorkspaceArea
+    ? getStaffWorkspaceNavigation(playerSummary, location.pathname)
+    : getDashboardNavigation(playerSummary, {
+        includeStaffWorkspaces: !location.pathname.startsWith(ROUTES.DASHBOARD),
+      });
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
   const isStaffUtilityMode = isStaffUtilitySummary(playerSummary);
 
@@ -69,7 +78,11 @@ const HeaderBurgerMenu = () => {
       <div className="relative flex items-center justify-between border-b border-slate-700 pb-4">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.28em] text-cyan-300">
-            {isStaffUtilityMode ? "Staff utility" : "Player menu"}
+            {isStaffWorkspaceArea
+              ? "Staff workspace"
+              : isStaffUtilityMode
+                ? "Staff utility"
+                : "Player menu"}
           </p>
           <h2 className="mt-2 text-2xl font-black text-white">
             E-Gaming
@@ -96,7 +109,10 @@ const HeaderBurgerMenu = () => {
             </p>
             {isStaffUtilityMode ? (
               <p className="mt-1 text-sm text-amber-200">
-                {getStaffUtilityRoleLabel(playerSummary)} · Read-only player view
+                {getStaffUtilityRoleLabel(playerSummary)} ·{" "}
+                {isStaffWorkspaceArea
+                  ? "Operational workspace"
+                  : "Read-only player view"}
               </p>
             ) : null}
           </div>
@@ -149,7 +165,9 @@ const HeaderBurgerMenu = () => {
         {isAuthenticated ? (
           <>
             <p className="px-1 pb-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-              All player areas
+              {isStaffWorkspaceArea
+                ? "Workspace navigation"
+                : "All player areas"}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {dashboardNavigation.map((item) => {

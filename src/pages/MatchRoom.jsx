@@ -36,7 +36,7 @@ const formatCountdown = (milliseconds) => {
 const getTimingState = (match, now) => {
   const scheduledAt = match.scheduledFor ? new Date(match.scheduledFor).getTime() : null;
   const revealAt = match.lobbyRevealAt ? new Date(match.lobbyRevealAt).getTime() : null;
-  if (match.status === "awaiting_operator") return "Room full · waiting for operator";
+  if (match.status === "awaiting_operator") return "Entry closed · waiting for operator";
   if (match.status === "operator_assigned" && !scheduledAt) return "Waiting for schedule";
   if (["scheduled", "lobby_ready"].includes(match.status)) {
     if (revealAt && now < revealAt) return `Lobby opens in ${formatCountdown(revealAt - now)}`;

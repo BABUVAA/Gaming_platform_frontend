@@ -5,6 +5,8 @@ import { configureStore } from "@reduxjs/toolkit";
 import api from "../src/api/axios-api.js";
 import quickMatchOfferingSlice, {
   fetchQuickMatchOfferings,
+  createQuickMatchOffering,
+  updateQuickMatchOffering,
   fetchPlayerQuickMatchOfferingById,
   fetchPlayerQuickMatchLeaderboard,
   fetchPlayerQuickMatchOfferings,
@@ -19,6 +21,25 @@ import {
 } from "../src/store/selectors/quickMatchOfferingSelectors.js";
 
 const reduce = quickMatchOfferingSlice.reducer;
+
+test("offering minimum seats travels through the Redux create/update boundary", async () => {
+  const originalAdapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push({ url: config.url, body: JSON.parse(config.data) });
+    return { config, data: { data: { offering: { _id: "offering", minimumParticipants: 12 } } }, headers: {}, status: 200, statusText: "OK" };
+  };
+  try {
+    const store = configureStore({ reducer: { quickMatchOfferings: reduce } });
+    await store.dispatch(createQuickMatchOffering({ minimumParticipants: 12 })).unwrap();
+    await store.dispatch(updateQuickMatchOffering({ offeringId: "offering", minimumParticipants: null })).unwrap();
+    assert.equal(requests[0].body.minimumParticipants, 12);
+    assert.deepEqual(requests[1], { url: "/api/staff/tournaments/offerings/offering", body: { minimumParticipants: null } });
+    assert.equal(store.getState().quickMatchOfferings.offerings[0].minimumParticipants, 12);
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
 
 test("player discovery owns an independent loading lifecycle", () => {
   const adminOffering = { _id: "admin-offering" };
