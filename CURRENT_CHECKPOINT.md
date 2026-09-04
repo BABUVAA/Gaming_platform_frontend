@@ -1,18 +1,21 @@
 # Current Checkpoint
 
-## Current Slice: Selected Staff Workspace Navigation — 2026-09-04
+## Current Slice: Selected Staff Workspace Navigation and Tabs — 2026-09-04
 
 - Implemented locally: staff navigation now starts with the Staff Workspace
   chooser and shows only the dashboard belonging to the workspace currently
   open. Other assigned role dashboards are hidden from the sidebar, desktop
   header and mobile hamburger until the staff member returns to the chooser.
-- Existing Match Operator/Game Manager top tabs and Event Manager/Tournament
-  Manager work tabs remain isolated inside their own dashboards. Roles,
-  assignments, route guards and backend authorization are unchanged.
-- Verification: frontend 178/178, ESLint, the 580-module production build and
+- Match Operator, Game Manager, Event Manager and Tournament Manager workspace
+  tabs now sit beneath the selected dashboard in the shared staff navigation.
+  Their `?tab=` state survives refresh and browser history. Dashboard-local
+  Match/Room record tabs remain with their record. The desktop rail is widened
+  to 16rem and long section names wrap instead of being hidden.
+- Roles, assignments, route guards and backend authorization are unchanged.
+  Verification: frontend 178/178, ESLint, the 581-module production build and
   diff check pass. Authenticated populated desktop/mobile visual proof remains
-  open. Included in the 2026-09-04 repository delivery; no deployment or
-  production-data mutation.
+  open. Included in the 2026-09-04 frontend repository delivery; deployment
+  remains open and no production data was mutated.
 
 ## Current Slice: Tournament Room Controls — 2026-09-04 (Implemented locally)
 

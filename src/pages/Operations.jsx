@@ -24,6 +24,7 @@ import useSocket from "../context/useSocket";
 import MatchChat from "../components/competition/MatchChat.jsx";
 import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
 import StaffWorkspaceTabs from "../components/common/StaffWorkspaceTabs.jsx";
+import useStaffWorkspaceTab from "../hooks/useStaffWorkspaceTab.js";
 import {
   getCompetitionRankingGroups,
   usesRankingKeys,
@@ -198,6 +199,8 @@ const getNextActionCopy = (match, nowMs) => {
   return "A dispute is open for governance review. Monitor the evidence and Match chat.";
 };
 
+const OPERATOR_WORKSPACE_TABS = ["rooms", "queue", "matches"];
+
 const Operations = () => {
   const { competitionRevision, connected } = useSocket();
   const dispatch = useDispatch();
@@ -212,7 +215,10 @@ const Operations = () => {
   const matchPageStatus = useSelector(selectOperatorMatchPageStatus);
   const [resultDrafts, setResultDrafts] = useState({});
   const [activeFilter, setActiveFilter] = useState("all");
-  const [activeDesk, setActiveDesk] = useState("rooms");
+  const [activeDesk, setActiveDesk] = useStaffWorkspaceTab(
+    OPERATOR_WORKSPACE_TABS,
+    "rooms",
+  );
   const [expandedMatchId, setExpandedMatchId] = useState("");
   const [matchTabs, setMatchTabs] = useState({});
   const [openRequest, setOpenRequest] = useState(null);
@@ -451,12 +457,6 @@ const Operations = () => {
           onOpen={() => openAssignedMatch(nextActionMatch._id)}
         />
       ) : null}
-
-      <StaffWorkspaceTabs activeId={activeDesk} ariaLabel="Match Operator responsibilities" items={[
-        { count: activeRooms.length, id: "rooms", label: "Active rooms" },
-        { count: unassignedMatches.length, id: "queue", label: "Full rooms" },
-        { count: matches.length, id: "matches", label: "Assigned matches" },
-      ]} onChange={setActiveDesk} />
 
       {error ? (
         <StatusMessage

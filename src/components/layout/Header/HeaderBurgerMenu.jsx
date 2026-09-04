@@ -49,6 +49,7 @@ const HeaderBurgerMenu = () => {
     : getDashboardNavigation(playerSummary, {
         includeStaffWorkspaces: !location.pathname.startsWith(ROUTES.DASHBOARD),
       });
+  const selectedStaffTab = new URLSearchParams(location.search).get("tab");
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
   const isStaffUtilityMode = isStaffUtilitySummary(playerSummary);
 
@@ -178,13 +179,17 @@ const HeaderBurgerMenu = () => {
                     to={item.to}
                     end={item.to === ROUTES.DASHBOARD}
                     onClick={closeMenu}
-                    className={({ isActive }) =>
-                      `flex min-h-20 items-center gap-3 rounded-xl border px-3 py-3 text-sm font-bold shadow-[0_10px_24px_rgba(2,8,23,0.14)] transition ${
-                        isActive
+                    className={({ isActive }) => {
+                      const itemIsActive = item.navigationKind === "tab"
+                        ? selectedStaffTab === item.id ||
+                          (!selectedStaffTab && item.isDefaultTab)
+                        : isActive;
+                      return `flex min-h-20 items-center gap-3 rounded-xl border px-3 py-3 text-sm font-bold shadow-[0_10px_24px_rgba(2,8,23,0.14)] transition ${
+                        itemIsActive
                           ? "border-cyan-400/50 bg-cyan-400/15 text-cyan-100"
                           : "border-slate-600 bg-slate-800 text-slate-200 hover:border-cyan-400/40 hover:bg-slate-700"
-                      }`
-                    }
+                      }`;
+                    }}
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-700 text-cyan-300">
                       <Icon size={17} />

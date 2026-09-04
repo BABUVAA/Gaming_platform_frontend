@@ -135,13 +135,17 @@ test("Game Manager evidence uses the scoped private blob endpoint", async () => 
 });
 
 test("Game Manager dashboard exposes scoped operations and only account verification", async () => {
-  const source = await readFile(
-    new URL("../src/pages/GameManagerDashboard.jsx", import.meta.url),
-    "utf8",
-  );
+  const [source, navigation] = await Promise.all([
+    readFile(
+      new URL("../src/pages/GameManagerDashboard.jsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../src/utils/navigation.js", import.meta.url), "utf8"),
+  ]);
   assert.match(source, /Attention queue/);
   assert.match(source, /Operational history/);
-  assert.match(source, /Account verification/);
+  assert.match(navigation, /Account verification/);
+  assert.match(source, /GameAccountVerificationQueue/);
   assert.match(source, /No delayed or disputed work needs attention/);
   assert.doesNotMatch(source, /resolve dispute/i);
   assert.match(source, /Open match details/);

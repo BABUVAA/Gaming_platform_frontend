@@ -37,6 +37,9 @@ const Header = () => {
     : getDashboardNavigation(playerSummary, {
         includeStaffWorkspaces: !isPlayerDashboardArea,
       });
+  const headerNavigation = isStaffWorkspaceArea
+    ? dashboardNavigation.filter((item) => item.navigationKind !== "tab")
+    : dashboardNavigation;
   const showPlayerWallet = playerSummary?.role === USER_ROLES.PLAYER;
 
   return (
@@ -59,7 +62,7 @@ const Header = () => {
 
         {isAuthenticated ? (
           <div className="hidden xl:flex xl:items-center xl:gap-2">
-            {dashboardNavigation.slice(0, 5).map((item) => (
+            {headerNavigation.slice(0, 5).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

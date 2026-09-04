@@ -393,8 +393,8 @@ test("Event governance stays approval-only while Event Manager owns invitations 
   assert.match(reviewSource, /Independent review required/);
   assert.match(reviewSource, /Another admin reviews/);
   assert.doesNotMatch(reviewSource, /Event Management sections|Invitations|Results & Rewards|EventStageManagement/);
-  assert.match(managerSource, />Invitations</);
-  assert.match(managerSource, />Results & Rewards</);
+  assert.match(navigationSource, /label: "Invitations"/);
+  assert.match(navigationSource, /label: "Results & rewards"/);
   assert.match(managerSource, /<EventInvitationManagement \/>/);
   assert.match(managerSource, /<EventManagerResults runs=\{runs\} \/>/);
   assert.match(resultsSource, /fetchManagedEventStages/);
@@ -404,7 +404,10 @@ test("Event governance stays approval-only while Event Manager owns invitations 
   assert.doesNotMatch(reviewSource, /Operations & Reports|RoundPlanReviewQueue|StageAdjustmentReviewQueue/);
   assert.match(reviewSource, /canReviewEventProposal\(\{ currentUser, item \}\)/);
   assert.match(reviewSource, /if \(!selected \|\| !canReview\(selected\.item\)\) return/);
-  assert.doesNotMatch(navigationSource, /label: "Events"|label: "Tournaments"/);
+  assert.doesNotMatch(
+    navigationSource,
+    /to: ROUTES\.EVENTS,|to: ROUTES\.TOURNAMENT,/,
+  );
   assert.match(competeSource, /fetchPlayerEvents/);
   assert.match(competeSource, /EventCompetitionCard/);
   assert.match(playerSource, /test money/);
@@ -457,16 +460,17 @@ test("Event creation omits round rules and Event Manager owns sequential setup",
 });
 
 test("Event Manager separates reusable Templates from dated Events", async () => {
-  const [source, operationsSource] = await Promise.all([
+  const [source, operationsSource, navigationSource] = await Promise.all([
     readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/eventManagement/EventManagerOperations.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/utils/navigation.js", import.meta.url), "utf8"),
   ]);
 
-  assert.match(source, /const \[activeTab, setActiveTab\] = useState\("templates"\)/);
-  assert.match(source, /aria-label="Event Manager sections"/);
-  assert.match(source, />Templates</);
-  assert.match(source, />Events</);
-  assert.match(source, /lg:grid-cols-\[12rem_minmax\(0,1fr\)\]/);
+  assert.match(source, /useStaffWorkspaceTab/);
+  assert.match(navigationSource, /label: "Templates"/);
+  assert.match(navigationSource, /label: "Events"/);
+  assert.doesNotMatch(source, /aria-label="Event Manager sections"/);
+  assert.doesNotMatch(source, /lg:grid-cols-\[12rem_minmax\(0,1fr\)\]/);
   assert.match(source, /StaffWorkspaceHeader/);
   assert.doesNotMatch(source, /Approve a\s+Template/);
   assert.doesNotMatch(source, /Create\s+Events from it/);

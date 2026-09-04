@@ -62,7 +62,7 @@ test("the player dashboard omits staff operation tabs from its utility navigatio
   assert.ok(!paths.includes("/staff/operations"));
 });
 
-test("staff workspace navigation shows only the chooser and selected dashboard", () => {
+test("staff navigation shows only the chooser, selected dashboard, and its tabs", () => {
   const multiRoleStaff = {
     role: "staff",
     staffAssignments: [
@@ -78,11 +78,27 @@ test("staff workspace navigation shows only the chooser and selected dashboard",
   );
 
   assert.deepEqual(chooser.map((item) => item.to), ["/staff"]);
-  assert.deepEqual(gameWorkspace.map((item) => item.to), [
-    "/staff",
-    "/staff/games",
-  ]);
+  assert.deepEqual(
+    gameWorkspace
+      .filter((item) => item.navigationKind !== "tab")
+      .map((item) => item.to),
+    ["/staff", "/staff/games"],
+  );
   assert.equal(gameWorkspace[1].label, "Game Manager dashboard");
+  assert.deepEqual(
+    gameWorkspace
+      .filter((item) => item.navigationKind === "tab")
+      .map((item) => item.id),
+    [
+      "overview",
+      "rooms",
+      "events",
+      "attention",
+      "operators",
+      "verification",
+      "history",
+    ],
+  );
   assert.ok(!gameWorkspace.some((item) => item.to === "/staff/events"));
   assert.ok(!gameWorkspace.some((item) => item.to === "/staff/operations"));
 });
@@ -226,10 +242,12 @@ test("staff workspaces share a player-style responsive shell", async () => {
     readFile(new URL("../src/routes/staffRoutes.jsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(layout, /md:grid-cols-\[14rem_minmax\(0,1fr\)\]/);
+  assert.match(layout, /md:grid-cols-\[16rem_minmax\(0,1fr\)\]/);
   assert.match(layout, /<StaffSideBar \/>/);
   assert.match(layout, /<Outlet \/>/);
   assert.match(sidebar, /getStaffWorkspaceNavigation/);
+  assert.match(sidebar, /workspaceTabs\.map/);
+  assert.match(sidebar, /new URLSearchParams\(location\.search\)/);
   assert.match(sidebar, /fixed inset-x-0 bottom-0/);
   assert.match(sidebar, /md:fixed md:bottom-0/);
   assert.match(sidebar, /md:left-\[max\(0px,calc\(\(100vw-1600px\)\/2\)\)\]/);
@@ -262,21 +280,24 @@ test("desktop dashboard sidebars stay fixed while content keeps its grid column"
 });
 
 test("each operational role dashboard separates its responsibilities", async () => {
-  const [tournaments, events, games, operations] = await Promise.all([
+  const [tournaments, events, games, operations, navigation] = await Promise.all([
     readFile(new URL("../src/components/adminComponents/QuickMatchOfferingManagement.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/GameManagerDashboard.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Operations.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/utils/navigation.js", import.meta.url), "utf8"),
   ]);
 
-  assert.match(tournaments, /Tournament Manager responsibilities/);
-  assert.match(tournaments, /Overview[\s\S]*Create[\s\S]*Drafts & paused[\s\S]*Live tournaments[\s\S]*History/);
-  assert.match(events, /Event Manager sections/);
-  assert.match(events, /Templates[\s\S]*Events/);
-  assert.match(games, /Game Manager responsibilities/);
-  assert.match(games, /Overview[\s\S]*Rooms & schedules[\s\S]*Events[\s\S]*Attention[\s\S]*Operators[\s\S]*Account verification[\s\S]*History/);
-  assert.match(operations, /Match Operator responsibilities/);
-  assert.match(operations, /Active rooms[\s\S]*Full rooms[\s\S]*Assigned matches/);
+  assert.match(navigation, /Overview[\s\S]*Create[\s\S]*Drafts & paused[\s\S]*Live tournaments[\s\S]*History/);
+  assert.match(navigation, /Templates[\s\S]*Invitations[\s\S]*Results & rewards[\s\S]*Events/);
+  assert.match(navigation, /Overview[\s\S]*Rooms & schedules[\s\S]*Events[\s\S]*Attention[\s\S]*Operators[\s\S]*Account verification[\s\S]*History/);
+  assert.match(navigation, /Active rooms[\s\S]*Full rooms[\s\S]*Assigned matches/);
+  for (const dashboard of [tournaments, events, games, operations]) {
+    assert.match(dashboard, /useStaffWorkspaceTab/);
+  }
+  assert.doesNotMatch(tournaments, /Tournament Manager responsibilities/);
+  assert.doesNotMatch(events, /Event Manager sections/);
+  assert.doesNotMatch(games, /Game Manager responsibilities/);
 });
 
 test("route ownership keeps safe staff views separate from participation-only pages", async () => {

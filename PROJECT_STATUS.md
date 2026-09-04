@@ -11,18 +11,21 @@ repositories:
 Update this file whenever a feature changes state, a security decision is made,
 or a new platform dependency is introduced.
 
-- Staff workspace navigation isolation implemented locally 2026-09-04. The
+- Staff workspace navigation isolation and tab extraction implemented locally
+  2026-09-04. The
   desktop staff sidebar, desktop header and mobile hamburger now expose the
   Staff Workspace chooser plus only the dashboard for the workspace currently
   open; dashboards belonging to the account's other active assignments are no
   longer mixed into that navigation. Returning to `/staff` shows the chooser
-  alone, while each selected role keeps only its existing role-specific
-  responsibility tabs. The assignment, route-guard and backend authorization
-  contracts are unchanged. Game Manager is also restored to the canonical
-  assigned-workspace navigation metadata. Frontend tests pass 178/178, ESLint,
-  the 580-module production build and diff check pass. Authenticated populated
-  desktop/mobile visual proof remains open. Included in the 2026-09-04
-  repository delivery; deployment remains open.
+  alone. Match Operator, Game Manager, Event Manager and Tournament Manager
+  responsibility tabs now live beneath the selected dashboard in that shared
+  navigation and use bounded `?tab=` state, while record-level Match/Room tabs
+  stay local. The assignment, route-guard and backend authorization contracts
+  are unchanged. Game Manager is also restored to canonical assigned-workspace
+  metadata. Frontend tests pass 178/178, ESLint, the 581-module production build
+  and diff check pass. Authenticated populated desktop/mobile visual proof and
+  deployment remain open. Included in the 2026-09-04 frontend repository
+  delivery.
 
 ## Sole Model Quick Start
 
@@ -519,10 +522,10 @@ to continue the project without reopening settled decisions.
   Backend 375/375, frontend 120/120, ESLint, both diff checks and the 564-module
   production build pass; API documentation covers all 208 mounted operations.
 
-- Staff workspaces use one compact player-style shell. Match Operator and Game
-  Manager share concise top responsibility tabs; Event Manager and Tournament
-  Manager keep compact left-side work navigation because their creation and
-  operations surfaces need more room. Governance uses the same visual density.
+- Staff workspaces use one compact player-style shell. Match Operator, Game
+  Manager, Event Manager and Tournament Manager responsibility tabs live in the
+  shared selected-workspace navigation rail and are URL-backed; record-specific
+  Match/Room tabs remain inside their record. Governance uses the same visual density.
   Duplicate role banners, decorative heroes and nonessential instructional
   copy are removed, while counts, state, actions and safety warnings remain.
   This is a frontend presentation contract only: staff roles, assignment/game

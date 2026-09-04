@@ -6,6 +6,7 @@ import JoinProgress from "../components/competition/JoinProgress.jsx";
 import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
 import EventInvitationManagement from "../components/adminComponents/EventInvitationManagement.jsx";
 import EventManagerResults from "../components/eventManagement/EventManagerResults.jsx";
+import useStaffWorkspaceTab from "../hooks/useStaffWorkspaceTab.js";
 import {
   createManagedEventRun,
   createManagedEventTemplate,
@@ -42,6 +43,12 @@ const initialRun = {
 };
 
 const editableStatuses = new Set(["draft", "changes_requested"]);
+const EVENT_MANAGER_WORKSPACE_TABS = [
+  "templates",
+  "invitations",
+  "results",
+  "events",
+];
 
 const formatStatus = (status) => status?.replaceAll("_", " ") || "unknown";
 
@@ -76,7 +83,10 @@ const EventManagerDashboard = () => {
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [editingRunId, setEditingRunId] = useState(null);
   const [activeSubmission, setActiveSubmission] = useState(null);
-  const [activeTab, setActiveTab] = useState("templates");
+  const [activeTab, setActiveTab] = useStaffWorkspaceTab(
+    EVENT_MANAGER_WORKSPACE_TABS,
+    "templates",
+  );
   const [selectedRunId, setSelectedRunId] = useState(null);
 
   useEffect(() => {
@@ -272,66 +282,6 @@ const EventManagerDashboard = () => {
     <main className="min-w-0 text-slate-100">
       <div className="mx-auto max-w-7xl space-y-4">
         <StaffWorkspaceHeader description="Templates, Events, registrations and rounds." title="Event Manager" />
-        <div className="grid items-start gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-slate-800 bg-slate-950/70 p-2 lg:sticky lg:top-5">
-          <nav
-            aria-label="Event Manager sections"
-            className="grid gap-1"
-            role="tablist"
-          >
-            <button
-              aria-selected={activeTab === "templates"}
-              className={
-                activeTab === "templates"
-                  ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left"
-                  : "rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-900"
-              }
-              onClick={() => setActiveTab("templates")}
-              role="tab"
-              type="button"
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="font-black text-white">Templates</span>
-                <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-cyan-200">
-                  {templates.length}
-                </span>
-              </span>
-            </button>
-            <button
-              aria-selected={activeTab === "invitations"}
-              className={activeTab === "invitations" ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left font-black text-white" : "rounded-xl border border-transparent px-3 py-2.5 text-left font-black text-white hover:bg-slate-900"}
-              onClick={() => setActiveTab("invitations")}
-              role="tab"
-              type="button"
-            >Invitations</button>
-            <button
-              aria-selected={activeTab === "results"}
-              className={activeTab === "results" ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left font-black text-white" : "rounded-xl border border-transparent px-3 py-2.5 text-left font-black text-white hover:bg-slate-900"}
-              onClick={() => setActiveTab("results")}
-              role="tab"
-              type="button"
-            >Results & Rewards</button>
-            <button
-              aria-selected={activeTab === "events"}
-              className={
-                activeTab === "events"
-                  ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left"
-                  : "rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-900"
-              }
-              onClick={() => setActiveTab("events")}
-              role="tab"
-              type="button"
-            >
-              <span className="flex items-center justify-between gap-3">
-                <span className="font-black text-white">Events</span>
-                <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-cyan-200">
-                  {runs.length}
-                </span>
-              </span>
-            </button>
-          </nav>
-        </aside>
-
         <div className="min-w-0 space-y-6">
           <section>
             {activeTab === "templates" ? (
@@ -997,7 +947,6 @@ const EventManagerDashboard = () => {
           {activeTab === "invitations" ? <EventInvitationManagement /> : null}
           {activeTab === "results" ? <EventManagerResults runs={runs} /> : null}
         </div>
-      </div>
       </div>
     </main>
   );

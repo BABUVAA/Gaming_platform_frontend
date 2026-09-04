@@ -9,7 +9,17 @@ import { getStoredErrorMessage } from "../api/apiError";
 import GameManagerEventDetails from "../components/gameManagement/GameManagerEventDetails.jsx";
 import GameAccountVerificationQueue from "../components/gameManagement/GameAccountVerificationQueue.jsx";
 import StaffWorkspaceHeader from "../components/common/StaffWorkspaceHeader.jsx";
-import StaffWorkspaceTabs from "../components/common/StaffWorkspaceTabs.jsx";
+import useStaffWorkspaceTab from "../hooks/useStaffWorkspaceTab.js";
+
+const GAME_MANAGER_WORKSPACE_TABS = [
+  "overview",
+  "rooms",
+  "events",
+  "attention",
+  "operators",
+  "verification",
+  "history",
+];
 
 const formatSchedule = (value) => {
   if (!value) return "Schedule pending";
@@ -47,7 +57,10 @@ const GameManagerDashboard = () => {
   const dispatch = useDispatch();
   const { error, operations, status } = useSelector((state) => state.gameManagement);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [activeSection, setActiveSection] = useState("overview");
+  const [activeSection] = useStaffWorkspaceTab(
+    GAME_MANAGER_WORKSPACE_TABS,
+    "overview",
+  );
   const [scheduleDrafts, setScheduleDrafts] = useState({});
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
@@ -120,16 +133,6 @@ const GameManagerDashboard = () => {
           <Metric label="Needs attention" value={total.attentionNeeded} warning />
           <Metric label="Assigned operators" value={total.operators} />
         </section>
-
-        <StaffWorkspaceTabs activeId={activeSection} ariaLabel="Game Manager responsibilities" items={[
-          { id: "overview", label: "Overview" },
-          { id: "rooms", label: "Rooms & schedules" },
-          { id: "events", label: "Events" },
-          { id: "attention", label: "Attention" },
-          { id: "operators", label: "Operators" },
-          { id: "verification", label: "Account verification" },
-          { id: "history", label: "History" },
-        ]} onChange={setActiveSection} />
 
         {error && <section className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{getStoredErrorMessage(error)}</section>}
         {selectedMatchId ? <ManagedMatchDetails key={selectedMatchId} matchId={selectedMatchId} onClose={() => setSelectedMatchId("")} onOpenRoom={openRoom} renderSchedule={(match) => <ScheduleRoomForm draft={scheduleDrafts[match.id] || {}} match={match} onChange={updateScheduleDraft} onSave={saveSchedule} />} /> : null}

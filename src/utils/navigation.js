@@ -278,6 +278,11 @@ export const getStaffWorkspaceNavigation = (
       to: ROUTES.OPERATIONS,
       icon: FaSatelliteDish,
       match: [ROUTES.OPERATIONS],
+      tabs: [
+        { id: "rooms", label: "Active rooms" },
+        { id: "queue", label: "Full rooms" },
+        { id: "matches", label: "Assigned matches" },
+      ],
     },
     {
       label: "Event Manager dashboard",
@@ -285,6 +290,12 @@ export const getStaffWorkspaceNavigation = (
       to: ROUTES.EVENT_MANAGER,
       icon: FaTrophy,
       match: [ROUTES.EVENT_MANAGER],
+      tabs: [
+        { id: "templates", label: "Templates" },
+        { id: "invitations", label: "Invitations" },
+        { id: "results", label: "Results & rewards" },
+        { id: "events", label: "Events" },
+      ],
     },
     {
       label: "Tournament Manager dashboard",
@@ -292,6 +303,13 @@ export const getStaffWorkspaceNavigation = (
       to: ROUTES.TOURNAMENT_MANAGER,
       icon: FaTrophy,
       match: [ROUTES.TOURNAMENT_MANAGER],
+      tabs: [
+        { id: "overview", label: "Overview" },
+        { id: "create", label: "Create" },
+        { id: "ready", label: "Drafts & paused" },
+        { id: "live", label: "Live tournaments" },
+        { id: "history", label: "History" },
+      ],
     },
     {
       label: "Game Manager dashboard",
@@ -299,6 +317,15 @@ export const getStaffWorkspaceNavigation = (
       to: ROUTES.GAME_MANAGER,
       icon: FaGamepad,
       match: [ROUTES.GAME_MANAGER],
+      tabs: [
+        { id: "overview", label: "Overview" },
+        { id: "rooms", label: "Rooms & schedules" },
+        { id: "events", label: "Events" },
+        { id: "attention", label: "Attention" },
+        { id: "operators", label: "Operators" },
+        { id: "verification", label: "Account verification" },
+        { id: "history", label: "History" },
+      ],
     },
     {
       label: "Discord workspace",
@@ -314,12 +341,23 @@ export const getStaffWorkspaceNavigation = (
     ),
   );
 
-  return selectedWorkspace
-    ? [
-        workspaceSwitcher,
-        { ...selectedWorkspace, navigationKind: "dashboard" },
-      ]
-    : [workspaceSwitcher];
+  if (!selectedWorkspace) return [workspaceSwitcher];
+
+  const workspaceDashboard = {
+    ...selectedWorkspace,
+    navigationKind: "dashboard",
+  };
+  const workspaceTabs = (selectedWorkspace.tabs || []).map((tab, index) => ({
+    ...tab,
+    description: `${selectedWorkspace.label}: ${tab.label}`,
+    icon: FaLayerGroup,
+    isDefaultTab: index === 0,
+    match: selectedWorkspace.match,
+    navigationKind: "tab",
+    to: `${selectedWorkspace.to}?tab=${tab.id}`,
+  }));
+
+  return [workspaceSwitcher, workspaceDashboard, ...workspaceTabs];
 };
 
 export const getDefaultRouteForRole = (role) => {

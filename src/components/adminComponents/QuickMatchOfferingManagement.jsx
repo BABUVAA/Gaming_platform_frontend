@@ -17,6 +17,15 @@ import {
 } from "../../store/slices/quickMatchOfferingSlice";
 import JoinProgress from "../competition/JoinProgress.jsx";
 import StaffWorkspaceHeader from "../common/StaffWorkspaceHeader.jsx";
+import useStaffWorkspaceTab from "../../hooks/useStaffWorkspaceTab.js";
+
+const TOURNAMENT_MANAGER_WORKSPACE_TABS = [
+  "overview",
+  "create",
+  "ready",
+  "live",
+  "history",
+];
 
 const createEmptyForm = () => ({
   currency: "INR",
@@ -363,7 +372,10 @@ const QuickMatchOfferingManagement = () => {
   const [form, setForm] = useState(createEmptyForm);
   const [editing, setEditing] = useState(null);
   const [mode, setMode] = useState("list");
-  const [section, setSection] = useState("overview");
+  const [section, setSection] = useStaffWorkspaceTab(
+    TOURNAMENT_MANAGER_WORKSPACE_TABS,
+    "overview",
+  );
   const [saving, setSaving] = useState(false);
   const activeGames = useMemo(
     () => games.filter((game) => game.status === "active"),
@@ -472,38 +484,9 @@ const QuickMatchOfferingManagement = () => {
     if (section === "history") return offering.status === "retired";
     return true;
   });
-  const sections = [
-    { id: "overview", label: "Overview", detail: `${offerings.length} tournaments` },
-    { id: "create", label: "Create", detail: `${activeGames.length} assigned games` },
-    { id: "ready", label: "Drafts & paused", detail: `${offerings.filter((item) => ["draft", "paused"].includes(item.status)).length} waiting` },
-    { id: "live", label: "Live tournaments", detail: `${offerings.filter((item) => item.status === "active").length} active` },
-    { id: "history", label: "History", detail: `${offerings.filter((item) => item.status === "retired").length} retired` },
-  ];
-
   return (
     <section className="space-y-4">
       <StaffWorkspaceHeader description="Quick Match offerings, rooms and rewards." title="Tournament Manager" />
-      <div className="grid items-start gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
-      <aside className="rounded-2xl border border-slate-800 bg-slate-950/70 p-2 lg:sticky lg:top-5">
-        <nav aria-label="Tournament Manager responsibilities" className="grid gap-1">
-          {sections.map((item) => (
-            <button
-              aria-current={section === item.id ? "page" : undefined}
-              className={
-                section === item.id
-                  ? "rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left"
-                  : "rounded-xl border border-transparent px-3 py-2.5 text-left hover:bg-slate-900"
-              }
-              key={item.id}
-              onClick={() => openSection(item.id)}
-              type="button"
-            >
-              <span className="flex items-center justify-between gap-2 font-black text-white"><span>{item.label}</span><span className="text-xs text-cyan-200">{item.detail.split(" ")[0]}</span></span>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
       <div className="min-w-0 space-y-5">
       {mode !== "list" ? (
         <OfferingForm
@@ -663,7 +646,6 @@ const QuickMatchOfferingManagement = () => {
       </div>
         </>
       )}
-      </div>
       </div>
     </section>
   );
