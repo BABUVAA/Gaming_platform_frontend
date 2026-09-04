@@ -36,6 +36,15 @@ or a new platform dependency is introduced.
   Razorpay test checkout and webhook recovery proof remain manual/open; no
   production data was mutated.
 
+- Razorpay delivery checkpoint 2026-09-04: backend commit `6a4874a` and
+  frontend commit `336bd98` are pushed to `main`. The public Vercel HTML returns
+  200 and includes Razorpay Checkout; the Render `/readyz` endpoint returns 200
+  with MongoDB and Redis ready. The committed Render blueprint enables sandbox
+  mode and the Razorpay deposit flag for the API and payment worker. Render's
+  dashboard requires a fresh GitHub sign-in, so the `sync: false` Razorpay key
+  values and resulting authenticated payment capability remain unverified;
+  finish that dashboard step before considering deployment complete.
+
 - Tournament Manager workspace tabs now have distinct behavior as of
   2026-09-04. The URL-backed `?tab=` value is the single rendering source of
   truth, fixing the former local-mode conflict that made sidebar tabs reuse the

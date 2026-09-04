@@ -2,6 +2,12 @@
 
 ## Current Slice: Razorpay Standard Checkout — 2026-09-04
 
+- Delivery: backend `6a4874a` and frontend `336bd98` are pushed to `main`.
+  Vercel publicly serves the Razorpay Checkout script and Render readiness is
+  green for MongoDB/Redis. Blueprint sandbox flags are committed, but the
+  Render dashboard is awaiting GitHub sign-in, so its secret-backed Razorpay
+  capability cannot yet be verified.
+
 - Implemented locally as the current Wallet's primary deposit checkout. A
   verified Player creates an integer-minor INR order at
   `POST /api/payment/create-order` (minimum 100 paise), the Vite client opens
