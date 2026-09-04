@@ -35,13 +35,22 @@ test("offering mutations use only the Tournament Manager API", async () => {
 });
 
 test("Tournament Manager uses compact operational offering rows", async () => {
-  const management = await source(
-    "../src/components/adminComponents/QuickMatchOfferingManagement.jsx",
-  );
+  const [management, navigation] = await Promise.all([
+    source(
+      "../src/components/adminComponents/QuickMatchOfferingManagement.jsx",
+    ),
+    source("../src/utils/navigation.js"),
+  ]);
 
   assert.match(management, /Room filling:/);
   assert.match(management, /space-y-2/);
   assert.doesNotMatch(management, /JoinProgress|const Detail/);
+  assert.doesNotMatch(management, /\[mode, setMode\]/);
+  assert.match(management, /section === "create"/);
+  assert.match(management, /section === "overview"/);
+  assert.match(management, /Read-only record of retired tournament configurations/);
+  assert.match(navigation, /id: "create", label: "Create tournament"/);
+  assert.match(navigation, /id: "live", label: "Live monitoring"/);
 });
 
 test("Tournament place rewards are configured once and result commands send ranking only", async () => {

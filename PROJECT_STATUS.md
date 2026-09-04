@@ -11,6 +11,19 @@ repositories:
 Update this file whenever a feature changes state, a security decision is made,
 or a new platform dependency is introduced.
 
+- Tournament Manager workspace tabs now have distinct behavior as of
+  2026-09-04. The URL-backed `?tab=` value is the single rendering source of
+  truth, fixing the former local-mode conflict that made sidebar tabs reuse the
+  general list. Overview gives one prioritized next action and workflow
+  shortcuts; Create owns a clean setup form; Setup & Paused owns editing and
+  launch decisions; Live Monitoring owns entry progress and active lifecycle
+  controls; History is read-only. Successful saves route to the relevant queue,
+  and lifecycle controls reject duplicate clicks while saving. Roles, scope,
+  Redux/API contracts and backend authorization are unchanged. Frontend tests
+  pass 179/179; ESLint, the 581-module production build and diff check pass.
+  Authenticated populated visual proof and deployment remain open. Included in
+  the 2026-09-04 frontend repository delivery; no production data was mutated.
+
 - Compact Tournament and Event Manager dashboards implemented locally
   2026-09-04. Tournament offerings and Event Templates/Events now render as
   dense single-column operational rows without repeated statistic panels.

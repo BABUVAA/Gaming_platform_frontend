@@ -370,7 +370,6 @@ const QuickMatchOfferingManagement = () => {
   );
   const [form, setForm] = useState(createEmptyForm);
   const [editing, setEditing] = useState(null);
-  const [mode, setMode] = useState("list");
   const [section, setSection] = useStaffWorkspaceTab(
     TOURNAMENT_MANAGER_WORKSPACE_TABS,
     "overview",
@@ -395,6 +394,12 @@ const QuickMatchOfferingManagement = () => {
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    if (section === "create") return;
+    setEditing(null);
+    setForm(createEmptyForm());
+  }, [section]);
+
   const changeForm = (field, value) =>
     setForm((current) => ({
       ...current,
@@ -407,11 +412,10 @@ const QuickMatchOfferingManagement = () => {
         ? { gameAccountVerificationWaiverEndsAt: "" }
         : {}),
     }));
-  const closeForm = () => {
+  const closeForm = (nextSection = editing ? "ready" : "overview") => {
     setEditing(null);
     setForm(createEmptyForm());
-    setMode("list");
-    setSection("overview");
+    setSection(nextSection);
   };
   const submit = async (event) => {
     event.preventDefault();
@@ -442,7 +446,7 @@ const QuickMatchOfferingManagement = () => {
           updateQuickMatchOffering({ ...payload, offeringId: editing._id }),
         ).unwrap();
       else await dispatch(createQuickMatchOffering(payload)).unwrap();
-      closeForm();
+      closeForm(requestedStatus === "active" ? "live" : "ready");
     } catch {
       // API errors are normalized into the shared toast; keep the form open.
     } finally {
@@ -467,41 +471,143 @@ const QuickMatchOfferingManagement = () => {
   const beginEdit = (offering) => {
     setEditing(offering);
     setForm(toForm(offering));
-    setMode("edit");
+    setSection("create");
   };
 
   const openSection = (nextSection) => {
     setEditing(null);
     setForm(createEmptyForm());
     setSection(nextSection);
-    setMode(nextSection === "create" ? "create" : "list");
   };
-  const visibleOfferings = offerings.filter((offering) => {
-    if (section === "ready")
-      return ["draft", "paused"].includes(offering.status);
-    if (section === "live") return offering.status === "active";
-    if (section === "history") return offering.status === "retired";
-    return true;
-  });
+  const readyOfferings = offerings.filter((offering) =>
+    ["draft", "paused"].includes(offering.status),
+  );
+  const liveOfferings = offerings.filter(
+    (offering) => offering.status === "active",
+  );
+  const historyOfferings = offerings.filter(
+    (offering) => offering.status === "retired",
+  );
+  const listContent = {
+    ready: {
+      description: "Edit setup, activate drafts, or resume paused tournaments.",
+      empty: "No drafts or paused tournaments need setup.",
+      offerings: readyOfferings,
+      title: "Drafts & paused",
+    },
+    live: {
+      description: "Monitor entry progress and pause or retire live tournaments.",
+      empty: "No tournaments are currently live.",
+      offerings: liveOfferings,
+      title: "Live tournaments",
+    },
+    history: {
+      description: "Read-only record of retired tournament configurations.",
+      empty: "No retired tournaments are in history.",
+      offerings: historyOfferings,
+      title: "Tournament history",
+    },
+  }[section];
+  const nextOffering = readyOfferings[0] || liveOfferings[0];
+
   return (
     <section className="space-y-4">
       <StaffWorkspaceHeader description="Quick Match offerings, rooms and rewards." title="Tournament Manager" />
       <div className="min-w-0 space-y-5">
-      {mode !== "list" ? (
+      {section === "create" ? (
         <OfferingForm
           form={form}
           games={activeGames}
-          onCancel={closeForm}
+          onCancel={() => closeForm()}
           onChange={changeForm}
           onSubmit={submit}
           saving={saving}
           title={editing ? "Edit paused or draft tournament" : "Create tournament"}
         />
-      ) : (
+      ) : section === "overview" ? (
+        <>
+          <section className="rounded-2xl border border-cyan-300/20 bg-[#07111f] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">
+              Next action
+            </p>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-black text-white">
+                  {nextOffering
+                    ? nextOffering.title
+                    : "Create your first tournament"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  {readyOfferings.length
+                    ? "A draft or paused tournament is waiting for a launch decision."
+                    : liveOfferings.length
+                      ? "Review current entry progress and keep the live tournament healthy."
+                      : "Build the entry, format, schedule, and reward rules players will see."}
+                </p>
+              </div>
+              <button
+                className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950"
+                onClick={() =>
+                  openSection(
+                    readyOfferings.length
+                      ? "ready"
+                      : liveOfferings.length
+                        ? "live"
+                        : "create",
+                  )
+                }
+                type="button"
+              >
+                {readyOfferings.length
+                  ? "Review setup"
+                  : liveOfferings.length
+                    ? "Monitor live"
+                    : "Create tournament"}
+              </button>
+            </div>
+          </section>
+          <section className="grid gap-3 md:grid-cols-3">
+            {[
+              {
+                count: readyOfferings.length,
+                description: "Configure and launch",
+                id: "ready",
+                label: "Drafts & paused",
+              },
+              {
+                count: liveOfferings.length,
+                description: "Monitor registration",
+                id: "live",
+                label: "Live tournaments",
+              },
+              {
+                count: historyOfferings.length,
+                description: "Review retired records",
+                id: "history",
+                label: "History",
+              },
+            ].map((item) => (
+              <button
+                className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4 text-left hover:border-cyan-300/40"
+                key={item.id}
+                onClick={() => openSection(item.id)}
+                type="button"
+              >
+                <span className="text-2xl font-black text-white">{item.count}</span>
+                <span className="mt-2 block font-bold text-cyan-100">{item.label}</span>
+                <span className="mt-1 block text-xs text-slate-400">{item.description}</span>
+              </button>
+            ))}
+          </section>
+        </>
+      ) : listContent ? (
         <>
       <header className="rounded-2xl border border-slate-800 bg-slate-950/55 p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-black text-white">Quick Matches</h2>
+          <div>
+            <h2 className="font-black text-white">{listContent.title}</h2>
+            <p className="mt-1 text-xs text-slate-400">{listContent.description}</p>
+          </div>
           <div className="flex gap-2">
             <button
               className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200"
@@ -511,13 +617,15 @@ const QuickMatchOfferingManagement = () => {
             >
               <FiRefreshCw /> Refresh
             </button>
-            <button
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-sm font-black text-slate-950"
-              onClick={() => openSection("create")}
-              type="button"
-            >
-              <FiPlus /> Create tournament
-            </button>
+            {section === "ready" && (
+              <button
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-sm font-black text-slate-950"
+                onClick={() => openSection("create")}
+                type="button"
+              >
+                <FiPlus /> Create tournament
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -527,7 +635,7 @@ const QuickMatchOfferingManagement = () => {
         </p>
       )}
       <div className="space-y-2">
-        {visibleOfferings.map((offering) => (
+        {listContent.offerings.map((offering) => (
           <article
             className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
             key={offering._id}
@@ -557,9 +665,11 @@ const QuickMatchOfferingManagement = () => {
               <span>{offering.gameAccountVerificationWaiverEndsAt && new Date(offering.gameAccountVerificationWaiverEndsAt) > new Date() ? "Verification temporarily waived" : "Verification required"}</span>
               <span className="font-bold text-cyan-200">Room filling: {offering.joinProgress?.joinedParticipants || 0}/{offering.joinProgress?.capacity || offering.maxParticipants}</span>
             </div>
+            {section !== "history" && (
             <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-800 pt-3">
               {["draft", "paused"].includes(offering.status) && (
                 <Action
+                  disabled={saving}
                   icon={FiEdit3}
                   label="Edit"
                   onClick={() => beginEdit(offering)}
@@ -567,6 +677,7 @@ const QuickMatchOfferingManagement = () => {
               )}
               {offering.status === "draft" && (
                 <Action
+                  disabled={saving}
                   icon={FiPlay}
                   label="Activate"
                   onClick={() => changeStatus(offering, "active")}
@@ -574,6 +685,7 @@ const QuickMatchOfferingManagement = () => {
               )}
               {offering.status === "active" && (
                 <Action
+                  disabled={saving}
                   icon={FiPause}
                   label="Pause"
                   onClick={() => changeStatus(offering, "paused")}
@@ -581,6 +693,7 @@ const QuickMatchOfferingManagement = () => {
               )}
               {offering.status === "paused" && (
                 <Action
+                  disabled={saving}
                   icon={FiPlay}
                   label="Reactivate"
                   onClick={() => changeStatus(offering, "active")}
@@ -588,6 +701,7 @@ const QuickMatchOfferingManagement = () => {
               )}
               {offering.status !== "retired" && (
                 <Action
+                  disabled={saving}
                   icon={FiSlash}
                   label="Retire"
                   onClick={() => changeStatus(offering, "retired")}
@@ -595,6 +709,7 @@ const QuickMatchOfferingManagement = () => {
                 />
               )}
             </div>
+            )}
           </article>
         ))}
         {status === "loading" && offerings.length === 0 && (
@@ -602,27 +717,27 @@ const QuickMatchOfferingManagement = () => {
             Loading tournaments...
           </p>
         )}
-        {status !== "loading" && visibleOfferings.length === 0 && (
+        {status !== "loading" && listContent.offerings.length === 0 && (
           <p className="rounded-3xl border border-dashed border-slate-700 bg-slate-950/70 p-5 text-sm text-slate-400">
-            No tournaments are available in this section.
+            {listContent.empty}
           </p>
         )}
       </div>
         </>
-      )}
+      ) : null}
       </div>
     </section>
   );
 };
 
-const Action = ({ icon: Icon, label, onClick, tone = "default" }) => (
+const Action = ({ disabled = false, icon: Icon, label, onClick, tone = "default" }) => (
   <button
     className={
       tone === "danger"
         ? "inline-flex items-center gap-2 rounded-xl border border-rose-300/30 px-3 py-2 text-sm font-bold text-rose-100"
         : "inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-sm font-bold text-slate-200"
     }
-    disabled={false}
+    disabled={disabled}
     onClick={onClick}
     type="button"
   >
@@ -630,6 +745,7 @@ const Action = ({ icon: Icon, label, onClick, tone = "default" }) => (
   </button>
 );
 Action.propTypes = {
+  disabled: PropTypes.bool,
   icon: PropTypes.elementType.isRequired,
   label: PropTypes.string.isRequired,
   onClick: PropTypes.func.isRequired,

@@ -305,9 +305,9 @@ export const getStaffWorkspaceNavigation = (
       match: [ROUTES.TOURNAMENT_MANAGER],
       tabs: [
         { id: "overview", label: "Overview" },
-        { id: "create", label: "Create" },
-        { id: "ready", label: "Drafts & paused" },
-        { id: "live", label: "Live tournaments" },
+        { id: "create", label: "Create tournament" },
+        { id: "ready", label: "Setup & paused" },
+        { id: "live", label: "Live monitoring" },
         { id: "history", label: "History" },
       ],
     },

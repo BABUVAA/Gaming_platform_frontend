@@ -1,5 +1,22 @@
 # Current Checkpoint
 
+## Current Slice: Distinct Tournament Manager Workspaces — 2026-09-04
+
+- Implemented locally: removed the conflicting local display mode that caused
+  sidebar `?tab=` changes to reuse the general offering list. The URL-backed
+  workspace tab is now the single source of truth, including direct links and
+  browser history.
+- Overview presents one prioritized next action plus workflow shortcuts; Create
+  always opens a clean setup form; Setup & Paused owns editing and launch work;
+  Live Monitoring owns active entry progress and pause/retire controls; History
+  is read-only. Successful saves route to the relevant live or setup queue, and
+  lifecycle buttons are disabled while a mutation is pending.
+- Roles, Tournament Manager scope, Redux/API commands and backend authorization
+  are unchanged. Frontend tests pass 179/179; ESLint, the 581-module production
+  build and diff check pass. Authenticated populated visual proof and deployment
+  remain open. Included in the 2026-09-04 frontend repository delivery; no
+  production data was mutated.
+
 ## Current Slice: Compact Tournament and Event Manager Dashboards — 2026-09-04
 
 - Implemented locally: Tournament Manager offerings and Event Manager

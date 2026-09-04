@@ -288,7 +288,7 @@ test("each operational role dashboard separates its responsibilities", async () 
     readFile(new URL("../src/utils/navigation.js", import.meta.url), "utf8"),
   ]);
 
-  assert.match(navigation, /Overview[\s\S]*Create[\s\S]*Drafts & paused[\s\S]*Live tournaments[\s\S]*History/);
+  assert.match(navigation, /Overview[\s\S]*Create tournament[\s\S]*Setup & paused[\s\S]*Live monitoring[\s\S]*History/);
   assert.match(navigation, /Templates[\s\S]*Invitations[\s\S]*Results & rewards[\s\S]*Events/);
   assert.match(navigation, /Overview[\s\S]*Rooms & schedules[\s\S]*Events[\s\S]*Attention[\s\S]*Operators[\s\S]*Account verification[\s\S]*History/);
   assert.match(navigation, /Active rooms[\s\S]*Full rooms[\s\S]*Assigned matches/);
