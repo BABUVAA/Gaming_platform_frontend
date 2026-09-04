@@ -3,10 +3,13 @@
 ## Current Slice: Razorpay Standard Checkout — 2026-09-04
 
 - Delivery: backend `6a4874a` and frontend `336bd98` are pushed to `main`.
-  Vercel publicly serves the Razorpay Checkout script and Render readiness is
-  green for MongoDB/Redis. Blueprint sandbox flags are committed, but the
-  Render dashboard is awaiting GitHub sign-in, so its secret-backed Razorpay
-  capability cannot yet be verified.
+  Vercel publicly serves the Razorpay Checkout script. Render deployment
+  `dep-dadfptn10e5c73ab2v10` is live; startup validation passed with stored
+  Razorpay credentials, sandbox money mode and the enabled deposit gate, and
+  readiness is green for MongoDB/Redis. Render still has no payment-worker
+  service, so automatic credit remains blocked pending explicit approval of
+  the separately billed worker; manual governed reconciliation remains the
+  temporary sandbox path.
 
 - Implemented locally as the current Wallet's primary deposit checkout. A
   verified Player creates an integer-minor INR order at
