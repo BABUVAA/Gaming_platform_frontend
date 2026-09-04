@@ -11,6 +11,16 @@ repositories:
 Update this file whenever a feature changes state, a security decision is made,
 or a new platform dependency is introduced.
 
+- Compact Game Manager dashboard implemented locally 2026-09-04. Global and
+  repeated per-game statistic tiles are removed. Each assigned Game now shows
+  one prioritized operational next action; compact Room, Event and operator
+  rows avoid duplicating roster and count data already available in exact
+  detail views. Attention, history, lobby scheduling, operator assignment and
+  account-verification authority are unchanged. Frontend tests pass 178/178;
+  ESLint, the 581-module production build and diff check pass. Authenticated
+  populated visual proof remains open. Included in the 2026-09-04 frontend
+  repository delivery; no deployment or production-data mutation.
+
 - Staff workspace navigation isolation and tab extraction implemented locally
   2026-09-04. The
   desktop staff sidebar, desktop header and mobile hamburger now expose the

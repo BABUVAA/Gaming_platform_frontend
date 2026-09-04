@@ -40,24 +40,40 @@ const formatAction = (entry) => {
   return entry.action?.replaceAll("_", " ").toLowerCase() || "operation updated";
 };
 
-const Metric = ({ label, value, warning = false }) => (
-  <div className="rounded-xl border border-slate-800 bg-slate-950/45 p-3">
-    <p className="text-xs font-bold text-slate-500">{label}</p>
-    <p className={warning ? "mt-1 text-xl font-black text-amber-300" : "mt-1 text-xl font-black text-white"}>{value}</p>
-  </div>
-);
-
-Metric.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.number.isRequired,
-  warning: PropTypes.bool,
+const getNextAction = (item) => {
+  if (item.attention?.length) {
+    return {
+      detail: "A delayed or disputed Match needs review.",
+      label: "Review attention",
+      section: "attention",
+    };
+  }
+  if (item.activeRooms?.length) {
+    return {
+      detail: "Review current rooms, assignments and lobby schedules.",
+      label: "Open rooms",
+      section: "rooms",
+    };
+  }
+  if (item.events?.length) {
+    return {
+      detail: "Review Event coverage and upcoming starts.",
+      label: "Open Events",
+      section: "events",
+    };
+  }
+  return {
+    detail: "There is no immediate operational work for this game.",
+    label: "Up to date",
+    section: "",
+  };
 };
 
 const GameManagerDashboard = () => {
   const dispatch = useDispatch();
   const { error, operations, status } = useSelector((state) => state.gameManagement);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [activeSection] = useStaffWorkspaceTab(
+  const [activeSection, setActiveSection] = useStaffWorkspaceTab(
     GAME_MANAGER_WORKSPACE_TABS,
     "overview",
   );
@@ -108,16 +124,6 @@ const GameManagerDashboard = () => {
     }
   };
 
-  const total = operations.reduce(
-    (summary, item) => ({
-      activeMatches: summary.activeMatches + item.metrics.activeMatches,
-      attentionNeeded: summary.attentionNeeded + item.metrics.attentionNeeded,
-      liveMatches: summary.liveMatches + item.metrics.liveMatches,
-      operators: summary.operators + item.operators.length,
-    }),
-    { activeMatches: 0, attentionNeeded: 0, liveMatches: 0, operators: 0 },
-  );
-
   return (
     <main className="min-w-0 text-slate-100">
       <div className="mx-auto max-w-[1500px] space-y-4">
@@ -127,13 +133,6 @@ const GameManagerDashboard = () => {
           title="Game Manager"
         />
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric label="Active matches" value={total.activeMatches} />
-          <Metric label="Live now" value={total.liveMatches} />
-          <Metric label="Needs attention" value={total.attentionNeeded} warning />
-          <Metric label="Assigned operators" value={total.operators} />
-        </section>
-
         {error && <section className="rounded-2xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-100">{getStoredErrorMessage(error)}</section>}
         {selectedMatchId ? <ManagedMatchDetails key={selectedMatchId} matchId={selectedMatchId} onClose={() => setSelectedMatchId("")} onOpenRoom={openRoom} renderSchedule={(match) => <ScheduleRoomForm draft={scheduleDrafts[match.id] || {}} match={match} onChange={updateScheduleDraft} onSave={saveSchedule} />} /> : null}
         {selectedRoomId ? <ManagedRoomDetails key={selectedRoomId} roomId={selectedRoomId} onClose={() => setSelectedRoomId("")} onOpenMatch={openMatch} /> : null}
@@ -142,28 +141,28 @@ const GameManagerDashboard = () => {
 
         {activeSection === "verification" ? <GameAccountVerificationQueue /> : null}
 
-        {activeSection !== "verification" ? <section className="grid gap-5 xl:grid-cols-2">
-          {activeSection === "events" && selectedEvent ? <GameManagerEventDetails event={selectedEvent} onClose={() => setSelectedEvent(null)} /> : null}
-          {operations.map((item) => (
+        {activeSection === "events" && selectedEvent ? <GameManagerEventDetails event={selectedEvent} onClose={() => setSelectedEvent(null)} /> : null}
+
+        {activeSection !== "verification" ? <section className="grid gap-3 xl:grid-cols-2">
+          {operations.map((item) => {
+            const nextAction = getNextAction(item);
+            return (
             <article className="rounded-2xl border border-slate-800 bg-[#07111f] p-4" key={item.game._id}>
               <div className="flex items-start justify-between gap-4">
-                <div><p className="text-xs font-bold capitalize text-cyan-300">{item.game.status}</p><h2 className="mt-1 text-lg font-black text-white">{item.game.name}</h2><p className="mt-1 text-xs text-slate-500">{item.game.link}</p></div>
-                {item.metrics.attentionNeeded > 0 && <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-bold text-amber-200"><FiAlertTriangle /> {item.metrics.attentionNeeded} needs attention</span>}
+                <div className="min-w-0"><p className="inline-flex items-center gap-2 text-xs font-bold capitalize text-cyan-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />{item.game.status}</p><h2 className="mt-1 truncate text-lg font-black text-white">{item.game.name}</h2></div>
+                {item.attention?.length ? <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/10 px-2.5 py-1.5 text-xs font-bold text-amber-200"><FiAlertTriangle /> Review needed</span> : null}
               </div>
 
-              {activeSection === "overview" ? <div className="mt-5 grid grid-cols-2 gap-3">
-                <Metric label="Awaiting operator" value={item.metrics.awaitingOperator} warning={item.metrics.awaitingOperator > 0} />
-                <Metric label="Live matches" value={item.metrics.liveMatches} />
-                <Metric label="Active Event runs" value={item.eventReadiness.activeRuns} />
-                <Metric label="Upcoming Event runs" value={item.eventReadiness.upcomingRuns} />
+              {activeSection === "overview" ? <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-3">
+                <div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Next action</p><p className="mt-1 text-sm text-slate-300">{nextAction.detail}</p></div>
+                {nextAction.section ? <button className="shrink-0 rounded-lg border border-cyan-300/30 px-3 py-2 text-sm font-bold text-cyan-200 hover:bg-cyan-300/10" onClick={() => setActiveSection(nextAction.section)} type="button">{nextAction.label}</button> : <span className="text-xs font-bold text-emerald-300">{nextAction.label}</span>}
               </div> : null}
 
-              {activeSection === "rooms" ? <div className="mt-5 space-y-3">
+              {activeSection === "rooms" ? <div className="mt-3 space-y-2">
                 {(item.activeRooms || []).map((room) => (
-                  <article className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4" key={room.id}>
+                  <article className="rounded-xl border border-slate-800 bg-slate-950/60 p-3" key={room.id}>
                     <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-black text-white">{room.title}</h3><p className="mt-1 text-xs capitalize text-slate-500">{room.mode} / {room.map} / {room.earlyClosed && room.status === "full" ? "Entry closed" : room.status}</p></div><span className="text-sm font-black text-cyan-200">{room.joinedCount}/{room.capacity}</span></div>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-cyan-300" style={{ width: `${Math.min(100, Math.round((room.joinedCount / room.capacity) * 100))}%` }} /></div>
-                    <div className="mt-3 flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">{room.lineup.map((player) => <span className="rounded-lg bg-slate-900 px-2 py-1 text-xs text-slate-300" key={`${room.id}:${player.seat}`}>#{player.seat} {player.username}</span>)}</div>
                     <button type="button" onClick={() => openRoom(room.id)} className="mt-3 rounded-lg border border-slate-700 px-3 py-2 text-sm font-bold text-cyan-200">Open room controls</button>
                     {room.match ? <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-amber-200">{delayLabel(room.match) || (room.match.assignedOperator ? room.match.assignedOperator.username : "Needs operator assignment")}</span><button type="button" onClick={() => openMatch(room.match.id)} className="rounded-lg border border-cyan-300/30 px-3 py-2 text-sm font-bold text-cyan-200">Open match details</button></div> : room.status === "full" ? <p className="mt-4 text-sm font-bold text-amber-200">Preparing Match for operator assignment.</p> : null}
                   </article>
@@ -171,15 +170,15 @@ const GameManagerDashboard = () => {
                 {!(item.activeRooms || []).length ? <p className="text-sm text-slate-500">No active rooms.</p> : null}
               </div> : null}
 
-              {activeSection === "events" ? <div className="mt-6 border-t border-slate-800 pt-5">
+              {activeSection === "events" ? <div className="mt-3 border-t border-slate-800 pt-3">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Events</p>
                 <div className="mt-3 space-y-2">
-                  {(item.events || []).map((event) => <button className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 px-3 py-3 text-left hover:border-cyan-300/30" key={event.id} onClick={() => setSelectedEvent(event)} type="button"><span className="min-w-0"><strong className="block truncate text-sm text-slate-100">{event.title}</strong><small className="text-slate-500">{event.registeredCount.toLocaleString("en-IN")} registered / {formatSchedule(event.startsAt)}</small></span><span className="shrink-0 text-xs font-bold capitalize text-cyan-200">{event.status.replaceAll("_", " ")}</span></button>)}
+                  {(item.events || []).map((event) => <button className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-800 px-3 py-3 text-left hover:border-cyan-300/30" key={event.id} onClick={() => setSelectedEvent(event)} type="button"><span className="min-w-0"><strong className="block truncate text-sm text-slate-100">{event.title}</strong><small className="text-slate-500">{formatSchedule(event.startsAt)}</small></span><span className="shrink-0 text-xs font-bold capitalize text-cyan-200">{event.status.replaceAll("_", " ")}</span></button>)}
                   {(item.events || []).length === 0 ? <p className="text-sm text-slate-500">No Events for this game.</p> : null}
                 </div>
               </div> : null}
 
-              {activeSection === "attention" ? <div className="mt-6 border-t border-slate-800 pt-5">
+              {activeSection === "attention" ? <div className="mt-3 border-t border-slate-800 pt-3">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Attention queue</p>
                 <div className="mt-3 space-y-2">
                   {(item.attention || []).map((match) => (
@@ -202,15 +201,15 @@ const GameManagerDashboard = () => {
                 </div>
               </div> : null}
 
-              {activeSection === "operators" ? <div className="mt-6 border-t border-slate-800 pt-5">
+              {activeSection === "operators" ? <div className="mt-3 border-t border-slate-800 pt-3">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Operator workload</p>
                 <div className="mt-3 space-y-2">
-                  {item.operators.map(({ activeMatches, operator }) => <div className="flex items-center justify-between rounded-xl bg-slate-950/70 px-3 py-3" key={operator._id}><span className="inline-flex items-center gap-2 text-sm font-bold text-slate-200"><FiUsers className="text-cyan-300" />{operator.username}</span><span className="text-sm text-slate-400">{activeMatches} active</span></div>)}
+                  {item.operators.map(({ activeMatches, operator }) => <div className="flex items-center justify-between rounded-xl bg-slate-950/70 px-3 py-3" key={operator._id}><span className="inline-flex items-center gap-2 text-sm font-bold text-slate-200"><FiUsers className="text-cyan-300" />{operator.username}</span><span className="text-xs font-bold text-slate-400">{activeMatches ? "Assigned work" : "Available"}</span></div>)}
                   {item.operators.length === 0 && <p className="text-sm text-slate-500">No assigned operator workload yet.</p>}
                 </div>
               </div> : null}
 
-              {activeSection === "history" ? <div className="mt-6 border-t border-slate-800 pt-5">
+              {activeSection === "history" ? <div className="mt-3 border-t border-slate-800 pt-3">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Operational history</p>
                 <div className="mt-3 space-y-2">
                   {(item.recentActivity || []).map((entry) => (
@@ -226,7 +225,7 @@ const GameManagerDashboard = () => {
                 </div>
               </div> : null}
 
-              {activeSection === "history" ? <div className="mt-6 border-t border-slate-800 pt-5">
+              {activeSection === "history" ? <div className="mt-4 border-t border-slate-800 pt-3">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Recent match activity</p>
                 <div className="mt-3 space-y-2">
                   {item.recentMatches.map((match) => <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-800 px-3 py-3" key={match._id}><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-200">{match.title}</p><p className="mt-1 text-xs text-slate-500">{formatSchedule(match.scheduledFor)}</p></div><span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-cyan-200"><FiRadio />{match.status.replaceAll("_", " ")}</span></div>)}
@@ -234,7 +233,8 @@ const GameManagerDashboard = () => {
                 </div>
               </div> : null}
             </article>
-          ))}
+            );
+          })}
         </section> : null}
 
       </div>

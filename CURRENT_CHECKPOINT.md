@@ -1,5 +1,21 @@
 # Current Checkpoint
 
+## Current Slice: Compact Game Manager Dashboard — 2026-09-04
+
+- Implemented locally: removed the four global statistic cards and the repeated
+  per-game metric grid from Game Manager. Each assigned game now presents one
+  operational next action, prioritizing attention, then Rooms/schedules, then
+  Event coverage, with a clear up-to-date state when no work exists.
+- Room rows no longer repeat complete player rosters, Event rows no longer
+  repeat registration totals, and operator rows use actionable availability
+  states instead of workload counts. Exact Room/Match details retain the data
+  needed to perform authorized work. Spacing and card density are reduced.
+- Roles, scopes, Redux commands, schedule rules and authorization are unchanged.
+  Frontend tests pass 178/178; ESLint, the 581-module production build and diff
+  check pass. Authenticated populated visual proof remains open. Included in
+  the 2026-09-04 frontend repository delivery; no deployment or production-data
+  mutation.
+
 ## Current Slice: Selected Staff Workspace Navigation and Tabs — 2026-09-04
 
 - Implemented locally: staff navigation now starts with the Staff Workspace

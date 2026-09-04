@@ -151,6 +151,10 @@ test("Game Manager dashboard exposes scoped operations and only account verifica
   assert.match(source, /Open match details/);
   assert.match(source, /Review match/);
   assert.match(source, /Start delayed/);
+  assert.match(source, /Next action/);
+  assert.match(source, /Review current rooms, assignments and lobby schedules/);
+  assert.doesNotMatch(source, /<Metric|const total = operations\.reduce/);
+  assert.doesNotMatch(source, /registeredCount\.toLocaleString/);
 });
 
 test("Game Manager detail and assignment transport remain Match-scoped with identity-only writes", async () => {
