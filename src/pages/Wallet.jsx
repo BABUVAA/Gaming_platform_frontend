@@ -13,6 +13,8 @@ import {
   fetchWalletBalance,
   fetchPaymentCapabilities,
   initiatePhonePeOrder,
+  initiateRazorpayOrder,
+  verifyRazorpayPayment,
 } from "../store/slices/paymentSlice";
 import {
   fetchPayoutDestinations,
@@ -185,28 +187,85 @@ const Wallet = () => {
     if (!value) return;
 
     try {
-      const response = await dispatch(
-        initiatePhonePeOrder({
-          amountMinor: Math.round(value * 100),
-        })
-      ).unwrap();
-
-      if (response?.redirectUrl) {
-        // Only the payment provider may call the signed callback endpoint.
-        window.location.href = response.redirectUrl;
+      if (paymentCapabilities.depositProvider === "phonepe") {
+        const phonePeOrder = await dispatch(
+          initiatePhonePeOrder({ amountMinor: Math.round(value * 100) }),
+        ).unwrap();
+        if (!phonePeOrder?.redirectUrl) {
+          throw new Error("PhonePe Checkout is unavailable.");
+        }
+        window.location.href = phonePeOrder.redirectUrl;
         closeModals();
         return;
       }
-
-      dispatch(
-        showToast({
-          message: "No payment redirect URL was returned.",
-          type: types.DANGER,
-          position: "bottom-right",
+      const response = await dispatch(
+        initiateRazorpayOrder({
+          amountMinor: Math.round(value * 100),
         })
-      );
-    } catch {
-      // The thunk owns the normalized failure toast and Redux error state.
+      ).unwrap();
+      const checkoutKeyId = response?.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!window.Razorpay || !checkoutKeyId || !response?.orderId) {
+        throw new Error("Razorpay Checkout is unavailable.");
+      }
+
+      closeModals();
+      let checkoutCompleted = false;
+      const checkout = new window.Razorpay({
+        amount: response.amount,
+        currency: response.currency,
+        description: "Wallet deposit",
+        key: checkoutKeyId,
+        name: "E-gaming",
+        order_id: response.orderId,
+        prefill: {
+          email: playerSummary?.email || "",
+          name: playerSummary?.displayName || playerSummary?.username || "",
+        },
+        handler: async (payment) => {
+          checkoutCompleted = true;
+          try {
+            await dispatch(verifyRazorpayPayment(payment)).unwrap();
+            dispatch(showToast({
+              message: "Payment verified. Your wallet will update after provider confirmation.",
+              position: "bottom-right",
+              type: types.SUCCESS,
+            }));
+            dispatch(fetchWalletBalance());
+            dispatch(fetchWalletLedger());
+          } catch {
+            // The verification thunk reports a normalized failure.
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            if (checkoutCompleted) return;
+            dispatch(showToast({
+              message: "Razorpay checkout was cancelled. No wallet credit was applied.",
+              position: "bottom-right",
+              type: types.WARNING,
+            }));
+          },
+        },
+        theme: { color: "#22d3ee" },
+      });
+      checkout.on("payment.failed", (failure) => {
+        const description = failure?.error?.description;
+        dispatch(showToast({
+          message: description || "Razorpay could not complete the payment. Please try again.",
+          position: "bottom-right",
+          type: types.DANGER,
+        }));
+      });
+      checkout.open();
+    } catch (error) {
+      // API failures are already normalized and shown by the order thunk.
+      if (error instanceof Error) {
+        dispatch(showToast({
+          message: error.message,
+          position: "bottom-right",
+          type: types.DANGER,
+        }));
+      }
     }
   };
 
@@ -282,7 +341,7 @@ const Wallet = () => {
       {paymentCapabilities.testMoney ? (
         <section className="rounded-2xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-amber-50">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
-            PhonePe sandbox - test money only
+            Payment sandbox - test money only
           </p>
           <p className="mt-1 text-xs leading-5">
             Deposits, entry fees, prizes, and wallet balances on this deployment
@@ -348,8 +407,8 @@ const Wallet = () => {
               title="Add funds"
               copy={paymentCapabilities.depositAvailable
                 ? paymentCapabilities.testMoney
-                  ? "PhonePe sandbox deposit."
-                  : "Deposit through PhonePe."
+                  ? `${paymentCapabilities.depositProvider === "phonepe" ? "PhonePe" : "Razorpay"} test-mode deposit.`
+                  : `Deposit securely through ${paymentCapabilities.depositProvider === "phonepe" ? "PhonePe" : "Razorpay"}.`
                 : "Deposits are unavailable."}
               actionLabel={paymentCapabilities.depositAvailable ? "Add Money" : "Unavailable"}
               disabled={paymentCapabilities.depositAvailable !== true}

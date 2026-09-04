@@ -35,6 +35,29 @@ const rejectPaymentError = (
   return thunkAPI.rejectWithValue(normalizedError);
 };
 
+export const initiateRazorpayOrder = createAsyncThunk(
+  "payment/initiateRazorpayOrder",
+  async (payload, thunkAPI) => {
+    try {
+      const response = await api.post("/api/payment/create-order", payload, {
+        withCredentials: true,
+      });
+      return response.data?.data || response.data;
+    } catch (error) {
+      return rejectPaymentError(
+        thunkAPI,
+        error,
+        "Unable to start wallet top-up.",
+        { notify: true },
+      );
+    }
+  },
+  {
+    condition: (_, { getState }) =>
+      getState().player?.summary?.role !== "staff",
+  },
+);
+
 export const initiatePhonePeOrder = createAsyncThunk(
   "payment/initiatePhonePeOrder",
   async (payload, thunkAPI) => {
@@ -44,10 +67,30 @@ export const initiatePhonePeOrder = createAsyncThunk(
       });
       return response.data?.data || response.data;
     } catch (error) {
+      return rejectPaymentError(thunkAPI, error, "Unable to start wallet top-up.", {
+        notify: true,
+      });
+    }
+  },
+  {
+    condition: (_, { getState }) =>
+      getState().player?.summary?.role !== "staff",
+  },
+);
+
+export const verifyRazorpayPayment = createAsyncThunk(
+  "payment/verifyRazorpayPayment",
+  async (payload, thunkAPI) => {
+    try {
+      const response = await api.post("/api/payment/verify-payment", payload, {
+        withCredentials: true,
+      });
+      return response.data?.data || response.data;
+    } catch (error) {
       return rejectPaymentError(
         thunkAPI,
         error,
-        "Unable to start wallet top-up.",
+        "Unable to verify the Razorpay payment.",
         { notify: true },
       );
     }
@@ -159,7 +202,9 @@ export const checkTransactionStatus = createAsyncThunk(
 // Explicit membership is safer than matching every action whose type happens
 // to begin with "payment/". Future synchronous actions cannot affect loading.
 const paymentThunks = [
+  initiateRazorpayOrder,
   initiatePhonePeOrder,
+  verifyRazorpayPayment,
   fetchWalletBalance,
   fetchUserTransactions,
   checkTransactionStatus,
@@ -177,6 +222,7 @@ const finishPaymentRequest = (state) => {
 const initialState = {
   capabilities: {
     depositAvailable: null,
+    depositProvider: null,
     moneyMode: "disabled",
     status: "idle",
     testMoney: false,
@@ -220,6 +266,9 @@ const paymentSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(initiateRazorpayOrder.fulfilled, (state, action) => {
+        state.latestOrder = action.payload;
+      })
       .addCase(initiatePhonePeOrder.fulfilled, (state, action) => {
         state.latestOrder = action.payload;
       })
@@ -244,6 +293,8 @@ const paymentSlice = createSlice({
         state.capabilities.depositAvailable =
           action.payload?.deposits?.available === true;
         state.capabilities.moneyMode = action.payload?.moneyMode || "disabled";
+        state.capabilities.depositProvider =
+          action.payload?.deposits?.provider || null;
         state.capabilities.testMoney = action.payload?.testMoney === true;
         state.capabilities.withdrawalsAvailable =
           action.payload?.withdrawalsAvailable === true;

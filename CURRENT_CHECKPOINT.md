@@ -1,5 +1,35 @@
 # Current Checkpoint
 
+## Current Slice: Razorpay Standard Checkout — 2026-09-04
+
+- Implemented locally as the current Wallet's primary deposit checkout. A
+  verified Player creates an integer-minor INR order at
+  `POST /api/payment/create-order` (minimum 100 paise), the Vite client opens
+  Razorpay's hosted modal, handles cancellation/failure, and sends only payment
+  ID, order ID and signature to `POST /api/payment/verify-payment`.
+- Backend ownership and a timing-safe HMAC-SHA256 check reject missing,
+  cross-player or mismatched signatures with HTTP 400. Signature acceptance
+  only queues reconciliation. The payment worker fetches authoritative order
+  and captured-payment evidence and requires exact stored order, amount,
+  currency and payment identity before the existing exactly-once ledger credit.
+  Browser success cannot mark a Transaction paid.
+- The installed `razorpay` Node SDK is reused. Backend `.env` is already ignored;
+  `.env.example` and Render describe `RAZORPAY_KEY_ID`, server-only
+  `RAZORPAY_KEY_SECRET`, and the requested sandbox-enabled release flag for the
+  API and payment worker. Activation requires
+  sandbox money mode and a test key; live keys fail closed. PhonePe remains for
+  rolling compatibility. The existing ignored local backend `.env` already has
+  test credentials and its Razorpay sandbox gate is enabled for local testing.
+- Verification: frontend 180/180, ESLint and the 581-module production build;
+  focused backend provider/config and replica-set payment coverage 22/22; the
+  complete backend `npm test` passes and API documentation covers all 228
+  mounted operations. No credentials were copied into tracked source, no
+  deployment or production-data mutation occurred.
+- Open before deployment: rotate the test secret shared in chat, configure the
+  replacement credentials on Render for both API and payment worker, explicitly
+  enable sandbox deposits, provision/run the worker, add Razorpay webhook
+  recovery, and capture one real test success/failure/dismissal/retry proof.
+
 ## Current Slice: Distinct Tournament Manager Workspaces — 2026-09-04
 
 - Implemented locally: removed the conflicting local display mode that caused

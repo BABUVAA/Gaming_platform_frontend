@@ -6,7 +6,8 @@ import paymentSlice, {
   fetchWalletLedger,
   fetchWalletBalance,
   fetchPaymentCapabilities,
-  initiatePhonePeOrder,
+  initiateRazorpayOrder,
+  verifyRazorpayPayment,
   WALLET_LEDGER_PAGE_LIMIT,
 } from "../src/store/slices/paymentSlice.js";
 
@@ -25,7 +26,7 @@ test("staff utility mode never starts a wallet top-up transport", async () => {
         player: () => ({ summary: { role: "staff" } }),
       },
     });
-    const action = await store.dispatch(initiatePhonePeOrder({ amountMinor: 10000 }));
+    const action = await store.dispatch(initiateRazorpayOrder({ amountMinor: 10000 }));
 
     assert.equal(action.meta.condition, true);
     assert.equal(requestCount, 0);
@@ -42,7 +43,7 @@ test("player wallet top-up sends only the canonical minor-unit amount", async ()
     observedConfig = config;
     return {
       config,
-      data: { data: { redirectUrl: "https://mercury-uat.phonepe.com/test" } },
+      data: { data: { amount: 1250, currency: "INR", orderId: "order_test" } },
       headers: {},
       status: 200,
       statusText: "OK",
@@ -56,11 +57,39 @@ test("player wallet top-up sends only the canonical minor-unit amount", async ()
         player: () => ({ summary: { role: "player" } }),
       },
     });
-    const action = await store.dispatch(initiatePhonePeOrder({ amountMinor: 1250 }));
+    const action = await store.dispatch(initiateRazorpayOrder({ amountMinor: 1250 }));
 
-    assert.equal(action.type, initiatePhonePeOrder.fulfilled.type);
-    assert.equal(observedConfig.url, "/api/payment/order");
+    assert.equal(action.type, initiateRazorpayOrder.fulfilled.type);
+    assert.equal(observedConfig.url, "/api/payment/create-order");
     assert.deepEqual(JSON.parse(observedConfig.data), { amountMinor: 1250 });
+  } finally {
+    api.defaults.adapter = originalAdapter;
+  }
+});
+
+test("Razorpay verification forwards only the three signed checkout fields", async () => {
+  const originalAdapter = api.defaults.adapter;
+  let observedConfig;
+  api.defaults.adapter = async (config) => {
+    observedConfig = config;
+    return { config, data: { data: { verified: true } }, headers: {}, status: 200, statusText: "OK" };
+  };
+  try {
+    const store = configureStore({
+      reducer: {
+        payment: paymentSlice.reducer,
+        player: () => ({ summary: { role: "player" } }),
+      },
+    });
+    const fields = {
+      razorpay_order_id: "order_test",
+      razorpay_payment_id: "pay_test",
+      razorpay_signature: "a".repeat(64),
+    };
+    const action = await store.dispatch(verifyRazorpayPayment(fields));
+    assert.equal(action.type, verifyRazorpayPayment.fulfilled.type);
+    assert.equal(observedConfig.url, "/api/payment/verify-payment");
+    assert.deepEqual(JSON.parse(observedConfig.data), fields);
   } finally {
     api.defaults.adapter = originalAdapter;
   }
@@ -74,7 +103,7 @@ test("payment capability read stores the server-owned deposit release state", as
     return {
       config,
       data: { data: {
-        deposits: { available: true, currency: "INR" },
+        deposits: { available: true, currency: "INR", provider: "razorpay" },
         moneyMode: "sandbox",
         testMoney: true,
         withdrawalsAvailable: false,
@@ -92,6 +121,7 @@ test("payment capability read stores the server-owned deposit release state", as
     assert.equal(observedConfig.url, "/api/payment/capabilities");
     assert.deepEqual(store.getState().payment.capabilities, {
       depositAvailable: true,
+      depositProvider: "razorpay",
       moneyMode: "sandbox",
       status: "succeeded",
       testMoney: true,

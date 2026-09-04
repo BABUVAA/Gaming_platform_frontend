@@ -11,6 +11,31 @@ repositories:
 Update this file whenever a feature changes state, a security decision is made,
 or a new platform dependency is introduced.
 
+- Razorpay Standard Checkout implemented locally as the primary wallet-deposit
+  UI on 2026-09-04. The Vite Wallet calls authenticated
+  `POST /api/payment/create-order`, opens Razorpay's hosted modal, handles
+  dismissal and `payment.failed`, then sends only Razorpay's three signed
+  checkout fields to authenticated `POST /api/payment/verify-payment`.
+  Backend order creation requires a verified participating Player, the shared
+  financial limiter, integer INR minor units and a minimum of 100 paise. It
+  stores the provider order with a pending Transaction and durable Razorpay
+  reconciliation job before exposing checkout. Verification binds the order to
+  the signed-in owner and uses timing-safe HMAC-SHA256 over
+  `order_id|payment_id`; it never credits from browser success alone. The
+  existing worker fetches the Razorpay order and captured payment, checks exact
+  order/amount/currency/payment evidence, and posts the deposit to the
+  append-only ledger exactly once. PhonePe remains a compatibility adapter.
+  `RAZORPAY_DEPOSITS_ENABLED` is sandbox-only and rejects live key IDs; the
+  requested Render API/payment-worker blueprint now enables that sandbox gate
+  with `PLATFORM_MONEY_MODE=sandbox`. Frontend passes 180/180 tests, ESLint and
+  the 581-module build. Focused backend Razorpay/config/payment integration
+  passes 22/22, the complete backend `npm test` passes, and API documentation
+  covers all 228 mounted operations.
+  The existing ignored backend `.env` contains test credentials and enables
+  the local sandbox gate. Replacement final-launch credentials, deployment, a real
+  Razorpay test checkout and webhook recovery proof remain manual/open; no
+  production data was mutated.
+
 - Tournament Manager workspace tabs now have distinct behavior as of
   2026-09-04. The URL-backed `?tab=` value is the single rendering source of
   truth, fixing the former local-mode conflict that made sidebar tabs reuse the
@@ -2584,6 +2609,26 @@ while keeping the current canonical API boundary:
 
 ### 5. Payment Callback Safety (In progress)
 
+Razorpay primary checkout addition 2026-09-04:
+
+- Player routes are `POST /api/payment/create-order` and
+  `POST /api/payment/verify-payment`; both inherit authenticated trusted-origin
+  mounting and add verified-player, participation and financial rate-limit
+  checks. The legacy PhonePe `/api/payment/order` route remains for rolling
+  compatibility but is no longer used by the current Wallet.
+- The create response contains only public checkout data: Razorpay order ID,
+  amount, currency and key ID. `RAZORPAY_KEY_SECRET` remains server-only.
+- Signature success means accepted for reconciliation, not paid. The durable
+  worker independently requires a captured Razorpay payment with the exact
+  stored order, INR amount, currency and (when received) payment ID before the
+  existing exactly-once ledger posting runs.
+- Release remains fail-closed: `PLATFORM_MONEY_MODE=sandbox`, a test-prefixed
+  key ID, complete backend credentials and `RAZORPAY_DEPOSITS_ENABLED=true` are
+  all required. Live keys, withdrawals and live-money operation remain blocked.
+  A provider webhook is still required for strongest recovery when the player
+  closes the browser before the handler returns; worker order polling provides
+  bounded recovery but has not yet received deployed sandbox evidence.
+
 #### Paid Quick Match money contract
 
 State: In progress. Owner: verified Player initiates entry;
@@ -2980,8 +3025,10 @@ Security rule for all three dashboards:
 
 ### Payments
 
-- Production payment order, verification, webhook signature validation,
-  idempotency, withdrawal workflow, and ledger reconciliation.
+- Razorpay Standard Checkout order creation and browser-returned signature
+  verification are implemented, with provider-authoritative reconciliation and
+  exactly-once ledger settlement. Deployed sandbox proof, Razorpay webhook
+  validation/recovery, payout integration and separate live release remain.
 - Wallet permissions and financial audit trail.
 
 ### Platform Scale
