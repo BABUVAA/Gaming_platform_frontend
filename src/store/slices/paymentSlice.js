@@ -161,9 +161,10 @@ export const fetchWalletLedger = createAsyncThunk(
 
 export const fetchUserTransactions = createAsyncThunk(
   "payment/fetchUserTransactions",
-  async (_, thunkAPI) => {
+  async ({ cursor = null } = {}, thunkAPI) => {
     try {
       const response = await api.get("/api/payment/transactions", {
+        params: { limit: 20, ...(cursor ? { cursor } : {}) },
         withCredentials: true,
       });
       return response.data?.data || response.data;
@@ -182,8 +183,8 @@ export const checkTransactionStatus = createAsyncThunk(
   async (transactionId, thunkAPI) => {
     try {
       const response = await api.post(
-        "/api/payment/status",
-        transactionId,
+        `/api/payment/transactions/${encodeURIComponent(transactionId)}/check`,
+        {},
         {
           withCredentials: true,
         }
@@ -206,8 +207,6 @@ const paymentThunks = [
   initiatePhonePeOrder,
   verifyRazorpayPayment,
   fetchWalletBalance,
-  fetchUserTransactions,
-  checkTransactionStatus,
 ];
 
 const finishPaymentRequest = (state) => {
@@ -255,6 +254,11 @@ const initialState = {
   },
   statusCheck: null,
   transactions: [],
+  transactionHistory: {
+    status: "idle", error: null, requestId: null,
+    page: { hasMore: false, nextCursor: null },
+    checks: {},
+  },
   isLoading: false,
   pendingRequests: 0,
   error: null,
@@ -268,9 +272,15 @@ const paymentSlice = createSlice({
     builder
       .addCase(initiateRazorpayOrder.fulfilled, (state, action) => {
         state.latestOrder = action.payload;
+        if (action.payload?.transaction) {
+          state.transactions.unshift(action.payload.transaction);
+          state.transactionHistory.requestId = null;
+          state.transactionHistory.status = "succeeded";
+        }
       })
       .addCase(initiatePhonePeOrder.fulfilled, (state, action) => {
         state.latestOrder = action.payload;
+        if (action.payload?.transaction) state.transactions.unshift(action.payload.transaction);
       })
       .addCase(fetchWalletBalance.fulfilled, (state, action) => {
         state.wallet.availableMinor = action.payload?.availableMinor || 0;
@@ -353,13 +363,43 @@ const paymentSlice = createSlice({
           state.ledger.error = action.payload;
         }
       })
+      .addCase(fetchUserTransactions.pending, (state, action) => {
+        state.transactionHistory.status = action.meta.arg?.cursor ? "loadingMore" : "loading";
+        state.transactionHistory.requestId = action.meta.requestId;
+        state.transactionHistory.error = null;
+      })
       .addCase(fetchUserTransactions.fulfilled, (state, action) => {
-        state.transactions = Array.isArray(action.payload)
-          ? action.payload
-          : action.payload?.transactions || [];
+        if (state.transactionHistory.requestId !== action.meta.requestId) return;
+        const incoming = action.payload?.transactions || [];
+        state.transactions = action.meta.arg?.cursor
+          ? [...state.transactions, ...incoming.filter((item) => !state.transactions.some((old) => old.id === item.id))]
+          : incoming;
+        state.transactionHistory.page = action.payload?.page || { hasMore: false, nextCursor: null };
+        state.transactionHistory.status = "succeeded";
+        state.transactionHistory.requestId = null;
+      })
+      .addCase(fetchUserTransactions.rejected, (state, action) => {
+        if (state.transactionHistory.requestId !== action.meta.requestId) return;
+        state.transactionHistory.status = "failed";
+        state.transactionHistory.requestId = null;
+        if (!action.meta.aborted) state.transactionHistory.error = action.payload;
+      })
+      .addCase(checkTransactionStatus.pending, (state, action) => {
+        state.transactionHistory.checks[action.meta.arg] = { status: "loading" };
       })
       .addCase(checkTransactionStatus.fulfilled, (state, action) => {
         state.statusCheck = action.payload;
+        const item = action.payload?.transaction;
+        if (item) state.transactions = state.transactions.map((old) => old.id === item.id ? item : old);
+        // A list started before verification must not overwrite the new status.
+        state.transactionHistory.requestId = null;
+        state.transactionHistory.status = "succeeded";
+        state.transactionHistory.checks[action.meta.arg] = {
+          status: "succeeded", nextCheckAt: action.payload?.nextCheckAt,
+        };
+      })
+      .addCase(checkTransactionStatus.rejected, (state, action) => {
+        state.transactionHistory.checks[action.meta.arg] = { status: "failed", error: action.payload };
       });
 
     addThunkLifecycleMatchers(builder, paymentThunks, {

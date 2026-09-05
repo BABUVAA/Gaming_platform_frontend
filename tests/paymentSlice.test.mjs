@@ -6,6 +6,8 @@ import paymentSlice, {
   fetchWalletLedger,
   fetchWalletBalance,
   fetchPaymentCapabilities,
+  fetchUserTransactions,
+  checkTransactionStatus,
   initiateRazorpayOrder,
   verifyRazorpayPayment,
   WALLET_LEDGER_PAGE_LIMIT,
@@ -130,6 +132,37 @@ test("payment capability read stores the server-owned deposit release state", as
   } finally {
     api.defaults.adapter = originalAdapter;
   }
+});
+
+test("payment history immediately inserts orders and rejects stale list responses after a check", () => {
+  let state = paymentSlice.reducer(undefined, { type: "init" });
+  state = paymentSlice.reducer(state, fetchUserTransactions.pending("old", {}));
+  state = paymentSlice.reducer(state, initiateRazorpayOrder.fulfilled({ transaction: { id: "one", status: "pending" } }, "order", {}));
+  state = paymentSlice.reducer(state, fetchUserTransactions.fulfilled({ transactions: [] }, "old", {}));
+  assert.equal(state.transactions[0].status, "pending");
+  state = paymentSlice.reducer(state, checkTransactionStatus.pending("check", "one"));
+  state = paymentSlice.reducer(state, checkTransactionStatus.fulfilled({ transaction: { id: "one", status: "completed" } }, "check", "one"));
+  assert.equal(state.transactions.length, 1);
+  assert.equal(state.transactions[0].status, "completed");
+  assert.equal(state.wallet.availableMinor, 0);
+});
+
+test("payment history and status check use bounded owner-only endpoints", async () => {
+  const adapter = api.defaults.adapter;
+  const requests = [];
+  api.defaults.adapter = async (config) => {
+    requests.push(config);
+    return { config, data: { data: { transactions: [], page: { hasMore: false } } }, headers: {}, status: 200, statusText: "OK" };
+  };
+  try {
+    const store = configureStore({ reducer: { payment: paymentSlice.reducer } });
+    await store.dispatch(fetchUserTransactions({ cursor: "cursor" }));
+    await store.dispatch(checkTransactionStatus("one"));
+    assert.equal(requests[0].url, "/api/payment/transactions");
+    assert.deepEqual(requests[0].params, { limit: 20, cursor: "cursor" });
+    assert.equal(requests[1].url, "/api/payment/transactions/one/check");
+    assert.deepEqual(JSON.parse(requests[1].data), {});
+  } finally { api.defaults.adapter = adapter; }
 });
 
 const ledgerEntry = (id, overrides = {}) => ({

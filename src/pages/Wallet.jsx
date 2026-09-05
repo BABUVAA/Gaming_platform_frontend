@@ -8,10 +8,12 @@ import {
   FiRefreshCw,
 } from "react-icons/fi";
 import { Button } from "../components";
+import PaymentHistory from "../components/PaymentHistory";
 import {
   fetchWalletLedger,
   fetchWalletBalance,
   fetchPaymentCapabilities,
+  fetchUserTransactions,
   initiatePhonePeOrder,
   initiateRazorpayOrder,
   verifyRazorpayPayment,
@@ -232,6 +234,7 @@ const Wallet = () => {
             }));
             dispatch(fetchWalletBalance());
             dispatch(fetchWalletLedger());
+            dispatch(fetchUserTransactions());
           } catch {
             // The verification thunk reports a normalized failure.
           }
@@ -429,6 +432,8 @@ const Wallet = () => {
           </>
         )}
       </section>
+
+      {!isStaffUtilityMode ? <PaymentHistory /> : null}
 
       {!isStaffUtilityMode ? (
         <section className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4">

@@ -2,6 +2,36 @@
 
 Last updated: 2026-09-04
 
+### Player payment history and recovery — 2026-09-04 (local verification)
+
+- Wallet now exposes initiated deposit orders separately from posted ledger
+  movements, including pending, awaiting-confirmation, completed and failed
+  status. Checkout creation returns safe transaction data for immediate Redux
+  insertion; history survives reload through a bounded owner-only API.
+- Contract amendment: authenticated verified users may read only their own
+  deposits at `GET /api/payment/transactions` (20 default, 50 maximum, cursor
+  paginated). Only a verified participating Player may POST an empty body to
+  `/api/payment/transactions/:transactionId/check` for their own pending deposit.
+  The shared financial limiter, sandbox-only release gate, atomic reconciliation
+  lease and one-minute persisted player cooldown apply. No new staff authority,
+  dashboard, client-selected amount/status or money-release gate is introduced.
+- The requested no-worker recovery action runs the existing provider-authoritative
+  reconciliation during the HTTP request. It never trusts checkout dismissal or
+  browser failure as a terminal payment state. Failed evidence jobs remain closed
+  to player retries, and ledger idempotency prevents repeat credits. History reads
+  do not contact providers or mutate money. Provider IDs, signatures, raw gateway
+  responses and other users' data are omitted.
+- Focused payment replica integration passes 8/8, frontend tests 182/182, and
+  generated API documentation covers 230 mounted operations. ESLint, the
+  582-module production build and diff checks pass. A local 390px fixture renders
+  all statuses and confirms check-to-completed rendering without overflow or
+  browser errors after correcting the temporary fixture stylesheet import.
+  Preview files/server were removed. The complete backend `npm test` passes
+  (453 tests, including 38 payment integration tests). Authenticated deployed
+  browser proof and deployment remain open. Backend commit `2d372e8` contains
+  the API/data implementation; frontend delivery is being committed separately.
+  No deployed data or configuration was changed.
+
 This is the working source of truth for the E-Gaming platform. It covers both
 repositories:
 
@@ -1685,6 +1715,21 @@ Rules currently enforced:
 - Player hosting is a capability (`canCreateTournaments`), not a staff role.
 
 ## User, Role, Scope, and UI Contract
+
+### Player payment recovery amendment — 2026-09-04 (local; deployed proof pending)
+
+Wallet shows each initiated deposit separately from immutable ledger movements.
+Verified owner-only GET `/api/payment/transactions` returns safe statuses, amounts
+and timestamps with cursor pagination (20 default/50 maximum). A verified
+participating Player may POST an empty body to
+`/api/payment/transactions/:transactionId/check` for their own pending deposit.
+This user-triggered check runs existing provider-authoritative reconciliation in
+the API process, gated to sandbox money mode, the shared financial limiter, an
+atomic shared job lease and one-minute persisted player cooldown. Staff, foreign
+orders and failed evidence jobs cannot be used to bypass this policy. No client
+amount, payment outcome, signature substitute or unverified wallet credit is
+accepted. Existing admin/worker paths and exactly-once ledger settlement remain
+authoritative; unattended recovery and live-money release gates are unchanged.
 
 ### Tournament Room controls amendment — 2026-09-04 (Implemented locally; deployed proof pending)
 

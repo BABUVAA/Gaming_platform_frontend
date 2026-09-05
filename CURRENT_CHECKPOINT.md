@@ -1,5 +1,25 @@
 # Current Checkpoint
 
+## Current Slice: Player Payment History and Recovery — 2026-09-04
+
+- Implemented locally: immediate safe deposit-order rows in Wallet, durable
+  owner-only cursor history, pending/awaiting-confirmation/completed/failed labels,
+  and per-order `Check payment status`. Posted ledger remains separate.
+- GET `/api/payment/transactions` is verified owner-only and bounded to 50.
+  POST `/api/payment/transactions/:transactionId/check` is verified participating
+  Player-only, sandbox-only, financially rate limited and guarded by an atomic
+  shared reconciliation lease plus a persisted one-minute player cooldown.
+  This explicit player-triggered provider check can settle without a worker;
+  unattended reconciliation still requires the separately approved worker or
+  future webhook work. Failed evidence cannot be overridden by the player.
+- Focused backend payment integration 8/8; frontend 182/182; API docs 230/230.
+  ESLint, 582-module build, diff checks and 390px fixture status/check rendering
+  pass (no overflow or browser errors after fixture setup). Preview files/server
+  removed. Full backend `npm test` passes 453/453 (38 payment integration).
+  Authenticated deployed browser proof and deployment remain open. Backend
+  commit `2d372e8` contains the API/data implementation; frontend delivery is
+  being committed separately. No deployed state was changed.
+
 ## Current Slice: Razorpay Standard Checkout — 2026-09-04
 
 - Delivery: backend `6a4874a` and frontend `336bd98` are pushed to `main`.
