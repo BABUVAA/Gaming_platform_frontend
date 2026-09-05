@@ -70,4 +70,4 @@ export const savePendingSignup = (
   }
 };
 
-export { MAX_PENDING_AGE_MS, STORAGE_KEY };
+export { MAX_PENDING_AGE_MS };

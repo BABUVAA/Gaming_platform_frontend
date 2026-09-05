@@ -34,7 +34,6 @@ export const ROUTES = {
   ACCOUNT_LEGACY: "/dashboard/account",
   WALLET: "/dashboard/wallet",
   REFER: "/dashboard/refer",
-  COC: "/coc",
   LOGOUT: "/logout",
   TOURNAMENT_OFFERING_DETAILS: "/dashboard/tournaments/offering/:id",
   HOST_TOURNAMENT_PROPOSAL: "/dashboard/host/tournament-proposal",
@@ -77,8 +76,3 @@ export const DASHBOARD_ROUTE_SEGMENTS = {
 
 export const buildTournamentOfferingPath = (offeringId) =>
   `/dashboard/tournaments/offering/${offeringId}`;
-
-export const buildEventPath = (runId) => `/dashboard/events/${runId}`;
-
-
-export default ROUTES;

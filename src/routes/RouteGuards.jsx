@@ -80,7 +80,7 @@ const useAccessSummaryGate = () => {
   };
 };
 
-export const AccessSummaryGate = ({
+const AccessSummaryGate = ({
   allowedRoles,
   hasProfileAccess,
   children,
@@ -143,7 +143,7 @@ export const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to={ROUTES.LOGIN} replace />;
 };
 
-export const RoleAwareRoute = ({ allowedRoles, children }) => (
+const RoleAwareRoute = ({ allowedRoles, children }) => (
   <AccessSummaryGate allowedRoles={allowedRoles}>{children}</AccessSummaryGate>
 );
 

@@ -61,5 +61,4 @@ const hostQuickMatchProposalSlice = createSlice({
   },
 });
 
-export const hostQuickMatchProposalActions = hostQuickMatchProposalSlice.actions;
 export default hostQuickMatchProposalSlice;

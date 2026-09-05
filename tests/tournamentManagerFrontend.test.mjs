@@ -54,11 +54,11 @@ test("Tournament Manager uses compact operational offering rows", async () => {
 });
 
 test("Tournament place rewards are configured once and result commands send ranking only", async () => {
-  const [management, operations, prizeReview, playerCard] = await Promise.all([
+  const [management, operations, prizeReview, compete] = await Promise.all([
     source("../src/components/adminComponents/QuickMatchOfferingManagement.jsx"),
     source("../src/pages/Operations.jsx"),
     source("../src/components/adminComponents/PrizeReleaseReview.jsx"),
-    source("../src/components/ui/GameCard/QuickMatchCard.jsx"),
+    source("../src/pages/Game.jsx"),
   ]);
   assert.match(management, /rewardPolicy[\s\S]*placementRewards/);
   assert.match(management, /Each place is a team total/);
@@ -66,5 +66,5 @@ test("Tournament place rewards are configured once and result commands send rank
   assert.match(operations, /Match Operator records the complete player or team ranking|Configured place rewards/);
   assert.doesNotMatch(operations, /rankingKeys[\s\S]{0,120}(amountMinor|prizePoolMinor)/);
   assert.match(prizeReview, /#\{winner\.place \|\| 1\}/);
-  assert.match(playerCard, /offering\.placementRewards/);
+  assert.match(compete, /offering\.placementRewards/);
 });

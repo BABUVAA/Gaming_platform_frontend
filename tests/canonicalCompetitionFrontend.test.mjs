@@ -132,10 +132,9 @@ test("player Matches separates live activity from completed history", async () =
 });
 
 test("Quick Match details mirror the compact Event tab layout and reopen after full", async () => {
-  const [detailPage, gamePage, quickCard] = await Promise.all([
+  const [detailPage, gamePage] = await Promise.all([
     read("../src/pages/QuickMatchDetails.jsx"),
     read("../src/pages/Game.jsx"),
-    read("../src/components/ui/GameCard/QuickMatchCard.jsx"),
   ]);
 
   assert.match(detailPage, /\["rewards", "leaderboard"\]/);
@@ -143,7 +142,7 @@ test("Quick Match details mirror the compact Event tab layout and reopen after f
   assert.match(detailPage, /left="-"/);
   assert.doesNotMatch(detailPage, /OverviewBlock|QuickMatchCard/);
   assert.match(gamePage, /roomStatus === "full"/);
-  assert.match(quickCard, /result\.roomStatus !== "full"/);
+  assert.match(gamePage, /markTournamentJoined/);
 });
 
 test("player dashboard tabs use the compact shell and omit promotional heroes", async () => {

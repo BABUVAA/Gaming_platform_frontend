@@ -66,5 +66,4 @@ const loadingSlice = createSlice({
   },
 });
 
-export const loadingActions = loadingSlice.actions;
 export default loadingSlice;

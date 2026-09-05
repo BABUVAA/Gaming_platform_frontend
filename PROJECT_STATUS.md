@@ -1,6 +1,47 @@
 # Project Status
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
+
+### Non-payment reliability and frontend-boundary hardening — 2026-09-05
+
+- Backend moved from Express 4.22.2 to Express 5.2.1 and refreshed its lockfile.
+  The current production dependency audit is zero known vulnerabilities. Route
+  metadata assertions were made compatible with Express 5 without changing any
+  mounted path, role, scope, money command, or response authorization rule.
+- The API now handles SIGTERM/SIGINT through one idempotent shutdown controller:
+  it stops HTTP admission, closes Socket.IO, drains idle connections, closes all
+  command/pub-sub/lock Redis clients, then disconnects MongoDB. A bounded timeout
+  records failure and terminates remaining connections instead of hanging a
+  deployment indefinitely. Focused shutdown tests cover duplicate signals and
+  partial resource failure.
+- The unlaunched public `/coc` utility is fully removed: page, route, constant,
+  registry entry and footer link. The raw upstream JSON screen and its
+  console-only failure handling are gone; unknown `/coc` URLs now follow the
+  normal application fallback instead of receiving special compatibility
+  behavior.
+- Game-account list and CoC owner-token verification now use a dedicated private
+  Redux slice; generic manual requests use the existing verification-request
+  boundary. The unused `ClanVerify` component was removed. No feature page or
+  component now calls the Axios client directly. CoC integration successes use
+  the shared `{ success, message, data }` API envelope and remain authenticated,
+  verified, rate-limited, bounded and server-authoritative.
+- Static reachability cleanup also removed 16 unused frontend modules (legacy
+  Tournament/Event pages, superseded Event-stage/admin UI, obsolete hooks,
+  selectors, cards and utilities) and four packages used only by that dead
+  code. It also removed the superseded embedded Clan Team builder and narrowed
+  55 internal-only exports so they are no longer part of the public module
+  surface. The scan now reports no unused files, dependencies or exports.
+- Verification: frontend 184/184, ESLint, 577-module production build, route
+  smoke, API-error/toast smoke and diff check pass. Backend auth 64/64, auth
+  integration 9/9, social 25/25, social integration 11/11, competition 137/137,
+  competition integration 148/148, payments 13/13, payment integration 38/38,
+  realtime 15/15, API documentation 230/230 and diff check pass. This slice
+  changes no payment behavior, release gate, deployed configuration or data.
+  The suites pass when run by their maintained groups; a combined `npm test`
+  invocation was stopped because the pre-existing test Redis client retries
+  indefinitely when no local daemon is available.
+- Delivery: backend reliability commit `8d1e513` and the paired frontend
+  boundary/dead-code cleanup are pushed to `main`. Deployment remains open.
 
 ### Player payment history and recovery — 2026-09-04 (local verification)
 
@@ -232,9 +273,10 @@ to continue the project without reopening settled decisions.
   live money and withdrawals remain closed.
 - New audit priorities are: deploy and live-prove the committed Team,
   lockfile, proxy, and security-header repairs; complete affected-device
-  signup/login/session proof; isolate Redis in the backend test harness; add
-  graceful API web shutdown; and provision workers/monitoring only under the existing payment
-  release decision. Redis persistence is off and the current deployment is one
+  signup/login/session proof; isolate Redis in the backend test harness; and
+  provision workers/monitoring only under the existing payment release
+  decision. Graceful API web shutdown is complete locally as of 2026-09-05.
+  Redis persistence is off and the current deployment is one
   free API instance with no worker services, so it is appropriate for a
   controlled free beta, not unrestricted paid scale.
 
@@ -886,8 +928,9 @@ to continue the project without reopening settled decisions.
   visibility. Staff accounts cannot join, register, check in, submit player
   results/disputes, use social/team/clan participation, or initiate player
   money actions.
-- Redux Toolkit thunks are the required feature-data boundary. Migration is
-  incomplete; do not add new direct API calls to feature components.
+- Redux Toolkit thunks are the required feature-data boundary. Feature-page
+  migration is complete as of 2026-09-05; do not add new direct API calls to
+  feature components.
 - Backend authorization is final. Frontend route guards and hidden UI are only
   navigation helpers.
 - Competition entry UX refinement 2026-08-20: Quick Match list/detail reads
@@ -1654,7 +1697,7 @@ prove the completion criteria.
 | Closed | Realtime staff access | Socket connection now resolves active StaffAssignments and Game scopes at connection time. Match Operator subscriptions require assigned-game scope plus explicit ownership; the broad operator room was removed from authorization-sensitive delivery. | Verified by realtime staff-context and fail-closed scope tests on 2026-08-08. |
 | P1 | Transactional account email | Resend-backed verification and password recovery are implemented behind a server service. Local environment-only credentials, live authorized-recipient delivery, database transaction tests, and an isolated real-route browser workflow are verified. A dedicated sender domain and operational delivery evidence remain open. | Verify a dedicated account-email domain for broader delivery, then certify staging delivery, failure, and bounce monitoring without storing secrets in the repository. |
 | P1 | Distributed security | Authentication, signup, verification, recovery, password-change, refresh, staff-assignment, Event-governance, operator, and player-financial mutations use atomic Redis counters keyed by hashed client/actor correlation and fail closed if protection storage is unavailable. Session-bound recent authentication protects governance and withdrawals; MFA and actionable mutation alerts remain. | Add MFA/passkeys and production alerts for sensitive governance and financial denials/actions. |
-| P1 | Frontend boundaries | Multiple feature pages call the Axios client directly despite the documented Redux boundary. Identity verification and recovery now use Redux thunks, but other domains remain. | Migrate one domain at a time to shared thunks/selectors and add component/integration tests. |
+| Closed | Frontend boundaries | Feature pages and components use Redux-owned request boundaries. The final Game Accounts and CoC utility calls moved behind thunks on 2026-09-05; the obsolete unused Clan verification component was removed. | Verified by a source boundary scan, Redux transport tests, the full frontend state suite, lint, build, route smoke and API-error smoke. |
 | P1 | API scale | Event execution, wallet history, security attention, staff profiles, player notifications, and assigned/unassigned operator Match queues use bounded stable reads with append de-duplication. Other social and compatibility list reads remain. | Cursor pagination with bounded limits and stable sorting for every remaining list; record endpoint deprecation dates and remove aliases after client migration. |
 | Closed | Financial model | The append-only balanced ledger stores integer INR minor units as the source of truth; Wallet is a rebuildable bucket projection and owner history is cursor-paginated. Durable reconciliation and idempotent settlement are implemented. External payment/payout certification remains under Payment safety. | Verified by payment policy plus replica-set ledger, settlement, prize-release and withdrawal tests. |
 | P2 | Operations | Request and worker logs are structured/redacted, request IDs exist, and durable Event/payment jobs have restart-safe code. Central collection, metrics, heartbeat alerts, SLO enforcement, worker deployment, backup restore and disaster-recovery drills remain unproven. | Provision/supervise workers, centralize logs, add actionable metrics/alerts and SLOs, then rehearse restart, backup restore and incident rollback. |
@@ -1674,10 +1717,9 @@ prove the completion criteria.
 - `GET /api/staff/games` and `GET /api/staff/games/activity` still exist as
   Game Manager catalog/activity reads. Only the former manager PATCH route is
   retired; the operational summary endpoint does not yet replace both reads.
-- The frontend architecture says feature components use Redux thunks, but
-  direct API calls remain in parts of Clan, game-account, wallet, and profile
-  pages. Match Control has moved to the Redux boundary; treat the broader
-  migration as in progress.
+- Feature pages and components now follow the documented Redux request
+  boundary. The final Game Accounts and CoC utility exceptions were removed on
+  2026-09-05; future feature transport must continue through shared thunks.
 - The backend default `npm test` now runs the maintained auth, social,
   competition, and realtime suites. CI is still required to enforce it on
   every change.
@@ -3848,8 +3890,9 @@ removed and their old mutation paths return stable retirement errors.
   payment policy 11, payment integration 32 and realtime 11. API documentation
   covers 207/207 mounted operations; both repository diff checks pass.
 - Next safe local priorities are remaining social/compatibility pagination,
-  Redux-boundary migrations, graceful API shutdown/monitoring hooks and durable
-  deployment evidence. External deployment/provider gates still require their
+  monitoring hooks, opt-in browser/load failure scaffolding and durable
+  deployment evidence. Redux feature boundaries and graceful API shutdown are
+  complete locally. External deployment/provider gates still require their
   documented billing and release decisions.
 
 ## Latest Refinement: Captain-Owned Team Entry and Reward Choice

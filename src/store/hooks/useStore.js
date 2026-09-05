@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import {
   useDispatch,
   useSelector,
-  useStore as useReduxStore,
 } from "react-redux";
 import {
   authAction,
@@ -57,24 +56,6 @@ import {
   selectQuickMatchJoinError,
   selectQuickMatchJoinStatus,
 } from "../selectors/matchmakingSelectors";
-
-export const useStore = () => {
-  // This hook is the store-facing convenience boundary for React code.
-  // We will grow it with domain hooks/selectors later without changing callers.
-  // If store consumption becomes more structured later, this hook can stay as
-  // the shared base while `useAuthStore`, `useWalletStore`, and similar hooks
-  // build on top of it.
-  const dispatch = useDispatch();
-  const store = useReduxStore();
-
-  return {
-    // Dispatch lets components and hooks trigger Redux actions and thunks.
-    dispatch,
-    // The raw store is available for advanced cases that need direct access.
-    // Most feature code should still prefer selectors and thunks over raw store reads.
-    store,
-  };
-};
 
 export const useAccountStore = () => {
   const account = useSelector(selectAccount);
@@ -272,5 +253,3 @@ export const useMatchmakingStore = () => {
     clearJoinError,
   };
 };
-
-export default useStore;

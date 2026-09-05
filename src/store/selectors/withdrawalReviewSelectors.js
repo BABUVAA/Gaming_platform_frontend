@@ -1,6 +1,6 @@
 import { getStoredErrorMessage } from "../../api/apiError.js";
 
-export const selectWithdrawalReview = (state) => state.withdrawalReview;
+const selectWithdrawalReview = (state) => state.withdrawalReview;
 export const selectWithdrawalReviewItems = (state) =>
   selectWithdrawalReview(state).items;
 export const selectWithdrawalReviewPage = (state) =>

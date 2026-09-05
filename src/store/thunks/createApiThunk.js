@@ -220,7 +220,7 @@ const executeConfiguredRequest = async ({
  * normalized rejection payloads, and optional notifications. The slice still
  * owns endpoint-specific response validation and business behavior.
  */
-export const createApiThunk = (
+const createApiThunk = (
   typePrefix,
   configuration,
   thunkOptions = {},

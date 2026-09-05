@@ -88,7 +88,7 @@ const inferErrorCode = (error, status, responseData) => {
   return STATUS_CODE_MAP[status] || API_ERROR_CODE.UNKNOWN;
 };
 
-export const isApiError = (value) =>
+const isApiError = (value) =>
   Boolean(
     value &&
       typeof value === "object" &&

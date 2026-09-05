@@ -10,5 +10,3 @@ export const adminRoutes = [
     withSuspense: true,
   },
 ];
-
-export default adminRoutes;

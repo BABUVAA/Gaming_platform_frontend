@@ -67,16 +67,16 @@ test("approved host proposal uses the canonical draft-only transport", async () 
 });
 
 test("host proposal UI and route are verified-capability-gated", async () => {
-  const [routes, guards, page, tournamentPage] = await Promise.all([
+  const [routes, guards, page, profileMenu] = await Promise.all([
     readFile(new URL("../src/routes/dashboardRoutes.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/routes/RouteGuards.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/HostTournamentProposal.jsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/pages/Tournament.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/layout/Header/HeaderProfileMenu.jsx", import.meta.url), "utf8"),
   ]);
 
   assert.match(routes, /HOST_TOURNAMENT_PROPOSAL[\s\S]*access: "approvedHost"/);
   assert.match(guards, /ApprovedHostRoute[\s\S]*VerifiedAccountGate/);
-  assert.match(tournamentPage, /hasApprovedHostAccess\(playerSummary\)/);
+  assert.match(profileMenu, /hasApprovedHostAccess\(playerSummary\)/);
   assert.match(page, /supportedModes/);
   assert.match(page, /supportedMaps/);
   assert.doesNotMatch(page, /status:\s*"active"/);

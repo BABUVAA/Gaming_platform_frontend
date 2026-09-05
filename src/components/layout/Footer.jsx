@@ -43,7 +43,6 @@ const Footer = () => {
         <FooterColumn
           title="Games"
           links={[
-            { label: "Clash of Clans", to: "/coc" },
             { label: "BGMI events", to: "/signup" },
             { label: "Clan squads", to: "/signup" },
           ]}

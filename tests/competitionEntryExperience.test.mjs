@@ -5,14 +5,13 @@ import { readFile } from "node:fs/promises";
 const source = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("Quick Match and Event surfaces render compact server-owned progress", async () => {
-  const [quickCard, tournamentManager, compete, eventCard, eventManager] = await Promise.all([
-    source("../src/components/ui/GameCard/QuickMatchCard.jsx"),
+  const [tournamentManager, compete, eventCard, eventManager] = await Promise.all([
     source("../src/components/adminComponents/QuickMatchOfferingManagement.jsx"),
     source("../src/pages/Game.jsx"),
     source("../src/components/competition/EventCompetitionCard.jsx"),
     source("../src/pages/EventManagerDashboard.jsx"),
   ]);
-  assert.match(quickCard, /offering\.joinProgress\?\.joinedParticipants/);
+  assert.match(compete, /offering\.joinProgress\?\.joinedParticipants/);
   assert.match(tournamentManager, /Room filling:/);
   assert.match(tournamentManager, /fetchQuickMatchOfferings\(\).*5000|5000/);
   assert.match(compete, /joinedCount: offering\.joinProgress\?\.joinedParticipants/);
@@ -21,16 +20,15 @@ test("Quick Match and Event surfaces render compact server-owned progress", asyn
 });
 
 test("competition entry confirmation discloses wallet hold and never requests a password", async () => {
-  const [dialog, quickCard, compete, eventDetails] = await Promise.all([
+  const [dialog, compete, eventDetails] = await Promise.all([
     source("../src/components/competition/CompetitionEntryDialog.jsx"),
-    source("../src/components/ui/GameCard/QuickMatchCard.jsx"),
     source("../src/pages/Game.jsx"),
     source("../src/pages/EventDetails.jsx"),
   ]);
   assert.match(dialog, /Available balance to Entry held/);
   assert.match(dialog, /No password is required/);
   assert.doesNotMatch(dialog, /type="password"|current-password/);
-  assert.match(quickCard, /CompetitionEntryDialog/);
+  assert.match(compete, /CompetitionEntryDialog/);
   assert.match(compete, /Proceed & register/);
   assert.match(eventDetails, /Proceed & register/);
   assert.doesNotMatch(`${compete}\n${eventDetails}`, /globalThis\.confirm/);

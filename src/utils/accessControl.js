@@ -9,14 +9,14 @@ export const USER_ROLES = Object.freeze({
 
 // Keeping approval states centralized prevents route guards and components
 // from using slightly different status values as hosting features are added.
-export const HOST_ACCESS_STATUSES = Object.freeze({
+const HOST_ACCESS_STATUSES = Object.freeze({
   PENDING: "pending",
   APPROVED: "approved",
   REJECTED: "rejected",
   SUSPENDED: "suspended",
 });
 
-export const isPlayer = (profile) => {
+const isPlayer = (profile) => {
   // A host remains a player, so all standard player access starts here.
   return profile?.role === USER_ROLES.PLAYER;
 };

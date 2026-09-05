@@ -253,5 +253,4 @@ const socialSlice = createSlice({
   },
 });
 
-export const socialActions = socialSlice.actions;
 export default socialSlice;

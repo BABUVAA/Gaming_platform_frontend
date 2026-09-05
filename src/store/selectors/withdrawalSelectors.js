@@ -1,14 +1,12 @@
 import { getStoredErrorMessage } from "../../api/apiError.js";
 
-export const selectWithdrawals = (state) => state.withdrawals;
+const selectWithdrawals = (state) => state.withdrawals;
 export const selectPayoutDestinations = (state) =>
   selectWithdrawals(state).destinations.items;
 export const selectWithdrawalAvailability = (state) =>
   selectWithdrawals(state).destinations.availability;
 export const selectPayoutDestinationStatus = (state) =>
   selectWithdrawals(state).destinations.status;
-export const selectPayoutDestinationError = (state) =>
-  getStoredErrorMessage(selectWithdrawals(state).destinations.error);
 export const selectWithdrawalHistory = (state) =>
   selectWithdrawals(state).history.items;
 export const selectWithdrawalHistoryPage = (state) =>

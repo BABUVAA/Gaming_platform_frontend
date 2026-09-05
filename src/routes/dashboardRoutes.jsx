@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 
 // Dashboard routes stay grouped by the dashboard domain so future role splits
 // can move whole sections without searching one giant router file.
-export const dashboardChildRoutes = [
+const dashboardChildRoutes = [
   { index: true, guardElement: "DashboardLanding" },
   {
     path: DASHBOARD_ROUTE_SEGMENTS.GAME,
@@ -126,5 +126,3 @@ export const dashboardRoute = {
   access: "protected",
   children: dashboardChildRoutes,
 };
-
-export default dashboardRoute;

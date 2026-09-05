@@ -42,7 +42,7 @@ export const findVerificationRequests = createApiThunk(
   },
 );
 
-export const reviewVerificationRequest = createApiThunk(
+const reviewVerificationRequest = createApiThunk(
   "admin/reviewVerificationRequest",
   {
     method: "patch",
@@ -58,13 +58,13 @@ export const reviewVerificationRequest = createApiThunk(
   },
 );
 
-export const fetchStaffRoles = createApiThunk("admin/fetchStaffRoles", {
+const fetchStaffRoles = createApiThunk("admin/fetchStaffRoles", {
   path: "/api/access-control/roles",
   selectData: (response) => response.data?.data?.roles || [],
   errorMessage: "Unable to load staff roles.",
   toast: { error: true },
 });
-export const fetchStaffCandidates = createApiThunk(
+const fetchStaffCandidates = createApiThunk(
   "admin/fetchStaffCandidates",
   {
     path: "/api/access-control/candidates",
@@ -78,7 +78,7 @@ export const fetchStaffCandidates = createApiThunk(
 );
 
 
-export const fetchStaffAssignments = createApiThunk(
+const fetchStaffAssignments = createApiThunk(
   "admin/fetchStaffAssignments",
   {
     path: "/api/access-control/assignments",
@@ -88,21 +88,21 @@ export const fetchStaffAssignments = createApiThunk(
   },
 );
 
-export const fetchStaffReports = createApiThunk("admin/fetchStaffReports", {
+const fetchStaffReports = createApiThunk("admin/fetchStaffReports", {
   path: "/api/access-control/reports",
   selectData: (response) => response.data?.data?.reports || [],
   errorMessage: "Unable to load staff reports.",
   toast: { error: true },
 });
 
-export const fetchStaffActivity = createApiThunk("admin/fetchStaffActivity", {
+const fetchStaffActivity = createApiThunk("admin/fetchStaffActivity", {
   path: "/api/access-control/activity",
   selectData: (response) => response.data?.data?.activity || [],
   errorMessage: "Unable to load staff service history.",
   toast: { error: true },
 });
 
-export const createStaffAssignment = createApiThunk(
+const createStaffAssignment = createApiThunk(
   "admin/createStaffAssignment",
   {
     method: "post",
@@ -154,7 +154,7 @@ export const updateCatalogGame = createApiThunk("admin/updateCatalogGame", {
   toast: { success: true, error: true },
 });
 
-export const updateStaffAssignmentStatus = createApiThunk(
+const updateStaffAssignmentStatus = createApiThunk(
   "admin/updateStaffAssignmentStatus",
   {
     method: "patch",
@@ -167,7 +167,7 @@ export const updateStaffAssignmentStatus = createApiThunk(
     toast: { success: true, error: true },
   },
 );
-export const updateStaffAssignmentScopes = createApiThunk(
+const updateStaffAssignmentScopes = createApiThunk(
   "admin/updateStaffAssignmentScopes",
   {
     method: "patch",

@@ -11,9 +11,6 @@ export const publicRoutes = [
   { path: ROUTES.LOGIN, componentKey: "Login" },
   { path: ROUTES.SIGNUP, componentKey: "SignUp" },
   { path: ROUTES.REFERRAL_LANDING, componentKey: "ReferralLanding" },
-  { path: ROUTES.COC, componentKey: "Coc" },
   { path: ROUTES.LOGOUT, element: <></> },
   dashboardRoute,
 ];
-
-export default publicRoutes;

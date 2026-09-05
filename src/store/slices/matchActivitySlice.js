@@ -235,5 +235,4 @@ const matchActivitySlice = createSlice({
   },
 });
 
-export const matchActivityActions = matchActivitySlice.actions;
 export default matchActivitySlice;

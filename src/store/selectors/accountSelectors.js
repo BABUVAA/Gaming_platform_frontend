@@ -4,6 +4,6 @@ import { getStoredErrorMessage } from "../../api/apiError";
 // shape and give later account features one consistent read boundary.
 export const selectAccount = (state) => state.account.data;
 export const selectAccountStatus = (state) => state.account.status;
-export const selectAccountApiError = (state) => state.account.error;
+const selectAccountApiError = (state) => state.account.error;
 export const selectAccountError = (state) =>
   getStoredErrorMessage(selectAccountApiError(state));

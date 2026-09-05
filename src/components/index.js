@@ -13,20 +13,16 @@ export { default as HeaderWalletMenu } from "./layout/Header/HeaderWalletMenu";
 export { default as HeaderBurgerMenu } from "./layout/Header/HeaderBurgerMenu";
 
 export { default as Footer } from "./layout/Footer";
-export { default as FooterNote } from "./layout/FooterNote";
 export { default as SideBar } from "./layout/Sidebar/SideBar";
 
 //UI component
 export { default as Button } from "./ui/Button/Button.jsx";
 export { default as Input } from "./ui/Input/Input.jsx";
-export { default as Spinner } from "./ui/Spinner/Spinner.jsx";
 export { default as Toast } from "./ui/Toast/Toast.jsx";
 
 //my components
 
 //admin components
-export { default as RewardManagement } from "./adminComponents/RewardManagement.jsx";
-export { default as VerificationManagement } from "./adminComponents/VerificationManagement.jsx";
 export { default as RoleManagement } from "./adminComponents/RoleManagement.jsx";
 export { default as GameCatalog } from "./adminComponents/GameCatalog.jsx";
 export { default as EventReviewQueue } from "./adminComponents/EventReviewQueue.jsx";

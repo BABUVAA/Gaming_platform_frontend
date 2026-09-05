@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import { FaBolt, FaExclamationTriangle, FaLock } from "react-icons/fa";
-import api from "../api/axios-api";
 import { getApiErrorMessage } from "../api/apiError";
-import { fetchMyVerificationRequests, submitGameAccountReplacement, submitGameAccountVerification } from "../store/slices/verificationRequestSlice";
+import { connectVerifiedGameAccount, fetchLinkedGameAccounts } from "../store/slices/gameAccountSlice";
+import { fetchMyVerificationRequests, submitGameAccountReplacement, submitGameAccountVerification, submitManualGameAccountVerification } from "../store/slices/verificationRequestSlice";
 import { showToast, types } from "../store/slices/toastSlice";
 import { selectIsStaffUtilityMode } from "../store/selectors/playerSelectors";
 
@@ -34,11 +34,11 @@ const GameAccounts = () => {
   const games = useSelector((store) => store.games?.data);
   const isStaffUtilityMode = useSelector(selectIsStaffUtilityMode);
 
-  const [linkedAccounts, setLinkedAccounts] = useState([]);
+  const linkedAccounts = useSelector((store) => store.gameAccounts?.items || []);
+  const gameAccountsStatus = useSelector((store) => store.gameAccounts?.status || "idle");
   const verificationRequests = useSelector((store) => store.verificationRequests?.items || []);
   const verificationPage = useSelector((store) => store.verificationRequests?.page);
   const verificationStatus = useSelector((store) => store.verificationRequests?.status);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGame, setSelectedGame] = useState(null);
   const [selectedAction, setSelectedAction] = useState("connect");
@@ -48,14 +48,11 @@ const GameAccounts = () => {
   const loadGameAccounts = useCallback(async () => {
     // Keep this loader stable so the bootstrap effect runs only when its Redux
     // dispatch dependency changes, not after every component render.
-    setIsLoading(true);
     try {
-      const [accountsResponse] = await Promise.all([
-        api.get("/api/users/game-accounts"),
+      await Promise.all([
+        dispatch(fetchLinkedGameAccounts()).unwrap(),
         dispatch(fetchMyVerificationRequests()).unwrap(),
       ]);
-
-      setLinkedAccounts(accountsResponse.data?.data || []);
     } catch (error) {
       dispatch(
         showToast({
@@ -67,8 +64,6 @@ const GameAccounts = () => {
           position: "bottom-right",
         })
       );
-    } finally {
-      setIsLoading(false);
     }
   }, [dispatch]);
 
@@ -116,12 +111,12 @@ const GameAccounts = () => {
           fraudAcknowledged: form.fraudAcknowledged,
         })).unwrap();
       } else if (selectedGame.verificationMethod === "api_token") {
-        await api.post("/api/users/game-accounts/connect", {
+        await dispatch(connectVerifiedGameAccount({
           gameKey: selectedGame.link,
           playerTag: form.playerTag,
           token: form.token,
           replacement: selectedAction === "replacement",
-        });
+        })).unwrap();
       } else if (selectedGame.link === "bgmi") {
         const result = await dispatch(submitGameAccountVerification({
           gameKey: selectedGame.link,
@@ -142,12 +137,12 @@ const GameAccounts = () => {
           );
         }
       } else {
-        await api.post("/api/users/verification-requests", {
+        await dispatch(submitManualGameAccountVerification({
           gameKey: selectedGame.link,
           accountId: form.accountId,
           accountUsername: form.accountUsername,
           evidenceNote: form.evidenceNote,
-        });
+        })).unwrap();
       }
 
       if (!recoveredExistingRequest) {
@@ -272,7 +267,7 @@ const GameAccounts = () => {
               <h2 className="text-base font-bold text-white">Requests</h2>
 
               <div className="mt-3 space-y-2">
-                {verificationRequests.length === 0 && !isLoading ? (
+                {verificationRequests.length === 0 && gameAccountsStatus !== "loading" ? (
                   <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-400">
                     No manual review requests yet.
                   </div>
@@ -323,7 +318,7 @@ const GameAccounts = () => {
           </div>
         </section>
 
-        {isLoading && (
+        {(gameAccountsStatus === "loading" || verificationStatus === "loading") && (
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/90 p-5 text-sm text-slate-400">
             Loading your game accounts...
           </div>

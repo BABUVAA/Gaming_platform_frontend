@@ -64,6 +64,22 @@ export const submitGameAccountVerification = createApiThunk(
   },
 );
 
+export const submitManualGameAccountVerification = createApiThunk(
+  "verificationRequests/submitManualVerification",
+  {
+    method: "post",
+    path: "/api/users/verification-requests",
+    getBody: ({ accountId, accountUsername, evidenceNote, gameKey }) => ({
+      accountId,
+      accountUsername,
+      evidenceNote: evidenceNote || "",
+      gameKey,
+    }),
+    selectData: (response) => response.data?.data,
+    errorMessage: "Unable to submit the game-account verification request.",
+  },
+);
+
 const appendUnique = (current, incoming) => {
   const known = new Set(current.map((item) => item._id));
   return [...current, ...incoming.filter((item) => !known.has(item._id))];

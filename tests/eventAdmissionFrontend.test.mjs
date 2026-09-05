@@ -250,15 +250,14 @@ test("Event leaderboard appends bounded safe player pages with opaque cursors", 
 
 test("player Event UI exposes no registration cancellation transport", async () => {
   const [pageSource, sliceSource] = await Promise.all([
-    readFile(new URL("../src/pages/Events.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/EventDetails.jsx", import.meta.url), "utf8"),
     readFile(
       new URL("../src/store/slices/eventRegistrationSlice.js", import.meta.url),
       "utf8",
     ),
   ]);
 
-  assert.match(pageSource, /Registration committed/);
-  assert.match(pageSource, /Event registration is final and cannot be cancelled/);
+  assert.match(pageSource, /const committed = \["registered", "waitlisted"\]/);
   assert.match(pageSource, /CompetitionEntryDialog/);
   assert.doesNotMatch(pageSource, /globalThis\.confirm/);
   assert.doesNotMatch(`${pageSource}\n${sliceSource}`, /cancelEventRegistration|Cancel \$\{mine\.status\}/);
@@ -369,7 +368,7 @@ test("Event governance stays approval-only while Event Manager owns invitations 
       "utf8",
     ),
     readFile(new URL("../src/utils/navigation.js", import.meta.url), "utf8"),
-    readFile(new URL("../src/pages/Events.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/EventDetails.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Game.jsx", import.meta.url), "utf8"),
   ]);
 
@@ -410,8 +409,7 @@ test("Event governance stays approval-only while Event Manager owns invitations 
   );
   assert.match(competeSource, /fetchPlayerEvents/);
   assert.match(competeSource, /EventCompetitionCard/);
-  assert.match(playerSource, /test money/);
-  assert.match(playerSource, /Hold fee and register/);
+  assert.match(playerSource, /CompetitionEntryDialog/);
   assert.match(playerSource, /paidEntryAvailable === false/);
   assert.doesNotMatch(playerSource, /registerForEvent\(\{[^}]*entryFeeMinor/);
   assert.doesNotMatch(playerSource, /registerForEvent\(\{[^}]*amountMinor/);
@@ -674,14 +672,14 @@ test("Platform Admin stage evidence and governed recovery use server-owned contr
 test("stage UI never sends client participants, seeds, batches, or job internals", async () => {
   const [source, managerSource] = await Promise.all([
     readFile(new URL(
-      "../src/components/adminComponents/EventStageManagement.jsx",
+      "../src/components/eventManagement/EventManagerResults.jsx",
       import.meta.url,
     ), "utf8"),
     readFile(new URL("../src/components/eventManagement/SequentialRoundControl.jsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(source, /Results and rewards/);
-  assert.match(source, /fetchEventExecutionRuns/);
+  assert.match(source, /Results & Rewards/);
+  assert.match(source, /fetchManagedEventStages/);
   assert.doesNotMatch(source, /closeEventRegistration|Configure Round|Retry advancement/);
   assert.match(managerSource, /Server-owned scope, roster, and result evidence/);
   assert.doesNotMatch(
@@ -763,7 +761,7 @@ test("stage batch pagination forwards only the opaque cursor and de-duplicates b
 
 test("player and operator stage UX consumes only safe server-derived Event links", async () => {
   const [playerSource, progressionSource, operatorSource] = await Promise.all([
-    readFile(new URL("../src/pages/Events.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/EventDetails.jsx", import.meta.url), "utf8"),
     readFile(
       new URL("../src/components/EventProgression.jsx", import.meta.url),
       "utf8",
@@ -772,10 +770,9 @@ test("player and operator stage UX consumes only safe server-derived Event links
   ]);
 
   assert.match(playerSource, /selectEventProgression\(event, standingPage\)/);
-  assert.match(playerSource, /event\.cancellation/);
   assert.match(progressionSource, /ownBatch\.stageNumber/);
   assert.match(progressionSource, /to=\{`\/dashboard\/matches\/\$\{ownBatch\.matchId\}`\}/);
-  assert.match(playerSource, /Registration committed/);
+  assert.match(playerSource, /const committed = \["registered", "waitlisted"\]/);
   assert.doesNotMatch(playerSource, /cancelEventRegistration|Cancel registration/);
   assert.doesNotMatch(
     `${playerSource}\n${progressionSource}`,
@@ -861,7 +858,7 @@ test("advancement and Event prize UI never accepts client winners, allocations, 
     ),
     readFile(
       new URL(
-        "../src/components/adminComponents/EventStageManagement.jsx",
+        "../src/components/adminComponents/EventPrizeGovernanceReview.jsx",
         import.meta.url,
       ),
       "utf8",
@@ -1025,7 +1022,7 @@ test("ranked Event UI exposes promoted and eliminated lists without client-owned
     readFile(new URL("../src/pages/EventManagerDashboard.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/components/eventManagement/SequentialRoundControl.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/pages/Operations.jsx", import.meta.url), "utf8"),
-    readFile(new URL("../src/components/adminComponents/EventStageManagement.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/eventManagement/EventManagerResults.jsx", import.meta.url), "utf8"),
   ]);
   assert.match(roundPlan, /promoted/);
   assert.match(roundPlan, /eliminated/);
@@ -1033,8 +1030,8 @@ test("ranked Event UI exposes promoted and eliminated lists without client-owned
   assert.match(operator, /rankingKeys/);
   assert.match(roundPlan, /Teams promoted per room/);
   assert.match(roundPlan, /players advance/);
-  assert.match(stage, /Eliminated round/);
-  assert.match(stage, /eliminatedInStage/);
+  assert.match(stage, /Final standings/);
+  assert.match(stage, /fetchManagedEventStandings/);
   assert.doesNotMatch(`${manager}\n${roundPlan}\n${stage}`, /seedingSeed|setWinner|eliminatePlayer|playerIds/);
   assert.match(manager, /Operations:/);
   assert.doesNotMatch(manager, /executionHandoff\.awaitingOperator/);

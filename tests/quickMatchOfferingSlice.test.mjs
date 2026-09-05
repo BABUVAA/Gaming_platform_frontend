@@ -117,20 +117,17 @@ test("player discovery retains a normalized rejection for recovery UI", () => {
   );
 });
 
-test("paid-entry release blockers have a deliberate player explanation", async () => {
+test("Quick Match entry displays server-owned eligibility failures", async () => {
   const source = await readFile(
-    new URL("../src/components/ui/GameCard/QuickMatchCard.jsx", import.meta.url),
+    new URL("../src/pages/Game.jsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(source, /paid_entry_unavailable:/);
-  assert.match(source, /payment release checks are incomplete/);
-  assert.match(source, /offering\.membership\?\.isJoined/);
+  assert.match(source, /getStoredErrorMessage\(error\)/);
+  assert.match(source, /tournament\.eligibility\?\.joinAvailable/);
+  assert.match(source, /tournament\.membership\?\.isJoined/);
   assert.match(source, /Joined/);
   assert.match(source, /already_joined/);
-  assert.match(source, /status === "operator_assigned"\) return "Waiting for schedule"/);
-  assert.match(source, /status === "scheduled"\) return "Scheduled"/);
-  assert.match(source, /status === "live"\) return "Live"/);
 });
 
 test("direct offering details use the canonical ID route independent of list position", async () => {

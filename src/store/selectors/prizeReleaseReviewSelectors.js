@@ -1,6 +1,6 @@
 import { getStoredErrorMessage } from "../../api/apiError.js";
 
-export const selectPrizeReleaseReview = (state) => state.prizeReleaseReview;
+const selectPrizeReleaseReview = (state) => state.prizeReleaseReview;
 export const selectPrizeReleaseItems = (state) =>
   selectPrizeReleaseReview(state).items;
 export const selectPrizeReleasePage = (state) =>

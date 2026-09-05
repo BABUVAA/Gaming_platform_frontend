@@ -1,5 +1,33 @@
 # Current Checkpoint
 
+## Current Slice: Non-payment Reliability and Redux Boundaries — 2026-09-05
+
+- Express is upgraded from 4.22.2 to 5.2.1; the refreshed backend production
+  audit reports zero vulnerabilities. Express 5 route metadata differences are
+  covered without changing any platform endpoint or authority boundary.
+- API SIGTERM/SIGINT shutdown is idempotent and bounded: HTTP admission stops,
+  Socket.IO closes, idle connections drain, all Redis command/pub-sub/lock
+  clients close, and MongoDB disconnects. Duplicate shutdown and partial
+  failure behavior have focused tests.
+- The unlaunched `/coc` page, route, constant, registry entry and footer link
+  are fully removed; there is no redirect or special compatibility behavior.
+  The unused Clan verification modal is also gone.
+  Game-account reads, CoC owner-token verification and manual verification use
+  Redux thunks, leaving zero direct Axios calls in feature pages/components.
+  CoC successes use the shared API envelope.
+- Static cleanup removed 16 unreachable modules and four dependencies used only
+  by them, removed the superseded embedded Clan Team builder, and narrowed 55
+  internal-only exports. The scan now finds no unused files, dependencies or
+  exports.
+- Green evidence: frontend 184/184, ESLint, 577-module build, both smoke checks
+  and diff check; backend group totals 460/460 across auth, social, competition,
+  payment regression and realtime coverage, docs 230/230, zero production audit
+  findings and diff check. The maintained groups pass independently; combined
+  `npm test` still requires a local Redis daemon or test-harness isolation to
+  exit. No payment contract, release flag, environment, deployment or database
+  state changed. Backend commit `8d1e513` and the paired frontend cleanup are
+  pushed to `main`; deployment remains open.
+
 ## Current Slice: Player Payment History and Recovery — 2026-09-04
 
 - Implemented locally: immediate safe deposit-order rows in Wallet, durable
@@ -1859,10 +1887,10 @@ Temporary signals, password, logs, and ports 8080/6379 were removed/restored.
 
 ### Next Code-Critical Slice: Reliability and Remaining Scale Hardening
 
-Team Event execution, Discord crash durability, upload/COC hardening and player
-Match-history pagination are complete. Next, finish remaining social and
-compatibility cursor pagination, Redux-boundary migrations, API graceful
-shutdown/monitoring hooks, and opt-in browser/load failure scaffolding.
+Team Event execution, Discord crash durability, upload/COC hardening, player
+Match-history pagination, Redux feature boundaries and API graceful shutdown
+are complete. Next, finish remaining social and compatibility cursor
+pagination, monitoring hooks, and opt-in browser/load failure scaffolding.
 Preserve every live-money release gate. Do not enable live money or provision
 paid workers without the documented external decisions.
 

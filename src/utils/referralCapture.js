@@ -48,4 +48,4 @@ export const loadCapturedReferral = (
   }
 };
 
-export { MAX_REFERRAL_AGE_MS, STORAGE_KEY };
+export { MAX_REFERRAL_AGE_MS };

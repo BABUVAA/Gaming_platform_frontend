@@ -103,7 +103,7 @@ const wrapWithSuspense = (element, withSuspense) => {
   return <Suspense fallback={<Loading />}>{element}</Suspense>;
 };
 
-export const buildRoute = (route) => {
+const buildRoute = (route) => {
   const builtRoute = {};
 
   // Index routes do not accept a path, so the builder copies only the shape
@@ -138,5 +138,3 @@ export const buildRoute = (route) => {
 };
 
 export const buildRoutes = (routes) => routes.map(buildRoute);
-
-export default buildRoutes;

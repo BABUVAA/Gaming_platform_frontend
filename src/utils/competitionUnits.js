@@ -1,6 +1,6 @@
 const identifier = (value) => String(value?._id || value || "");
 
-export const getCompetitionTeamSize = (match) =>
+const getCompetitionTeamSize = (match) =>
   Number(
     match?.eventBatch?.stage?.teamSize ||
       match?.eventBatch?.teamSize ||
