@@ -2,24 +2,27 @@
 
 Last updated: 2026-09-06
 
-### Original landing-page esports hero — 2026-09-06
+### Original landing-page gameplay trailer — 2026-09-06
 
-- Replaced the 12.6 MB stock `Battlefield.mp4` landing asset with an original
-  Indian mobile-esports squad scene generated for this platform. The ten-second
-  seamless camera loop keeps the four-player squad and arena energy on the
-  right while preserving dark negative space beneath the existing headline and
-  calls to action.
-- The hero now prefers a 1920x1080 VP9 WebM (865 KB), falls back to H.264 MP4
-  (1.54 MB), and renders a 126 KB WebP poster immediately. Autoplay remains
+- Replaced the portrait-only hero with an original fictional battle-royale
+  trailer: squad drop-in, storm-zone vehicle chase, final-zone firefight, and
+  an Indian mobile-esports squad finale. Every shot preserves dark left-side
+  space beneath the existing headline and calls to action; the opening aerial
+  frame returns at the end for a clean loop.
+- The hero now prefers a 14-second 1920x1080 VP9 WebM (1.48 MB), falls back to
+  H.264 MP4 (2.46 MB), and renders a 163 KB WebP poster immediately. Autoplay remains
   muted/inline; reduced-motion users receive the static poster instead. Mobile
   object positioning protects the squad crop and video preload is metadata-only.
 - Focused source/asset coverage passes and both video containers were verified
-  as ten seconds, 30 fps and broadly compatible `yuv420p`. Frontend tests pass
+  as 14 seconds, 30 fps and broadly compatible `yuv420p`. Frontend tests pass
   185/185; ESLint, the 577-module production build, route smoke, API-error/toast
-  smoke, zero-vulnerability production audit, and diff check pass. The in-app
-  browser blocks localhost, so the generated poster was visually inspected but
-  rendered browser proof remains open. This slice changes no roles, API
-  contract, payments, deployment, or data.
+  smoke, zero-vulnerability production audit, diff check, and a five-shot visual
+  contact-sheet inspection pass. The scenes are original and contain no game
+  branding, copied maps, HUD, text, or recognizable characters. Rendered browser
+  proof remains open because the in-app browser blocks localhost. This slice
+  changes no roles, API contract, payments, deployment, or data.
+  Included in the 2026-09-06 frontend repository delivery; deployment remains
+  open.
 
 ### Non-payment reliability and frontend-boundary hardening — 2026-09-05
 

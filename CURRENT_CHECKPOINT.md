@@ -1,20 +1,21 @@
 # Current Checkpoint
 
-## Current Slice: Original Landing-Page Esports Hero — 2026-09-06
+## Current Slice: Original Landing-Page Gameplay Trailer — 2026-09-06
 
-- The landing hero now uses an original Indian mobile-esports squad scene with
-  subtle tricolor arena lighting, four-player competition imagery on the right,
-  and dark negative space for the existing left-side copy and actions.
-- Delivery is a seamless ten-second 1920x1080 loop: VP9 WebM first (865 KB),
-  H.264 MP4 fallback (1.54 MB), and a 126 KB WebP poster. The removed stock
-  `Battlefield.mp4` was 12.6 MB. Playback is muted/inline, preload is metadata
-  only, and reduced-motion users retain the poster instead of animation.
+- The landing hero is now an original fictional battle-royale gameplay trailer:
+  squad drop-in, storm-zone vehicle chase, final-zone firefight, and an Indian
+  mobile-esports squad finale. Shots keep the left side usable for existing copy
+  and the opening frame returns at the end for a clean loop.
+- Delivery is a 14-second 1920x1080 loop: VP9 WebM first (1.48 MB), H.264 MP4
+  fallback (2.46 MB), and a 163 KB WebP gameplay poster. Playback is muted and
+  inline, preload is metadata only, and reduced-motion users retain the poster.
 - Green evidence: frontend 185/185, ESLint, 577-module build, both smoke checks,
-  zero-vulnerability production audit, diff check, and media-format inspection.
-  Local visual browser proof is blocked by the in-app browser's localhost
-  policy; the generated poster itself has been visually inspected. No API,
-  authority, money, environment, database, or deployed state changed. Included
-  in the 2026-09-06 frontend repository delivery; deployment remains open.
+  zero-vulnerability production audit, diff/media checks, and a five-shot visual
+  contact-sheet inspection. Generated scenes contain no game branding, copied
+  map, HUD, text, or recognizable character. The in-app browser still blocks
+  localhost, so rendered browser proof remains open. No API, authority, money,
+  environment, database, or deployed state changed. Included in the 2026-09-06
+  frontend repository delivery; deployment remains open.
 
 ## Current Slice: Non-payment Reliability and Redux Boundaries — 2026-09-05
 

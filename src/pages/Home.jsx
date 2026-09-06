@@ -79,7 +79,7 @@ const Home = () => {
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-cover bg-[68%_center] lg:bg-center"
-          style={{ backgroundImage: "url('/landing-esports-poster.webp')" }}
+          style={{ backgroundImage: "url('/landing-gameplay-poster.webp')" }}
         />
         <video
           aria-hidden="true"
@@ -88,11 +88,11 @@ const Home = () => {
           loop
           muted
           playsInline
-          poster="/landing-esports-poster.webp"
+          poster="/landing-gameplay-poster.webp"
           preload="metadata"
         >
-          <source src="/landing-esports.webm" type="video/webm" />
-          <source src="/landing-esports.mp4" type="video/mp4" />
+          <source src="/landing-gameplay.webm" type="video/webm" />
+          <source src="/landing-gameplay.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.94),rgba(17,24,39,0.76)_48%,rgba(17,24,39,0.20)),linear-gradient(180deg,rgba(17,24,39,0.04),rgba(17,24,39,0.92))]" />
 
