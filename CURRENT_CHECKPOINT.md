@@ -1,5 +1,21 @@
 # Current Checkpoint
 
+## Current Slice: Original Landing-Page Esports Hero — 2026-09-06
+
+- The landing hero now uses an original Indian mobile-esports squad scene with
+  subtle tricolor arena lighting, four-player competition imagery on the right,
+  and dark negative space for the existing left-side copy and actions.
+- Delivery is a seamless ten-second 1920x1080 loop: VP9 WebM first (865 KB),
+  H.264 MP4 fallback (1.54 MB), and a 126 KB WebP poster. The removed stock
+  `Battlefield.mp4` was 12.6 MB. Playback is muted/inline, preload is metadata
+  only, and reduced-motion users retain the poster instead of animation.
+- Green evidence: frontend 185/185, ESLint, 577-module build, both smoke checks,
+  zero-vulnerability production audit, diff check, and media-format inspection.
+  Local visual browser proof is blocked by the in-app browser's localhost
+  policy; the generated poster itself has been visually inspected. No API,
+  authority, money, environment, database, or deployed state changed. Included
+  in the 2026-09-06 frontend repository delivery; deployment remains open.
+
 ## Current Slice: Non-payment Reliability and Redux Boundaries — 2026-09-05
 
 - Express is upgraded from 4.22.2 to 5.2.1; the refreshed backend production

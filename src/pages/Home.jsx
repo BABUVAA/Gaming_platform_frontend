@@ -76,15 +76,24 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[#111827] text-slate-100">
       <section className="relative overflow-hidden border-b border-slate-700 bg-[#182235]">
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          src="/Battlefield.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/pubg-banner.webp"
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-cover bg-[68%_center] lg:bg-center"
+          style={{ backgroundImage: "url('/landing-esports-poster.webp')" }}
         />
+        <video
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover object-[68%_center] motion-reduce:hidden lg:object-center"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/landing-esports-poster.webp"
+          preload="metadata"
+        >
+          <source src="/landing-esports.webm" type="video/webm" />
+          <source src="/landing-esports.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.94),rgba(17,24,39,0.76)_48%,rgba(17,24,39,0.20)),linear-gradient(180deg,rgba(17,24,39,0.04),rgba(17,24,39,0.92))]" />
 
         <div className="relative mx-auto flex min-h-[calc(100svh-9rem)] max-w-7xl flex-col justify-center px-4 py-12 md:px-6 lg:py-16">

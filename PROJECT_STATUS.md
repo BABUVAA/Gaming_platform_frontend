@@ -1,6 +1,25 @@
 # Project Status
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
+
+### Original landing-page esports hero — 2026-09-06
+
+- Replaced the 12.6 MB stock `Battlefield.mp4` landing asset with an original
+  Indian mobile-esports squad scene generated for this platform. The ten-second
+  seamless camera loop keeps the four-player squad and arena energy on the
+  right while preserving dark negative space beneath the existing headline and
+  calls to action.
+- The hero now prefers a 1920x1080 VP9 WebM (865 KB), falls back to H.264 MP4
+  (1.54 MB), and renders a 126 KB WebP poster immediately. Autoplay remains
+  muted/inline; reduced-motion users receive the static poster instead. Mobile
+  object positioning protects the squad crop and video preload is metadata-only.
+- Focused source/asset coverage passes and both video containers were verified
+  as ten seconds, 30 fps and broadly compatible `yuv420p`. Frontend tests pass
+  185/185; ESLint, the 577-module production build, route smoke, API-error/toast
+  smoke, zero-vulnerability production audit, and diff check pass. The in-app
+  browser blocks localhost, so the generated poster was visually inspected but
+  rendered browser proof remains open. This slice changes no roles, API
+  contract, payments, deployment, or data.
 
 ### Non-payment reliability and frontend-boundary hardening — 2026-09-05
 
