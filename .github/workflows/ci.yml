@@ -24,6 +24,9 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm run build
+        env:
+          # Build validation only; GitHub Actions does not deploy this output.
+          BACKEND_PROXY_TARGET: http://127.0.0.1:8080
       - run: npm run smoke:routes
       - run: npm run smoke:api-errors
       - run: npm audit
