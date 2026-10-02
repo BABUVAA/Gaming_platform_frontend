@@ -1,13 +1,14 @@
 # Current Checkpoint
 
-Updated: 2026-09-30. Fast-resume index for both repositories.
+Updated: 2026-10-02. Fast-resume index for both repositories.
 `PROJECT_STATUS.md` remains authoritative; its newest dated amendments govern
 over historical implementation notes. Prior checkpoint history is retained in
 Git, and detailed feature/contract history remains in `PROJECT_STATUS.md`.
 
 ## Current slice: paired-system reassessment
 
-User requested a whole-system re-audit and fixes. Implemented locally:
+User requested a whole-system re-audit and fixes, then commit/push and verification.
+Implemented and pushed:
 
 - Authentication-specific 401 classification prevents payment-provider errors
   from refreshing/replaying checkout or falsely expiring the player's session.
@@ -20,18 +21,22 @@ User requested a whole-system re-audit and fixes. Implemented locally:
   gates and backend API-documentation coverage check.
 - Test Redis isolation and bounded unavailable-Redis failure; CI Redis service;
   all test files included with an inventory guard; `.env.*` ignored except sample.
+- Release CI fixes: exact-case Sidebar test path, CI-only build proxy target,
+  and request-time CoC configuration guard instead of import-time process exit.
 
 Full findings, changed-file map, test matrix and live limitations:
 `PLATFORM_REASSESSMENT_2026-09-30.md`.
 
-## Fresh verification
+## Verification
 
 - Frontend 191/191; ESLint; production build 579 modules; route and API-error
   smoke checks pass. Shared chunk warning remains ~609 kB minified / 181 kB gzip.
-- Backend aggregate 477/477, exit 0: auth 64 + integration 9; social 25 +
-  integration 12; competition 137 + integration 148; payments 13 + integration
+- Backend Linux CI aggregate 479/479, exit 0: auth 64 + integration 9; social 25 +
+  integration 12; competition 139 + integration 148; payments 13 + integration
   39; realtime 15; restored additional coverage 15.
-- Focused backend post-update regression 26/26; API docs cover 230/230 operations;
+- Both release CI pipelines are green (frontend run 37030451677, backend
+  37030208489). CoC/account focused checks pass 16/16. September 30 focused
+  backend regression was 26/26. API docs cover 230/230 operations;
   full npm audits report zero vulnerabilities in both repositories; diff checks pass.
 - Node 24.15.0 locally. MongoDB integration tests use temporary databases/replica
   sets. Redis authentication tests use disposable identities and explicit
@@ -43,16 +48,22 @@ Full findings, changed-file map, test matrix and live limitations:
 
 ## Delivery and deployed evidence
 
-- Work is local/uncommitted. Baselines: frontend `91d0460`, backend `8d1e513` on
-  main. No commit/push or deployment was requested for this audit.
+- User authorized delivery on October 2. Audit commits frontend `031880b` and
+  backend `745c327` are pushed to main; release fixes follow in frontend
+  `be65b72` / `3ce1b57` and backend `848c2fa`. Baselines were frontend `91d0460`
+  and backend `8d1e513`. This checkpoint is the delivery-record follow-up.
 - No production database cleanup, cloud setting changes, new paid services or
   live-payment enablement. Existing environment secrets were not changed.
-- Public Vercel frontend returned 200 with baseline security headers; its bundle
-  still uses the documented Render API origin.
-- API health/readiness probes timed out; one DNS failure subsequently resolved,
-  but repeated HTTP probes still timed out. Render MCP requires reauthentication.
-  Current backend health, deployment revision, logs and worker inventory are
-  unverified. Do not infer a confirmed outage or claim the deployment is healthy.
+- Vercel production READY was confirmed for the audit code; deployment status
+  is successful through `3ce1b57`. Public frontend returns 200 with baseline
+  security headers. Normal Git deployment was used without a duplicate trigger.
+- API health/readiness now return 200 with MongoDB and Redis ready. Anonymous
+  session reads return expected 401 `ACCESS_TOKEN_MISSING` with correct CORS.
+  Render MCP requires reauthentication: exact backend deployed SHA, logs and
+  workers remain unverified. These public checks do not certify the full system.
+- Existing Chrome staff session restored, opened Game Manager with scoped tabs,
+  and survived reload without the expiry loop. This is not fresh login or mobile
+  player proof. No test account, competition or payment data was created.
 - Historic deployment/worker/Redis statements in the tracker are dated evidence,
   not a new live inspection. Reconnect Render before completing that part.
 
@@ -91,8 +102,8 @@ Full findings, changed-file map, test matrix and live limitations:
 
 ## Next verification and launch boundaries
 
-1. Reconnect Render and inspect readiness, deployment, runtime, logs and workers.
-   Deployment of these local fixes remains a separate requested release step.
+1. Reconnect Render and confirm the backend deployed revision, runtime, logs and
+   workers. Source is pushed and public readiness passes; exact SHA is unverified.
 2. Run authenticated real-browser/device journeys, including interrupted signup,
    blocked-cookie login, team entry, staff workspaces, chat and sandbox recovery.
 3. Rotate previously shared credentials; prove backup restore, alerts, load and

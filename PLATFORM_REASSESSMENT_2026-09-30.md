@@ -1,5 +1,15 @@
 # Platform reassessment — 2026-09-30
 
+Delivery follow-up, October 2: fixes are committed/pushed. Fresh Linux CI passes
+191 frontend and 479 backend tests after fixing a case-sensitive test path,
+providing a CI-only build proxy target, and removing an optional CoC utility's
+import-time process exit (CoC requests still fail closed when unconfigured).
+Vercel deployment succeeds; backend public health/readiness now pass, but its
+exact deployed revision/logs/workers need Render reconnection. Existing Chrome
+staff session restoration and Game Manager reload pass. See the October 2 entry
+in `PROJECT_STATUS.md` for commit IDs, CI runs and precise verification limits.
+The audit below retains its original September 30 scope/evidence.
+
 ## Result and scope
 
 This is a fresh paired-repository code, dependency, configuration and automated

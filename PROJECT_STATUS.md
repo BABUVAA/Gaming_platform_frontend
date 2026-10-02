@@ -1,6 +1,46 @@
 # Project Status
 
-Last updated: 2026-09-30
+Last updated: 2026-10-02
+
+### Audit release and post-push verification — 2026-10-02
+
+- User authorized commit, push and subsequent verification. Audit fixes are on
+  both `origin/main` branches: frontend `031880b`, backend `745c327`. Release
+  follow-ups are frontend `be65b72` / `3ce1b57` and backend `848c2fa`.
+- Fresh Linux CI exposed issues hidden by the local Windows environment: one
+  test used `SideBar` instead of tracked `Sidebar`, and the frontend CI build
+  lacked its required proxy target. Corrected the test path and provided a
+  non-secret localhost target for the CI build only; production env is unchanged.
+- Backend CI exposed an import-time process exit in the optional CoC utility.
+  Missing CoC credentials now reject only CoC operations with a safe 503 before
+  cache/upstream access; unrelated account routes can initialize. Configured
+  ownership verification and existing authorization remain unchanged. Two new
+  tests prove import safety and fail-closed behavior. Focused checks pass 16/16.
+- Both GitHub Actions release runs are green: frontend run `37030451677`
+  (191/191 tests, lint, build, both smoke checks, audit and whitespace); backend
+  run `37030208489` (479/479 tests, inventory, API docs 230/230, audit and
+  whitespace). Fresh full dependency audits report zero vulnerabilities. Local
+  frontend gates also pass; the existing ~609 kB shared-chunk warning remains.
+- Vercel confirmed production READY for `031880b` (17-second build); GitHub's
+  Vercel deployment statuses subsequently confirm success for `be65b72` and
+  `3ce1b57`. Public frontend returned HTTP 200 with baseline security headers.
+  Git-linked deployment was used; no duplicate manual deployment was triggered.
+- Render public `/healthz` and `/readyz` now return HTTP 200, with MongoDB and
+  Redis ready. Anonymous `/api/auth/session` returns the expected 401
+  `ACCESS_TOKEN_MISSING`, private/no-store caching, and credentialed CORS for the
+  documented frontend origin. Earlier September 30 timeouts are historical.
+  Render connector reauthentication still prevents confirming the exact deployed
+  backend SHA, service logs and worker inventory; health alone does not prove
+  that `848c2fa` is deployed.
+- Live Chrome reused an existing staff session, restored the workspace chooser,
+  opened Game Manager with only its selected-workspace navigation, and retained
+  authenticated access after reload without the expiry loop. No fresh login,
+  signup, mobile/blocked-cookie journey, chat mutation or payment was attempted.
+  The in-app browser failed to attach; Chrome supplied the actual browser proof.
+- No production data cleanup, provider transaction, cloud configuration change,
+  paid service provisioning or real-money enablement. Remaining launch gates
+  and authenticated player/device/payment journeys are unchanged. This release
+  record supersedes the local/uncommitted delivery state in the dated audit.
 
 ### Paired-system reassessment and reliability/security fixes — 2026-09-30
 
