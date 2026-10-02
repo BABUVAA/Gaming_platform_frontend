@@ -11,12 +11,13 @@ jobs:
   quality:
     name: Test, lint, build, and smoke checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - run: npm ci
@@ -25,4 +26,5 @@ jobs:
       - run: npm run build
       - run: npm run smoke:routes
       - run: npm run smoke:api-errors
+      - run: npm audit
       - run: git diff --check

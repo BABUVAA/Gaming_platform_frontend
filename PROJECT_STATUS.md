@@ -1,6 +1,61 @@
 # Project Status
 
-Last updated: 2026-09-06
+Last updated: 2026-09-30
+
+### Paired-system reassessment and reliability/security fixes — 2026-09-30
+
+- Current audit: `PLATFORM_REASSESSMENT_2026-09-30.md`. This is a local code,
+  dependency/configuration and automated-regression audit, not production
+  certification. Earlier dated entries below retain historical evidence; they
+  do not establish today's deployment, worker, dependency or runtime state.
+- Fixed a false session-expiry path: frontend HTTP recovery and Redux session
+  invalidation now recognize authentication-specific codes, so a provider's
+  `PAYMENT_PROVIDER_AUTH_FAILED` HTTP 401 cannot refresh/replay checkout or log
+  the player out. Genuine session failures and uncoded legacy 401s retain the
+  authentication recovery path. No authentication authority was weakened.
+- Wallet balance, deposit-availability and per-order status checks now reject
+  out-of-order results; duplicate status-check clicks are suppressed. PhonePe
+  new-order insertion also invalidates stale history reads, matching Razorpay.
+- Personal chat now uses the canonical Friendship status even when legacy
+  friend arrays are stale. Removed, declined, cancelled and pending records
+  cannot regain chat access through compatibility fallback. This enforces the
+  existing accepted-friends-only authorization contract, without a new role,
+  route, grant or scope.
+- PhonePe callback redelivery no longer re-queues processing/failed/completed
+  reconciliation jobs. It may record evidence, but cannot release a lease or
+  reopen a terminal decision. Existing provider evidence and exactly-once ledger
+  settlement remain authoritative; no money release gate changed.
+- Refreshed vulnerable locked dependencies: Axios 1.20.0 in both repositories,
+  Engine.IO 6.6.11 in backend, brace-expansion 1.1.21 and js-yaml 4.3.2 in frontend.
+  CI now uses Node 24, audits dependencies and has a bounded job duration;
+  backend CI supplies test Redis and checks mounted API documentation.
+- Auth session tests use random test signing keys and explicit test Redis,
+  never application `.env` Redis configuration. Missing Redis now fails within
+  a three-second connection deadline with cleanup. All three previously omitted
+  test files (email identity, game catalog, upload security) are in `npm test`;
+  a new inventory gate detects future omissions. Both repositories now ignore
+  `.env.*` except `.env.example`.
+- Verification: frontend **191/191**, ESLint, **579-module** production build,
+  both smoke checks; backend aggregate **477/477** (64 auth, 9 auth integration,
+  25 social, 12 social integration, 137 competition, 148 competition integration,
+  13 payments, 39 payment integration, 15 realtime, 15 additional). Post-update
+  focused backend proof **26/26**; API docs **230/230**; full dependency audits
+  **zero findings** in both repos; diff checks pass. Tests used temporary MongoDB
+  instances and isolated non-persistent Redis, not production data. Intentional
+  Redis-unavailable proof fails promptly rather than hanging. Windows MongoDB
+  harness teardown warnings and the ~609 kB shared frontend chunk remain noted.
+- Live evidence: public Vercel frontend returns 200 with baseline browser
+  headers. The documented API origin is present in its served bundle, but
+  health/readiness requests timed out (an earlier DNS failure later resolved).
+  Render MCP requires reauthentication; current service/log/worker readiness is
+  **unverified**, not a confirmed outage. Reconnect and inspect before declaring
+  deployment healthy. Authenticated mobile/desktop journeys, restore/load/alert
+  evidence, credential rotation and final-launch payment gates remain open.
+- Delivery: changes are **local and uncommitted** on the existing main branches,
+  based on frontend `91d0460` and backend `8d1e513`. No push, deployment, cloud
+  setting, production-data mutation, paid service or real-money enablement was
+  performed. `CURRENT_CHECKPOINT.md` is condensed into the current operational
+  index; detailed prior work remains here and in version history.
 
 ### Original landing-page gameplay trailer — 2026-09-06
 

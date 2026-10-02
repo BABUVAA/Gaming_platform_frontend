@@ -2,13 +2,14 @@ import {
   createListenerMiddleware,
   isRejectedWithValue,
 } from "@reduxjs/toolkit";
-import { rememberUnauthenticatedSession } from "../authSessionHint";
-import { sessionInvalidated } from "../actions/sessionActions";
+import { rememberUnauthenticatedSession } from "../authSessionHint.js";
+import { sessionInvalidated } from "../actions/sessionActions.js";
+import { isSessionAuthenticationError } from "../../api/apiError.js";
 
 const credentialActionPrefixes = new Set(["auth/login", "auth/signup"]);
 
 const isProtectedRequestUnauthorized = (action, previousState) => {
-  if (!isRejectedWithValue(action) || action.payload?.status !== 401) {
+  if (!isRejectedWithValue(action) || !isSessionAuthenticationError(action.payload)) {
     return false;
   }
 

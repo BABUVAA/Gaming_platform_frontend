@@ -1,5 +1,5 @@
 import axios from "axios";
-import { normalizeApiError } from "./apiError.js";
+import { isSessionAuthenticationError, normalizeApiError } from "./apiError.js";
 
 const configuredTimeout = Number(import.meta.env?.VITE_API_TIMEOUT_MS);
 const requestTimeout =
@@ -87,7 +87,7 @@ const refreshExcludedPaths = new Set([
 const shouldRefreshAuthentication = (error) => {
   const request = error.config;
   return Boolean(
-    error.response?.status === 401 &&
+    isSessionAuthenticationError(normalizeApiError(error)) &&
       request &&
       !request._authRetry &&
       !request.signal?.aborted &&

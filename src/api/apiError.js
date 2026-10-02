@@ -28,6 +28,22 @@ const STATUS_CODE_MAP = {
 
 const DEFAULT_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
+const SESSION_ERROR_CODES = new Set([
+  API_ERROR_CODE.UNAUTHENTICATED,
+  "ACCESS_TOKEN_MISSING",
+  "ACCESS_TOKEN_EXPIRED",
+  "ACCESS_TOKEN_INVALID",
+  "SESSION_INVALID",
+  "REFRESH_TOKEN_MISSING",
+  "REFRESH_TOKEN_EXPIRED",
+  "REFRESH_TOKEN_INVALID",
+]);
+
+// A provider credential error can also be HTTP 401. It must not refresh or
+// destroy the player's unrelated browser session (or retry a payment command).
+export const isSessionAuthenticationError = (error) =>
+  error?.status === 401 && SESSION_ERROR_CODES.has(error.code);
+
 const getErrorText = (value) => {
   if (typeof value === "string" && value.trim()) {
     const text = value.trim();

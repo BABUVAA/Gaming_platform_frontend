@@ -197,7 +197,11 @@ export const checkTransactionStatus = createAsyncThunk(
         "Failed to check transaction status.",
       );
     }
-  }
+  },
+  {
+    condition: (transactionId, { getState }) =>
+      getState().payment?.transactionHistory?.checks?.[transactionId]?.status !== "loading",
+  },
 );
 
 // Explicit membership is safer than matching every action whose type happens
@@ -219,6 +223,8 @@ const finishPaymentRequest = (state) => {
 };
 
 const initialState = {
+  walletRequestId: null,
+  capabilitiesRequestId: null,
   capabilities: {
     depositAvailable: null,
     depositProvider: null,
@@ -280,9 +286,18 @@ const paymentSlice = createSlice({
       })
       .addCase(initiatePhonePeOrder.fulfilled, (state, action) => {
         state.latestOrder = action.payload;
-        if (action.payload?.transaction) state.transactions.unshift(action.payload.transaction);
+        if (action.payload?.transaction) {
+          state.transactions.unshift(action.payload.transaction);
+          state.transactionHistory.requestId = null;
+          state.transactionHistory.status = "succeeded";
+        }
+      })
+      .addCase(fetchWalletBalance.pending, (state, action) => {
+        state.walletRequestId = action.meta.requestId;
       })
       .addCase(fetchWalletBalance.fulfilled, (state, action) => {
+        if (state.walletRequestId !== action.meta.requestId) return;
+        state.walletRequestId = null;
         state.wallet.availableMinor = action.payload?.availableMinor || 0;
         state.wallet.currency = action.payload?.currency || "INR";
         state.wallet.entryHeldMinor = action.payload?.entryHeldMinor || 0;
@@ -296,10 +311,13 @@ const paymentSlice = createSlice({
         state.wallet.withdrawalPendingMinor =
           action.payload?.withdrawalPendingMinor || 0;
       })
-      .addCase(fetchPaymentCapabilities.pending, (state) => {
+      .addCase(fetchPaymentCapabilities.pending, (state, action) => {
+        state.capabilitiesRequestId = action.meta.requestId;
         state.capabilities.status = "loading";
       })
       .addCase(fetchPaymentCapabilities.fulfilled, (state, action) => {
+        if (state.capabilitiesRequestId !== action.meta.requestId) return;
+        state.capabilitiesRequestId = null;
         state.capabilities.depositAvailable =
           action.payload?.deposits?.available === true;
         state.capabilities.moneyMode = action.payload?.moneyMode || "disabled";
@@ -311,9 +329,11 @@ const paymentSlice = createSlice({
         state.capabilities.status = "succeeded";
       })
       .addCase(fetchPaymentCapabilities.rejected, (state, action) => {
-        if (action.meta.aborted) return;
+        if (state.capabilitiesRequestId !== action.meta.requestId) return;
+        state.capabilitiesRequestId = null;
         state.capabilities.depositAvailable = false;
-        state.capabilities.status = "failed";
+        state.capabilities.withdrawalsAvailable = false;
+        state.capabilities.status = action.meta.aborted ? "idle" : "failed";
       })
       .addCase(fetchWalletLedger.pending, (state, action) => {
         const isNextPage = Boolean(action.meta.arg?.cursor);
@@ -385,9 +405,12 @@ const paymentSlice = createSlice({
         if (!action.meta.aborted) state.transactionHistory.error = action.payload;
       })
       .addCase(checkTransactionStatus.pending, (state, action) => {
-        state.transactionHistory.checks[action.meta.arg] = { status: "loading" };
+        state.transactionHistory.checks[action.meta.arg] = {
+          status: "loading", requestId: action.meta.requestId,
+        };
       })
       .addCase(checkTransactionStatus.fulfilled, (state, action) => {
+        if (state.transactionHistory.checks[action.meta.arg]?.requestId !== action.meta.requestId) return;
         state.statusCheck = action.payload;
         const item = action.payload?.transaction;
         if (item) state.transactions = state.transactions.map((old) => old.id === item.id ? item : old);
@@ -399,6 +422,7 @@ const paymentSlice = createSlice({
         };
       })
       .addCase(checkTransactionStatus.rejected, (state, action) => {
+        if (state.transactionHistory.checks[action.meta.arg]?.requestId !== action.meta.requestId) return;
         state.transactionHistory.checks[action.meta.arg] = { status: "failed", error: action.payload };
       });
 
@@ -415,6 +439,11 @@ const paymentSlice = createSlice({
       fulfilled: finishPaymentRequest,
       rejected: (state, action) => {
         finishPaymentRequest(state);
+
+        if (fetchWalletBalance.rejected.match(action)) {
+          if (state.walletRequestId !== action.meta.requestId) return;
+          state.walletRequestId = null;
+        }
 
         // An aborted request is an intentional control-flow event, not a
         // payment failure that should replace the current screen error.

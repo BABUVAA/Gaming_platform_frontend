@@ -9,6 +9,7 @@ import paymentSlice, {
   fetchUserTransactions,
   checkTransactionStatus,
   initiateRazorpayOrder,
+  initiatePhonePeOrder,
   verifyRazorpayPayment,
   WALLET_LEDGER_PAGE_LIMIT,
 } from "../src/store/slices/paymentSlice.js";
@@ -145,6 +146,59 @@ test("payment history immediately inserts orders and rejects stale list response
   assert.equal(state.transactions.length, 1);
   assert.equal(state.transactions[0].status, "completed");
   assert.equal(state.wallet.availableMinor, 0);
+});
+
+test("PhonePe creation also protects the new order from an older history response", () => {
+  let state = paymentSlice.reducer(undefined, fetchUserTransactions.pending("old", {}));
+  state = paymentSlice.reducer(state, initiatePhonePeOrder.fulfilled({ transaction: { id: "new", status: "pending" } }, "order", {}));
+  state = paymentSlice.reducer(state, fetchUserTransactions.fulfilled({ transactions: [] }, "old", {}));
+  assert.deepEqual(state.transactions.map((item) => item.id), ["new"]);
+});
+
+test("wallet and availability keep the newest request result when responses arrive out of order", () => {
+  let state = paymentSlice.reducer(undefined, fetchWalletBalance.pending("old"));
+  state = paymentSlice.reducer(state, fetchWalletBalance.pending("new"));
+  state = paymentSlice.reducer(state, fetchWalletBalance.fulfilled({ availableMinor: 5000 }, "new"));
+  state = paymentSlice.reducer(state, fetchWalletBalance.fulfilled({ availableMinor: 0 }, "old"));
+  assert.equal(state.wallet.availableMinor, 5000);
+  assert.equal(state.isLoading, false);
+
+  state = paymentSlice.reducer(state, fetchPaymentCapabilities.pending("old"));
+  state = paymentSlice.reducer(state, fetchPaymentCapabilities.pending("new"));
+  state = paymentSlice.reducer(state, fetchPaymentCapabilities.fulfilled({ deposits: { available: false } }, "new"));
+  state = paymentSlice.reducer(state, fetchPaymentCapabilities.fulfilled({ deposits: { available: true } }, "old"));
+  assert.equal(state.capabilities.depositAvailable, false);
+});
+
+test("stale status-check responses cannot overwrite a newer payment confirmation", () => {
+  let state = paymentSlice.reducer(undefined, initiateRazorpayOrder.fulfilled({ transaction: { id: "one", status: "pending" } }, "order", {}));
+  state = paymentSlice.reducer(state, checkTransactionStatus.pending("old", "one"));
+  state = paymentSlice.reducer(state, checkTransactionStatus.pending("new", "one"));
+  state = paymentSlice.reducer(state, checkTransactionStatus.fulfilled({ transaction: { id: "one", status: "completed" } }, "new", "one"));
+  state = paymentSlice.reducer(state, checkTransactionStatus.fulfilled({ transaction: { id: "one", status: "pending" } }, "old", "one"));
+  state = paymentSlice.reducer(state, checkTransactionStatus.rejected(new Error("old error"), "old", "one"));
+  assert.equal(state.transactions[0].status, "completed");
+  assert.equal(state.transactionHistory.checks.one.status, "succeeded");
+});
+
+test("repeated status-check clicks share the pending request without another provider check", async () => {
+  const adapter = api.defaults.adapter;
+  let finish;
+  let requests = 0;
+  api.defaults.adapter = (config) => new Promise((resolve) => {
+    requests += 1;
+    finish = () => resolve({ config, data: { data: {} }, headers: {}, status: 200, statusText: "OK" });
+  });
+  try {
+    const store = configureStore({ reducer: { payment: paymentSlice.reducer } });
+    const pending = store.dispatch(checkTransactionStatus("one"));
+    const duplicate = await store.dispatch(checkTransactionStatus("one"));
+    assert.equal(duplicate.meta.condition, true);
+    assert.equal(requests, 1);
+    finish();
+    await pending;
+    assert.equal(store.getState().payment.transactionHistory.checks.one.status, "succeeded");
+  } finally { api.defaults.adapter = adapter; }
 });
 
 test("payment history and status check use bounded owner-only endpoints", async () => {
