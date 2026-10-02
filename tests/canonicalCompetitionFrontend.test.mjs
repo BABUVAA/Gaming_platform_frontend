@@ -148,7 +148,7 @@ test("Quick Match details mirror the compact Event tab layout and reopen after f
 test("player dashboard tabs use the compact shell and omit promotional heroes", async () => {
   const [sidebar, chats, wallet, gameAccounts, profile, clanStyles] =
     await Promise.all([
-      read("../src/components/layout/SideBar/SideBar.jsx"),
+      read("../src/components/layout/Sidebar/SideBar.jsx"),
       read("../src/pages/Chats.jsx"),
       read("../src/pages/Wallet.jsx"),
       read("../src/pages/GameAccounts.jsx"),
